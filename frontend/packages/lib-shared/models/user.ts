@@ -9,6 +9,8 @@ export interface UserInfo {
   createTime: number;
   updateTime: number;
   language: string;
+  tenantId: string;
+  tenantIds: string[];
   lastOrganizationId: string;
   phone: string;
   source: string;

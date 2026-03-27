@@ -18,7 +18,10 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.sql.DataSource;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 
 /**
@@ -34,6 +37,40 @@ import java.util.Properties;
 @MapperScan(basePackages = {"cn.cordys.**.mapper"}, sqlSessionFactoryRef = "sqlSessionFactory")
 @EnableTransactionManagement
 public class MybatisConfig {
+
+    private static final String DEFAULT_TENANT_ID = "default";
+
+    /**
+     * 供运行时动态注册租户数据源使用。
+     */
+    @Bean
+    public DynamicTenantRoutingDataSource tenantRoutingDataSource(
+            @Qualifier("dataSourceProperties") DataSourceProperties properties) {
+        DataSource defaultDataSource = buildDataSource(
+                properties.determineDriverClassName(),
+                properties.determineUrl(),
+                properties.determineUsername(),
+                properties.determinePassword(),
+                "CordysTenantDefaultHikariCP"
+        );
+
+        Map<Object, Object> targetDataSources = new HashMap<>();
+        targetDataSources.put(DEFAULT_TENANT_ID, defaultDataSource);
+
+        DynamicTenantRoutingDataSource routingDataSource = new DynamicTenantRoutingDataSource();
+        routingDataSource.setDefaultTargetDataSource(Objects.requireNonNull(defaultDataSource));
+        routingDataSource.initTargets(targetDataSources);
+        return routingDataSource;
+    }
+
+    /**
+     * 主业务数据源（按租户路由）。
+     */
+    @Bean
+    @Primary
+    public DataSource dataSource(DynamicTenantRoutingDataSource tenantRoutingDataSource) {
+        return tenantRoutingDataSource;
+    }
 
     /**
      * 配置 MyBatis 的分页拦截器。
@@ -92,26 +129,19 @@ public class MybatisConfig {
         return new UserDesensitizationInterceptor();
     }
 
-    /**
-     * 配置主数据源。
-     * <p>
-     * 该方法根据配置文件中的属性创建一个主数据源，使用 {@link HikariDataSource} 作为数据源类型。
-     * </p>
-     *
-     * @param properties 数据源的基础配置
-     *
-     * @return 配置好的主数据源实例
-     */
-    @Bean
-    @Primary
-    @ConfigurationProperties(prefix = "spring.datasource.hikari")
-    public DataSource dataSource(@Qualifier("dataSourceProperties") DataSourceProperties properties) {
-        return DataSourceBuilder.create(properties.getClassLoader()).type(HikariDataSource.class)
-                .driverClassName(properties.determineDriverClassName())
-                .url(properties.determineUrl())
-                .username(properties.determineUsername())
-                .password(properties.determinePassword())
+    private DataSource buildDataSource(String driverClassName,
+                                       String url,
+                                       String username,
+                                       String password,
+                                       String poolName) {
+        HikariDataSource dataSource = DataSourceBuilder.create().type(HikariDataSource.class)
+                .driverClassName(driverClassName)
+                .url(url)
+                .username(username)
+                .password(password)
                 .build();
+        dataSource.setPoolName(poolName);
+        return dataSource;
     }
 
     /**

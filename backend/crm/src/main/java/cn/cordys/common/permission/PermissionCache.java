@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 @Component
 public class PermissionCache {
 
-    @Cacheable(value = "permission_cache", key = "#userId + ':' +  #orgId")
+    @Cacheable(value = "permission_cache", key = "T(cn.cordys.context.TenantContext).getTenantIdOrDefault() + ':' + #userId + ':' + #orgId")
     public List<RolePermissionDTO> getRolePermissions(String userId, String orgId) {
         RoleService roleService = CommonBeanFactory.getBean(RoleService.class);
         // 获取角色
@@ -65,7 +65,7 @@ public class PermissionCache {
                 .collect(Collectors.toSet());
     }
 
-    @CacheEvict(value = "permission_cache", key = "#userId + ':' +  #orgId", beforeInvocation = true)
+    @CacheEvict(value = "permission_cache", key = "T(cn.cordys.context.TenantContext).getTenantIdOrDefault() + ':' + #userId + ':' + #orgId", beforeInvocation = true)
     public void clearCache(String userId, String orgId) {
         // do nothing
     }

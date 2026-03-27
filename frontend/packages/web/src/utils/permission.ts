@@ -6,10 +6,13 @@ import appRoutes from '@/router/routes/index';
 import useAppStore from '@/store/modules/app';
 import useUserStore from '@/store/modules/user';
 
-import { WorkbenchRouteEnum } from '@/enums/routeEnum';
+import { ManagementCenterRouteEnum, WorkbenchRouteEnum } from '@/enums/routeEnum';
 
 export function hasPermission(permission: string) {
   const userStore = useUserStore();
+  if (permission === 'PLATFORM_ADMIN:READ' && userStore.userInfo.source !== 'PLATFORM') {
+    return false;
+  }
   if (userStore.isAdmin) {
     return true;
   }
@@ -51,6 +54,10 @@ export function topLevelMenuHasPermission(route: RouteLocationNormalized | Route
   const userStore = useUserStore();
   const appStore = useAppStore();
   const { moduleConfigList } = appStore;
+
+  if (route.name === ManagementCenterRouteEnum.MANAGEMENT_CENTER && userStore.isAdmin) {
+    return true;
+  }
 
   if (
     moduleConfigList.length &&

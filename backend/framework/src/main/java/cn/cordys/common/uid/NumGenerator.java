@@ -1,6 +1,7 @@
 package cn.cordys.common.uid;
 
 import cn.cordys.common.constants.ApplicationNumScope;
+import cn.cordys.common.redis.TenantRedisKeyBuilder;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.Redisson;
@@ -50,8 +51,9 @@ public class NumGenerator {
      * @return 唯一的数字 ID
      */
     public static long nextNum(String prefix, ApplicationNumScope scope) {
+        String tenantScopedPrefix = TenantRedisKeyBuilder.tenantKey(prefix);
         // 获取分布式 ID 生成器
-        RIdGenerator idGenerator = redisson.getIdGenerator(prefix + "_" + scope.name());
+        RIdGenerator idGenerator = redisson.getIdGenerator(tenantScopedPrefix + "_" + scope.name());
 
         // 处理子范围的用例（如 SYSTEM）
         if (SUB_NUM.contains(scope)) {

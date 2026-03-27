@@ -1,6 +1,7 @@
 package cn.cordys.crm.system.job;
 
 import cn.cordys.common.util.JSON;
+import cn.cordys.common.redis.TenantRedisKeyBuilder;
 import cn.cordys.crm.system.dto.response.AnnouncementDTO;
 import cn.cordys.crm.system.mapper.ExtAnnouncementMapper;
 import cn.cordys.crm.system.service.AnnouncementService;
@@ -26,6 +27,10 @@ public class NotifyOnJob {
     private AnnouncementService announcementService;
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+
+    private String tenantRedisKey(String rawKey) {
+        return TenantRedisKeyBuilder.tenantKey(rawKey);
+    }
 
     @QuartzScheduled(cron = "0 0/5 * * * ?")
     public void onEvent() {
@@ -69,7 +74,7 @@ public class NotifyOnJob {
         List<String> expiredIds = extAnnouncementMapper.selectFixTimeExpiredIds(startStamp, expiredStamp);
         if (CollectionUtils.isNotEmpty(expiredIds)) {
             for (String expiredId : expiredIds) {
-                stringRedisTemplate.delete(ANNOUNCE_PREFIX + expiredId);
+                stringRedisTemplate.delete(tenantRedisKey(ANNOUNCE_PREFIX + expiredId));
             }
         }
     }

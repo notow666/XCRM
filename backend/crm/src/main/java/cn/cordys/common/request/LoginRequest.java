@@ -46,6 +46,12 @@ public class LoginRequest {
     private String platform;
 
     /**
+     * 当前租户ID。
+     */
+    @Size(max = 64)
+    private String tenantId;
+
+    /**
      * 获取解密后的用户名。
      * <p>如果解密失败，将返回原始的用户名。</p>
      *

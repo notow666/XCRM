@@ -1,6 +1,7 @@
 package cn.cordys.common.uid;
 
 import cn.cordys.common.exception.GenericException;
+import cn.cordys.common.redis.TenantRedisKeyBuilder;
 import cn.cordys.quartz.anno.QuartzScheduled;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
@@ -28,6 +29,14 @@ public class SerialNumGenerator {
         this.redis = redis;
     }
 
+    private String tenantRedisKey(String rawKey) {
+        return TenantRedisKeyBuilder.tenantKey(rawKey);
+    }
+
+    private String tenantRedisPattern(String rawPattern) {
+        return TenantRedisKeyBuilder.tenantPattern(rawPattern);
+    }
+
     /**
      * 按规则生成流水号
      */
@@ -40,7 +49,7 @@ public class SerialNumGenerator {
 
         // 强制使用年月作为流水号 key 的日期部分
         String date = new SimpleDateFormat(r.datePattern()).format(new Date());
-        String key = "%s:%s:%s:%s:%s".formatted(PREFIX, orgId, formKey, date, r.p1);
+        String key = tenantRedisKey("%s:%s:%s:%s:%s".formatted(PREFIX, orgId, formKey, date, r.p1));
         try {
             // Redis 自增序列
             long seq = Objects.requireNonNull(redis.opsForValue().increment(key), "Redis increment 返回 null");
@@ -83,7 +92,7 @@ public class SerialNumGenerator {
 
         String currentMonth = new SimpleDateFormat("yyyyMM").format(new Date());
 
-        try (Cursor<String> cursor = redis.scan(ScanOptions.scanOptions().match("serial:*:*:*").count(1000).build())) {
+        try (Cursor<String> cursor = redis.scan(ScanOptions.scanOptions().match(tenantRedisPattern("serial:*:*:*")).count(1000).build())) {
             cursor.forEachRemaining(key -> {
                 String serialDate = key.substring(key.lastIndexOf(":") + 1);
                 if (!currentMonth.equals(serialDate)) {
@@ -112,7 +121,7 @@ public class SerialNumGenerator {
      */
     public void resetKey(String datePattern, String formKey, String orgId) {
         String date = new SimpleDateFormat(datePattern).format(new Date());
-        String key = "%s:%s:%s:%s".formatted(PREFIX, orgId, formKey, date);
+        String key = tenantRedisKey("%s:%s:%s:%s".formatted(PREFIX, orgId, formKey, date));
         redis.delete(key);
     }
 }

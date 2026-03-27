@@ -46,7 +46,7 @@
       await oAuthLogin();
       return;
     }
-    router.replace({ name: AppRouteEnum.WORKBENCH });
+    router.replace({ name: AppRouteEnum.WORKBENCH_INDEX });
     licenseStore.getValidateLicense();
   });
 </script>

@@ -13,6 +13,14 @@ import type { Recordable } from '@lib/shared/types/global';
 import type { AxiosResponse } from 'axios';
 
 export default function createAxios(opt: Partial<CreateAxiosOptions>) {
+  const resolveTenantIdFromHash = () => {
+    const hash = window.location.hash || '';
+    const match = hash.match(/^#\/([^/]+)\/login(?:\?|$)/);
+    if (match && typeof match[1] === 'string' && match[1].trim()) {
+      return decodeURIComponent(match[1].trim());
+    }
+    return '';
+  };
   /**
    * @description: 数据处理，方便区分多种处理方式
    */
@@ -93,18 +101,26 @@ export default function createAxios(opt: Partial<CreateAxiosOptions>) {
       // 请求之前处理config
       const currentLocale = localStorage.getItem('CRM-locale') || 'zh-CN';
       const app = getLocalStorage<Record<string, any>>('app', true);
+      const requestUrl = String(config.url || '');
+      const isPlatformApi = requestUrl.includes('/platform/');
+      const isSystemVersionApi = requestUrl.includes('/system/version');
 
       const token = getToken();
       if (token && (config as Recordable)?.requestOptions?.withToken !== false) {
         const { sessionId, csrfToken } = token;
 
-        (config as Recordable).headers = {
+        const headers: Recordable = {
           ...config.headers,
           'X-AUTH-TOKEN': sessionId,
           'CSRF-TOKEN': csrfToken,
           'Accept-Language': currentLocale,
-          'Organization-Id': app?.orgId,
         };
+        if (!isPlatformApi && !isSystemVersionApi) {
+          const routeTenantId = resolveTenantIdFromHash();
+          headers['X-Tenant-ID'] = routeTenantId || app?.tenantId;
+          headers['Organization-Id'] = app?.orgId;
+        }
+        (config as Recordable).headers = headers;
       }
       return config;
     },
@@ -142,7 +158,14 @@ export default function createAxios(opt: Partial<CreateAxiosOptions>) {
       } catch (e) {
         throw new Error(e as unknown as string);
       }
-      opt.checkStatus?.(response?.status, msg, msgDetail, response?.data?.code, config?.requestOptions?.noErrorTip);
+      opt.checkStatus?.(
+        response?.status,
+        msg,
+        msgDetail,
+        response?.data?.code,
+        config?.requestOptions?.noErrorTip,
+        String(config?.url || '')
+      );
       return Promise.reject(
         response?.config?.requestOptions?.isReturnNativeResponse ? response?.data : response?.data?.message || error
       );

@@ -35,7 +35,7 @@ public class LicenseService {
     @Resource
     private ExtLicenseMapper extLicenseMapper;
 
-    @Cacheable(value = "license_cache", key = "'CORDYS-LICENSE'", unless = "#result == null")
+    @Cacheable(value = "license_cache", key = "T(cn.cordys.context.TenantContext).getTenantIdOrDefault() + ':CORDYS-LICENSE'", unless = "#result == null")
     public LicenseDTO validate() {
         var code = Optional.ofNullable(extLicenseMapper.get())
                 .map(License::getLicenseCode)
@@ -44,7 +44,7 @@ public class LicenseService {
     }
 
     @OperationLog(module = LogModule.SYSTEM, type = LogType.ADD)
-    @CachePut(value = "license_cache", key = "'CORDYS-LICENSE'", unless = "#result == null")
+    @CachePut(value = "license_cache", key = "T(cn.cordys.context.TenantContext).getTenantIdOrDefault() + ':CORDYS-LICENSE'", unless = "#result == null")
     public LicenseDTO add(String code, String userId) {
         LicenseDTO licenseDTO = validate(code);
 

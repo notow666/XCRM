@@ -6,14 +6,11 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.io.Serial;
-
 @Builder
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class LogContextInfo implements java.io.Serializable {
-    @Serial
     private static final long serialVersionUID = 1L;
     /**
      * 原始值
@@ -36,6 +33,11 @@ public class LogContextInfo implements java.io.Serializable {
      * 优先级高于注解
      */
     private String resourceName;
+
+    /**
+     * 租户ID（租户中心日志时用于路由及落库）
+     */
+    private String tenantId;
 
     @Override
     public String toString() {

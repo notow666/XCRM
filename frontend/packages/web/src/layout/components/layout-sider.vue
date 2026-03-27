@@ -48,6 +48,7 @@
             :class="personalMenuShow ? 'bg-[var(--primary-6)]' : ''"
           >
             <CrmPopConfirm
+              v-if="!isPlatformUser"
               v-model:show="showPopModal"
               :title="t('system.personal.addNewExport')"
               icon-type="primary"
@@ -84,7 +85,7 @@
       </div>
     </div>
   </n-layout-sider>
-  <personalExportDrawer v-model:visible="showPersonalExport" />
+  <personalExportDrawer v-if="!isPlatformUser" v-model:visible="showPersonalExport" />
 </template>
 
 <script setup lang="ts">
@@ -132,6 +133,7 @@
   const appStore = useAppStore();
   const userStore = useUserStore();
   const licenseStore = useLicenseStore();
+  const isPlatformUser = computed(() => userStore.userInfo.source === 'PLATFORM');
   const router = useRouter();
   const route = useRoute();
   const collapsed = ref(appStore.getMenuCollapsed);
@@ -162,8 +164,8 @@
     hasAnyPermission(['CUSTOMER_MANAGEMENT:EXPORT', 'OPPORTUNITY_MANAGEMENT:EXPORT', 'CLUE_MANAGEMENT:EXPORT'])
   );
 
-  const personalMenuOptions = computed(() => [
-    {
+  const personalMenuOptions = computed(() => {
+    const header = {
       key: 'header',
       type: 'render',
       render: () =>
@@ -182,36 +184,42 @@
             default: () => h('div', {}, { default: () => userStore.userInfo.name }),
           }
         ),
-    },
-    {
-      key: 'header-divider',
-      type: 'divider',
-    },
-    {
-      label: t('module.personal.info'),
-      key: AppRouteEnum.PERSONAL_INFO,
-      icon: renderIcon('iconicon_set_up'),
-    },
-    {
-      label: t('module.personal.plan'),
-      key: AppRouteEnum.PERSONAL_PLAN,
-      icon: renderIcon('iconicon_calendar1'),
-    },
-    ...(hasExportPermission.value
-      ? [
-          {
-            label: t('module.personal.myExport'),
-            key: AppRouteEnum.PERSONAL_EXPORT,
-            icon: renderIcon('iconicon_export'),
-          },
-        ]
-      : []),
-    {
+    };
+    const divider = { key: 'header-divider', type: 'divider' };
+    const logoutItem = {
       label: t('module.logout'),
       key: AppRouteEnum.LOGOUT,
       icon: renderIcon('iconicon_logout'),
-    },
-  ]);
+    };
+    // 管理中心平台账号：不与租户侧共用个人中心/导出等能力，仅展示退出
+    if (isPlatformUser.value) {
+      return [header, divider, logoutItem];
+    }
+    return [
+      header,
+      divider,
+      {
+        label: t('module.personal.info'),
+        key: AppRouteEnum.PERSONAL_INFO,
+        icon: renderIcon('iconicon_set_up'),
+      },
+      {
+        label: t('module.personal.plan'),
+        key: AppRouteEnum.PERSONAL_PLAN,
+        icon: renderIcon('iconicon_calendar1'),
+      },
+      ...(hasExportPermission.value
+        ? [
+            {
+              label: t('module.personal.myExport'),
+              key: AppRouteEnum.PERSONAL_EXPORT,
+              icon: renderIcon('iconicon_export'),
+            },
+          ]
+        : []),
+      logoutItem,
+    ];
+  });
 
   function renderLabel(option: MenuOption | MenuGroupOption) {
     return h(
@@ -274,6 +282,13 @@
 
   async function personalMenuChange(key: string) {
     personalMenuValue.value = key;
+    // 平台管理员：只走统一 logout（platformLogout），禁止先调 userStore.logout 以免清空 source 导致误跳租户登录页
+    if (isPlatformUser.value) {
+      if (key === AppRouteEnum.LOGOUT) {
+        await logout();
+      }
+      return;
+    }
     if (key === AppRouteEnum.PERSONAL_INFO || key === AppRouteEnum.PERSONAL_PLAN) {
       if (key === AppRouteEnum.PERSONAL_INFO) {
         personalTab.value = PersonalEnum.INFO;
@@ -284,8 +299,7 @@
     } else if (key === AppRouteEnum.PERSONAL_EXPORT) {
       showPersonalExport.value = true;
     } else {
-      await userStore.logout();
-      logout();
+      await logout();
       if (!licenseStore.hasLicense()) {
         // license到期后，退出登录重置界面配置
         appStore.resetPageConfig();
@@ -308,14 +322,13 @@
 
   const menuOptions = computed<MenuOption[]>(() => {
     return mapTree(menuTree.value, (e: any) => {
-      const menuChildren = mapTree(e.children);
       return e.meta.isTopMenu
         ? null
         : {
             ...e,
             label: t(e?.meta?.locale ?? ''),
             key: e.name,
-            children: menuChildren.length ? menuChildren : undefined,
+            children: Array.isArray(e.children) && e.children.length ? e.children : undefined,
             icon: getMenuIcon(e),
           };
     }) as unknown as MenuOption[];
@@ -363,6 +376,9 @@
   watch(
     () => appStore.orgId,
     (orgId) => {
+      if (isPlatformUser.value) {
+        return;
+      }
       if (orgId) {
         appStore.initModuleConfig();
         appStore.initNavTopConfig();

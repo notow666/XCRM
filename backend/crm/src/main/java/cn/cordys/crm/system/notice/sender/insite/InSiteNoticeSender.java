@@ -3,9 +3,11 @@ package cn.cordys.crm.system.notice.sender.insite;
 
 import cn.cordys.common.constants.TopicConstants;
 import cn.cordys.common.redis.MessagePublisher;
+import cn.cordys.common.redis.TenantRedisKeyBuilder;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.Translator;
+import cn.cordys.context.TenantContext;
 import cn.cordys.crm.system.constants.NotificationConstants;
 import cn.cordys.crm.system.domain.Notification;
 import cn.cordys.crm.system.dto.MessageDetailDTO;
@@ -38,6 +40,10 @@ public class InSiteNoticeSender extends AbstractNoticeSender {
     private StringRedisTemplate stringRedisTemplate;
     @Resource
     private MessagePublisher messagePublisher;
+
+    private String tenantRedisKey(String rawKey) {
+        return TenantRedisKeyBuilder.tenantKey(rawKey);
+    }
 
     public void sendAnnouncement(MessageDetailDTO messageDetailDTO, NoticeModel noticeModel, String context, String subjectText) {
         List<Receiver> receivers = super.getReceivers(noticeModel.getReceivers(), noticeModel.isExcludeSelf(), noticeModel.getOperator());
@@ -80,24 +86,25 @@ public class InSiteNoticeSender extends AbstractNoticeSender {
             notificationBaseMapper.insert(notification);
             String messageText = JSON.toJSONString(notification);
             //储存信息
-            stringRedisTemplate.opsForZSet().add(USER_PREFIX + receiver.getUserId(), id, System.currentTimeMillis());
-            stringRedisTemplate.opsForValue().set(MSG_PREFIX + id, messageText);
+            stringRedisTemplate.opsForZSet().add(tenantRedisKey(USER_PREFIX + receiver.getUserId()), id, System.currentTimeMillis());
+            stringRedisTemplate.opsForValue().set(tenantRedisKey(MSG_PREFIX + id), messageText);
             // 限制 Redis 只存 5 条消息
             Set<String> oldNotificationIds = stringRedisTemplate.opsForZSet()
-                    .reverseRange(USER_PREFIX + receiver.getUserId(), 4, -1);
+                    .reverseRange(tenantRedisKey(USER_PREFIX + receiver.getUserId()), 4, -1);
             if (CollectionUtils.isNotEmpty(oldNotificationIds)) {
                 for (String oldNotificationId : oldNotificationIds) {
-                    stringRedisTemplate.delete(MSG_PREFIX + oldNotificationId);
+                    stringRedisTemplate.delete(tenantRedisKey(MSG_PREFIX + oldNotificationId));
                 }
             }
-            stringRedisTemplate.opsForZSet().removeRange(USER_PREFIX + receiver.getUserId(), 0, -6);
+            stringRedisTemplate.opsForZSet().removeRange(tenantRedisKey(USER_PREFIX + receiver.getUserId()), 0, -6);
             //更新用户的已读全部消息状态 0 为未读，1为已读
-            stringRedisTemplate.opsForValue().set(USER_READ_PREFIX + receiver.getUserId(), "False");
+            stringRedisTemplate.opsForValue().set(tenantRedisKey(USER_READ_PREFIX + receiver.getUserId()), "False");
 
             // 发送消息
             NoticeRedisMessage noticeRedisMessage = new NoticeRedisMessage();
             noticeRedisMessage.setMessage(receiver.getUserId());
             noticeRedisMessage.setNoticeType(NotificationConstants.Type.SYSTEM_NOTICE.toString());
+            noticeRedisMessage.setTenantId(TenantContext.getTenantIdOrDefault());
             messagePublisher.publish(TopicConstants.SSE_TOPIC, JSON.toJSONString(noticeRedisMessage));
         });
 

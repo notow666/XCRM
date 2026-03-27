@@ -176,10 +176,12 @@
     }
     return enableList.filter((item) => moduleCount.value?.[item.value]);
   });
-  const activeConfigValue = ref<SearchTableKey>(lastScopedOptions.value[0].value as SearchTableKey); // 当前选中的标签
+  const activeConfigValue = ref<SearchTableKey>(
+    (lastScopedOptions.value[0]?.value ?? FormDesignKeyEnum.SEARCH_ADVANCED_CLUE) as SearchTableKey
+  ); // 当前选中的标签
 
   function initConfigList() {
-    activeConfigValue.value = displayConfigList.value[0]?.value as SearchTableKey;
+    activeConfigValue.value = (displayConfigList.value[0]?.value ?? activeConfigValue.value) as SearchTableKey;
   }
   function clickTag(config: ScopedOptions) {
     activeConfigValue.value = config.value as SearchTableKey;

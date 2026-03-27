@@ -8,7 +8,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-import java.io.Serial;
 import java.util.List;
 import java.util.Set;
 
@@ -17,7 +16,6 @@ import java.util.Set;
  */
 @Data
 public class UserDTO implements java.io.Serializable {
-    @Serial
     private static final long serialVersionUID = 1L;
 
     @Schema(description = "用户ID", requiredMode = Schema.RequiredMode.REQUIRED)
@@ -81,6 +79,12 @@ public class UserDTO implements java.io.Serializable {
 
     @Schema(description = "所在的组织ID")
     private Set<String> organizationIds;
+
+    @Schema(description = "当前租户ID")
+    private String tenantId;
+
+    @Schema(description = "所在的租户ID")
+    private Set<String> tenantIds;
 
     @Schema(description = "部门id")
     private String departmentId;

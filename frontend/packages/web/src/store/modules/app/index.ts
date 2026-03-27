@@ -124,6 +124,7 @@ const useAppStore = defineStore('app', {
       ...defaultLoginConfig,
       ...defaultPlatformConfig,
     },
+    tenantId: '',
     orgId: '',
     moduleConfigList: cloneDeep(defaultModuleConfig),
     currentTopMenu: {} as RouteRecordRaw,
@@ -165,6 +166,9 @@ const useAppStore = defineStore('app', {
     getOrgId(state: AppState) {
       return state.orgId;
     },
+    getTenantId(state: AppState) {
+      return state.tenantId;
+    },
     getTopMenus(state: AppState): RouteRecordRaw[] {
       return state.topMenus;
     },
@@ -186,6 +190,9 @@ const useAppStore = defineStore('app', {
     },
   },
   actions: {
+    setTenantId(id: string) {
+      this.tenantId = id;
+    },
     setOrgId(id: string) {
       this.orgId = id;
     },
@@ -354,9 +361,21 @@ const useAppStore = defineStore('app', {
       // TODO license 先放开
       // const licenseStore = useLicenseStore();
       // if (!licenseStore.hasLicense()) return;
-      const res = await getThirdConfigByType(CompanyTypeEnum.SQLBot);
-      if (res.config.sqlBotChatEnable) {
-        await loadScript(res.config?.appSecret as string, { identifier: CompanyTypeEnum.SQLBot });
+      try {
+        const res = await getThirdConfigByType(CompanyTypeEnum.SQLBot);
+        if (res?.config && res.config.sqlBotChatEnable) {
+          await loadScript(res.config?.appSecret as string, { identifier: CompanyTypeEnum.SQLBot });
+        }
+      } catch (error) {
+        // 未配置 SQLBot（后端返回 code=100500）属于可预期场景：静默跳过，不影响登录后主流程
+        if (typeof error === 'string' && error.includes('当前类型应用未配置')) {
+          return;
+        }
+        if ((error as any)?.code === 100500 || (error as any)?.response?.data?.code === 100500) {
+          return;
+        }
+        // eslint-disable-next-line no-console
+        console.log(error);
       }
     },
 
@@ -461,7 +480,7 @@ const useAppStore = defineStore('app', {
     },
   },
   persist: {
-    paths: ['menuIconStatus', 'pageConfig', 'moduleConfigList', 'navTopConfigList', 'activePlatformResource'],
+    paths: ['menuIconStatus', 'pageConfig', 'moduleConfigList', 'navTopConfigList', 'activePlatformResource', 'tenantId', 'orgId'],
   },
 });
 

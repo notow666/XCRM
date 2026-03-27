@@ -6,6 +6,9 @@ import usePermission from '@/hooks/usePermission';
 import appClientMenus from '@/router/app-menus';
 import { allMenuRouteMap, featureRouteMap } from '@/router/constants';
 import useAppStore from '@/store/modules/app';
+import useUserStore from '@/store/modules/user';
+
+import { ManagementCenterRouteEnum } from '@/enums/routeEnum';
 
 /**
  * 获取菜单树
@@ -13,10 +16,24 @@ import useAppStore from '@/store/modules/app';
  */
 export default function useMenuTree() {
   const appStore = useAppStore();
+  const userStore = useUserStore();
   const permission = usePermission();
 
   const menuTree = computed(() => {
     const copyRouter = cloneDeep(appClientMenus) as RouteRecordNormalized[];
+    if (userStore.userInfo.source === 'PLATFORM') {
+      const managementCenterRoute = copyRouter.find(
+        (route) =>
+          route.name === ManagementCenterRouteEnum.MANAGEMENT_CENTER ||
+          String(route.path || '').startsWith('/management-center')
+      );
+      if (!managementCenterRoute) {
+        return [];
+      }
+      const route = cloneDeep(managementCenterRoute) as RouteRecordRaw;
+      route.children = (route.children || []).filter((child) => child.meta?.hideInMenu !== true);
+      return [route];
+    }
 
     const currentMenuConfig: string[] = appStore.moduleConfigList.filter((e) => e.enable).map((e) => e.moduleKey);
 
@@ -35,6 +52,15 @@ export default function useMenuTree() {
       if (!_routes) return null;
 
       const collector = _routes.map((element) => {
+        const isManagementCenterRoot =
+          element.name === ManagementCenterRouteEnum.MANAGEMENT_CENTER ||
+          String(element.path || '').startsWith('/management-center');
+        if (userStore.userInfo.source !== 'PLATFORM' && isManagementCenterRoot) {
+          return null;
+        }
+        if (userStore.userInfo.source === 'PLATFORM' && !isManagementCenterRoot) {
+          return null;
+        }
         if (element.meta?.hideInMenu === true) {
           return null;
         }

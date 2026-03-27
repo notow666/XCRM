@@ -9,11 +9,13 @@ import cn.cordys.common.constants.TopicConstants;
 import cn.cordys.common.dto.OptionDTO;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.redis.MessagePublisher;
+import cn.cordys.common.redis.TenantRedisKeyBuilder;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.SubListUtils;
 import cn.cordys.common.util.Translator;
+import cn.cordys.context.TenantContext;
 import cn.cordys.crm.system.constants.NotificationConstants;
 import cn.cordys.crm.system.domain.Announcement;
 import cn.cordys.crm.system.domain.Notification;
@@ -67,6 +69,10 @@ public class AnnouncementService {
     private StringRedisTemplate stringRedisTemplate;
     @Resource
     private MessagePublisher messagePublisher;
+
+    private String tenantRedisKey(String rawKey) {
+        return TenantRedisKeyBuilder.tenantKey(rawKey);
+    }
 
     @Transactional(rollbackFor = Exception.class)
     @OperationLog(module = LogModule.SYSTEM_MESSAGE_ANNOUNCEMENT, type = LogType.ADD)
@@ -221,8 +227,8 @@ public class AnnouncementService {
         List<NotificationDTO> notificationDTOS = notificationMapper.selectByAnyOne(notificationRequest);
         for (NotificationDTO notificationDTO : notificationDTOS) {
             String notificationDTOId = notificationDTO.getId();
-            stringRedisTemplate.opsForZSet().remove(USER_ANNOUNCE_PREFIX + notificationDTO.getReceiver(), notificationDTOId);
-            stringRedisTemplate.delete(ANNOUNCE_PREFIX + notificationDTOId);
+            stringRedisTemplate.opsForZSet().remove(tenantRedisKey(USER_ANNOUNCE_PREFIX + notificationDTO.getReceiver()), notificationDTOId);
+            stringRedisTemplate.delete(tenantRedisKey(ANNOUNCE_PREFIX + notificationDTOId));
         }
     }
 
@@ -267,14 +273,15 @@ public class AnnouncementService {
                     notificationDTO.setContentText(JSON.toJSONString(announcementContentDTO));
                     String messageText = JSON.toJSONString(notificationDTO);
 
-                    stringRedisTemplate.opsForZSet().add(USER_ANNOUNCE_PREFIX + subUserId, id, System.currentTimeMillis());
-                    stringRedisTemplate.opsForValue().set(ANNOUNCE_PREFIX + id, messageText);
+                    stringRedisTemplate.opsForZSet().add(tenantRedisKey(USER_ANNOUNCE_PREFIX + subUserId), id, System.currentTimeMillis());
+                    stringRedisTemplate.opsForValue().set(tenantRedisKey(ANNOUNCE_PREFIX + id), messageText);
                     //更新用户的已读全部消息状态 0 为未读，1为已读
-                    stringRedisTemplate.opsForValue().set(USER_READ_PREFIX + subUserId, "False");
+                    stringRedisTemplate.opsForValue().set(tenantRedisKey(USER_READ_PREFIX + subUserId), "False");
                     // 发送消息
                     NoticeRedisMessage noticeRedisMessage = new NoticeRedisMessage();
                     noticeRedisMessage.setMessage(subUserId);
                     noticeRedisMessage.setNoticeType(NotificationConstants.Type.ANNOUNCEMENT_NOTICE.toString());
+                    noticeRedisMessage.setTenantId(TenantContext.getTenantIdOrDefault());
                     messagePublisher.publish(TopicConstants.SSE_TOPIC, JSON.toJSONString(noticeRedisMessage));
                     //sseService.broadcastPeriodically(subUserId, NotificationConstants.Type.ANNOUNCEMENT_NOTICE.toString());
                 }

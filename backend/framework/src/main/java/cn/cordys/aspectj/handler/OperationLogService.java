@@ -3,6 +3,7 @@ package cn.cordys.aspectj.handler;
 import cn.cordys.aspectj.builder.OperationLog;
 import cn.cordys.aspectj.dto.LogDTO;
 import cn.cordys.common.util.ServletUtils;
+import cn.cordys.context.TenantContext;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ public class OperationLogService {
         reqDTO.setResourceId(operationLog.getResourceId()); // 资源id
         reqDTO.setResourceName(operationLog.getResourceName()); // 资源名称
         reqDTO.setDetail(operationLog.getDetail()); // 资源名称
+        reqDTO.setTenantId(TenantContext.getTenantId());
     }
 
     private static void fillRequestFields(LogDTO reqDTO) {

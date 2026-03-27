@@ -10,6 +10,10 @@ export default mergeConfig(
   {
     mode: 'development',
     server: {
+      // 从环境变量读取端口
+      port: 5173,
+      // 从环境变量读取 host
+      host: '0.0.0.0',
       open: true,
       fs: {
         strict: true,

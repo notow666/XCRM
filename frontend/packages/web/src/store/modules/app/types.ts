@@ -67,6 +67,7 @@ export interface AppState {
   defaultLoginConfig: LoginConfig;
   defaultPlatformConfig: PlatformConfig;
   themeOverridesConfig: GlobalThemeOverrides;
+  tenantId: string;
   orgId: string;
   moduleConfigList: ModuleNavBaseInfoItem[]; // 模块配置列表
   topMenus: RouteRecordRaw[];

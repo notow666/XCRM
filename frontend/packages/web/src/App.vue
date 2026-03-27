@@ -24,7 +24,7 @@
 
   import CrmSysUpgradeTip from '@/components/pure/crm-sys-upgrade-tip/index.vue';
 
-  import { getThirdOauthCallback } from '@/api/modules';
+  import { getThirdOauthCallback, platformIsLogin } from '@/api/modules';
   import useLoading from '@/hooks/useLoading';
   import useUser from '@/hooks/useUser';
   import useAppStore from '@/store/modules/app';
@@ -53,6 +53,18 @@
   const naiveUIDateLocale = computed(() => {
     return currentLocale.value === 'zh-CN' ? dateZhCN : dateEnUS;
   });
+
+  function resolveTenantIdForLogin() {
+    const routeTenantId = router.currentRoute.value.params?.tenantId;
+    if (typeof routeTenantId === 'string' && routeTenantId.trim()) {
+      return routeTenantId;
+    }
+    const appTenantId = appStore.tenantId;
+    if (typeof appTenantId === 'string' && appTenantId.trim()) {
+      return appTenantId;
+    }
+    return '';
+  }
 
   async function handleOauthLogin(type: string, loginType: CompanyTypeEnum, isDingBrowser: boolean) {
     try {
@@ -88,7 +100,12 @@
       // eslint-disable-next-line no-console
       console.log(error);
       if ((error as Result).code === 100500) {
-        router.replace({ name: 'login' });
+        const tenantId = resolveTenantIdForLogin();
+        if (tenantId) {
+          router.replace({ name: 'login', params: { tenantId } });
+        } else {
+          router.replace({ name: 'platformLogin' });
+        }
       }
       if ((error as Result).code === 401) {
         logout();
@@ -97,6 +114,28 @@
   }
 
   onBeforeMount(async () => {
+    const isPlatformLoginRoute = window.location.hash.includes('/platform/login');
+    const isManagementCenterRoute = window.location.hash.includes('/management-center');
+    if (isPlatformLoginRoute) {
+      appStore.setLoginLoading(false);
+      return;
+    }
+    if (isManagementCenterRoute) {
+      try {
+        if (hasToken()) {
+          const platformUser = await platformIsLogin();
+          if (platformUser?.source === 'PLATFORM') {
+            userStore.setInfo(platformUser as any);
+          }
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.log(error);
+      } finally {
+        appStore.setLoginLoading(false);
+      }
+      return;
+    }
     const isWXWork = navigator.userAgent.includes('wxwork');
     const isDingTalk =
       navigator.userAgent.includes('dingtalk') ||
@@ -118,10 +157,12 @@
       }
     }
 
-    if (WHITE_LIST.find((el) => window.location.hash.split('#')[1].includes(el.path)) === undefined) {
+    const currentPath = router.currentRoute.value.path || '';
+    const isTenantLoginRoute = /\/[^/]+\/login$/.test(currentPath);
+    if (!isTenantLoginRoute && WHITE_LIST.find((el) => window.location.hash.split('#')[1].includes(el.path)) === undefined) {
       await userStore.checkIsLogin(isWXWork || isDingTalk || isLark);
-      appStore.setLoginLoading(false);
     }
+    appStore.setLoginLoading(false);
   });
 
   onBeforeUnmount(() => {
@@ -145,6 +186,9 @@
   watchTheme(appStore.pageConfig.theme, appStore.pageConfig);
 
   onBeforeMount(async () => {
+    if (window.location.hash.includes('/platform/login') || window.location.hash.includes('/management-center')) {
+      return;
+    }
     try {
       appStore.initThirdPartyResource();
       await licenseStore.getValidateLicense();

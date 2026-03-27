@@ -164,7 +164,7 @@ public class DataSourceService {
         }
     }
 
-    @Cacheable(value = "table_schema_cache", key = "#databaseName", unless = "#result == null")
+    @Cacheable(value = "table_schema_cache", key = "T(cn.cordys.context.TenantContext).getTenantIdOrDefault() + ':' + #databaseName", unless = "#result == null")
     public List<TableDTO> tableList(String databaseName) {
         var schemaJson = extDataSourceMapper.selectSchemaByDbName(databaseName);
         return JSON.parseArray(schemaJson, TableDTO.class);

@@ -57,7 +57,7 @@ public class ShiroConfig {
      */
     @Bean
     public ShiroFilterFactoryBean shiroFilterFactoryBean(final DefaultWebSecurityManager sessionManager) {
-        final var bean = new ShiroFilterFactoryBean();
+        final ShiroFilterFactoryBean bean = new ShiroFilterFactoryBean();  // 改为具体类型
         bean.setLoginUrl("/");
         bean.setSecurityManager(sessionManager);
         bean.setUnauthorizedUrl("/403");

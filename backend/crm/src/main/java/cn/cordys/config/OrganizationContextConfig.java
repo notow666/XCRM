@@ -18,9 +18,10 @@ public class OrganizationContextConfig {
      * @return
      */
     @Bean
-    public FilterRegistrationBean<OrganizationContextWebFilter> tenantContextWebFilter() {
+    public FilterRegistrationBean<OrganizationContextWebFilter> organizationContextWebFilter() {
         FilterRegistrationBean<OrganizationContextWebFilter> registrationBean = new FilterRegistrationBean<>();
         registrationBean.setFilter(new OrganizationContextWebFilter());
+        registrationBean.setOrder(-100);
         return registrationBean;
     }
 }

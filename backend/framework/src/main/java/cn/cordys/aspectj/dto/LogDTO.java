@@ -64,8 +64,8 @@ public class LogDTO {
     @Schema(description = "登录地")
     private String loginAddress;
 
-    @Schema(description = "平台")
-    private String platform;
+    @Schema(description = "租户ID")
+    private String tenantId;
 
     /**
      * 原始值

@@ -81,7 +81,7 @@ public class SystemService {
         }
     }
 
-    @Cacheable(value = CACHE_COPYRIGHT)
+    @Cacheable(value = CACHE_COPYRIGHT, key = "T(cn.cordys.context.TenantContext).getTenantIdOrDefault()")
     public VersionInfoDTO getVersion() {
         // 支持系统属性覆盖，环境变量退化，最后为 unknown
         String current = StringUtils.defaultIfBlank(System.getenv("CRM_VERSION"), "unknown");

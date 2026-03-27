@@ -10,7 +10,8 @@ export default function checkStatus(
   msg: string,
   msgDetail: string | Record<string, any>,
   code?: number,
-  noErrorTip?: boolean
+  noErrorTip?: boolean,
+  requestUrl?: string
 ): void {
   const { message } = useDiscreteApi({
     messageProviderProps: {
@@ -20,23 +21,38 @@ export default function checkStatus(
   const { t } = useI18n();
   const { logout, isLoginPage, isWhiteListPage } = useUser();
   let errMessage = '';
+  const isTenantDisabledMsg = (text?: string) =>
+    !!text &&
+    (text.includes('租户已停用') ||
+      text.includes('tenant.disabled') ||
+      text.toLowerCase().includes('tenant is disabled'));
   switch (status) {
     case 400:
       errMessage = `${msg}`;
       break;
     case 401: {
       errMessage = msg || t('api.errMsg401');
+      // /logout 本身若返回 401，不应再次触发 logout 造成二次重定向覆盖租户登录页
+      const isLogoutApi = typeof requestUrl === 'string' && requestUrl.includes('/logout');
       if (!isLoginPage() && !isWhiteListPage()) {
         // 不是登录页再调用logout
+        if (isLogoutApi) {
+          break;
+        }
         logout();
       }
       break;
     }
-    case 403:
-      if (router.currentRoute.value.name !== NO_RESOURCE_ROUTE_NAME) {
+    case 403: {
+      errMessage = msg || t('api.errMsg403');
+      if (isTenantDisabledMsg(msg) && !isLoginPage() && !isWhiteListPage()) {
+        // 租户停用场景：提示后登出，避免继续停留在无效会话
+        logout();
+      } else if (router.currentRoute.value.name !== NO_RESOURCE_ROUTE_NAME) {
         router.push({ name: NO_RESOURCE_ROUTE_NAME });
       }
       break;
+    }
     // 404请求不存在
     case 404:
       errMessage = msg || t('api.errMsg404');

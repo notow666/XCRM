@@ -77,6 +77,13 @@ export enum TenderRouteEnum {
   TENDER_INDEX = 'tenderIndex',
 }
 
+export enum ManagementCenterRouteEnum {
+  MANAGEMENT_CENTER = 'managementCenter',
+  MANAGEMENT_CENTER_OVERVIEW = 'managementCenterOverview',
+  MANAGEMENT_CENTER_TENANT = 'managementCenterTenant',
+  MANAGEMENT_CENTER_AUDIT = 'managementCenterAudit',
+}
+
 export enum FullPageEnum {
   FULL_PAGE = 'fullPage',
   FULL_PAGE_DASHBOARD = 'fullPageDashboard',
@@ -97,4 +104,5 @@ export const AppRouteEnum = {
   ...ContractRouteEnum,
   ...OrderRouteEnum,
   ...TenderRouteEnum,
+  ...ManagementCenterRouteEnum,
 };

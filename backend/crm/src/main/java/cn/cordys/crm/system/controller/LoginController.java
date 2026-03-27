@@ -7,13 +7,16 @@ import cn.cordys.common.util.Translator;
 import cn.cordys.common.util.rsa.RsaKey;
 import cn.cordys.common.util.rsa.RsaUtils;
 import cn.cordys.context.OrganizationContext;
+import cn.cordys.context.TenantContext;
 import cn.cordys.crm.system.service.UserLoginService;
+import cn.cordys.tenant.service.TenantMetaService;
 import cn.cordys.security.SessionUser;
 import cn.cordys.security.SessionUtils;
 import cn.cordys.security.UserDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.apache.shiro.SecurityUtils;
 import org.springframework.validation.annotation.Validated;
@@ -32,6 +35,9 @@ public class LoginController {
 
     @Resource
     private UserLoginService userLoginService;
+
+    @Resource
+    private TenantMetaService tenantMetaService;
 
     /**
      * 检查用户是否已登录。
@@ -80,6 +86,15 @@ public class LoginController {
     @PostMapping(value = "/login")
     @Operation(summary = "登录")
     public SessionUser login(@Validated @RequestBody LoginRequest request) {
+        String tenantId = StringUtils.trimToNull(request.getTenantId());
+        if (StringUtils.isBlank(tenantId) || !tenantMetaService.existsTenantId(tenantId)) {
+            throw new GenericException("请求非法");
+        }
+        if (!tenantMetaService.isTenantEnabled(tenantId)) {
+            throw new GenericException(Translator.get("tenant.disabled"));
+        }
+        TenantContext.setTenantId(tenantId);
+
         SessionUser sessionUser = SessionUtils.getUser();
         if (sessionUser != null) {
             // 如果当前用户已登录且用户名与请求用户名不匹配，抛出异常

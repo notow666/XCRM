@@ -13,12 +13,34 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: 'login',
+      redirect: () => {
+        try {
+          const appRaw = localStorage.getItem('app');
+          if (appRaw) {
+            const app = JSON.parse(appRaw);
+            const tenantId = typeof app?.tenantId === 'string' ? app.tenantId.trim() : '';
+            if (tenantId) {
+              return `/${tenantId}/login`;
+            }
+          }
+        } catch {
+          // ignore
+        }
+        return '/platform/login';
+      },
     },
     {
-      path: '/login',
+      path: '/:tenantId/login',
       name: 'login',
       component: () => import('@/views/base/login/index.vue'),
+      meta: {
+        requiresAuth: false,
+      },
+    },
+    {
+      path: '/platform/login',
+      name: 'platformLogin',
+      component: () => import('@/views/platform-login/index.vue'),
       meta: {
         requiresAuth: false,
       },

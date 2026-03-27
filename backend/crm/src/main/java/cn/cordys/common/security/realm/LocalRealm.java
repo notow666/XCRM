@@ -3,9 +3,9 @@ package cn.cordys.common.security.realm;
 
 import cn.cordys.common.constants.UserSource;
 import cn.cordys.common.permission.PermissionUtils;
+import cn.cordys.common.util.CodingUtils;
 import cn.cordys.common.util.Translator;
 import cn.cordys.crm.system.service.UserLoginService;
-import cn.cordys.security.SessionConstants;
 import cn.cordys.security.SessionUser;
 import cn.cordys.security.SessionUtils;
 import cn.cordys.security.UserDTO;
@@ -19,6 +19,8 @@ import org.apache.shiro.realm.AuthorizingRealm;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.springframework.context.annotation.Lazy;
+
+import java.util.Objects;
 
 
 /**
@@ -68,7 +70,7 @@ public class LocalRealm extends AuthorizingRealm {
         UserDTO user = getUserWithOutAuthenticate(userId);
         userId = user.getId();
         SessionUser sessionUser = SessionUser.fromUser(user, (String) session.getId());
-        session.setAttribute(SessionConstants.ATTR_USER, sessionUser);
+        SessionUtils.putUser(sessionUser);
         return new SimpleAuthenticationInfo(userId, password, getName());
 
     }
@@ -93,8 +95,9 @@ public class LocalRealm extends AuthorizingRealm {
             log.warn("The user does not exist: {}", userId);
             throw new UnknownAccountException(Translator.get("password_is_incorrect"));
         }
-        // 密码验证
-        if (!userLoginService.checkUserPassword(user.getId(), password)) {
+        // 直接使用已查询到的用户密码做比对，避免二次查库在多租户路由场景下误判
+        String inputPwdMd5 = CodingUtils.md5(password);
+        if (!Objects.equals(user.getPassword(), inputPwdMd5)) {
             throw new IncorrectCredentialsException(Translator.get("password_is_incorrect"));
         }
         SessionUser sessionUser = SessionUser.fromUser(user, SessionUtils.getSessionId());

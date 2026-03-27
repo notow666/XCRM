@@ -66,7 +66,7 @@ public class DepartmentService extends MoveNodeService {
      *
      * @return List<BaseTreeNode>
      */
-    @Cacheable(value = "dept_tree_cache", key = "#orgId")
+    @Cacheable(value = "dept_tree_cache", key = "T(cn.cordys.context.TenantContext).getTenantIdOrDefault() + ':' + #orgId")
     public List<BaseTreeNode> getTree(String orgId) {
         List<BaseTreeNode> departmentList = extDepartmentMapper.selectTreeNode(orgId);
         return BaseTreeNode.buildTree(departmentList);
@@ -80,7 +80,7 @@ public class DepartmentService extends MoveNodeService {
      * @param userId
      */
     @OperationLog(module = LogModule.SYSTEM_ORGANIZATION, type = LogType.ADD)
-    @CacheEvict(value = "dept_tree_cache", key = "#orgId", beforeInvocation = true)
+    @CacheEvict(value = "dept_tree_cache", key = "T(cn.cordys.context.TenantContext).getTenantIdOrDefault() + ':' + #orgId", beforeInvocation = true)
     public Department addDepartment(DepartmentAddRequest request, String orgId, String userId) {
         //同一层级部门名称唯一
         checkDepartmentName(request.getName(), request.getParentId(), orgId);
@@ -126,7 +126,7 @@ public class DepartmentService extends MoveNodeService {
      * @param userId
      */
     @OperationLog(module = LogModule.SYSTEM_ORGANIZATION, type = LogType.UPDATE)
-    @CacheEvict(value = "dept_tree_cache", key = "#orgId", beforeInvocation = true)
+    @CacheEvict(value = "dept_tree_cache", key = "T(cn.cordys.context.TenantContext).getTenantIdOrDefault() + ':' + #orgId", beforeInvocation = true)
     public void rename(DepartmentRenameRequest request, String userId, String orgId) {
         Department originalDepartment = checkDepartment(request.getId());
         checkDepartmentName(request.getName(), originalDepartment.getParentId(), originalDepartment.getOrganizationId());
@@ -226,7 +226,7 @@ public class DepartmentService extends MoveNodeService {
      *
      * @param ids
      */
-    @CacheEvict(value = "dept_tree_cache", key = "#orgId", beforeInvocation = true)
+    @CacheEvict(value = "dept_tree_cache", key = "T(cn.cordys.context.TenantContext).getTenantIdOrDefault() + ':' + #orgId", beforeInvocation = true)
     public void delete(List<String> ids, String operator, String orgId) {
         if (!deleteCheck(ids, orgId)) {
             throw new GenericException(Translator.get("department.employees.exist"));
@@ -412,7 +412,7 @@ public class DepartmentService extends MoveNodeService {
      * @param operatorId
      * @param orgId
      */
-    @CacheEvict(value = "dept_tree_cache", key = "#orgId", beforeInvocation = true)
+    @CacheEvict(value = "dept_tree_cache", key = "T(cn.cordys.context.TenantContext).getTenantIdOrDefault() + ':' + #orgId", beforeInvocation = true)
     public void sort(NodeMoveRequest request, String operatorId, String orgId) {
         NodeSortDTO nodeSortDTO = super.getNodeSortDTO(request,
                 extDepartmentMapper::selectBaseTreeById,

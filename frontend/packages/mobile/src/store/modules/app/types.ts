@@ -6,6 +6,7 @@ export interface AppState {
   pageSize: number;
   showSizePicker: boolean;
   showQuickJumper: boolean;
+  tenantId: string;
   orgId: string;
   moduleConfigList: ModuleNavBaseInfoItem[]; // 模块配置列表
   messageInfo: MessageInfo; // 消息通知和公告

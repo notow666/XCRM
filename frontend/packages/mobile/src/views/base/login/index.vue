@@ -47,13 +47,14 @@
 </template>
 
 <script setup lang="ts">
-  import { ref } from 'vue';
-  import { useRouter } from 'vue-router';
-  import { FormInstance } from 'vant';
+  import { onMounted, ref } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
+  import { FormInstance, showToast } from 'vant';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
   import { clearToken, getLoginType, isLoginExpires, setLoginExpires, setLoginType } from '@lib/shared/method/auth';
   import { encrypted } from '@lib/shared/method/index';
+  import { getLocalStorage } from '@lib/shared/method/local-storage';
 
   import CrmIcon from '@/components/pure/crm-icon-font/index.vue';
 
@@ -63,6 +64,7 @@
   import { AppRouteEnum } from '@/enums/routeEnum';
 
   const router = useRouter();
+  const route = useRoute();
 
   const appStore = useAppStore();
 
@@ -87,6 +89,16 @@
   const formRef = ref<FormInstance>();
   const loading = ref(false);
 
+  function resolveTenantId() {
+    const tenantId = route.params.tenantId;
+    return typeof tenantId === 'string' && tenantId.trim() ? tenantId : '';
+  }
+
+  const initialTenantId = resolveTenantId();
+  if (initialTenantId) {
+    appStore.setTenantId(initialTenantId);
+  }
+
   async function logout() {
     try {
       await userStore.logout(true);
@@ -102,16 +114,25 @@
       loading.value = true;
       await logout();
 
+      if (!getLocalStorage('publicKey')) {
+        await appStore.initPublicKey();
+      }
+      if (!getLocalStorage('publicKey')) {
+        showToast(t('login.form.publicKeyMissing') || '无法获取登录公钥，请刷新后重试');
+        return;
+      }
+
       await userStore.login({
         username: encrypted(userInfo.value.username) || '',
         password: encrypted(userInfo.value.password) || '',
         authenticate: userInfo.value.authenticate,
+        tenantId: resolveTenantId(),
         platform: 'MOBILE',
       });
       setLoginExpires();
       setLoginType(userInfo.value.authenticate);
       router.replace({
-        name: AppRouteEnum.WORKBENCH,
+        name: AppRouteEnum.WORKBENCH_INDEX,
       });
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -121,9 +142,9 @@
     }
   }
 
-  onMounted(() => {
-    appStore.initPublicKey();
+  onMounted(async () => {
     try {
+      await appStore.initPublicKey();
       if (isLoginExpires()) {
         clearToken();
       }

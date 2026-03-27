@@ -38,14 +38,14 @@ export default function setupUserLoginInfoGuard(router: Router) {
         }
         // 其他浏览器进入则到登录页面
       } else if (to.name !== 'login' && !isWhiteListPage()) {
-        next({ name: 'login' });
+        next({ name: 'login', params: { tenantId: 'default' } });
         NProgress.done();
         return;
       }
     }
     // 已登录访问登录页面和loading页面则都去首页
     if ((to.name === 'login' || to.name === LOGIN_LOADING) && tokenExists) {
-      next({ name: AppRouteEnum.WORKBENCH });
+      next({ name: AppRouteEnum.WORKBENCH_INDEX });
       NProgress.done();
       return;
     }

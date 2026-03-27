@@ -9,7 +9,8 @@ export default function checkStatus(
   msg: string,
   msgDetail: string | Record<string, any>,
   code?: number,
-  noErrorTip?: boolean
+  noErrorTip?: boolean,
+  requestUrl?: string
 ): void {
   const { t } = useI18n();
   const { logout, isLoginPage, isWhiteListPage } = useUser();
@@ -21,7 +22,11 @@ export default function checkStatus(
       break;
     case 401: {
       errMessage = msg || t('api.errMsg401');
+      const isLogoutApi = typeof requestUrl === 'string' && requestUrl.includes('/logout');
       if (!isLoginPage() && !isWhiteListPage()) {
+        if (isLogoutApi) {
+          break;
+        }
         logout();
       }
       break;

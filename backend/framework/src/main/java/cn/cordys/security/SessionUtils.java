@@ -1,8 +1,10 @@
 package cn.cordys.security;
 
 import cn.cordys.common.util.CommonBeanFactory;
+import cn.cordys.context.TenantContext;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.session.Session;
@@ -23,6 +25,7 @@ import static cn.cordys.security.SessionConstants.ATTR_USER;
  */
 @Slf4j
 public class SessionUtils {
+    private static final String DEFAULT_SOURCE = "LOCAL";
 
     /**
      * 获取当前用户的 ID。
@@ -63,27 +66,54 @@ public class SessionUtils {
         }
     }
 
+    private static String buildPrincipalName(String source, String tenantId, String userId) {
+        String normalizedSource = StringUtils.defaultIfBlank(source, DEFAULT_SOURCE);
+        String normalizedTenantId = StringUtils.defaultIfBlank(tenantId, TenantContext.DEFAULT_TENANT_ID);
+        return normalizedSource + ":" + normalizedTenantId + ":" + userId;
+    }
+
+    public static String buildPrincipalName(SessionUser sessionUser) {
+        if (sessionUser == null || StringUtils.isBlank(sessionUser.getId())) {
+            return null;
+        }
+        return buildPrincipalName(sessionUser.getSource(), sessionUser.getTenantId(), sessionUser.getId());
+    }
+
     /**
-     * 踢除指定用户名的用户（从 Redis 会话中删除）。
+     * 踢除指定用户（按 source+tenantId+userId 维度删除会话）。
      *
-     * @param username 用户名
+     * @param source   用户来源
+     * @param tenantId 租户ID
+     * @param userId   用户ID
      */
-    public static void kickOutUser(String username) {
+    public static void kickOutUser(String source, String tenantId, String userId) {
+        if (StringUtils.isBlank(userId)) {
+            return;
+        }
         // 获取 Redis session 存储库
         RedisIndexedSessionRepository sessionRepository = CommonBeanFactory.getBean(RedisIndexedSessionRepository.class);
         if (sessionRepository == null) {
             return;
         }
+        String principalName = buildPrincipalName(source, tenantId, userId);
 
-        // 根据用户名查找会话
-        Map<String, ?> users = sessionRepository.findByPrincipalName(username);
+        // 根据 principal 索引查找会话
+        Map<String, ?> users = sessionRepository.findByPrincipalName(principalName);
         if (MapUtils.isNotEmpty(users)) {
-            // 删除所有与该用户名关联的 session
+            // 删除所有与该 principal 关联的 session
             users.keySet().forEach(k -> {
                 sessionRepository.deleteById(k);
-                sessionRepository.getSessionRedisOperations().delete("spring:session:sessions:" + k);
             });
         }
+    }
+
+    /**
+     * 踢除指定用户（当前租户下 LOCAL 用户）。
+     *
+     * @param userId 用户ID
+     */
+    public static void kickOutUser(String userId) {
+        kickOutUser(DEFAULT_SOURCE, TenantContext.getTenantIdOrDefault(), userId);
     }
 
     /**
@@ -93,6 +123,7 @@ public class SessionUtils {
      * @param kickUserId 被踢用户 ID
      */
     public static void kickOutUser(String operatorId, String kickUserId) {
+        SessionUser currentUser = getUser();
         // 处理用户会话
         boolean isSelfReset = Strings.CS.equals(operatorId, kickUserId);
         if (isSelfReset) {
@@ -100,13 +131,21 @@ public class SessionUtils {
             SecurityUtils.getSubject().logout();
             // 需要检查是否有其他会话存在
             try {
-                SessionUtils.kickOutUser(kickUserId);
+                if (currentUser != null) {
+                    SessionUtils.kickOutUser(currentUser.getSource(), currentUser.getTenantId(), kickUserId);
+                } else {
+                    SessionUtils.kickOutUser(kickUserId);
+                }
             } catch (Exception e) {
                 log.error("踢出用户失败: {}", e.getMessage());
             }
         } else {
             // 管理员重置他人密码，踢出该用户
-            SessionUtils.kickOutUser(kickUserId);
+            if (currentUser != null) {
+                SessionUtils.kickOutUser(currentUser.getSource(), currentUser.getTenantId(), kickUserId);
+            } else {
+                SessionUtils.kickOutUser(kickUserId);
+            }
         }
 
     }
@@ -119,7 +158,10 @@ public class SessionUtils {
     public static void putUser(SessionUser sessionUser) {
         // 保存用户信息到 Session
         SecurityUtils.getSubject().getSession().setAttribute(ATTR_USER, sessionUser);
-        // 保存用户 ID 到 Session
-        SecurityUtils.getSubject().getSession().setAttribute(FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME, sessionUser.getId());
+        // 保存租户隔离后的 principal 到 Session 索引
+        SecurityUtils.getSubject().getSession().setAttribute(
+                FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME,
+                buildPrincipalName(sessionUser)
+        );
     }
 }

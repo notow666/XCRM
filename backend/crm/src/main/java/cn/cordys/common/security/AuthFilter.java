@@ -1,5 +1,6 @@
 package cn.cordys.common.security;
 
+import cn.cordys.security.SessionUtils;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,6 +26,11 @@ public class AuthFilter extends FormAuthenticationFilter {
      */
     @Override
     protected boolean onAccessDenied(ServletRequest request, ServletResponse response) throws Exception {
+        // 兼容 HeaderSession 场景：若 Session 中已存在用户信息，则视为已登录并放行。
+        // 平台登录当前通过 SessionUtils.putUser 建立会话，不一定走 Subject.login。
+        if (SessionUtils.getUser() != null) {
+            return true;
+        }
         if (isLoginRequest(request, response)) {
             if (isLoginSubmission(request, response)) {
                 return executeLogin(request, response);

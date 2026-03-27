@@ -21,16 +21,22 @@ public @interface OperationLog {
     String operator() default "";
 
     /**
-     * @return 操作日志的类型，如：新增、修改、删除
-     * {@link LogType}
+     * 平台
+     * @return
      */
-    String type();
+    String platform() default LogModule.PLATFORM_TENANT_CENTER;
 
     /**
      * @return 业务模块名
      * {@link LogModule}
      */
     String module() default "";
+
+    /**
+     * @return 操作日志的类型，如：新增、修改、删除
+     * {@link LogType}
+     */
+    String type();
 
     /**
      * @return 日志绑定的业务标识

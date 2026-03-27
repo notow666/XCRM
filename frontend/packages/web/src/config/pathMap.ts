@@ -244,4 +244,26 @@ export const pathMap: PathMapItem[] = [
       },
     ],
   },
+  {
+    key: 'MANAGEMENT_CENTER',
+    route: AppRouteEnum.MANAGEMENT_CENTER,
+    locale: 'menu.managementCenter',
+    children: [
+      {
+        key: 'MANAGEMENT_CENTER_OVERVIEW',
+        route: AppRouteEnum.MANAGEMENT_CENTER_OVERVIEW,
+        locale: 'menu.managementCenter.overview',
+      },
+      {
+        key: 'MANAGEMENT_CENTER_TENANT',
+        route: AppRouteEnum.MANAGEMENT_CENTER_TENANT,
+        locale: 'menu.managementCenter.tenant',
+      },
+      {
+        key: 'MANAGEMENT_CENTER_AUDIT',
+        route: AppRouteEnum.MANAGEMENT_CENTER_AUDIT,
+        locale: 'menu.managementCenter.audit',
+      },
+    ],
+  },
 ];

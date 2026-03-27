@@ -1,7 +1,8 @@
 import { clearToken, hasToken, isLoginExpires } from '@lib/shared/method/auth';
 
+import { platformIsLogin } from '@/api/modules';
 import useUser from '@/hooks/useUser';
-import { getFirstRouteNameByPermission } from '@/utils/permission';
+import useUserStore from '@/store/modules/user';
 
 import NProgress from 'nprogress';
 import type { LocationQueryRaw, Router } from 'vue-router';
@@ -17,11 +18,41 @@ export default function setupUserLoginInfoGuard(router: Router) {
     }
 
     const tokenExists = hasToken();
+    const userStore = useUserStore();
+    let isPlatformUser = userStore.userInfo.source === 'PLATFORM';
+    const isPlatformRoute = to.path.startsWith('/platform');
+    const isManagementCenterRoute = to.path.startsWith('/management-center');
+
+    if (tokenExists && (isPlatformRoute || isManagementCenterRoute) && !isPlatformUser) {
+      try {
+        const platformUser = await platformIsLogin();
+        if (platformUser?.source === 'PLATFORM') {
+          userStore.setInfo(platformUser as any);
+          isPlatformUser = true;
+        }
+      } catch (error) {
+        // ignore and fallback to existing guard branches below
+      }
+    }
 
     // 未登录访问受限页面重定向登录页
-    if (!tokenExists && to.name !== 'login' && !isWhiteListPage()) {
+    if (!tokenExists && to.name !== 'login' && to.name !== 'platformLogin' && !isWhiteListPage()) {
+      if (isPlatformRoute) {
+        next({ name: 'platformLogin' });
+        NProgress.done();
+        return;
+      }
+      const routeTenantId = to.params?.tenantId;
+      const appTenantId = userStore.userInfo?.tenantId || '';
+      const tenantIdToRedirect =
+        (typeof routeTenantId === 'string' && routeTenantId.trim()) ||
+        (typeof appTenantId === 'string' && appTenantId.trim()) ||
+        'default';
       next({
         name: 'login',
+        params: {
+          tenantId: tenantIdToRedirect,
+        },
         query: {
           redirect: to.name,
           ...to.query,
@@ -33,8 +64,19 @@ export default function setupUserLoginInfoGuard(router: Router) {
 
     // 已登录访问 login重定向（有权限第一个页面）
     if (to.name === 'login' && tokenExists) {
-      const firstRoute = getFirstRouteNameByPermission(router.getRoutes());
-      next({ name: firstRoute });
+      next({ name: isPlatformUser ? 'managementCenterOverview' : 'workbenchIndex' });
+      NProgress.done();
+      return;
+    }
+
+    if (to.name === 'platformLogin' && tokenExists) {
+      next({ name: 'managementCenterOverview' });
+      NProgress.done();
+      return;
+    }
+
+    if (isPlatformUser && !isPlatformRoute && !isManagementCenterRoute) {
+      next({ name: 'managementCenterOverview' });
       NProgress.done();
       return;
     }

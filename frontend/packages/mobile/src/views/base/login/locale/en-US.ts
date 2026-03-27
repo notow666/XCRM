@@ -17,4 +17,5 @@ export default {
   'login.form.LARK': 'LARK',
   'login.form.logout': 'Log out',
   'login.form.loadingTip': 'Loading, please wait...',
+  'login.form.publicKeyMissing': 'Could not load login public key. Please refresh and try again.',
 };

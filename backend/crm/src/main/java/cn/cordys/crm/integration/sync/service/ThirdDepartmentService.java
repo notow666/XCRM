@@ -5,6 +5,7 @@ import cn.cordys.aspectj.constants.LogType;
 import cn.cordys.aspectj.dto.LogDTO;
 import cn.cordys.common.constants.ThirdConfigTypeConstants;
 import cn.cordys.common.exception.GenericException;
+import cn.cordys.common.redis.TenantRedisKeyBuilder;
 import cn.cordys.common.util.CommonBeanFactory;
 import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.Translator;
@@ -72,6 +73,14 @@ public class ThirdDepartmentService {
     @Resource
     private CommonNoticeSendService commonNoticeSendService;
 
+    private String tenantRedisKey(String rawKey) {
+        return TenantRedisKeyBuilder.tenantKey(rawKey);
+    }
+
+    private String tenantRedisPattern(String rawPattern) {
+        return TenantRedisKeyBuilder.tenantPattern(rawPattern);
+    }
+
     /**
      * 同步组织架构（异步执行）
      *
@@ -83,7 +92,7 @@ public class ThirdDepartmentService {
     public void syncUser(String operatorId, String orgId, String type, Locale locale) {
         Redisson redisson = CommonBeanFactory.getBean(Redisson.class);
         assert redisson != null;
-        RLock lock = redisson.getLock(LOCK_PREFIX + orgId);
+        RLock lock = redisson.getLock(tenantRedisKey(LOCK_PREFIX + orgId));
 
         // 尝试获取锁，避免并发同步
         if (!lock.tryLock()) {
@@ -319,7 +328,7 @@ public class ThirdDepartmentService {
      * 获取同步状态Redis Key
      */
     private String getSyncStatusKey(String orgId) {
-        return SYNC_STATUS_PREFIX + orgId;
+        return tenantRedisKey(SYNC_STATUS_PREFIX + orgId);
     }
 
     /**
@@ -361,7 +370,7 @@ public class ThirdDepartmentService {
      */
     private void clearCaches(String orgId) {
         // 清理部门树缓存
-        stringRedisTemplate.delete(DEPT_TREE_CACHE_KEY + orgId);
+        stringRedisTemplate.delete(tenantRedisKey(DEPT_TREE_CACHE_KEY + orgId));
         // 清理权限缓存
         deleteKeysByPrefixSafely(orgId);
     }
@@ -372,7 +381,7 @@ public class ThirdDepartmentService {
      * @param orgId 组织ID
      */
     public void deleteKeysByPrefixSafely(String orgId) {
-        String pattern = String.format(PERMISSION_CACHE_PATTERN, orgId);
+        String pattern = tenantRedisPattern(String.format(PERMISSION_CACHE_PATTERN, orgId));
         ScanOptions options = ScanOptions.scanOptions().match(pattern).count(SCAN_COUNT).build();
 
         try (Cursor<String> cursor = stringRedisTemplate.scan(options)) {

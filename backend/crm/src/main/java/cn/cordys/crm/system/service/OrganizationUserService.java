@@ -545,7 +545,7 @@ public class OrganizationUserService {
             extNotificationMapper.deleteByReceivers(ids, orgId);
         }
         // 踢出用户
-        userList.forEach(user -> SessionUtils.kickOutUser(user.getName()));
+        userList.forEach(user -> SessionUtils.kickOutUser(user.getId()));
         extOrganizationUserMapper.deleteUserByOrgId(orgId);
 
     }
@@ -725,7 +725,7 @@ public class OrganizationUserService {
      * @param operatorId
      * @param orgId
      */
-    @CacheEvict(value = "dept_tree_cache", key = "#orgId", beforeInvocation = true)
+    @CacheEvict(value = "dept_tree_cache", key = "T(cn.cordys.context.TenantContext).getTenantIdOrDefault() + ':' + #orgId", beforeInvocation = true)
     public void saveImportData(List<UserExcelData> list, List<BaseTreeNode> departmentTree, Map<String, String> departmentMap, String operatorId, String orgId) {
         //部门
         List<String> departmentPath = list.stream().map(UserExcelData::getDepartment).toList();

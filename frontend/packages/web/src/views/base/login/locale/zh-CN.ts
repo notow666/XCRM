@@ -1,5 +1,5 @@
 export default {
-  'login.form.title': '新一代的开源 AI CRM 系统',
+  'login.form.title': '新一代的开源 CRM 系统',
   'login.form.userName.errMsg': '用户名不能为空',
   'login.form.password.errMsg': '密码不能为空',
   'login.form.login.errMsg': '登录出错，请刷新重试',
@@ -24,4 +24,5 @@ export default {
   'login.form.DINGTALKScanLogin': '钉钉登录',
   'login.form.LARK': '飞书',
   'login.form.LARKScanLogin': '飞书登录',
+  'login.form.publicKeyMissing': '无法获取登录公钥，请刷新页面后重试',
 };

@@ -10,4 +10,9 @@ public class NoticeRedisMessage extends RedisMessage {
      */
     private String noticeType;
 
+    /**
+     * 事件所属租户ID
+     */
+    private String tenantId;
+
 }

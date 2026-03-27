@@ -18,7 +18,7 @@ import useUser from '@/hooks/useUser';
 import router from '@/router';
 import useAppStore from '@/store/modules/app/index';
 import useLicenseStore from '@/store/modules/setting/license';
-import { getFirstRouteNameByPermission, hasAnyPermission } from '@/utils/permission';
+import { hasAnyPermission } from '@/utils/permission';
 
 import type { NotificationOptions, NotificationReactive } from 'naive-ui';
 
@@ -45,6 +45,8 @@ const useUserStore = defineStore('user', {
       createTime: 0,
       updateTime: 0,
       language: '',
+      tenantId: '',
+      tenantIds: [],
       lastOrganizationId: '',
       phone: '',
       source: '',
@@ -95,6 +97,7 @@ const useUserStore = defineStore('user', {
         setToken(res.sessionId, res.csrfToken);
         this.setInfo(res);
         const appStore = useAppStore();
+        appStore.setTenantId(res.tenantId || '');
         const lastOrganizationId = res.lastOrganizationId ?? res.organizationIds[0] ?? '';
         this.clientIdRandomId = getGenerateId();
         appStore.setOrgId(lastOrganizationId);
@@ -119,7 +122,7 @@ const useUserStore = defineStore('user', {
       removeRouteListener();
       removeScript(CompanyTypeEnum.SQLBot);
       appStore.hideLoading();
-      router.push({ name: 'login' });
+      // 登出跳转与租户信息清理由 useUser().logout() 统一处理
     },
     // 登出
     async logout(silence = false) {
@@ -152,6 +155,7 @@ const useUserStore = defineStore('user', {
         setToken(res.sessionId, res.csrfToken);
         this.setInfo(res);
         const appStore = useAppStore();
+        appStore.setTenantId(res.tenantId || '');
         const lastOrganizationId = res.lastOrganizationId ?? res.organizationIds?.[0] ?? '';
         appStore.setOrgId(lastOrganizationId);
         this.clientIdRandomId = getGenerateId();
@@ -172,6 +176,7 @@ const useUserStore = defineStore('user', {
         setToken(res.sessionId, res.csrfToken);
         this.setInfo(res);
         const appStore = useAppStore();
+        appStore.setTenantId(res.tenantId || '');
         const lastOrganizationId = res.lastOrganizationId ?? res.organizationIds?.[0] ?? '';
         appStore.setOrgId(lastOrganizationId);
         return true;
@@ -186,11 +191,20 @@ const useUserStore = defineStore('user', {
       const isLoginStatus = await this.isLogin(isDisabledErrorTip);
       if (isLoginStatus) {
         if (isLoginPage()) {
-          const currentRouteName = getFirstRouteNameByPermission(router.getRoutes());
-          await router.push({ name: currentRouteName });
+          await router.push({ name: this.userInfo.source === 'PLATFORM' ? 'managementCenterOverview' : 'workbenchIndex' });
         }
       } else if (!isLoginPage()) {
-        router.push({ name: 'login' });
+        const appStore = useAppStore();
+        const routeTenantId = router.currentRoute.value.params?.tenantId;
+        const tenantId =
+          (typeof routeTenantId === 'string' && routeTenantId.trim()) ||
+          (typeof appStore.tenantId === 'string' && appStore.tenantId.trim()) ||
+          '';
+        if (tenantId) {
+          router.push({ name: 'login', params: { tenantId } });
+        } else {
+          router.push({ name: 'platformLogin' });
+        }
       }
     },
     // 展示系统公告

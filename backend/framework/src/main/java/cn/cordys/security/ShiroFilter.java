@@ -1,6 +1,7 @@
 package cn.cordys.security;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -75,6 +76,7 @@ public final class ShiroFilter {
         FILTER_CHAIN_DEFINITION_MAP.put("/logout", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/is-login", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/get-key", "anon");
+        FILTER_CHAIN_DEFINITION_MAP.put("/platform/auth/**", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/403", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/sso/callback/**", "anon");
     }
@@ -89,6 +91,7 @@ public final class ShiroFilter {
         FILTER_CHAIN_DEFINITION_MAP.put("/ui/display/preview", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/ui/display/info", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/anonymous/**", "anon");
+        FILTER_CHAIN_DEFINITION_MAP.put("/system/version", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/system/version/current", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/sse/subscribe/**", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/sse/close/**", "anon");
@@ -107,6 +110,10 @@ public final class ShiroFilter {
      * @return 返回一个不可变Map，包含应绕过 CSRF 检查的 URL 路径的过滤器链定义。
      */
     public static Map<String, String> ignoreCsrfFilter() {
-        return Map.of("/", "apikey, authc", "/language", "apikey, authc", "/mock", "apikey, authc");
+        Map<String, String> ignore = new HashMap<>(3);
+        ignore.put("/", "apikey, authc");
+        ignore.put("/language", "apikey, authc");
+        ignore.put("/mock", "apikey, authc");
+        return ignore;
     }
 }

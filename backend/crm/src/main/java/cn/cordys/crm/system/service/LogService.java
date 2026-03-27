@@ -1,6 +1,7 @@
 package cn.cordys.crm.system.service;
 
 import cn.cordys.aspectj.context.OperationLogContext;
+import cn.cordys.aspectj.constants.LogModule;
 import cn.cordys.aspectj.dto.LogContextInfo;
 import cn.cordys.aspectj.dto.LogDTO;
 import cn.cordys.aspectj.handler.OperationLogHandler;
@@ -8,6 +9,7 @@ import cn.cordys.common.constants.InternalUser;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.JSON;
+import cn.cordys.context.TenantContext;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.crm.system.domain.OperationLog;
 import cn.cordys.crm.system.domain.OperationLogBlob;
@@ -17,12 +19,16 @@ import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 
 /**
  * 操作日志服务类
@@ -37,6 +43,10 @@ public class LogService implements OperationLogHandler {
 
     @Resource
     private BaseMapper<OperationLogBlob> operationLogBlobMapper;
+
+    @Resource
+    @Qualifier("masterJdbcTemplate")
+    private JdbcTemplate masterJdbcTemplate;
 
     /**
      * 根据 LogDTO 创建一个 OperationLogBlob 实体对象。
@@ -126,6 +136,9 @@ public class LogService implements OperationLogHandler {
             if (StringUtils.isBlank(log.getResourceName()) && ObjectUtils.isNotEmpty(extra.getResourceName())) {
                 log.setResourceName(subStrResourceName(extra.getResourceName()));
             }
+            if (StringUtils.isBlank(log.getTenantId()) && ObjectUtils.isNotEmpty(extra.getTenantId())) {
+                log.setTenantId(extra.getTenantId());
+            }
         }
 
         // 截断日志内容
@@ -134,12 +147,12 @@ public class LogService implements OperationLogHandler {
         OperationLog operationLog = BeanUtils.copyBean(new OperationLog(), log);
         operationLog.setResourceName(subStrResourceName(log.getResourceName()));
         operationLog.setDetail(log.getDetail());
-        operationLogMapper.insert(operationLog);
-
         OperationLogBlob blob = getBlob(log);
-        if (blob.getOriginalValue() != null || blob.getModifiedValue() != null) {
-            operationLogBlobMapper.insert(blob);
+        if (StringUtils.isNotBlank(log.getTenantId())) {
+            runWithTenant(log.getTenantId(), () -> insertByMapper(operationLog, blob));
+            return;
         }
+        insertByMapper(operationLog, blob);
     }
 
     /**
@@ -154,10 +167,10 @@ public class LogService implements OperationLogHandler {
             return;
         }
 
-        var currentTimeMillis = System.currentTimeMillis();
+        long currentTimeMillis = System.currentTimeMillis();
         List<OperationLog> items = new ArrayList<>();
         // 使用流处理，构建操作日志和Blob列表
-        var blobs = logs.stream()
+        List<OperationLogBlob> blobs = logs.stream()
                 .peek(log -> {
                     log.setId(IDGenerator.nextStr());
                     log.setResourceName(subStrResourceName(log.getResourceName()));
@@ -170,7 +183,7 @@ public class LogService implements OperationLogHandler {
                 })
                 .map(this::getBlob)
                 .filter(blob -> blob.getOriginalValue() != null || blob.getModifiedValue() != null)
-                .toList();
+                .collect(Collectors.toList());
         // 批量插入操作日志和日志Blob数据
         operationLogMapper.batchInsert(items);
         operationLogBlobMapper.batchInsert(blobs);
@@ -179,5 +192,26 @@ public class LogService implements OperationLogHandler {
     @Override
     public void handleLog(LogDTO operationLog) {
         add(operationLog);
+    }
+
+    private void runWithTenant(String tenantId, Runnable action) {
+        String previous = TenantContext.getTenantId();
+        try {
+            TenantContext.setTenantId(tenantId);
+            action.run();
+        } finally {
+            if (previous == null) {
+                TenantContext.clear();
+            } else {
+                TenantContext.setTenantId(previous);
+            }
+        }
+    }
+
+    private void insertByMapper(OperationLog operationLog, OperationLogBlob blob) {
+        operationLogMapper.insert(operationLog);
+        if (blob.getOriginalValue() != null || blob.getModifiedValue() != null) {
+            operationLogBlobMapper.insert(blob);
+        }
     }
 }

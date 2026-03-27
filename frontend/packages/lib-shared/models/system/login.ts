@@ -3,5 +3,6 @@ export interface LoginParams {
   password: string;
   authenticate: string;
   loginAddress?: string;
+  tenantId?: string;
   platform: 'WEB' | 'MOBILE'; // 平台,WEB\MOBILE
 }

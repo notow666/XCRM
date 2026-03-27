@@ -1,6 +1,7 @@
 package cn.cordys.aspectj.builder;
 
 import cn.cordys.aspectj.constants.CodeVariableType;
+import cn.cordys.aspectj.constants.LogModule;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import org.hibernate.validator.constraints.Length;

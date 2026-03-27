@@ -54,6 +54,7 @@ const useAppStore = defineStore('app', {
     pageSize: 10,
     showSizePicker: true,
     showQuickJumper: true,
+    tenantId: '',
     orgId: '',
     moduleConfigList: cloneDeep(defaultModuleConfig),
     messageInfo: {
@@ -67,6 +68,9 @@ const useAppStore = defineStore('app', {
     originStageConfigList: [],
   }),
   getters: {
+    getTenantId(state: AppState) {
+      return state.tenantId;
+    },
     getOrgId(state: AppState) {
       return state.orgId;
     },
@@ -84,6 +88,9 @@ const useAppStore = defineStore('app', {
     },
   },
   actions: {
+    setTenantId(id: string) {
+      this.tenantId = id;
+    },
     setOrgId(id: string) {
       this.orgId = id;
     },
@@ -177,9 +184,20 @@ const useAppStore = defineStore('app', {
       // TODO license 先放开
       // const licenseStore = useLicenseStore();
       // if (!licenseStore.hasLicense()) return;
-      const res = await getThirdConfigByType(CompanyTypeEnum.SQLBot);
-      if (res.config.sqlBotChatEnable) {
-        await loadScript(res.config?.appSecret as string, { identifier: CompanyTypeEnum.SQLBot });
+      try {
+        const res = await getThirdConfigByType(CompanyTypeEnum.SQLBot);
+        if (res?.config && res.config.sqlBotChatEnable) {
+          await loadScript(res.config?.appSecret as string, { identifier: CompanyTypeEnum.SQLBot });
+        }
+      } catch (error) {
+        if (typeof error === 'string' && error.includes('当前类型应用未配置')) {
+          return;
+        }
+        if ((error as any)?.code === 100500 || (error as any)?.response?.data?.code === 100500) {
+          return;
+        }
+        // eslint-disable-next-line no-console
+        console.log(error);
       }
     },
     async initPublicKey() {
@@ -202,7 +220,7 @@ const useAppStore = defineStore('app', {
     },
   },
   persist: {
-    paths: ['moduleConfigList'],
+    paths: ['moduleConfigList', 'tenantId', 'orgId'],
   },
 });
 

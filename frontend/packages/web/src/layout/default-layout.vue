@@ -13,7 +13,7 @@
       <PageContent />
     </n-layout>
   </n-layout>
-  <PersonalInfoDrawer v-model:visible="showPersonalInfo" :active-tab-value="personalTab" />
+  <PersonalInfoDrawer v-if="!isPlatformUser" v-model:visible="showPersonalInfo" :active-tab-value="personalTab" />
 </template>
 
 <script setup lang="ts">
@@ -28,10 +28,13 @@
   import PersonalInfoDrawer from '@/views/system/business/components/personalInfoDrawer.vue';
 
   import { defaultPlatformLogo } from '@/config/business';
+  import useUserStore from '@/store/modules/user';
 
   import { DashboardRouteEnum, TenderRouteEnum } from '@/enums/routeEnum';
 
   const route = useRoute();
+  const userStore = useUserStore();
+  const isPlatformUser = computed(() => userStore.userInfo.source === 'PLATFORM');
 
   interface Props {
     isPreview?: boolean;

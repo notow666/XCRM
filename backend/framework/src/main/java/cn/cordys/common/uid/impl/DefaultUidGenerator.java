@@ -4,7 +4,6 @@ import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.uid.BitsAllocator;
 import cn.cordys.common.uid.worker.WorkerIdAssigner;
 import cn.cordys.common.util.TimeUtils;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -54,8 +53,15 @@ public class DefaultUidGenerator implements DisposableBean {
     /**
      * Spring lifecycle init
      */
-    @PostConstruct
-    public void init() {
+    private volatile boolean initialized = false;
+
+    /**
+     * 延后到应用就绪后执行（由外部初始化器/监听器触发），避免启动期落到错误租户。
+     */
+    public synchronized void init() {
+        if (initialized) {
+            return;
+        }
         // init epoch
         setEpochStr(epochStr);
 
@@ -74,6 +80,8 @@ public class DefaultUidGenerator implements DisposableBean {
                 "Initialized UID Generator: epoch={}, bits=(time:{}, worker:{}, seq:{}), workerId={}",
                 epochStr, timeBits, workerBits, seqBits, workerId
         );
+
+        initialized = true;
     }
 
     /**

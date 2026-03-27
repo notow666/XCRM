@@ -411,6 +411,8 @@ export const defaultUserInfo: OrgUserInfo = {
   createTime: 0,
   updateTime: 0,
   language: '',
+  tenantId: '',
+  tenantIds: [''],
   lastOrganizationId: '',
   phone: '',
   source: '',

@@ -1,11 +1,23 @@
 package cn.cordys.aspectj.constants;
 
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
+
 /**
  * 系统日志模块常量类。
  * 用于定义不同模块的名称，便于日志记录时进行分类。
  */
 public class LogModule {
-
+    /**
+     * 管理中心
+     */
+    public static final String PLATFORM_MANAGEMENT_CENTER = "MANAGEMENT_CENTER";
+    public static final Marker MANAGEMENT_MARKER = MarkerFactory.getMarker(PLATFORM_MANAGEMENT_CENTER);
+    /**
+     * 租户中心
+     */
+    public static final String PLATFORM_TENANT_CENTER = "TENANT_CENTER";
+    public static final Marker TENANT_MARKER = MarkerFactory.getMarker(PLATFORM_TENANT_CENTER);
     /**
      * 系统管理模块
      */

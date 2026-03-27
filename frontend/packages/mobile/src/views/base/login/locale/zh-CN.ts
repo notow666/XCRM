@@ -17,4 +17,5 @@ export default {
   'login.form.LARK': '飞书',
   'login.form.logout': '退出登录',
   'login.form.loadingTip': '正在加载中，请稍候...',
+  'login.form.publicKeyMissing': '无法获取登录公钥，请刷新后重试',
 };

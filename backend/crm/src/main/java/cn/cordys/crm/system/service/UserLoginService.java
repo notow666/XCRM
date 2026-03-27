@@ -12,6 +12,7 @@ import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.ServletUtils;
 import cn.cordys.common.util.Translator;
 import cn.cordys.context.OrganizationContext;
+import cn.cordys.context.TenantContext;
 import cn.cordys.crm.system.constants.LoginType;
 import cn.cordys.crm.system.constants.OrganizationConfigConstants;
 import cn.cordys.crm.system.domain.*;
@@ -25,13 +26,14 @@ import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
 import cn.cordys.security.SessionUser;
 import cn.cordys.security.SessionUtils;
 import cn.cordys.security.UserDTO;
+import cn.cordys.tenant.service.TenantMetaService;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.compress.utils.Sets;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.*;
-import org.apache.shiro.authz.UnauthorizedException;
 import org.apache.shiro.subject.Subject;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,6 +53,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class UserLoginService {
+    private static final String PLATFORM_ADMIN_READ_PERMISSION = "PLATFORM_ADMIN:READ";
     @Resource
     private BaseMapper<User> userMapper;
 
@@ -80,6 +83,9 @@ public class UserLoginService {
 
     @Resource
     private ExtOrganizationConfigDetailMapper extOrganizationConfigDetailMapper;
+
+    @Resource
+    private TenantMetaService tenantMetaService;
 
     /**
      * 用户登录
@@ -120,8 +126,6 @@ public class UserLoginService {
             throw new ExpiredCredentialsException(Translator.get("password_is_incorrect"));
         } catch (AuthenticationException e) {
             throw new AuthenticationException(e.getMessage());
-        } catch (UnauthorizedException e) {
-            throw new UnauthorizedException(Translator.get("password_is_incorrect") + e.getMessage());
         }
     }
 
@@ -147,11 +151,15 @@ public class UserLoginService {
         // 获取用户所属组织列表
         Set<String> orgIds = getUserOrganizations(userDTO.getId());
 
+        // 确定当前租户ID并校验绑定关系
+        String tenantId = determineTenantId();
+        validateTenantBinding(tenantId);
+
         // 确定当前使用的组织ID
         String organizationId = determineOrganizationId(userDTO, orgIds);
 
         // 设置用户权限和角色信息
-        setupUserPermissions(userDTO, organizationId, orgIds);
+        setupUserPermissions(userDTO, organizationId, orgIds, tenantId);
 
         //默认密码检查
         checkDefaultPwd(userDTO);
@@ -167,7 +175,7 @@ public class UserLoginService {
     private void checkDefaultPwd(UserDTO userDTO) {
         String defaultPwd = "";
         if (Strings.CI.equals(userDTO.getId(), InternalUser.ADMIN.getValue())) {
-            defaultPwd = CodingUtils.md5("CordysCRM");
+            defaultPwd = CodingUtils.md5("crm123");
         } else {
             if (StringUtils.isNotBlank(userDTO.getPhone())) {
                 defaultPwd = CodingUtils.md5(userDTO.getPhone().substring(userDTO.getPhone().length() - 6));
@@ -230,7 +238,7 @@ public class UserLoginService {
         }
 
         // 验证配置内容
-        validateAuthConfig(enabledConfigs.getFirst());
+        validateAuthConfig(enabledConfigs.get(0));
     }
 
     /**
@@ -251,7 +259,7 @@ public class UserLoginService {
         }
 
         // 设置用户部门信息
-        setUserDepartmentInfo(userDTO, orgUsers.getFirst());
+        setUserDepartmentInfo(userDTO, orgUsers.get(0));
     }
 
     /**
@@ -283,7 +291,7 @@ public class UserLoginService {
     /**
      * 设置用户的权限和角色信息
      */
-    private void setupUserPermissions(UserDTO userDTO, String organizationId, Set<String> orgIds) {
+    private void setupUserPermissions(UserDTO userDTO, String organizationId, Set<String> orgIds, String tenantId) {
         // 设置用户角色
         List<RoleDataScopeDTO> roleOptions = roleService.getRoleOptions(userDTO.getId(), organizationId);
         userDTO.setRoles(roleOptions);
@@ -291,11 +299,34 @@ public class UserLoginService {
         // 更新最后登录的组织ID
         userDTO.setLastOrganizationId(organizationId);
 
-        // 设置用户权限
-        userDTO.setPermissionIds(permissionCache.getPermissionIds(userDTO.getId(), organizationId));
+        // 设置用户权限（租户用户强制剔除管理中心权限）
+        Set<String> permissionIds = permissionCache.getPermissionIds(userDTO.getId(), organizationId);
+        if (!Strings.CI.equals(userDTO.getSource(), "PLATFORM")) {
+            permissionIds.remove(PLATFORM_ADMIN_READ_PERMISSION);
+        }
+        userDTO.setPermissionIds(permissionIds);
 
         // 设置用户所属的所有组织
         userDTO.setOrganizationIds(orgIds);
+
+        // 设置租户信息
+        userDTO.setTenantId(tenantId);
+        userDTO.setTenantIds(Sets.newHashSet(tenantId));
+    }
+
+    private String determineTenantId() {
+        String tenantId = TenantContext.getTenantId();
+        if (StringUtils.isBlank(tenantId)) {
+            // 必须使用 AuthenticationException 子类，否则 Shiro 会报 unexpected error
+            throw new AccountException("请求非法");
+        }
+        return tenantId;
+    }
+
+    private void validateTenantBinding(String tenantId) {
+        if (!tenantMetaService.isTenantEnabled(tenantId)) {
+            throw new DisabledAccountException(Translator.get("tenant.disabled"));
+        }
     }
 
     /**
@@ -350,7 +381,11 @@ public class UserLoginService {
      */
     private List<OrganizationConfigDetail> getEnabledWeComOauthConfigs(String configId) {
         return extOrganizationConfigDetailMapper
-                .getEnableOrganizationConfigDetails(configId, List.of(ThirdDetailType.WECOM_SYNC.name(), ThirdDetailType.DINGTALK_SYNC.name(), ThirdDetailType.LARK_SYNC.name()));
+                .getEnableOrganizationConfigDetails(configId, java.util.Arrays.asList(
+                        ThirdDetailType.WECOM_SYNC.name(),
+                        ThirdDetailType.DINGTALK_SYNC.name(),
+                        ThirdDetailType.LARK_SYNC.name()
+                ));
     }
 
     /**

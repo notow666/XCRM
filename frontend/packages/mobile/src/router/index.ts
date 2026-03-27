@@ -13,10 +13,10 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/loading',
+      redirect: '/default/login',
     },
     {
-      path: '/login',
+      path: '/:tenantId/login',
       name: 'login',
       component: () => import('@/views/base/login/index.vue'),
       meta: {

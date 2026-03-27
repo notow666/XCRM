@@ -37,6 +37,8 @@ const useUserStore = defineStore('user', {
       createTime: 0,
       updateTime: 0,
       language: '',
+      tenantId: '',
+      tenantIds: [],
       lastOrganizationId: '',
       phone: '',
       source: '',
@@ -77,6 +79,7 @@ const useUserStore = defineStore('user', {
         setToken(res.sessionId, res.csrfToken);
         this.setInfo(res);
         const appStore = useAppStore();
+        appStore.setTenantId(res.tenantId || '');
         const lastOrganizationId = res.lastOrganizationId ?? res.organizationIds?.[0] ?? '';
         appStore.setOrgId(lastOrganizationId);
         this.clientIdRandomId = getGenerateId();
@@ -107,10 +110,10 @@ const useUserStore = defineStore('user', {
       const isLoginStatus = await this.isLogin();
       if (isLoginStatus) {
         if (isLoginPage()) {
-          router.replace({ name: AppRouteEnum.WORKBENCH });
+          router.replace({ name: AppRouteEnum.WORKBENCH_INDEX });
         }
       } else if (!isLoginPage()) {
-        router.replace({ name: 'login' });
+        router.replace({ name: 'login', params: { tenantId: 'default' } });
       }
     },
     async login(params: LoginParams) {
@@ -119,6 +122,7 @@ const useUserStore = defineStore('user', {
         setToken(res.sessionId, res.csrfToken);
         this.setInfo(res);
         const appStore = useAppStore();
+        appStore.setTenantId(res.tenantId || '');
         const lastOrganizationId = res.lastOrganizationId ?? res.organizationIds[0] ?? '';
         this.clientIdRandomId = getGenerateId();
         appStore.setOrgId(lastOrganizationId);

@@ -83,7 +83,7 @@ export default function useLogin() {
         setLoginType(loginType);
         const { redirect, ...othersQuery } = router.currentRoute.value.query;
         await router.replace({
-          name: (redirect as string) || AppRouteEnum.WORKBENCH,
+          name: (redirect as string) || AppRouteEnum.WORKBENCH_INDEX,
           query: {
             ...othersQuery,
           },
@@ -94,7 +94,7 @@ export default function useLogin() {
       console.log(error);
       const err = error as Result;
       if (err.code === 100500) {
-        router.replace({ name: 'login' });
+        router.replace({ name: 'login', params: { tenantId: 'default' } });
       } else if (err.code === 401) {
         router.replace(AUTH_DISABLED_ROUTE_NAME);
       }
@@ -136,7 +136,7 @@ export default function useLogin() {
       ) as keyof typeof platformConfig | undefined;
       // 没有检测到三方平台企业微信、钉钉浏览器直接跳转到登录
       if (!platformKey) {
-        return router.replace({ name: 'login' });
+        return router.replace({ name: 'login', params: { tenantId: 'default' } });
       }
       // 检测到任一平台走第三方认证登录
       await handleThirdAuthLogin(platformKey);
@@ -145,7 +145,7 @@ export default function useLogin() {
       console.log(error);
       const err = error as Result;
       if (err.code === 100500) {
-        router.replace({ name: 'login' });
+        router.replace({ name: 'login', params: { tenantId: 'default' } });
       } else if (err.code === 401) {
         router.replace(AUTH_DISABLED_ROUTE_NAME);
       }

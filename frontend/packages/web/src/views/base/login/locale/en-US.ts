@@ -1,5 +1,5 @@
 export default {
-  'login.form.title': 'New generation open-source AI CRM system',
+  'login.form.title': 'New generation open-source CRM system',
   'login.form.userName.errMsg': 'Username cannot be empty',
   'login.form.password.errMsg': 'Password cannot be empty',
   'login.form.login.errMsg': 'Login error, refresh and try again',
@@ -24,4 +24,5 @@ export default {
   'login.form.DINGTALKScanLogin': 'Dingtalk scan code login',
   'login.form.LARK': 'LARK',
   'login.form.LARKScanLogin': 'Lark scan code login',
+  'login.form.publicKeyMissing': 'Could not load login public key. Please refresh and try again.',
 };

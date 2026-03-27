@@ -3,9 +3,11 @@ package cn.cordys.crm.system.consumer;
 import cn.cordys.common.constants.TopicConstants;
 import cn.cordys.common.redis.TopicConsumer;
 import cn.cordys.common.util.JSON;
+import cn.cordys.context.TenantContext;
 import cn.cordys.crm.system.notice.dto.NoticeRedisMessage;
 import cn.cordys.crm.system.notice.sse.SseService;
 import jakarta.annotation.Resource;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -22,6 +24,12 @@ public class SSEConsumer implements TopicConsumer {
     @Override
     public void consume(String message) {
         NoticeRedisMessage noticeRedisMessage = JSON.parseObject(message, NoticeRedisMessage.class);
-        sseService.broadcastPeriodically(noticeRedisMessage.getMessage(), noticeRedisMessage.getNoticeType());
+        String tenantId = StringUtils.defaultIfBlank(noticeRedisMessage.getTenantId(), TenantContext.DEFAULT_TENANT_ID);
+        TenantContext.setTenantId(tenantId);
+        try {
+            sseService.broadcastPeriodically(noticeRedisMessage.getMessage(), noticeRedisMessage.getNoticeType());
+        } finally {
+            TenantContext.clear();
+        }
     }
 }

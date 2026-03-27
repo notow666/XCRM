@@ -12,6 +12,7 @@ import cn.cordys.common.dto.OptionDTO;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.pager.PageUtils;
 import cn.cordys.common.pager.PagerWithOption;
+import cn.cordys.common.redis.TenantRedisKeyBuilder;
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.CodingUtils;
 import cn.cordys.common.util.Translator;
@@ -70,6 +71,10 @@ public class PersonalCenterService {
     @Resource
     private ExtOrganizationUserMapper extOrganizationUserMapper;
 
+    private String tenantRedisKey(String rawKey) {
+        return TenantRedisKeyBuilder.tenantKey(rawKey);
+    }
+
     public UserResponse getUserDetail(String id, String orgId) {
         if (Strings.CS.equals(id, InternalUser.ADMIN.getValue())) {
             return BeanUtils.copyBean(new UserResponse(), userBaseMapper.selectByPrimaryKey(id));
@@ -83,7 +88,7 @@ public class PersonalCenterService {
      */
     public void sendCode(SendEmailDTO emailDTO, String organizationId) {
         String email = emailDTO.getEmail();
-        String redisKey = PREFIX + email;
+        String redisKey = tenantRedisKey(PREFIX + email);
         if (stringRedisTemplate.hasKey(redisKey)) {
             stringRedisTemplate.delete(redisKey); // 验证通过后删除验证码
         }
@@ -111,7 +116,7 @@ public class PersonalCenterService {
      * 存储验证码到 Redis，设置有效期 10 分钟
      */
     private void saveCode(String email, String code) {
-        stringRedisTemplate.opsForValue().set(PREFIX + email, code, 10, TimeUnit.MINUTES);
+        stringRedisTemplate.opsForValue().set(tenantRedisKey(PREFIX + email), code, 10, TimeUnit.MINUTES);
     }
 
     /**

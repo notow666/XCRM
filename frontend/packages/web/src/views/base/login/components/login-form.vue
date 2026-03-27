@@ -118,25 +118,28 @@
 
 <script lang="ts" setup>
   import { computed, ref } from 'vue';
+  import { useRoute } from 'vue-router';
   import { FormInst, NButton, NDivider, NForm, NFormItem, NInput, NSpin, useMessage } from 'naive-ui';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
-  import { clearToken, getLoginType, isLoginExpires, setLoginExpires, setLoginType } from '@lib/shared/method/auth';
+  import { clearToken, getLoginType, hasToken, isLoginExpires, setLoginExpires, setLoginType } from '@lib/shared/method/auth';
   import { encrypted } from '@lib/shared/method/index';
+  import { getLocalStorage } from '@lib/shared/method/local-storage';
 
   import CrmIcon from '@/components/pure/crm-icon-font/index.vue';
   import TabQrCode from './tabQrCode.vue';
 
-  // import { getAuthDetailByType } from '@/api/modules/setting/config';
-  // import { getPlatformParamUrl } from '@/api/modules/user';
   import { getThirdConfigByType } from '@/api/modules';
   import { defaultLoginLogo } from '@/config/business';
   import useLoading from '@/hooks/useLoading';
   import useUser from '@/hooks/useUser';
   import useAppStore from '@/store/modules/app';
   import useLicenseStore from '@/store/modules/setting/license';
-  // import useModal from '@/hooks/useModal';
   import useUserStore from '@/store/modules/user';
+
+  // import { getAuthDetailByType } from '@/api/modules/setting/config';
+  // import { getPlatformParamUrl } from '@/api/modules/user';
+  // import useModal from '@/hooks/useModal';
 
   const { goUserHasPermissionPage } = useUser();
   const { t } = useI18n();
@@ -181,6 +184,19 @@
   const showQrCodeTab = ref(false);
   const activeName = ref('');
 
+  const route = useRoute();
+
+  function resolveTenantId() {
+    const { tenantId } = route.params as { tenantId?: unknown };
+    return typeof tenantId === 'string' && tenantId.trim() ? tenantId : '';
+  }
+
+  // 进入登录页后立即写入 tenantId，确保 QR 登录回调等请求在 mounted 前也带上正确的 X-Tenant-ID
+  const initialTenantId = resolveTenantId();
+  if (initialTenantId) {
+    appStore.setTenantId(initialTenantId);
+  }
+
   function switchLoginType(type: string) {
     userInfo.value.authenticate = type;
     if (type === 'QR_CODE') {
@@ -196,16 +212,31 @@
       if (!errors) {
         setLoading(true);
         try {
-          try {
-            await userStore.logout(true); // 登录之前先注销，防止未登出就继续登录导致报错
-          } catch (error) {
-            // eslint-disable-next-line no-console
-            console.log('logout error', error);
+          const tenantId = resolveTenantId();
+          if (!tenantId) {
+            Message.error(t('login.form.login.tenant_missing') || 'tenantId is required');
+            return;
+          }
+          if (!getLocalStorage('publicKey')) {
+            await appStore.initPublicKey();
+          }
+          if (!getLocalStorage('publicKey')) {
+            Message.error(t('login.form.publicKeyMissing') || '无法获取登录公钥，请刷新页面后重试');
+            return;
+          }
+          if (hasToken()) {
+            try {
+              await userStore.logout(true); // 登录之前先注销，防止未登出就继续登录导致报错
+            } catch (error) {
+              // eslint-disable-next-line no-console
+              console.log('logout error', error);
+            }
           }
           await userStore.login({
             username: encrypted(userInfo.value.username) || '',
             password: encrypted(userInfo.value.password) || '',
             authenticate: userInfo.value.authenticate,
+            tenantId,
             platform: 'WEB',
           });
           await licenseStore.getValidateLicense();
@@ -328,13 +359,15 @@
       //   initPlatformInfo();
       // }
       initPlatformInfo();
-      appStore.initPublicKey();
       try {
+        // 必须先拿到 RSA 公钥再展示登录表单，否则 encrypted() 在无 publicKey 时会失败，后端收到无效密文会报「用户名或密码不正确」
+        await appStore.initPublicKey();
         if (isLoginExpires()) {
           preheat.value = false;
           clearToken();
         } else {
-          preheat.value = await userStore.isLogin();
+          // 无 token 时不调用 /is-login，避免登录页首开被无意义请求阻塞
+          preheat.value = hasToken() ? await userStore.isLogin() : false;
         }
       } catch (e) {
         // eslint-disable-next-line no-console

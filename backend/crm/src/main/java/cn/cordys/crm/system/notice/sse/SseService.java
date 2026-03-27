@@ -2,7 +2,9 @@ package cn.cordys.crm.system.notice.sse;
 
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.JSON;
+import cn.cordys.common.redis.TenantRedisKeyBuilder;
 import cn.cordys.context.OrganizationContext;
+import cn.cordys.context.TenantContext;
 import cn.cordys.crm.system.constants.NotificationConstants;
 import cn.cordys.crm.system.domain.Notification;
 import cn.cordys.crm.system.dto.response.NotificationDTO;
@@ -40,6 +42,14 @@ public class SseService {
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
+    private String tenantRedisKey(String rawKey) {
+        return TenantRedisKeyBuilder.tenantKey(rawKey);
+    }
+
+    private String tenantUserKey(String userId) {
+        return TenantContext.getTenantIdOrDefault() + ":" + userId;
+    }
+
     /**
      * 添加或获取现有客户端流
      */
@@ -50,7 +60,8 @@ public class SseService {
             log.info("User ID or Client ID is blank, cannot add client.");
             return null;
         }
-        Map<String, ClientSinkWrapper> inner = userClients.computeIfAbsent(userId,
+        String userKey = tenantUserKey(userId);
+        Map<String, ClientSinkWrapper> inner = userClients.computeIfAbsent(userKey,
                 k -> Collections.synchronizedMap(new LinkedHashMap<>()));
 
         synchronized (inner) {
@@ -77,12 +88,13 @@ public class SseService {
      */
     public void removeClient(String userId, String clientId) {
         if (StringUtils.isAnyBlank(userId, clientId)) return;
-        Map<String, ClientSinkWrapper> map = userClients.get(userId);
+        String userKey = tenantUserKey(userId);
+        Map<String, ClientSinkWrapper> map = userClients.get(userKey);
         if (map == null) return;
         synchronized (map) {
             ClientSinkWrapper w = map.remove(clientId);
             if (w != null) w.complete();
-            if (map.isEmpty()) userClients.remove(userId);
+            if (map.isEmpty()) userClients.remove(userKey);
         }
     }
 
@@ -90,7 +102,7 @@ public class SseService {
      * 向指定用户所有客户端发送事件
      */
     public void sendToUser(String userId, Object data) {
-        Map<String, ClientSinkWrapper> map = userClients.get(userId);
+        Map<String, ClientSinkWrapper> map = userClients.get(tenantUserKey(userId));
         if (map != null) {
             map.forEach((clientId, wrapper) -> wrapper.emit(JSON.toJSONString(data)));
         }
@@ -100,7 +112,7 @@ public class SseService {
      * 向单个客户端发送事件
      */
     public void sendToClient(String userId, String clientId, Object data) {
-        Optional.ofNullable(userClients.get(userId))
+        Optional.ofNullable(userClients.get(tenantUserKey(userId)))
                 .map(m -> m.get(clientId)).ifPresent(wrapper -> wrapper.emit(JSON.toJSONString(data)));
     }
 
@@ -120,7 +132,7 @@ public class SseService {
         SseMessageDTO dto = new SseMessageDTO();
         if (Strings.CI.equals(sendType, NotificationConstants.Type.SYSTEM_NOTICE.toString())) {
             List<String> modules = sendModuleService.getNoticeModules();
-            Set<String> sysValues = stringRedisTemplate.opsForZSet().range(USER_PREFIX + userId, 0, -1);
+            Set<String> sysValues = stringRedisTemplate.opsForZSet().range(tenantRedisKey(USER_PREFIX + userId), 0, -1);
             if (CollectionUtils.isNotEmpty(sysValues)) {
                 dto.setNotificationDTOList(buildDTOList(sysValues, MSG_PREFIX));
             } else {
@@ -133,13 +145,13 @@ public class SseService {
             }
         }
         if (Strings.CI.equals(sendType, NotificationConstants.Type.ANNOUNCEMENT_NOTICE.toString())) {
-            Set<String> values = stringRedisTemplate.opsForZSet().range(USER_ANNOUNCE_PREFIX + userId, 0, -1);
+            Set<String> values = stringRedisTemplate.opsForZSet().range(tenantRedisKey(USER_ANNOUNCE_PREFIX + userId), 0, -1);
             if (CollectionUtils.isNotEmpty(values)) {
                 dto.setAnnouncementDTOList(buildDTOList(values, ANNOUNCE_PREFIX));
             }
         }
         dto.setRead(Boolean.parseBoolean(
-                stringRedisTemplate.opsForValue().get(USER_READ_PREFIX + userId)
+                stringRedisTemplate.opsForValue().get(tenantRedisKey(USER_READ_PREFIX + userId))
         ));
         return dto;
     }
@@ -152,7 +164,7 @@ public class SseService {
             return Collections.emptyList();
         }
         return values.stream()
-                .map(val -> stringRedisTemplate.opsForValue().get(prefix + val))
+                .map(val -> stringRedisTemplate.opsForValue().get(tenantRedisKey(prefix + val)))
                 .filter(StringUtils::isNotBlank)
                 .map(json -> {
                     Notification notification = JSON.parseObject(json, Notification.class);

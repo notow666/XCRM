@@ -5,6 +5,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.lang.NonNull;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -20,6 +22,13 @@ public class OrganizationContextWebFilter extends OncePerRequestFilter {
      * 组织信息的请求头名称
      */
     public static final String ORGANIZATION_ID_HEADER = "Organization-Id";
+
+    @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) throws ServletException {
+        String uri = request.getRequestURI();
+        return StringUtils.contains(uri, "/platform/")
+                || StringUtils.contains(uri, "/system/version");
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)

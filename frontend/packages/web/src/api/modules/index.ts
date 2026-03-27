@@ -563,6 +563,8 @@ export const {
   getTenderConfig,
 } = businessApi;
 
+export * from './platform';
+
 export const {
   getMessageTask,
   addAnnouncement,

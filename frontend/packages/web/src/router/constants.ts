@@ -23,8 +23,16 @@ export const NOT_FOUND = {
   },
 };
 
+export const PLATFORM_LOGIN = {
+  name: 'platformLogin',
+  path: '/platform/login',
+  meta: {
+    requiresAuth: false,
+  },
+};
+
 // 路由白名单，无需校验权限与登录状态
-export const WHITE_LIST = [NOT_FOUND];
+export const WHITE_LIST = [NOT_FOUND, PLATFORM_LOGIN];
 
 // 重定向中转站路由
 export const REDIRECT_ROUTE_NAME = 'Redirect';

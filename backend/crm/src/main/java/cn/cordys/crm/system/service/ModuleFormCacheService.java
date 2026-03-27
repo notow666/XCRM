@@ -30,7 +30,7 @@ public class ModuleFormCacheService {
      *
      * @return 表单配置
      */
-    @CachePut(value = "form_cache", key = "#currentOrgId + ':' + #saveParam.formKey", unless = "#result == null")
+    @CachePut(value = "form_cache", key = "T(cn.cordys.context.TenantContext).getTenantIdOrDefault() + ':' + #currentOrgId + ':' + #saveParam.formKey", unless = "#result == null")
     public ModuleFormConfigDTO save(ModuleFormSaveRequest saveParam, String currentUserId, String currentOrgId) {
         return moduleFormService.save(saveParam, currentUserId, currentOrgId);
     }
@@ -43,7 +43,7 @@ public class ModuleFormCacheService {
      *
      * @return 表单配置
      */
-    @Cacheable(value = "form_cache", key = "#currentOrgId + ':' + #formKey", unless = "#result == null")
+    @Cacheable(value = "form_cache", key = "T(cn.cordys.context.TenantContext).getTenantIdOrDefault() + ':' + #currentOrgId + ':' + #formKey", unless = "#result == null")
     public ModuleFormConfigDTO getConfig(String formKey, String currentOrgId) {
         return moduleFormService.getConfig(formKey, currentOrgId);
     }

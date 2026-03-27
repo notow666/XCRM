@@ -12,6 +12,7 @@ import org.quartz.TriggerKey;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -20,8 +21,7 @@ import java.util.List;
 public class ExtScheduleService {
 
     // TODO: Add RESOURCE_TYPES
-    private static final List<String> RESOURCE_TYPES = List.of(
-    );
+    private static final List<String> RESOURCE_TYPES = new ArrayList<>();
     @Resource
     private BaseMapper<Schedule> scheduleMapper;
     @Resource

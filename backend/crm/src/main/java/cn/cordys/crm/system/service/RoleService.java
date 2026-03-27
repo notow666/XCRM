@@ -6,6 +6,7 @@ import cn.cordys.aspectj.constants.LogType;
 import cn.cordys.aspectj.context.OperationLogContext;
 import cn.cordys.aspectj.dto.LogContextInfo;
 import cn.cordys.common.constants.InternalRole;
+import cn.cordys.common.constants.InternalUser;
 import cn.cordys.common.constants.RoleDataScope;
 import cn.cordys.common.dto.RoleDataScopeDTO;
 import cn.cordys.common.exception.GenericException;
@@ -561,10 +562,14 @@ public class RoleService {
 
     public List<RoleDataScopeDTO> getRoleOptions(String userId, String orgId) {
         List<String> roleIds = getRoleIdsByUserId(userId);
-        if (CollectionUtils.isEmpty(roleIds)) {
-            return List.of();
+        List<Role> roles = CollectionUtils.isEmpty(roleIds) ? List.of() : getByIds(roleIds);
+        // 兜底：部分租户历史数据可能缺失 admin->org_admin 关联，导致管理员菜单权限缺失
+        if (CollectionUtils.isEmpty(roles) && Strings.CS.equals(userId, InternalUser.ADMIN.getValue())) {
+            Role orgAdmin = roleMapper.selectByPrimaryKey(InternalRole.ORG_ADMIN.getValue());
+            if (orgAdmin != null) {
+                roles = Collections.singletonList(orgAdmin);
+            }
         }
-        List<Role> roles = getByIds(roleIds);
         return roles.stream()
                 .filter(role -> Strings.CS.equals(role.getOrganizationId(), orgId))
                 .map(role -> {
