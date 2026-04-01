@@ -92,7 +92,7 @@ public class SerialNumGenerator {
 
         String currentMonth = new SimpleDateFormat("yyyyMM").format(new Date());
 
-        try (Cursor<String> cursor = redis.scan(ScanOptions.scanOptions().match(tenantRedisPattern("serial:*:*:*")).count(1000).build())) {
+        try (Cursor<String> cursor = redis.scan(ScanOptions.scanOptions().match("*:serial:*:*:*").count(1000).build())) {
             cursor.forEachRemaining(key -> {
                 String serialDate = key.substring(key.lastIndexOf(":") + 1);
                 if (!currentMonth.equals(serialDate)) {

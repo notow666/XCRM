@@ -1,6 +1,7 @@
 package cn.cordys.crm.integration.dataease.service;
 
 import cn.cordys.common.constants.RoleDataScope;
+import cn.cordys.common.context.TenantTaskExecutor;
 import cn.cordys.common.dto.BaseTreeNode;
 import cn.cordys.common.dto.OptionDTO;
 import cn.cordys.common.service.DataScopeService;
@@ -55,15 +56,18 @@ public class DataEaseSyncService {
     private DataScopeService dataScopeService;
     @Resource
     private DataEaseService dataEaseService;
+    @Resource
+    private TenantTaskExecutor tenantTaskExecutor;
 
     @QuartzScheduled(cron = "0 0 0 * * ?")
     public void syncDataEase() {
-        Set<String> orgIds = extOrganizationMapper.selectAllOrganizationIds();
-        // 同步角色
-        for (String orgId : orgIds) {
-            log.info("定时同步DataEase数据，组织ID: {}", orgId);
-            syncDataEase(orgId);
-        }
+        tenantTaskExecutor.runForEachEnabledTenant("DataEaseSyncService.syncDataEase", tenantId -> {
+            Set<String> orgIds = extOrganizationMapper.selectAllOrganizationIds();
+            for (String orgId : orgIds) {
+                log.info("定时同步DataEase数据，tenantId={}, 组织ID={}", tenantId, orgId);
+                syncDataEase(orgId);
+            }
+        });
     }
 
     public void syncDataEase(String orgId) {

@@ -19,6 +19,7 @@ import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.util.CollectionUtils;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -32,6 +33,8 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 public class OperationOperationLogInterceptor extends OperationLogValueParser implements MethodInterceptor, Serializable, SmartInitializingSingleton {
+    @Serial
+    private static final long serialVersionUID = 8423165548581910950L;
 
     @Setter
     private OperationLogSource operationLogSource;

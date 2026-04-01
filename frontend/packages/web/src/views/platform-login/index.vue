@@ -5,9 +5,9 @@
       <div class="platform-login-form h-[100vh] flex-1">
         <div class="login-form" style="height: 100vh;">
           <div class="title">
-            <div class="flex justify-center">
-              <img :src="loginLogo" class="h-[52px] w-[240px]"/>
-            </div>
+<!--            <div class="flex justify-center">-->
+<!--              <img :src="loginLogo" class="h-[52px] w-[240px]"/>-->
+<!--            </div>-->
             <div class="title-0 mt-[16px] flex justify-center">
               <span class="title-welcome">管理中心登录</span>
             </div>

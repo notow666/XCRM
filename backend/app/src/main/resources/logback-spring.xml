@@ -4,10 +4,19 @@
     <property resource="commons.properties"/>
     <property resource="cordys-crm.properties" ignoreResourceNotFound="true"/>
 
+    <!-- 控制台日志格式 -->
+    <property name="CONSOLE_LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{traceId}] [%X{tenantId}] [%X{userId}] %-5level %logger{36} - %msg%n"/>
+
+    <!-- 文件日志格式 -->
+    <property name="FILE_LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{traceId}] [%X{tenantId}] [%X{userId}] %-5level %logger{36} - %msg%n"/>
+
     <!-- Console 输出 -->
     <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d %5p %40.40c:%4L - %m%n</pattern>
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
         </encoder>
     </appender>
 
@@ -26,8 +35,8 @@
             <maxFileSize>50MB</maxFileSize>
         </rollingPolicy>
         <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
-            <Pattern>%d [%thread] %-5level %logger{36} %line - %msg%n</Pattern>
         </encoder>
     </appender>
 
@@ -44,8 +53,8 @@
             <maxFileSize>50MB</maxFileSize>
         </rollingPolicy>
         <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
-            <Pattern>%d [%thread] %-5level %logger{36} %line - %msg%n</Pattern>
         </encoder>
     </appender>
 
@@ -62,8 +71,8 @@
             <maxFileSize>50MB</maxFileSize>
         </rollingPolicy>
         <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
-            <Pattern>%d [%thread] %-5level %logger{36} %line - %msg%n</Pattern>
         </encoder>
     </appender>
 
@@ -80,8 +89,8 @@
             <maxFileSize>50MB</maxFileSize>
         </rollingPolicy>
         <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
-            <Pattern>%d [%thread] %-5level %logger{36} %line - %msg%n</Pattern>
         </encoder>
     </appender>
 
@@ -98,8 +107,8 @@
             <maxFileSize>50MB</maxFileSize>
         </rollingPolicy>
         <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
-            <Pattern>%d [%thread] %-5level %logger{36} %line - %msg%n</Pattern>
         </encoder>
     </appender>
 

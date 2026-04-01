@@ -6,6 +6,7 @@ import cn.cordys.aspectj.dto.LogContextInfo;
 import cn.cordys.aspectj.dto.LogDTO;
 import cn.cordys.aspectj.handler.OperationLogHandler;
 import cn.cordys.common.constants.InternalUser;
+import cn.cordys.common.constants.MdcConstants;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.JSON;
@@ -19,6 +20,7 @@ import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
@@ -108,6 +110,8 @@ public class LogService implements OperationLogHandler {
      */
     @Async
     public void add(LogDTO log) {
+        log.setTraceId(MDC.get(MdcConstants.TRACE_ID_KEY));
+
         if (StringUtils.isBlank(log.getOrganizationId())) {
             log.setOrganizationId(OrganizationContext.getOrganizationId());
         }

@@ -1,6 +1,7 @@
 package cn.cordys.crm.system.job;
 
 import cn.cordys.common.util.JSON;
+import cn.cordys.common.context.TenantTaskExecutor;
 import cn.cordys.common.redis.TenantRedisKeyBuilder;
 import cn.cordys.crm.system.dto.response.AnnouncementDTO;
 import cn.cordys.crm.system.mapper.ExtAnnouncementMapper;
@@ -27,6 +28,8 @@ public class NotifyOnJob {
     private AnnouncementService announcementService;
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+    @Resource
+    private TenantTaskExecutor tenantTaskExecutor;
 
     private String tenantRedisKey(String rawKey) {
         return TenantRedisKeyBuilder.tenantKey(rawKey);
@@ -34,11 +37,10 @@ public class NotifyOnJob {
 
     @QuartzScheduled(cron = "0 0/5 * * * ?")
     public void onEvent() {
-        try {
+        tenantTaskExecutor.runForEachEnabledTenant("NotifyOnJob.onEvent", tenantId -> {
+            log.info("执行公告通知定时任务，tenantId={}", tenantId);
             this.addNotification();
-        } catch (Exception e) {
-            log.error("公告通知异常: ", e.getMessage());
-        }
+        });
     }
 
     /**

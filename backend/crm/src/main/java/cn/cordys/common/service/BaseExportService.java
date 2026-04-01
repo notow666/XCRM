@@ -10,10 +10,7 @@ import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.resolver.field.AbstractModuleFieldResolver;
 import cn.cordys.common.resolver.field.ModuleFieldResolverFactory;
 import cn.cordys.common.uid.IDGenerator;
-import cn.cordys.common.util.CommonBeanFactory;
-import cn.cordys.common.util.JSON;
-import cn.cordys.common.util.SubListUtils;
-import cn.cordys.common.util.Translator;
+import cn.cordys.common.util.*;
 import cn.cordys.crm.system.constants.ExportConstants;
 import cn.cordys.crm.system.domain.ExportTask;
 import cn.cordys.crm.system.dto.field.base.BaseField;
@@ -444,7 +441,8 @@ public abstract class BaseExportService {
 		for (int i = 1; i < alignSubFvs.size(); i++) {
 			// 其余行只用遍历子表格字段
 			Map<String,Object> subRowMap = alignSubFvs.get(i);
-			futures.add(executor.submit(() -> transFieldValueWithSub(metas, new LinkedHashMap<>(), new LinkedHashMap<>(), subRowMap)));
+			futures.add(AsyncUtils.supplyAsync(
+                    () -> transFieldValueWithSub(metas, new LinkedHashMap<>(), new LinkedHashMap<>(), subRowMap), executor));
 		}
 
 		for (Future<List<Object>> f : futures) {

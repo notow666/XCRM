@@ -6,9 +6,11 @@ import cn.cordys.common.util.HikariCPUtils;
 import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.rsa.RsaKey;
 import cn.cordys.common.util.rsa.RsaUtils;
+import cn.cordys.context.TenantContext;
 import cn.cordys.crm.system.service.ExportTaskStopService;
 import cn.cordys.crm.system.service.ExtScheduleService;
 import cn.cordys.crm.system.service.SystemService;
+import cn.cordys.tenant.service.TenantMetaService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -16,6 +18,11 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 @Component
 @Slf4j
@@ -36,6 +43,8 @@ class AppListener implements ApplicationRunner {
     private ExportTaskStopService exportTaskStopService;
     @Resource
     private SystemService systemService;
+    @Resource
+    private TenantMetaService tenantMetaService;
 
     /**
      * 应用启动后执行的初始化方法。
@@ -56,16 +65,9 @@ class AppListener implements ApplicationRunner {
         log.info("初始化RSA配置");
         initializeRsaConfiguration();
 
-        log.info("初始化定时任务");
-        extScheduleService.startEnableSchedules();
-
         HikariCPUtils.printHikariCPStatus();
 
-        log.info("初始化默认组织数据");
-        dataInitService.initOneTime();
-
-        log.info("停止导出任务");
-        exportTaskStopService.stopPreparedAll();
+        initializeBusinessByTenant();
 
         log.info("清理表单缓存");
         systemService.clearFormCache();
@@ -80,7 +82,8 @@ class AppListener implements ApplicationRunner {
      * </p>
      */
     private void initializeRsaConfiguration() {
-        String redisKey = "rsa:key";
+        // 管理中心 Redis key 统一使用 master: 前缀
+        String redisKey = "master:rsa:key";
         try {
             // 从 Redis 获取 RSA 密钥
             String rsaStr = stringRedisTemplate.opsForValue().get(redisKey);
@@ -97,11 +100,50 @@ class AppListener implements ApplicationRunner {
         try {
             // 如果 Redis 中没有密钥，生成新的 RSA 密钥并保存到 Redis
             RsaKey rsaKey = RsaUtils.getRsaKey();
-            stringRedisTemplate.opsForValue().set(redisKey, JSON.toJSONString(rsaKey));
+            stringRedisTemplate.opsForValue().set(redisKey, Objects.requireNonNull(JSON.toJSONString(rsaKey)));
             RsaUtils.setRsaKey(rsaKey);
         } catch (Exception e) {
             log.error("初始化 RSA 配置失败", e);
         }
+    }
+
+    private void initializeBusinessByTenant() {
+        String previousTenantId = TenantContext.getTenantId();
+        List<String> tenantIds = getEnabledTenantIds();
+        for (String tenantId : tenantIds) {
+            try {
+                TenantContext.setTenantId(tenantId);
+                log.info("初始化租户业务配置，tenantId={}", tenantId);
+
+                log.info("初始化定时任务，tenantId={}", tenantId);
+                extScheduleService.startEnableSchedules();
+
+                log.info("初始化默认组织数据，tenantId={}", tenantId);
+                dataInitService.initOneTime();
+
+                log.info("停止导出任务，tenantId={}", tenantId);
+                exportTaskStopService.stopPreparedAll();
+            } catch (Exception e) {
+                log.error("租户初始化失败，tenantId={}", tenantId, e);
+            }
+        }
+        if (StringUtils.isBlank(previousTenantId)) {
+            TenantContext.clear();
+        } else {
+            TenantContext.setTenantId(previousTenantId);
+        }
+    }
+
+    private List<String> getEnabledTenantIds() {
+        Set<String> enabledTenantIds = tenantMetaService.listEnabledTenantIds();
+        List<String> tenantIds = new ArrayList<>();
+        if (enabledTenantIds != null) {
+            tenantIds.addAll(enabledTenantIds);
+        }
+        if (!tenantIds.contains(TenantContext.DEFAULT_TENANT_ID)) {
+            tenantIds.add(TenantContext.DEFAULT_TENANT_ID);
+        }
+        return tenantIds;
     }
 
 

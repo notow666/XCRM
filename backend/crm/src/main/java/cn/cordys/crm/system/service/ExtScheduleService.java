@@ -2,6 +2,7 @@ package cn.cordys.crm.system.service;
 
 import cn.cordys.common.schedule.ScheduleManager;
 import cn.cordys.common.util.JSON;
+import cn.cordys.context.TenantContext;
 import cn.cordys.crm.system.domain.Schedule;
 import cn.cordys.crm.system.mapper.ExtScheduleMapper;
 import cn.cordys.mybatis.BaseMapper;
@@ -48,9 +49,10 @@ public class ExtScheduleService {
                         removeJob(schedule); // 删除关闭的job
                     }
                     log.info("初始化任务：{}", JSON.toJSONString(schedule));
+                    String tenantId = TenantContext.getTenantIdOrDefault();
                     scheduleManager.addOrUpdateCronJob(
-                            new JobKey(schedule.getKey(), schedule.getJob()),
-                            new TriggerKey(schedule.getKey(), schedule.getJob()),
+                            new JobKey(tenantId + ":" + schedule.getKey(), tenantId + ":" + schedule.getJob()),
+                            new TriggerKey(tenantId + ":" + schedule.getKey(), tenantId + ":" + schedule.getJob()),
                             Class.forName(schedule.getJob()),
                             schedule.getValue(),
                             scheduleManager.getDefaultJobDataMap(schedule, schedule.getValue(), schedule.getCreateUser())
@@ -67,9 +69,10 @@ public class ExtScheduleService {
     }
 
     private void removeJob(Schedule schedule) {
+        String tenantId = TenantContext.getTenantIdOrDefault();
         scheduleManager.removeJob(
-                new JobKey(schedule.getKey(), schedule.getJob()),
-                new TriggerKey(schedule.getKey(), schedule.getJob())
+                new JobKey(tenantId + ":" + schedule.getKey(), tenantId + ":" + schedule.getJob()),
+                new TriggerKey(tenantId + ":" + schedule.getKey(), tenantId + ":" + schedule.getJob())
         );
     }
 }

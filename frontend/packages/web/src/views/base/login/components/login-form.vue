@@ -8,14 +8,14 @@
   </div>
   <div v-else class="login-form" :style="props.isPreview ? 'height: inherit' : 'height: 100vh'">
     <div class="title">
-      <div class="flex justify-center">
-        <img :src="innerLogo" class="h-[52px] w-[240px]" />
-      </div>
-      <div class="title-0 mt-[16px] flex justify-center">
-        <span class="title-welcome">
-          {{ t(innerSlogan || '') || t('login.form.title') }}
-        </span>
-      </div>
+<!--      <div class="flex justify-center">-->
+<!--        <img :src="innerLogo" class="h-[52px] w-[240px]" />-->
+<!--      </div>-->
+<!--      <div class="title-0 mt-[16px] flex justify-center">-->
+<!--        <span class="title-welcome">-->
+<!--          {{ t(innerSlogan || '') || t('login.form.title') }}-->
+<!--        </span>-->
+<!--      </div>-->
     </div>
 
     <div class="form mt-[40px] min-w-[480px]">

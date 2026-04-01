@@ -1,9 +1,11 @@
 package cn.cordys.common.schedule;
 
 import cn.cordys.common.exception.GenericException;
+import cn.cordys.context.TenantContext;
 import cn.cordys.crm.system.domain.Schedule;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.quartz.*;
 
 /**
@@ -22,6 +24,7 @@ import org.quartz.*;
  */
 @Slf4j
 public class ScheduleManager {
+    private static final String TENANT_ID_KEY = "tenantId";
 
     @Resource
     private Scheduler scheduler;
@@ -78,13 +81,16 @@ public class ScheduleManager {
     public void addCronJob(JobKey jobKey, TriggerKey triggerKey, Class<? extends Job> jobClass, String cron, JobDataMap jobDataMap) {
         try {
             log.info("addCronJob: {},{}", triggerKey.getName(), triggerKey.getGroup());
-            JobBuilder jobBuilder = JobBuilder.newJob(jobClass).withIdentity(jobKey);
+            JobBuilder jobBuilder = JobBuilder.newJob(jobClass).withIdentity(withTenantJobKey(jobKey));
             if (jobDataMap != null) {
+                if (StringUtils.isBlank(jobDataMap.getString(TENANT_ID_KEY))) {
+                    jobDataMap.put(TENANT_ID_KEY, TenantContext.getTenantIdOrDefault());
+                }
                 jobBuilder.usingJobData(jobDataMap);
             }
 
             TriggerBuilder<Trigger> triggerBuilder = TriggerBuilder.newTrigger();
-            triggerBuilder.withIdentity(triggerKey);
+            triggerBuilder.withIdentity(withTenantTriggerKey(triggerKey));
             triggerBuilder.startNow();
             triggerBuilder.withSchedule(CronScheduleBuilder.cronSchedule(cron));
             CronTrigger trigger = (CronTrigger) triggerBuilder.build();
@@ -115,10 +121,11 @@ public class ScheduleManager {
      * @param cron       新的 Cron 表达式
      */
     public void modifyCronJobTime(TriggerKey triggerKey, String cron) {
+        TriggerKey tenantTriggerKey = withTenantTriggerKey(triggerKey);
 
-        log.info("modifyCronJobTime: {}", triggerKey.getName() + "," + triggerKey.getGroup());
+        log.info("modifyCronJobTime: {}", tenantTriggerKey.getName() + "," + tenantTriggerKey.getGroup());
         try {
-            CronTrigger trigger = (CronTrigger) scheduler.getTrigger(triggerKey);
+            CronTrigger trigger = (CronTrigger) scheduler.getTrigger(tenantTriggerKey);
             if (trigger == null) {
                 return;
             }
@@ -127,11 +134,11 @@ public class ScheduleManager {
             if (!oldTime.equalsIgnoreCase(cron)) {
                 // 修改触发器的 Cron 表达式
                 TriggerBuilder<Trigger> triggerBuilder = TriggerBuilder.newTrigger();
-                triggerBuilder.withIdentity(triggerKey);
+                triggerBuilder.withIdentity(tenantTriggerKey);
                 triggerBuilder.startNow();
                 triggerBuilder.withSchedule(CronScheduleBuilder.cronSchedule(cron));
                 trigger = (CronTrigger) triggerBuilder.build();
-                scheduler.rescheduleJob(triggerKey, trigger);
+                scheduler.rescheduleJob(tenantTriggerKey, trigger);
             }
         } catch (Exception e) {
             throw new RuntimeException("修改 Cron 表达式失败", e);
@@ -145,11 +152,13 @@ public class ScheduleManager {
      * @param triggerKey 触发器标识
      */
     public void removeJob(JobKey jobKey, TriggerKey triggerKey) {
+        JobKey tenantJobKey = withTenantJobKey(jobKey);
+        TriggerKey tenantTriggerKey = withTenantTriggerKey(triggerKey);
         try {
-            log.info("RemoveJob: {},{}", jobKey.getName(), jobKey.getGroup());
-            scheduler.pauseTrigger(triggerKey);
-            scheduler.unscheduleJob(triggerKey);
-            scheduler.deleteJob(jobKey);
+            log.info("RemoveJob: {},{}", tenantJobKey.getName(), tenantJobKey.getGroup());
+            scheduler.pauseTrigger(tenantTriggerKey);
+            scheduler.unscheduleJob(tenantTriggerKey);
+            scheduler.deleteJob(tenantJobKey);
         } catch (Exception e) {
             log.error("删除任务失败", e);
             throw new RuntimeException("删除任务失败", e);
@@ -186,12 +195,14 @@ public class ScheduleManager {
      */
     public void addOrUpdateCronJob(JobKey jobKey, TriggerKey triggerKey, Class jobClass, String cron, JobDataMap jobDataMap)
             throws SchedulerException {
-        log.info("AddOrUpdateCronJob: {}", jobKey.getName() + "," + triggerKey.getGroup());
+        JobKey tenantJobKey = withTenantJobKey(jobKey);
+        TriggerKey tenantTriggerKey = withTenantTriggerKey(triggerKey);
+        log.info("AddOrUpdateCronJob: {}", tenantJobKey.getName() + "," + tenantTriggerKey.getGroup());
 
-        if (scheduler.checkExists(triggerKey)) {
-            modifyCronJobTime(triggerKey, cron);
+        if (scheduler.checkExists(tenantTriggerKey)) {
+            modifyCronJobTime(tenantTriggerKey, cron);
         } else {
-            addCronJob(jobKey, triggerKey, jobClass, cron, jobDataMap);
+            addCronJob(tenantJobKey, tenantTriggerKey, jobClass, cron, jobDataMap);
         }
     }
 
@@ -225,6 +236,29 @@ public class ScheduleManager {
         jobDataMap.put("userId", userId);
         jobDataMap.put("config", schedule.getConfig());
         jobDataMap.put("organizationId", schedule.getOrganizationId());
+        jobDataMap.put(TENANT_ID_KEY, TenantContext.getTenantIdOrDefault());
         return jobDataMap;
+    }
+
+    private JobKey withTenantJobKey(JobKey jobKey) {
+        String tenantId = TenantContext.getTenantIdOrDefault();
+        String name = appendTenantPrefix(jobKey.getName(), tenantId);
+        String group = appendTenantPrefix(jobKey.getGroup(), tenantId);
+        return new JobKey(name, group);
+    }
+
+    private TriggerKey withTenantTriggerKey(TriggerKey triggerKey) {
+        String tenantId = TenantContext.getTenantIdOrDefault();
+        String name = appendTenantPrefix(triggerKey.getName(), tenantId);
+        String group = appendTenantPrefix(triggerKey.getGroup(), tenantId);
+        return new TriggerKey(name, group);
+    }
+
+    private String appendTenantPrefix(String value, String tenantId) {
+        String prefix = tenantId + ":";
+        if (StringUtils.isBlank(value) || value.startsWith(prefix)) {
+            return value;
+        }
+        return prefix + value;
     }
 }

@@ -1,5 +1,6 @@
 package cn.cordys.crm.system.job;
 
+import cn.cordys.common.context.TenantTaskExecutor;
 import cn.cordys.crm.system.job.listener.ExecuteEvent;
 import cn.cordys.quartz.anno.QuartzScheduled;
 import lombok.extern.slf4j.Slf4j;
@@ -12,10 +13,12 @@ import org.springframework.stereotype.Component;
 public class TaskCleanupJob {
 
     private final ApplicationEventPublisher publisher;
+    private final TenantTaskExecutor tenantTaskExecutor;
 
     @Autowired
-    public TaskCleanupJob(ApplicationEventPublisher publisher) {
+    public TaskCleanupJob(ApplicationEventPublisher publisher, TenantTaskExecutor tenantTaskExecutor) {
         this.publisher = publisher;
+        this.tenantTaskExecutor = tenantTaskExecutor;
     }
 
     /**
@@ -26,7 +29,10 @@ public class TaskCleanupJob {
      */
     @QuartzScheduled(cron = "0 0 3 * * ?")
     public void execute() {
-        runAll();
+        tenantTaskExecutor.runForEachEnabledTenant("TaskCleanupJob.execute", tenantId -> {
+            log.info("执行清理任务，tenantId={}", tenantId);
+            runAll();
+        });
     }
 
 

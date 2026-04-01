@@ -1,7 +1,9 @@
 package cn.cordys.common.schedule;
 
 
+import cn.cordys.context.TenantContext;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.quartz.Job;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
@@ -41,18 +43,32 @@ public abstract class BaseScheduleJob implements Job {
      */
     @Override
     public void execute(JobExecutionContext context) {
-        // 从 JobDataMap 中获取任务所需的资源信息
-        JobKey jobKey = context.getTrigger().getJobKey();
-        JobDataMap jobDataMap = context.getJobDetail().getJobDataMap();
-        this.resourceId = jobDataMap.getString("resourceId");
-        this.userId = jobDataMap.getString("userId");
-        this.expression = jobDataMap.getString("expression");
+        String previousTenantId = TenantContext.getTenantId();
+        try {
+            // 从 JobDataMap 中获取任务所需的资源信息
+            JobKey jobKey = context.getTrigger().getJobKey();
+            JobDataMap jobDataMap = context.getJobDetail().getJobDataMap();
+            this.resourceId = jobDataMap.getString("resourceId");
+            this.userId = jobDataMap.getString("userId");
+            this.expression = jobDataMap.getString("expression");
 
-        // 记录日志，显示当前任务的执行情况
-        log.info(jobKey.getGroup() + " Running: " + resourceId);
+            String tenantId = jobDataMap.getString("tenantId");
+            if (StringUtils.isNotBlank(tenantId)) {
+                TenantContext.setTenantId(tenantId);
+            }
 
-        // 调用子类实现的业务逻辑
-        businessExecute(context);
+            // 记录日志，显示当前任务的执行情况
+            log.info("{} Running: {}, tenantId={}", jobKey.getGroup(), resourceId, TenantContext.getTenantIdOrDefault());
+
+            // 调用子类实现的业务逻辑
+            businessExecute(context);
+        } finally {
+            if (StringUtils.isBlank(previousTenantId)) {
+                TenantContext.clear();
+            } else {
+                TenantContext.setTenantId(previousTenantId);
+            }
+        }
     }
 
     /**

@@ -9,6 +9,7 @@ import cn.cordys.common.dto.RoleDataScopeDTO;
 import cn.cordys.common.dto.RolePermissionDTO;
 import cn.cordys.common.permission.PermissionCache;
 import cn.cordys.common.service.DataScopeService;
+import cn.cordys.common.util.AsyncUtils;
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.JSON;
 import cn.cordys.context.OrganizationContext;
@@ -69,8 +70,8 @@ public class HomeStatisticService {
                 HomeStatisticSearchWrapperRequest wrapperRequest = new HomeStatisticSearchWrapperRequest(searchRequest, deptDataPermission, orgId, userId);
 
                 // 多线程执行
-                Future<HomeStatisticSearchResponse> getNewClueStatistic = executor.submit(() ->
-                        getStatisticSearchResponse(wrapperRequest, this::getNewClueCount));
+                Future<HomeStatisticSearchResponse> getNewClueStatistic = AsyncUtils.supplyAsync(
+                        () -> getStatisticSearchResponse(wrapperRequest, this::getNewClueCount), executor);
 
                 switch (statisticPeriod) {
                     case TODAY -> clueStatistic.setTodayClue(getNewClueStatistic.get());
@@ -99,10 +100,10 @@ public class HomeStatisticService {
             }
 
             // 多线程执行
-            Future<HomeStatisticSearchResponse> getNewOpportunityStatistic = executor.submit(() ->
-                    getStatisticSearchResponse(wrapperRequest, this::getOpportunityCount));
-            Future<HomeStatisticSearchResponse> getNewOpportunityTotalAmount = executor.submit(() ->
-                    getStatisticSearchResponse(wrapperRequest, this::getOpportunityAmount));
+            Future<HomeStatisticSearchResponse> getNewOpportunityStatistic = AsyncUtils.supplyAsync(() ->
+                    getStatisticSearchResponse(wrapperRequest, this::getOpportunityCount), executor);
+            Future<HomeStatisticSearchResponse> getNewOpportunityTotalAmount = AsyncUtils.supplyAsync(() ->
+                    getStatisticSearchResponse(wrapperRequest, this::getOpportunityAmount), executor);
             try {
                 switch (statisticPeriod) {
                     case TODAY -> {
@@ -177,7 +178,7 @@ public class HomeStatisticService {
     public HomeStatisticSearchResponse getStatisticSearchResponse(HomeStatisticSearchWrapperRequest request,
                                                                   Function<HomeStatisticSearchWrapperRequest, Long> statisticFunction) {
         HomeStatisticSearchResponse response = new HomeStatisticSearchResponse();
-        Future<Long> getCount = executor.submit(() -> statisticFunction.apply(request));
+        Future<Long> getCount = AsyncUtils.supplyAsync(() -> statisticFunction.apply(request), executor);
         try {
 
             Long count = getCount.get();
@@ -187,7 +188,7 @@ public class HomeStatisticService {
                 HomeStatisticSearchWrapperRequest periodRequest = copyHomeStatisticSearchWrapperRequest(request);
                 periodRequest.setStartTime(periodRequest.getPeriodStartTime());
                 periodRequest.setEndTime(periodRequest.getPeriodEndTime());
-                Future<Long> getPeriodCount = executor.submit(() -> statisticFunction.apply(periodRequest));
+                Future<Long> getPeriodCount = AsyncUtils.supplyAsync(() -> statisticFunction.apply(periodRequest), executor);
                 Long periodCount = getPeriodCount.get();
                 response.setPriorPeriodCompareRate(getPriorPeriodCompareRate(count, periodCount));
             }

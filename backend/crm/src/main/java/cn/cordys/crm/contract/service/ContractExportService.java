@@ -4,6 +4,7 @@ import cn.cordys.common.dto.ExportDTO;
 import cn.cordys.common.dto.ExportFieldParam;
 import cn.cordys.common.dto.FieldExportMeta;
 import cn.cordys.common.service.BaseExportService;
+import cn.cordys.common.util.AsyncUtils;
 import cn.cordys.common.util.TimeUtils;
 import cn.cordys.common.util.Translator;
 import cn.cordys.crm.contract.dto.request.ContractPageRequest;
@@ -84,13 +85,14 @@ public class ContractExportService extends BaseExportService {
 		for (int i = 0; i < size; i++) {
 			final int idx = i;
 			ContractListResponse detail = dataList.get(i);
-			futures.add(executor.submit(() -> {
-				if (ExportThreadRegistry.isInterrupted(taskId)) {
-					throw new InterruptedException("导出中断");
-				}
-				List<List<Object>> buildData = buildData(detail, exportFieldParam, exportParam.getExportMetas());
-				return Pair.of(idx, buildData);
-			}));
+			futures.add(
+                    AsyncUtils.supplyAsync(() -> {
+                        if (ExportThreadRegistry.isInterrupted(taskId)) {
+                            throw new RuntimeException("导出中断", new InterruptedException("导出中断"));
+                        }
+                        List<List<Object>> buildData = buildData(detail, exportFieldParam, exportParam.getExportMetas());
+                        return Pair.of(idx, buildData);
+                    }, executor));
 		}
 
 		// 收集结果 (阻塞)

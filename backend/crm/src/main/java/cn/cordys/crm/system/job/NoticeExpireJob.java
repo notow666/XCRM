@@ -1,5 +1,6 @@
 package cn.cordys.crm.system.job;
 
+import cn.cordys.common.context.TenantTaskExecutor;
 import cn.cordys.common.util.JSON;
 import cn.cordys.crm.contract.domain.Contract;
 import cn.cordys.crm.contract.domain.ContractPaymentPlan;
@@ -65,6 +66,8 @@ public class NoticeExpireJob {
     private ExtContractMapper extContractMapper;
     @Resource
     private SqlSessionFactory sqlSessionFactory;
+    @Resource
+    private TenantTaskExecutor tenantTaskExecutor;
 
 
     /**
@@ -75,6 +78,13 @@ public class NoticeExpireJob {
      */
     @QuartzScheduled(cron = "0 0 8 * * ?")
     public void onEvent() {
+        tenantTaskExecutor.runForEachEnabledTenant("NoticeExpireJob.onEvent", tenantId -> {
+            log.info("执行到期提醒任务，tenantId={}", tenantId);
+            doOnEvent();
+        });
+    }
+
+    private void doOnEvent() {
         try {
             this.quotationExpiringRemind();
             this.quotationExpiredRemind();

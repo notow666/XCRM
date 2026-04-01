@@ -21,6 +21,9 @@ public class OperationLog {
     @Schema(description = "组织id")
     private String organizationId;
 
+    @Schema(description = "tranceId")
+    private String traceId;
+
     @Schema(description = "租户id")
     private String tenantId;
 

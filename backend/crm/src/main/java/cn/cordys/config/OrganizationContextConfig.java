@@ -21,7 +21,7 @@ public class OrganizationContextConfig {
     public FilterRegistrationBean<OrganizationContextWebFilter> organizationContextWebFilter() {
         FilterRegistrationBean<OrganizationContextWebFilter> registrationBean = new FilterRegistrationBean<>();
         registrationBean.setFilter(new OrganizationContextWebFilter());
-        registrationBean.setOrder(-100);
+        registrationBean.setOrder(100);
         return registrationBean;
     }
 }

@@ -2,10 +2,12 @@ package cn.cordys.aspectj.handler;
 
 import cn.cordys.aspectj.builder.OperationLog;
 import cn.cordys.aspectj.dto.LogDTO;
+import cn.cordys.common.constants.MdcConstants;
 import cn.cordys.common.util.ServletUtils;
 import cn.cordys.context.TenantContext;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
 /**

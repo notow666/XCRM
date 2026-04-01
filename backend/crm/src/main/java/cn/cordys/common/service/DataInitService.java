@@ -3,6 +3,7 @@ package cn.cordys.common.service;
 
 import cn.cordys.common.util.OnceInterface;
 import cn.cordys.common.util.OnceInterfaceAction;
+import cn.cordys.context.TenantContext;
 import cn.cordys.crm.clue.service.ClueService;
 import cn.cordys.crm.system.domain.Parameter;
 import cn.cordys.crm.system.service.ModuleFieldExtService;
@@ -43,7 +44,9 @@ public class DataInitService {
     private ClueService clueService;
 
     public void initOneTime() {
-        RLock lock = redisson.getLock("init_data_lock");
+        // 多租户业务中心 Redis key 统一使用 tenantId: 前缀
+        String tenantId = TenantContext.getTenantIdOrDefault();
+        RLock lock = redisson.getLock(tenantId + ":init_data_lock");
         lock.lock();
         try {
             initOneTime(moduleService::initDefaultOrgModule, "init.module");

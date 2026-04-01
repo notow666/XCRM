@@ -64,6 +64,9 @@ public class LogDTO {
     @Schema(description = "登录地")
     private String loginAddress;
 
+    @Schema(description = "tranceId")
+    private String traceId;
+
     @Schema(description = "租户ID")
     private String tenantId;
 

@@ -53,10 +53,10 @@ public class PlatformAuthService {
         user.setName(row.username);
         user.setSource("PLATFORM");
         user.setEnable(true);
-        user.setTenantId("default");
+        user.setTenantId("---");
         user.setPermissionIds(Collections.singleton("PLATFORM_ADMIN:READ"));
         user.setOrganizationIds(Collections.emptySet());
-        user.setTenantIds(Collections.singleton("default"));
+        user.setTenantIds(Collections.emptySet());
 
         SessionUser sessionUser = SessionUser.fromUser(user, SessionUtils.getSessionId());
         SessionUtils.putUser(sessionUser);
