@@ -46,6 +46,7 @@ export interface CustomerDetail {
   createUserName: string;
   updateUserName: string;
   moduleFields: ModuleField[];
+  stage?: string;
 }
 
 export interface SaveCustomerFollowRecordParams {
@@ -390,4 +391,32 @@ export interface CustomerInvoiceItem {
 
 export interface CustomerInvoicePageQueryParams extends TableQueryParams {
   customerId: string;
+}
+
+export interface CustomerStageConfigItem {
+  id: string;
+  name: string;
+  type: 'AFOOT' | 'END';
+  rate: string;
+  afootRollBack: boolean;
+  endRollBack: boolean;
+  pos: number;
+  stageHasData: boolean;
+  createUser: string;
+  updateUser: string;
+  createTime: number;
+  updateTime: number;
+  organizationId: string;
+}
+
+export interface CustomerStageConfig {
+  stageConfigList: CustomerStageConfigItem[];
+  afootRollBack: boolean;
+  endRollBack: boolean;
+}
+
+export interface UpdateCustomerStageParams {
+  id: string;
+  stage: string;
+  failureReason?: string;
 }

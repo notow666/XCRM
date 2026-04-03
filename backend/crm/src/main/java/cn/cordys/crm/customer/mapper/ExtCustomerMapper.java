@@ -95,4 +95,13 @@ public interface ExtCustomerMapper {
     List<ChartResult> chart(@Param("request") CustomerChartAnalysisDbRequest request, @Param("userId") String userId, @Param("orgId") String orgId,
                             @Param("dataPermission") DeptDataPermissionDTO dataPermission);
 
+    /**
+     * 根据阶段ID统计客户数量
+     *
+     * @param stageId 阶段ID
+     * @param orgId   组织ID
+     * @return 客户数量
+     */
+    int countByStage(@Param("stageId") String stageId, @Param("orgId") String orgId);
+
 }

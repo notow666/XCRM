@@ -125,6 +125,13 @@ import {
   GetAccountInvoiceListUrl,
   GetAccountInvoiceStatisticUrl,
   GetAccountOrderListUrl,
+  GetCustomerStageConfigUrl,
+  AddCustomerStageUrl,
+  UpdateCustomerStageUrl,
+  UpdateCustomerStageRollbackUrl,
+  DeleteCustomerStageUrl,
+  SortCustomerStageUrl,
+  UpdateCustomerStageUrl2,
 } from '@lib/shared/api/requrls/customer';
 import type {
   ChartResponseDataItem,
@@ -135,6 +142,10 @@ import type {
   TableExportSelectedParams,
   TableQueryParams,
 } from '@lib/shared/models/common';
+import type {
+  CustomerStageConfig,
+  UpdateCustomerStageParams,
+} from '@lib/shared/models/customer';
 import type {
   AddCustomerCollaborationParams,
   AddCustomerRelationItemParams,
@@ -188,7 +199,43 @@ import type { CluePoolItem, FormDesignConfigDetailParams, OpportunityItem } from
 import { ValidateInfo } from '@lib/shared/models/system/org';
 import type { ViewItem, ViewParams } from '@lib/shared/models/view';
 import type { ContractItem, PaymentPlanItem, PaymentRecordItem } from '@lib/shared/models/contract';
+
 export default function useProductApi(CDR: CordysAxios) {
+  // 获取客户阶段配置
+  function getCustomerStageConfig() {
+    return CDR.get<CustomerStageConfig>({ url: GetCustomerStageConfigUrl }, { ignoreCancelToken: true });
+  }
+
+  // 添加客户阶段
+  function addCustomerStage(data: any) {
+    return CDR.post({ url: AddCustomerStageUrl, data });
+  }
+
+  // 更新客户阶段
+  function updateCustomerStage(data: any) {
+    return CDR.post({ url: UpdateCustomerStageUrl, data });
+  }
+
+  // 更新客户阶段回退设置
+  function updateCustomerStageRollback(data: any) {
+    return CDR.post({ url: UpdateCustomerStageRollbackUrl, data });
+  }
+
+  // 删除客户阶段
+  function deleteCustomerStage(id: string) {
+    return CDR.get({ url: `${DeleteCustomerStageUrl}/${id}` });
+  }
+
+  // 客户阶段排序
+  function sortCustomerStage(ids: string[]) {
+    return CDR.post({ url: SortCustomerStageUrl, data: ids });
+  }
+
+  // 更新客户阶段（业务）
+  function updateCustomerStage2(data: UpdateCustomerStageParams) {
+    return CDR.post({ url: UpdateCustomerStageUrl2, data });
+  }
+
   // 添加客户
   function addCustomer(data: SaveCustomerParams) {
     return CDR.post({ url: AddCustomerUrl, data });
@@ -928,5 +975,12 @@ export default function useProductApi(CDR: CordysAxios) {
     getCustomerInvoiceList,
     getCustomerOrderList,
     getCustomerInvoiceStatistic,
+    getCustomerStageConfig,
+    addCustomerStage,
+    updateCustomerStage,
+    updateCustomerStageRollback,
+    deleteCustomerStage,
+    sortCustomerStage,
+    updateCustomerStage2,
   };
 }

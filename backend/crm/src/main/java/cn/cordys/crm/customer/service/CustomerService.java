@@ -36,6 +36,8 @@ import cn.cordys.crm.customer.dto.response.CustomerListResponse;
 import cn.cordys.crm.customer.mapper.ExtCustomerContactMapper;
 import cn.cordys.crm.customer.mapper.ExtCustomerMapper;
 import cn.cordys.crm.customer.mapper.ExtCustomerPoolMapper;
+import cn.cordys.crm.customer.mapper.ExtCustomerStageConfigMapper;
+import cn.cordys.crm.customer.service.CustomerStageService;
 import cn.cordys.crm.follow.domain.FollowUpPlan;
 import cn.cordys.crm.follow.domain.FollowUpRecord;
 import cn.cordys.crm.follow.mapper.ExtFollowUpPlanMapper;
@@ -147,6 +149,10 @@ public class CustomerService {
     private ExtCustomerContactMapper extCustomerContactMapper;
     @Resource
     private ExtOpportunityMapper extOpportunityMapper;
+    @Resource
+    private ExtCustomerStageConfigMapper extCustomerStageConfigMapper;
+    @Resource
+    private CustomerStageService customerStageService;
     @Resource
     private ExtFollowUpRecordMapper extFollowUpRecordMapper;
     @Resource
@@ -406,6 +412,12 @@ public class CustomerService {
         customer.setId(IDGenerator.nextStr());
         customer.setInSharedPool(false);
 
+        // 设置客户阶段为第一个阶段
+        List<cn.cordys.crm.opportunity.dto.response.StageConfigResponse> stageConfigList = extCustomerStageConfigMapper.getStageConfigList(orgId);
+        if (CollectionUtils.isNotEmpty(stageConfigList)) {
+            customer.setStage(stageConfigList.getFirst().getId());
+        }
+
         //保存自定义字段
         customerFieldService.saveModuleField(customer, orgId, userId, request.getModuleFields(), false);
 
@@ -460,6 +472,42 @@ public class CustomerService {
         customer = customerMapper.selectByPrimaryKey(request.getId());
         baseService.handleUpdateLog(originCustomer, customer, originCustomerFields, request.getModuleFields(), originCustomer.getId(), originCustomer.getName());
         return customer;
+    }
+
+    @OperationLog(module = LogModule.CUSTOMER_INDEX, type = LogType.UPDATE, resourceId = "{#request.id}")
+    public void updateStage(CustomerStageRequest request, String orgId) {
+        System.out.println("=== updateStage called === id=" + request.getId() + " stage=" + request.getStage());
+        Customer oldCustomer = customerMapper.selectByPrimaryKey(request.getId());
+        if (oldCustomer == null) {
+            throw new GenericException(Translator.get("customer_not_found"));
+        }
+
+        List<cn.cordys.crm.opportunity.dto.response.StageConfigResponse> stageConfigList = extCustomerStageConfigMapper.getStageConfigList(orgId);
+
+        Map<String, String> stageMap = stageConfigList.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        cn.cordys.crm.opportunity.dto.response.StageConfigResponse::getId,
+                        cn.cordys.crm.opportunity.dto.response.StageConfigResponse::getName
+                ));
+
+        Customer newCustomer = new Customer();
+        newCustomer.setId(request.getId());
+        newCustomer.setStage(request.getStage());
+
+        customerMapper.update(newCustomer);
+
+        Map<String, String> originalVal = new java.util.HashMap<>(1);
+        originalVal.put("stage", stageMap.get(oldCustomer.getStage()));
+        Map<String, String> modifiedVal = new java.util.HashMap<>(1);
+        modifiedVal.put("stage", stageMap.get(request.getStage()));
+
+        OperationLogContext.setContext(
+                cn.cordys.aspectj.dto.LogContextInfo.builder()
+                        .resourceName(oldCustomer.getName())
+                        .originalValue(originalVal)
+                        .modifiedValue(modifiedVal)
+                        .build()
+        );
     }
 
     private void updateModuleField(Customer customer, List<BaseModuleFieldValue> moduleFields, String orgId, String userId) {

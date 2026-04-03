@@ -4,14 +4,20 @@ import { useI18n } from '@lib/shared/hooks/useI18n';
 import type { FormItemModel } from '@/components/business/crm-batch-form/types';
 
 import {
+  addCustomerStage,
   addOpportunityStage,
   addOrderStatus,
+  deleteCustomerStage,
   deleteOpportunityStage,
   deleteOrderStatus,
+  getCustomerStageConfig,
   getOpportunityStageConfig,
   getOrderStatusConfig,
+  sortCustomerStage,
   sortOpportunityStage,
   sortOrderStatus,
+  updateCustomerStage,
+  updateCustomerStageRollback,
   updateOpportunityStage,
   updateOpportunityStageRollback,
   updateOrderStatus,
@@ -80,6 +86,25 @@ export function useStatusTextConfig(): Record<StatusBizType, StatusTextConfig> {
         },
       ],
       stageHasDataTip: t('module.order.stageHasData'),
+    },
+    [FormDesignKeyEnum.CUSTOMER]: {
+      title: t('module.customerStepSet'),
+      sectionTitle: t('module.customerStepSet'),
+      columnTitles: [t('module.customerStepSet'), t('opportunity.stageType')],
+      rollbackTitle: t('module.customerStepSet'),
+      switches: [
+        {
+          key: 'runningStageRollback',
+          label: t('crmStatusConfigDrawer.runningStageRollback'),
+          tip: t('crmStatusConfigDrawer.runningStageRollbackTip', { name: t('module.customerManagement') }),
+        },
+        {
+          key: 'completedStageRollback',
+          label: t('crmStatusConfigDrawer.completedStageRollback'),
+          tip: t('crmStatusConfigDrawer.completedOptStageRollbackTip', { name: t('module.customerManagement') }),
+        },
+      ],
+      stageHasDataTip: t('module.businessManage.stageHasData'),
     },
   };
 }
@@ -155,6 +180,31 @@ export function useStatusFormItemModelConfig(): Record<StatusBizType, FormItemMo
         },
       },
     ],
+    [FormDesignKeyEnum.CUSTOMER]: [
+      {
+        path: 'name',
+        type: FieldTypeEnum.INPUT,
+        formItemClass: 'w-full flex-initial',
+        inputProps: { maxlength: 16 },
+        rule: [
+          { required: true, message: t('common.notNull', { value: '' }) },
+          { notRepeat: true, message: t('module.capacitySet.repeatMsg') },
+        ],
+      },
+      {
+        path: 'type',
+        type: FieldTypeEnum.SELECT,
+        formItemClass: 'w-full flex-initial',
+        selectProps: {
+          disabledFunction: () => true,
+          disabledTooltipFunction: () => t('opportunity.stageTypeDisabledChange'),
+          options: [
+            { label: t('common.inProgress'), value: 'AFOOT' },
+            { label: t('common.complete'), value: 'END' },
+          ],
+        },
+      },
+    ],
   };
 }
 
@@ -176,6 +226,14 @@ export function useStatusApiConfig(): Record<StatusBizType, StatusApiConfig> {
       sort: sortOrderStatus,
       rollback: updateOrderStatusRollback,
     },
+    [FormDesignKeyEnum.CUSTOMER]: {
+      load: getCustomerStageConfig,
+      create: addCustomerStage,
+      update: updateCustomerStage,
+      remove: deleteCustomerStage,
+      sort: sortCustomerStage,
+      rollback: updateCustomerStageRollback,
+    },
   };
 }
 
@@ -193,6 +251,11 @@ export function useStatusStrategyConfig(): Record<StatusBizType, StatusStrategyC
     },
     [FormDesignKeyEnum.ORDER]: {
       formItemModel: formItemModelMap[FormDesignKeyEnum.ORDER],
+      buildCreateParams: (row, { list, index }) => buildDefaultCreateParams(row, list, index, ['name', 'type']),
+      buildUpdateParams: (row) => buildDefaultUpdateParams(row, ['id', 'name']),
+    },
+    [FormDesignKeyEnum.CUSTOMER]: {
+      formItemModel: formItemModelMap[FormDesignKeyEnum.CUSTOMER],
       buildCreateParams: (row, { list, index }) => buildDefaultCreateParams(row, list, index, ['name', 'type']),
       buildUpdateParams: (row) => buildDefaultUpdateParams(row, ['id', 'name']),
     },

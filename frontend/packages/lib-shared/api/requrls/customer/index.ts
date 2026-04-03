@@ -135,3 +135,11 @@ export const FixedAccountPoolViewUrl = 'pool/account/view/fixed';
 export const EnableAccountPoolViewUrl = 'pool/account/view/enable';
 export const DragAccountPoolViewUrl = 'pool/account/view/edit/pos';
 export const generateCustomerPoolChartUrl = '/pool/account/chart';
+
+export const GetCustomerStageConfigUrl = '/customer/stage/get';
+export const AddCustomerStageUrl = '/customer/stage/add';
+export const UpdateCustomerStageUrl = '/customer/stage/update';
+export const UpdateCustomerStageRollbackUrl = '/customer/stage/update-rollback';
+export const DeleteCustomerStageUrl = '/customer/stage/delete';
+export const SortCustomerStageUrl = '/customer/stage/sort';
+export const UpdateCustomerStageUrl2 = '/account/update-stage';

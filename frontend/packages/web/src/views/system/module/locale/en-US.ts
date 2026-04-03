@@ -63,6 +63,7 @@ export default {
   'module.clue.deleteRulesTitle': 'There are unallocated leads in the lead pool, deletion is prohibited!',
   'module.businessManage.businessCloseRule': 'Opportunity close rules',
   'module.businessManage.businessStepSet': 'Opportunity stage settings',
+  'module.customerStepSet': 'Customer Stage Settings',
   'module.businessManage.businessStepConfig': 'Stage configuration',
   'module.businessManage.businessStepRollbackConfig': 'Opportunity stage rollback settings',
   'module.businessManage.insetBefore': 'Insert stage before',

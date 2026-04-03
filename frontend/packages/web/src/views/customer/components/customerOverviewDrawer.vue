@@ -34,6 +34,22 @@
         />
       </div>
     </template>
+    <template #rightTop>
+      <CrmWorkflowCard
+        v-model:stage="currentStatus"
+        :show-confirm-status="true"
+        class="mb-[16px]"
+        :stage-config-list="stageConfig?.stageConfigList || []"
+        is-limit-back
+        :back-stage-permission="['CUSTOMER_MANAGEMENT:UPDATE']"
+        :source-id="props.sourceId"
+        :operation-permission="['CUSTOMER_MANAGEMENT:UPDATE']"
+        :update-api="updateCustomerStage"
+        :afoot-roll-back="stageConfig?.afootRollBack"
+        :end-roll-back="stageConfig?.endRollBack"
+        @load-detail="handleSaved"
+      />
+    </template>
     <template #right>
       <div class="h-full pt-[16px]">
         <ContactTable
@@ -133,6 +149,7 @@
 </template>
 
 <script setup lang="ts">
+  import { onMounted, watch } from 'vue';
   import { useMessage } from 'naive-ui';
 
   import { FormDesignKeyEnum } from '@lib/shared/enums/formDesignEnum';
@@ -149,6 +166,7 @@
   import CrmOverviewDrawer from '@/components/business/crm-overview-drawer/index.vue';
   import type { TabContentItem } from '@/components/business/crm-tab-setting/type';
   import TransferForm from '@/components/business/crm-transfer-modal/transferForm.vue';
+  import CrmWorkflowCard from '@/components/business/crm-workflow-card/index.vue';
   import collaborator from './collaborator.vue';
   import customerRelation from './customerRelation.vue';
   import ContractTimeline from '@/views/contract/contract/components/contractTimeline.vue';
@@ -156,7 +174,14 @@
   import opportunityTable from '@/views/opportunity/components/opportunityTable.vue';
   import OrderTable from '@/views/order/order/components/orderTable.vue';
 
-  import { deleteCustomer, getCustomerHeaderList, updateCustomer } from '@/api/modules';
+  import {
+    deleteCustomer,
+    getCustomer,
+    getCustomerHeaderList,
+    getCustomerStageConfig,
+    updateCustomer,
+    updateCustomerStage2,
+  } from '@/api/modules';
   import useModal from '@/hooks/useModal';
   import { hasAnyPermission } from '@/utils/permission';
 
@@ -184,6 +209,38 @@
   const layout = computed(() => crmOverviewDrawerRef.value?.layout);
 
   const refreshKey = ref(0);
+  const stageConfig = ref<Awaited<ReturnType<typeof getCustomerStageConfig>>>();
+  const currentStatus = ref<string>('');
+
+  async function initStageConfig() {
+    try {
+      stageConfig.value = await getCustomerStageConfig();
+      if (stageConfig.value?.stageConfigList?.length && !currentStatus.value) {
+        currentStatus.value = stageConfig.value.stageConfigList[0].id;
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log('initStageConfig error:', error);
+    }
+  }
+
+  async function updateCustomerStage(data: { id: string; stage: string }) {
+    return updateCustomerStage2(data);
+  }
+
+  onMounted(() => {
+    initStageConfig();
+  });
+
+  watch(
+    () => show.value,
+    (val) => {
+      if (val) {
+        initStageConfig();
+      }
+    }
+  );
+
   const transferLoading = ref(false);
   const collaborationType = ref<CollaborationType>();
   const sourceName = ref('');
@@ -376,14 +433,37 @@
     }
   }
 
+  async function getCustomerDetailStage() {
+    try {
+      const detail = await getCustomer(props.sourceId);
+      if (detail?.stage) {
+        currentStatus.value = detail.stage;
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log('getCustomerDetailStage error:', error);
+    }
+  }
+
   function handleSaved() {
     refreshKey.value += 1;
     emit('saved');
+    // 延迟获取最新阶段，避免被取消
+    setTimeout(() => {
+      getCustomerDetailStage();
+    }, 500);
   }
 
-  function handleDescriptionInit(_collaborationType?: CollaborationType, _sourceName?: string) {
+  function handleDescriptionInit(
+    _collaborationType?: CollaborationType,
+    _sourceName?: string,
+    detail?: Record<string, any>
+  ) {
     collaborationType.value = _collaborationType;
     sourceName.value = _sourceName || '';
+    if (detail?.stage) {
+      currentStatus.value = detail.stage;
+    }
   }
 
   const showContractDetailDrawer = ref(false);

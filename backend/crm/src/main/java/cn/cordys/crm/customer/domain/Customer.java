@@ -42,4 +42,7 @@ public class Customer extends BaseModel {
 
     @Schema(description = "公海原因ID")
     private String reasonId;
+
+    @Schema(description = "客户阶段ID")
+    private String stage;
 }

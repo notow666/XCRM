@@ -412,6 +412,13 @@ export const {
   getCustomerInvoiceList,
   getCustomerOrderList,
   getCustomerInvoiceStatistic,
+  getCustomerStageConfig,
+  addCustomerStage,
+  updateCustomerStage,
+  updateCustomerStageRollback,
+  deleteCustomerStage,
+  sortCustomerStage,
+  updateCustomerStage2,
 } = customerApi;
 
 export const {

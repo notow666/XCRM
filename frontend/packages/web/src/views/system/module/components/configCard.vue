@@ -72,6 +72,7 @@
     @load-config="() => getGlobalReasonConfig()"
   />
   <stateFlowDrawer v-model:visible="businessManagementStepSetVisible" :type="FormDesignKeyEnum.BUSINESS" />
+  <stateFlowDrawer v-model:visible="customerStepSetVisible" :type="FormDesignKeyEnum.CUSTOMER" />
   <stateFlowDrawer v-model:visible="orderStateFlowVisible" :type="FormDesignKeyEnum.ORDER" />
   <ContractFormFormDrawer v-model:visible="contractFormVisible" />
   <OrderFormFormDrawer v-model:visible="orderFormVisible" />
@@ -394,6 +395,10 @@
           key: 'openSea',
         },
         {
+          label: t('module.customerStepSet'),
+          key: 'customerStepSet',
+        },
+        {
           label: t('common.more'),
           slotName: 'more',
         },
@@ -587,6 +592,7 @@
   const opportunityQuotationFormVisible = ref(false);
   const businessManagementBusinessParamsSetVisible = ref(false);
   const businessManagementStepSetVisible = ref(false);
+  const customerStepSetVisible = ref(false);
   const orderFormVisible = ref(false);
   const orderStateFlowVisible = ref(false);
 
@@ -610,6 +616,8 @@
           customerManagementOpenSeaVisible.value = true;
         } else if (key === 'capacitySet') {
           capacitySetVisible.value = true;
+        } else if (key === 'customerStepSet') {
+          customerStepSetVisible.value = true;
         }
         break;
       case ModuleConfigEnum.CONTRACT:

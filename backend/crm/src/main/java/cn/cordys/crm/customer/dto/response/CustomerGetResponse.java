@@ -76,6 +76,9 @@ public class CustomerGetResponse {
     @Schema(description = "失败原因ID")
     private String reasonName;
 
+    @Schema(description = "客户阶段ID")
+    private String stage;
+
     @Schema(description = "自定义字段")
     private List<BaseModuleFieldValue> moduleFields;
 

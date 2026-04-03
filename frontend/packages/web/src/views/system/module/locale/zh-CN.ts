@@ -61,6 +61,7 @@ export default {
   'module.clue.followUpTime': '跟进时间',
   'module.businessManage.businessCloseRule': '商机关闭规则',
   'module.businessManage.businessStepSet': '商机阶段设置',
+  'module.customerStepSet': '客户阶段设置',
   'module.businessManage.businessStepConfig': '阶段配置',
   'module.businessManage.businessStepRollbackConfig': '商机阶段回退设置',
   'module.businessManage.insetBefore': '在之前插入阶段',
