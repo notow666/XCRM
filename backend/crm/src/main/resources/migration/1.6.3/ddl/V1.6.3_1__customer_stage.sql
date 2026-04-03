@@ -30,12 +30,12 @@ ALTER TABLE customer ADD COLUMN `stage` VARCHAR(32) COMMENT '客户阶段ID' AFT
 -- 初始化客户阶段配置数据
 INSERT INTO `customer_stage_config`(`id`, `name`, `type`, `rate`, `afoot_roll_back`, `end_roll_back`, `pos`, `organization_id`, `create_time`, `update_time`, `create_user`, `update_user`)
 VALUES
-    ('339600000000000001', '线索', 'AFOOT', '10', b'1', b'0', 1, '100001', UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', 'admin'),
-    ('339600000000000002', '初步接触', 'AFOOT', '30', b'1', b'0', 2, '100001', UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', 'admin'),
-    ('339600000000000003', '需求了解', 'AFOOT', '50', b'1', b'0', 3, '100001', UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', 'admin'),
-    ('339600000000000004', '方案报价', 'AFOOT', '70', b'1', b'0', 4, '100001', UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', 'admin'),
-    ('339600000000000005', '商务谈判', 'AFOOT', '90', b'1', b'0', 5, '100001', UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', 'admin'),
-    ('339600000000000006', '成交', 'END', '100', b'1', b'0', 6, '100001', UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', 'admin'),
-    ('339600000000000007', '流失', 'END', '0', b'1', b'0', 7, '100001', UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', 'admin');
+    ('339600000000000001', '待跟进', 'AFOOT', '10', b'1', b'0', 1, '100001', UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', 'admin'),
+    ('339600000000000002', '待签约', 'AFOOT', '30', b'1', b'0', 2, '100001', UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', 'admin'),
+    ('339600000000000003', '已上门', 'AFOOT', '50', b'1', b'0', 3, '100001', UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', 'admin'),
+    ('339600000000000004', '已签约', 'AFOOT', '70', b'1', b'0', 4, '100001', UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', 'admin'),
+    ('339600000000000005', '回款中', 'AFOOT', '90', b'1', b'0', 5, '100001', UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', 'admin'),
+    ('339600000000000006', '已回款', 'AFOOT', '100', b'1', b'0', 6, '100001', UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', 'admin'),
+    ('339600000000000007', '无效客户', 'END', '0', b'1', b'0', 7, '100001', UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', 'admin');
 
 SET SESSION innodb_lock_wait_timeout = DEFAULT;
