@@ -83,7 +83,7 @@ public class ClueController {
     @GetMapping("/get/{id}")
     @RequiresPermissions(PermissionConstants.CLUE_MANAGEMENT_READ)
     @Operation(summary = "线索详情")
-    public ClueGetResponse get(@PathVariable String id) {
+    public ClueGetResponse get(@PathVariable("id") String id) {
         return clueService.getWithDataPermissionCheck(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
@@ -111,7 +111,7 @@ public class ClueController {
     @GetMapping("/delete/{id}")
     @RequiresPermissions(PermissionConstants.CLUE_MANAGEMENT_DELETE)
     @Operation(summary = "删除线索")
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         clueService.delete(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 

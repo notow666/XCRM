@@ -31,35 +31,35 @@ public class CustomerRelationController {
     @GetMapping("/list/{customerId}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_READ)
     @Operation(summary = "客户关系列表")
-    public List<CustomerRelationListResponse> list(@PathVariable String customerId) {
+    public List<CustomerRelationListResponse> list(@PathVariable("customerId") String customerId) {
         return customerRelationService.list(customerId);
     }
 
     @PostMapping("/add/{customerId}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE)
     @Operation(summary = "添加客户关系")
-    public CustomerRelation add(@PathVariable String customerId, @Validated @RequestBody CustomerRelationSaveRequest request) {
+    public CustomerRelation add(@PathVariable("customerId") String customerId, @Validated @RequestBody CustomerRelationSaveRequest request) {
         return customerRelationService.add(request, customerId);
     }
 
     @PostMapping("/update/{customerId}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE)
     @Operation(summary = "更新客户关系")
-    public CustomerRelation update(@PathVariable String customerId, @Validated @RequestBody CustomerRelationUpdateRequest request) {
+    public CustomerRelation update(@PathVariable("customerId") String customerId, @Validated @RequestBody CustomerRelationUpdateRequest request) {
         return customerRelationService.update(request, customerId);
     }
 
     @GetMapping("/delete/{id}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE)
     @Operation(summary = "删除客户关系")
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         customerRelationService.delete(id);
     }
 
     @PostMapping("/save/{customerId}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE)
     @Operation(summary = "整体客户关系")
-    public void save(@PathVariable String customerId, @Validated @RequestBody @Valid @NotNull List<CustomerRelationSaveRequest> requests) {
+    public void save(@PathVariable("customerId") String customerId, @Validated @RequestBody @Valid @NotNull List<CustomerRelationSaveRequest> requests) {
         customerRelationService.save(customerId, requests);
     }
 }

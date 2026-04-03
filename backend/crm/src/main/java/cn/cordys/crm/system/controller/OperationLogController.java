@@ -38,7 +38,7 @@ public class OperationLogController {
     @GetMapping("/detail/{id}")
     @Operation(summary = "系统管理-操作日志-详情")
     @RequiresPermissions(PermissionConstants.OPERATION_LOG_READ)
-    public OperationLogDetailResponse logDetail(@PathVariable String id) {
+    public OperationLogDetailResponse logDetail(@PathVariable("id") String id) {
         return sysOperationLogService.getLogDetail(id, OrganizationContext.getOrganizationId());
     }
 }

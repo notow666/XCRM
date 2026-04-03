@@ -103,7 +103,7 @@ public class CustomerController {
     @GetMapping("/get/{id}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_READ)
     @Operation(summary = "客户详情")
-    public CustomerGetResponse get(@PathVariable String id) {
+    public CustomerGetResponse get(@PathVariable("id") String id) {
         return customerService.getWithDataPermissionCheck(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
@@ -131,7 +131,7 @@ public class CustomerController {
     @GetMapping("/delete/{id}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_DELETE)
     @Operation(summary = "删除客户")
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         customerService.delete(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
@@ -275,7 +275,7 @@ public class CustomerController {
     @GetMapping("/contract/statistic/{accountId}")
     @RequiresPermissions({PermissionConstants.CUSTOMER_MANAGEMENT_READ, PermissionConstants.CONTRACT_READ})
     @Operation(summary = "客户详情-合同列表统计")
-    public CustomerContractStatisticResponse calculateCustomerContractStatistic(@PathVariable String accountId) {
+    public CustomerContractStatisticResponse calculateCustomerContractStatistic(@PathVariable("accountId") String accountId) {
         DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(SessionUtils.getUserId(),
                 OrganizationContext.getOrganizationId(), PermissionConstants.CONTRACT_READ);
         return contractService.calculateContractStatisticByCustomerId(accountId, SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), deptDataPermission);
@@ -295,7 +295,7 @@ public class CustomerController {
     @GetMapping("/contract/payment-plan/statistic/{accountId}")
     @RequiresPermissions({PermissionConstants.CUSTOMER_MANAGEMENT_READ, PermissionConstants.CONTRACT_PAYMENT_PLAN_READ})
     @Operation(summary = "客户详情-合同回款计划列表统计")
-    public CustomerPaymentPlanStatisticResponse calculateCustomerPaymentPlanStatistic(@PathVariable String accountId) {
+    public CustomerPaymentPlanStatisticResponse calculateCustomerPaymentPlanStatistic(@PathVariable("accountId") String accountId) {
         DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(SessionUtils.getUserId(),
                 OrganizationContext.getOrganizationId(), PermissionConstants.CONTRACT_PAYMENT_PLAN_READ);
         return contractPaymentPlanService.calculateCustomerPaymentPlanStatistic(accountId, SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), deptDataPermission);
@@ -315,7 +315,7 @@ public class CustomerController {
 	@GetMapping("/contract/payment-record/statistic/{accountId}")
 	@RequiresPermissions({PermissionConstants.CUSTOMER_MANAGEMENT_READ, PermissionConstants.CONTRACT_PAYMENT_RECORD_READ})
 	@Operation(summary = "客户详情-合同回款记录列表统计")
-	public CustomerPaymentRecordStatisticResponse calculateCustomerPaymentRecordStatistic(@PathVariable String accountId) {
+	public CustomerPaymentRecordStatisticResponse calculateCustomerPaymentRecordStatistic(@PathVariable("accountId") String accountId) {
 		DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(SessionUtils.getUserId(),
 				OrganizationContext.getOrganizationId(), PermissionConstants.CONTRACT_PAYMENT_RECORD_READ);
 		return contractPaymentRecordService.sumCustomerPaymentAmount(accountId, SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), deptDataPermission);
@@ -346,7 +346,7 @@ public class CustomerController {
     @GetMapping("/invoice/statistic/{accountId}")
     @RequiresPermissions({PermissionConstants.CUSTOMER_MANAGEMENT_READ, PermissionConstants.CONTRACT_INVOICE_READ})
     @Operation(summary = "客户详情-发票列表统计")
-    public CustomerInvoiceStatisticResponse calculateCustomerInvoiceStatistic(@PathVariable String accountId) {
+    public CustomerInvoiceStatisticResponse calculateCustomerInvoiceStatistic(@PathVariable("accountId") String accountId) {
         BigDecimal invoiceAmount = contractInvoiceService.calculateCustomerInvoiceAmount(accountId, SessionUtils.getUserId(),
                 OrganizationContext.getOrganizationId());
 

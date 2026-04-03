@@ -65,6 +65,7 @@ const system: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.settings.businessSetting',
         permissions: ['SYSTEM_SETTING:READ'],
+        hideInMenu: true, // 企业设置隐藏
       },
     },
     {

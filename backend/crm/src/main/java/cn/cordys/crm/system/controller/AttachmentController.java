@@ -30,13 +30,13 @@ public class AttachmentController {
 
     @GetMapping("/preview/{id}")
     @Operation(summary = "预览附件")
-    public ResponseEntity<org.springframework.core.io.Resource> preview(@PathVariable String id) {
+    public ResponseEntity<org.springframework.core.io.Resource> preview(@PathVariable("id") String id) {
         return attachmentService.getResource(id);
     }
 
     @GetMapping("/download/{id}")
     @Operation(summary = "下载附件")
-    public ResponseEntity<org.springframework.core.io.Resource> download(@PathVariable String id) {
+    public ResponseEntity<org.springframework.core.io.Resource> download(@PathVariable("id") String id) {
         return attachmentService.getResource(id);
     }
 }

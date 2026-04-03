@@ -25,7 +25,7 @@ public class UserSyncController {
     @GetMapping("/{type}")
     @RequiresPermissions(PermissionConstants.SYS_ORGANIZATION_SYNC)
     @Operation(summary = "用户(员工)-同步组织架构")
-    public void syncUser(@PathVariable String type) {
+    public void syncUser(@PathVariable("type") String type) {
         thirdDepartmentService.syncUser(SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), type, LocaleContextHolder.getLocale());
     }
 

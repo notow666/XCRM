@@ -63,7 +63,7 @@ public class OrganizationUserController {
     @GetMapping("/detail/{id}")
     @Operation(summary = "用户(员工)-员工详情")
     @RequiresPermissions(PermissionConstants.SYS_ORGANIZATION_READ)
-    public UserResponse getUserDetail(@PathVariable String id) {
+    public UserResponse getUserDetail(@PathVariable("id") String id) {
         return organizationUserService.getUserDetail(id);
     }
 
@@ -78,7 +78,7 @@ public class OrganizationUserController {
     @GetMapping("/reset-password/{userId}")
     @RequiresPermissions(PermissionConstants.SYS_ORGANIZATION_USER_RESET_PASSWORD)
     @Operation(summary = "用户(员工)-重置密码")
-    public void resetPassword(@PathVariable String userId) {
+    public void resetPassword(@PathVariable("userId") String userId) {
         organizationUserService.resetPassword(userId, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
@@ -163,7 +163,7 @@ public class OrganizationUserController {
     @GetMapping("/delete/{id}")
     @RequiresPermissions(PermissionConstants.SYS_ORGANIZATION_DELETE)
     @Operation(summary = "用户(员工)-删除")
-    public void deleteUser(@PathVariable String id) {
+    public void deleteUser(@PathVariable("id") String id) {
         organizationUserService.deleteUserById(id, OrganizationContext.getOrganizationId());
     }
 
@@ -171,7 +171,7 @@ public class OrganizationUserController {
     @GetMapping("/delete/check/{id}")
     @RequiresPermissions(PermissionConstants.SYS_ORGANIZATION_DELETE)
     @Operation(summary = "用户(员工)-删除校验")
-    public boolean deleteCheck(@PathVariable String id) {
+    public boolean deleteCheck(@PathVariable("id") String id) {
         return organizationUserService.deleteCheck(id);
     }
 
@@ -179,7 +179,7 @@ public class OrganizationUserController {
     @GetMapping("/get/{departmentId}")
     @Operation(summary = "获取指定部门下用户")
     @RequiresPermissions(PermissionConstants.SYS_ORGANIZATION_READ)
-    public List<DeptUserTreeNode> getDepartmentUser(@PathVariable String departmentId) {
+    public List<DeptUserTreeNode> getDepartmentUser(@PathVariable("departmentId") String departmentId) {
         return organizationUserService.getUserTreeByDepId(departmentId, OrganizationContext.getOrganizationId());
     }
 }

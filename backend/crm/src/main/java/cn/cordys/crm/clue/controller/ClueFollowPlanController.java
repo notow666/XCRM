@@ -56,7 +56,7 @@ public class ClueFollowPlanController {
     @GetMapping("/get/{id}")
     @RequiresPermissions(PermissionConstants.CLUE_MANAGEMENT_READ)
     @Operation(summary = "线索跟进计划详情")
-    public FollowUpPlanDetailResponse get(@PathVariable String id) {
+    public FollowUpPlanDetailResponse get(@PathVariable("id") String id) {
         return followUpPlanService.get(id, OrganizationContext.getOrganizationId());
     }
 
@@ -64,7 +64,7 @@ public class ClueFollowPlanController {
     @GetMapping("/cancel/{id}")
     @RequiresPermissions(PermissionConstants.CLUE_MANAGEMENT_UPDATE)
     @Operation(summary = "取消线索跟进计划")
-    public void cancelPlan(@PathVariable String id) {
+    public void cancelPlan(@PathVariable("id") String id) {
         followUpPlanService.cancelPlan(id, SessionUtils.getUserId());
     }
 
@@ -72,7 +72,7 @@ public class ClueFollowPlanController {
     @GetMapping("/delete/{id}")
     @Operation(summary = "线索删除跟进计划")
     @RequiresPermissions(PermissionConstants.CLUE_MANAGEMENT_UPDATE)
-    public void deletePlan(@PathVariable String id) {
+    public void deletePlan(@PathVariable("id") String id) {
         followUpPlanService.delete(id);
     }
 

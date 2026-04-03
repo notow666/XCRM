@@ -57,7 +57,7 @@ public class RoleController {
     @GetMapping("/get/{id}")
     @RequiresPermissions(PermissionConstants.SYSTEM_ROLE_READ)
     @Operation(summary = "角色详情")
-    public RoleGetResponse get(@PathVariable String id) {
+    public RoleGetResponse get(@PathVariable("id") String id) {
         return roleService.get(id);
     }
 
@@ -78,7 +78,7 @@ public class RoleController {
     @GetMapping("/delete/{id}")
     @Operation(summary = "删除角色")
     @RequiresPermissions(PermissionConstants.SYSTEM_ROLE_DELETE)
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         roleService.delete(id, OrganizationContext.getOrganizationId());
     }
 
@@ -107,21 +107,21 @@ public class RoleController {
     @GetMapping("/user/dept/tree/{roleId}")
     @Operation(summary = "获取部门用户树")
     @RequiresPermissions(PermissionConstants.SYSTEM_ROLE_ADD_USER)
-    public List<DeptUserTreeNode> getDeptUserTree(@PathVariable String roleId) {
+    public List<DeptUserTreeNode> getDeptUserTree(@PathVariable("roleId") String roleId) {
         return userRoleService.getDeptUserTree(OrganizationContext.getOrganizationId(), roleId);
     }
 
     @GetMapping("/user/role/tree/{roleId}")
     @Operation(summary = "获取角色用户树")
     @RequiresPermissions(PermissionConstants.SYSTEM_ROLE_ADD_USER)
-    public List<RoleUserTreeNode> getRoleUserTree(@PathVariable String roleId) {
+    public List<RoleUserTreeNode> getRoleUserTree(@PathVariable("roleId") String roleId) {
         return userRoleService.getRoleUserTree(OrganizationContext.getOrganizationId(), roleId);
     }
 
     @GetMapping("/user/option/{roleId}")
     @Operation(summary = "获取所有用户选项")
     @RequiresPermissions(PermissionConstants.SYSTEM_ROLE_ADD_USER)
-    public List<RoleUserOptionResponse> RoleUserOptionResponse(@PathVariable String roleId) {
+    public List<RoleUserOptionResponse> RoleUserOptionResponse(@PathVariable("roleId") String roleId) {
         return userRoleService.getUserOptionByRoleId(OrganizationContext.getOrganizationId(), roleId);
     }
 
@@ -135,7 +135,7 @@ public class RoleController {
     @GetMapping("/user/delete/{id}")
     @Operation(summary = "角色移除用户")
     @RequiresPermissions(PermissionConstants.SYSTEM_ROLE_REMOVE_USER)
-    public void deleteRoleUser(@PathVariable String id) {
+    public void deleteRoleUser(@PathVariable("id") String id) {
         userRoleService.deleteRoleUser(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 

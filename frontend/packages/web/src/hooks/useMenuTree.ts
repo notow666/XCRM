@@ -18,7 +18,6 @@ export default function useMenuTree() {
   const appStore = useAppStore();
   const userStore = useUserStore();
   const permission = usePermission();
-
   const menuTree = computed(() => {
     const copyRouter = cloneDeep(appClientMenus) as RouteRecordNormalized[];
     if (userStore.userInfo.source === 'PLATFORM') {
@@ -52,6 +51,7 @@ export default function useMenuTree() {
       if (!_routes) return null;
 
       const collector = _routes.map((element) => {
+
         const isManagementCenterRoot =
           element.name === ManagementCenterRouteEnum.MANAGEMENT_CENTER ||
           String(element.path || '').startsWith('/management-center');

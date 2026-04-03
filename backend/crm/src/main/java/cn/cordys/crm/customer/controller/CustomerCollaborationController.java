@@ -31,7 +31,7 @@ public class CustomerCollaborationController {
     @GetMapping("/list/{customerId}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_READ)
     @Operation(summary = "客户协作人列表")
-    public List<CustomerCollaborationListResponse> list(@PathVariable String customerId) {
+    public List<CustomerCollaborationListResponse> list(@PathVariable("customerId") String customerId) {
         return customerCollaborationService.list(customerId, OrganizationContext.getOrganizationId());
     }
 
@@ -52,7 +52,7 @@ public class CustomerCollaborationController {
     @GetMapping("/delete/{id}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE)
     @Operation(summary = "删除客户协作人")
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         customerCollaborationService.delete(id);
     }
 

@@ -231,7 +231,7 @@ public class ModuleFieldController {
 
     @GetMapping("/display/{formKey}")
     @Operation(summary = "获取表单配置")
-    public ModuleFormConfigDTO getFieldList(@PathVariable String formKey) {
+    public ModuleFormConfigDTO getFieldList(@PathVariable("formKey") String formKey) {
         return moduleFormService.getSourceDisplayFields(formKey, OrganizationContext.getOrganizationId());
     }
 

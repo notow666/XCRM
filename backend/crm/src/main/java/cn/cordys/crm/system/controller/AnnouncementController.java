@@ -51,7 +51,7 @@ public class AnnouncementController {
     @GetMapping(value = "/announcement/get/{announcementId}")
     @Operation(summary = "获取公告")
     @RequiresPermissions(PermissionConstants.SYSTEM_NOTICE_READ)
-    public AnnouncementDTO addAnnouncement(@PathVariable String announcementId) {
+    public AnnouncementDTO addAnnouncement(@PathVariable("announcementId") String announcementId) {
         return announcementService.detail(announcementId);
     }
 
@@ -87,7 +87,7 @@ public class AnnouncementController {
     @GetMapping(value = "/announcement/delete/{announcementId}")
     @Operation(summary = "删除公告")
     @RequiresPermissions(PermissionConstants.SYSTEM_NOTICE_DELETE)
-    public void deleteAnnouncement(@PathVariable String announcementId) {
+    public void deleteAnnouncement(@PathVariable("announcementId") String announcementId) {
         announcementService.delete(announcementId);
     }
 

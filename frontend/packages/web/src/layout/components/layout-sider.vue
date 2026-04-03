@@ -143,7 +143,6 @@
   const personalTab = ref(PersonalEnum.INFO);
   const visitedKey = 'doNotShowPersonalExportAgain';
   const { addVisited, getIsVisited } = useVisit(visitedKey);
-
   watch(
     () => appStore.getMenuCollapsed,
     (value) => {

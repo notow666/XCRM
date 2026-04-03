@@ -73,7 +73,7 @@ public class BusinessTitleController {
     @GetMapping("/invoice/check/{id}")
     @RequiresPermissions(PermissionConstants.CONTRACT_BUSINESS_TITLE_DELETE)
     @Operation(summary = "检查工商抬头是否开过票")
-    public boolean checkInvoice(@PathVariable String id) {
+    public boolean checkInvoice(@PathVariable("id") String id) {
         return businessTitleService.checkHasInvoice(id);
     }
 

@@ -76,7 +76,7 @@ public class ProductPriceController {
 	@GetMapping("/copy/{id}")
 	@RequiresPermissions(PermissionConstants.PRICE_ADD)
 	@Operation(summary = "复制价格表")
-	public ProductPrice copy(@PathVariable String id) {
+	public ProductPrice copy(@PathVariable("id") String id) {
 		return priceService.copy(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
 	}
 
@@ -90,14 +90,14 @@ public class ProductPriceController {
     @GetMapping("/get/{id}")
     @RequiresPermissions(PermissionConstants.PRICE_READ)
     @Operation(summary = "价格表详情")
-    public ProductPriceGetResponse get(@PathVariable String id) {
+    public ProductPriceGetResponse get(@PathVariable("id") String id) {
         return priceService.get(id);
     }
 
     @GetMapping("/delete/{id}")
     @RequiresPermissions(PermissionConstants.PRICE_DELETE)
     @Operation(summary = "删除价格表")
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         priceService.delete(id);
     }
 

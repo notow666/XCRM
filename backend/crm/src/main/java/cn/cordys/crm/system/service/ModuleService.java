@@ -74,6 +74,7 @@ public class ModuleService {
     public List<ModuleDTO> getModuleList(ModuleRequest request) {
         LambdaQueryWrapper<Module> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Module::getOrganizationId, request.getOrganizationId());
+        queryWrapper.eq(Module::getEnable, true);
         List<Module> modules = moduleMapper.selectListByLambda(queryWrapper);
         return modules.stream()
                 .map(module -> {
@@ -251,7 +252,11 @@ public class ModuleService {
             module.setId(IDGenerator.nextStr());
             module.setModuleKey(moduleConstant.getKey());
             module.setOrganizationId(organizationId);
-            module.setEnable(true);
+            if(moduleConstant.equals(ModuleKey.PRODUCT)){
+                module.setEnable(false);
+            }else{
+                module.setEnable(true);
+            }
             module.setPos(pos.getAndIncrement());
             module.setCreateUser(InternalUser.ADMIN.getValue());
             module.setCreateTime(System.currentTimeMillis());

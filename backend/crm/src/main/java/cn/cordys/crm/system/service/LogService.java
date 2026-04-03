@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -111,6 +112,7 @@ public class LogService implements OperationLogHandler {
     @Async
     public void add(LogDTO log) {
         log.setTraceId(MDC.get(MdcConstants.TRACE_ID_KEY));
+        log.setPath(MDC.get(MdcConstants.REQUEST_URI_KEY));
 
         if (StringUtils.isBlank(log.getOrganizationId())) {
             log.setOrganizationId(OrganizationContext.getOrganizationId());
@@ -140,9 +142,6 @@ public class LogService implements OperationLogHandler {
             if (StringUtils.isBlank(log.getResourceName()) && ObjectUtils.isNotEmpty(extra.getResourceName())) {
                 log.setResourceName(subStrResourceName(extra.getResourceName()));
             }
-            if (StringUtils.isBlank(log.getTenantId()) && ObjectUtils.isNotEmpty(extra.getTenantId())) {
-                log.setTenantId(extra.getTenantId());
-            }
         }
 
         // 截断日志内容
@@ -152,10 +151,6 @@ public class LogService implements OperationLogHandler {
         operationLog.setResourceName(subStrResourceName(log.getResourceName()));
         operationLog.setDetail(log.getDetail());
         OperationLogBlob blob = getBlob(log);
-        if (StringUtils.isNotBlank(log.getTenantId())) {
-            runWithTenant(log.getTenantId(), () -> insertByMapper(operationLog, blob));
-            return;
-        }
         insertByMapper(operationLog, blob);
     }
 
@@ -170,12 +165,14 @@ public class LogService implements OperationLogHandler {
         if (CollectionUtils.isEmpty(logs)) {
             return;
         }
-
+        Map<String, String> copyOfContextMap = MDC.getCopyOfContextMap();
         long currentTimeMillis = System.currentTimeMillis();
         List<OperationLog> items = new ArrayList<>();
         // 使用流处理，构建操作日志和Blob列表
         List<OperationLogBlob> blobs = logs.stream()
                 .peek(log -> {
+                    log.setTraceId(copyOfContextMap.get(MdcConstants.TRACE_ID_KEY));
+                    log.setPath(copyOfContextMap.get(MdcConstants.REQUEST_URI_KEY));
                     log.setId(IDGenerator.nextStr());
                     log.setResourceName(subStrResourceName(log.getResourceName()));
                     log.setDetail(subStrContent(log.getDetail()));
@@ -196,20 +193,6 @@ public class LogService implements OperationLogHandler {
     @Override
     public void handleLog(LogDTO operationLog) {
         add(operationLog);
-    }
-
-    private void runWithTenant(String tenantId, Runnable action) {
-        String previous = TenantContext.getTenantId();
-        try {
-            TenantContext.setTenantId(tenantId);
-            action.run();
-        } finally {
-            if (previous == null) {
-                TenantContext.clear();
-            } else {
-                TenantContext.setTenantId(previous);
-            }
-        }
     }
 
     private void insertByMapper(OperationLog operationLog, OperationLogBlob blob) {

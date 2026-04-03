@@ -60,21 +60,21 @@ public class CluePoolController {
     @GetMapping("/no-pick/{id}")
     @Operation(summary = "线索池是否存在未领取线索")
     @RequiresPermissions(value = {PermissionConstants.MODULE_SETTING_UPDATE})
-    public boolean checkNoPick(@PathVariable String id) {
+    public boolean checkNoPick(@PathVariable("id") String id) {
         return cluePoolService.checkNoPick(id);
     }
 
     @GetMapping("/delete/{id}")
     @Operation(summary = "删除线索池")
     @RequiresPermissions(value = {PermissionConstants.MODULE_SETTING_UPDATE})
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         cluePoolService.delete(id);
     }
 
     @GetMapping("/switch/{id}")
     @Operation(summary = "启用/禁用线索池")
     @RequiresPermissions(value = {PermissionConstants.MODULE_SETTING_UPDATE})
-    public void switchStatus(@PathVariable String id) {
+    public void switchStatus(@PathVariable("id") String id) {
         cluePoolService.switchStatus(id, SessionUtils.getUserId());
     }
 }

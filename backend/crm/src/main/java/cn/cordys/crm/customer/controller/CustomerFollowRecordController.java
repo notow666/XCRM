@@ -66,7 +66,7 @@ public class CustomerFollowRecordController {
     @GetMapping("/get/{id}")
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_READ, PermissionConstants.CUSTOMER_MANAGEMENT_POOL_READ}, logical = Logical.OR)
     @Operation(summary = "客户跟进记录详情")
-    public FollowUpRecordDetailResponse get(@PathVariable String id) {
+    public FollowUpRecordDetailResponse get(@PathVariable("id") String id) {
         return followUpRecordService.get(id, OrganizationContext.getOrganizationId());
     }
 
@@ -74,7 +74,7 @@ public class CustomerFollowRecordController {
     @GetMapping("/delete/{id}")
     @Operation(summary = "客户删除跟进记录")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE)
-    public void deleteRecord(@PathVariable String id) {
+    public void deleteRecord(@PathVariable("id") String id) {
         followUpRecordService.delete(id);
     }
 }

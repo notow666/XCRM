@@ -29,7 +29,6 @@ public class OperationLogService {
         reqDTO.setResourceId(operationLog.getResourceId()); // 资源id
         reqDTO.setResourceName(operationLog.getResourceName()); // 资源名称
         reqDTO.setDetail(operationLog.getDetail()); // 资源名称
-        reqDTO.setTenantId(TenantContext.getTenantId());
     }
 
     private static void fillRequestFields(LogDTO reqDTO) {

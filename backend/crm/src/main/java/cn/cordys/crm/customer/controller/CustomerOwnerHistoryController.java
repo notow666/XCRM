@@ -30,7 +30,7 @@ public class CustomerOwnerHistoryController {
     @GetMapping("/list/{customerId}")
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_READ, PermissionConstants.CUSTOMER_MANAGEMENT_POOL_READ}, logical = Logical.OR)
     @Operation(summary = "客户责任人历史列表")
-    public List<CustomerOwnerListResponse> list(@PathVariable String customerId) {
+    public List<CustomerOwnerListResponse> list(@PathVariable("customerId") String customerId) {
         return customerOwnerHistoryService.list(customerId, OrganizationContext.getOrganizationId());
     }
 }

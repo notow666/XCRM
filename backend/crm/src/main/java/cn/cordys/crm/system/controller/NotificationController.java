@@ -49,7 +49,7 @@ public class NotificationController {
 
     @GetMapping(value = "/read/{id}")
     @Operation(summary = "消息中心-将消息设置为已读")
-    public Integer read(@PathVariable String id) {
+    public Integer read(@PathVariable("id") String id) {
         return notificationService.read(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 

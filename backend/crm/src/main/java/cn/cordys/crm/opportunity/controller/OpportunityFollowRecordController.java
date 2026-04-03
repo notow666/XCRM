@@ -54,14 +54,14 @@ public class OpportunityFollowRecordController {
     @GetMapping("/get/{id}")
     @RequiresPermissions(PermissionConstants.OPPORTUNITY_MANAGEMENT_READ)
     @Operation(summary = "商机跟进记录详情")
-    public FollowUpRecordDetailResponse get(@PathVariable String id) {
+    public FollowUpRecordDetailResponse get(@PathVariable("id") String id) {
         return followUpRecordService.get(id, OrganizationContext.getOrganizationId());
     }
 
     @GetMapping("/delete/{id}")
     @Operation(summary = "客户删除跟进记录")
     @RequiresPermissions(PermissionConstants.OPPORTUNITY_MANAGEMENT_UPDATE)
-    public void deleteRecord(@PathVariable String id) {
+    public void deleteRecord(@PathVariable("id") String id) {
         followUpRecordService.delete(id);
     }
 }

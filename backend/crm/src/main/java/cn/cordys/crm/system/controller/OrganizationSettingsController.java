@@ -120,7 +120,7 @@ public class OrganizationSettingsController {
 
     @GetMapping("/third-party/get/{type}")
     @Operation(summary = "根据类型获取开启的三方扫码设置")
-    public ThirdConfigBaseDTO<?> getThirdConfigByType(@PathVariable String type) {
+    public ThirdConfigBaseDTO<?> getThirdConfigByType(@PathVariable("type") String type) {
         String organizationId = Optional.ofNullable(OrganizationContext.getOrganizationId()).orElse(DEFAULT_ORGANIZATION_ID);
         return integrationConfigService.getThirdConfigForPublic(type, organizationId);
     }

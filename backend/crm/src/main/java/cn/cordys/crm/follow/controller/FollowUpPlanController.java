@@ -69,7 +69,7 @@ public class FollowUpPlanController {
 
     @GetMapping("/delete/{id}")
     @Operation(summary = "删除跟进计划")
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         followUpPlanService.checkPlanPermission(id, OrganizationContext.getOrganizationId());
         followUpPlanService.delete(id);
     }
@@ -84,7 +84,7 @@ public class FollowUpPlanController {
     @GetMapping("/get/{id}")
     @Operation(summary = "跟进计划详情")
     @RequiresPermissions(value = {PermissionConstants.CLUE_MANAGEMENT_READ, PermissionConstants.CUSTOMER_MANAGEMENT_READ, PermissionConstants.OPPORTUNITY_MANAGEMENT_READ}, logical = Logical.OR)
-    public FollowUpPlanDetailResponse get(@PathVariable String id) {
+    public FollowUpPlanDetailResponse get(@PathVariable("id") String id) {
         return followUpPlanService.get(id, OrganizationContext.getOrganizationId());
     }
 

@@ -1,6 +1,7 @@
 package cn.cordys.config;
 
 
+import cn.cordys.common.constants.MdcConstants;
 import cn.cordys.context.TenantContext;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -46,42 +47,55 @@ public class AsyncConfig implements AsyncConfigurer {
         return executor;
     }
 
+    @Override
+    public Executor getAsyncExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(10);
+        executor.setMaxPoolSize(20);
+        executor.setQueueCapacity(200);
+        executor.setThreadNamePrefix("default-async-task-");
+        // 设置 MDC 传递装饰器
+        executor.setTaskDecorator(new MdcTaskDecorator());
+        executor.initialize();
+        return executor;
+    }
+
     /**
      * 捕获 @Async void 方法未处理的异常
      */
     @Override
     public AsyncUncaughtExceptionHandler getAsyncUncaughtExceptionHandler() {
-        return (ex, method, params) -> log.error("异步任务异常: {}", method.getName() + " - " + ex.getMessage());
+        return (throwable, method, params) -> {
+            // 异步方法异常处理
+            Map<String, String> copyOfContextMap = MDC.getCopyOfContextMap();
+            log.error(String.format(
+                    "异步方法执行异常 - 方法: %s, traceId: %s, 租户: %s, 异常: %s",
+                    method.getName(),
+                    copyOfContextMap.get(MdcConstants.TRACE_ID_KEY),
+                    copyOfContextMap.get(MdcConstants.TENANT_ID_KEY),
+                    throwable.getMessage()
+            ));
+        };
     }
 
     /**
      * MDC 上下文传递装饰器
      */
     static class MdcTaskDecorator implements TaskDecorator {
-
         @Override
         public Runnable decorate(Runnable runnable) {
-            // 获取父线程的 MDC 上下文
-            Map<String, String> parentMdcContext = MDC.getCopyOfContextMap();
-
+            Map<String, String> parentMdc = MDC.getCopyOfContextMap();
+            String tenantId = TenantContext.getTenantId();
             return () -> {
                 try {
-                    // 设置子线程的 MDC 上下文
-                    if (parentMdcContext != null) {
-                        MDC.setContextMap(parentMdcContext);
+                    if (parentMdc != null) {
+                        MDC.setContextMap(parentMdc);
                     }
-
-                    // 传递租户上下文（如果使用了 ThreadLocal）
-                    String tenantId = TenantContext.getTenantId();
                     if (tenantId != null) {
                         TenantContext.setTenantId(tenantId);
                     }
-
-                    // 执行实际任务
                     runnable.run();
-
                 } finally {
-                    // 清理 MDC 和租户上下文，防止内存泄漏
                     MDC.clear();
                     TenantContext.clear();
                 }

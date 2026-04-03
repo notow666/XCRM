@@ -54,14 +54,14 @@ public class OpportunityRuleController {
     @GetMapping("/delete/{id}")
     @Operation(summary = "删除商机规则")
     @RequiresPermissions(value = {PermissionConstants.MODULE_SETTING_UPDATE})
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         opportunityRuleService.delete(id);
     }
 
     @GetMapping("/switch/{id}")
     @Operation(summary = "启用/禁用商机规则")
     @RequiresPermissions(value = {PermissionConstants.MODULE_SETTING_UPDATE})
-    public void switchStatus(@PathVariable String id) {
+    public void switchStatus(@PathVariable("id") String id) {
         opportunityRuleService.switchStatus(id, SessionUtils.getUserId());
     }
 }

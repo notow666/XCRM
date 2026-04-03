@@ -83,7 +83,7 @@ public class CustomerContactController {
     @GetMapping("/list/{customerId}")
     @Operation(summary = "客户下的联系人列表")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_READ)
-    public CustomerContactListAllResponse list(@Validated @PathVariable String customerId) {
+    public CustomerContactListAllResponse list(@Validated @PathVariable("customerId") String customerId) {
         DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(SessionUtils.getUserId(),
                 OrganizationContext.getOrganizationId(), PermissionConstants.CUSTOMER_MANAGEMENT_READ);
         return customerContactService.listByCustomerId(customerId, SessionUtils.getUserId(),
@@ -94,7 +94,7 @@ public class CustomerContactController {
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_READ,
             PermissionConstants.CUSTOMER_MANAGEMENT_CONTACT_READ}, logical = Logical.OR)
     @Operation(summary = "客户联系人详情")
-    public CustomerContactGetResponse get(@PathVariable String id) {
+    public CustomerContactGetResponse get(@PathVariable("id") String id) {
         return customerContactService.get(id);
     }
 
@@ -118,7 +118,7 @@ public class CustomerContactController {
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE,
             PermissionConstants.CUSTOMER_MANAGEMENT_CONTACT_UPDATE}, logical = Logical.OR)
     @Operation(summary = "启用联系人")
-    public void enable(@PathVariable String id) {
+    public void enable(@PathVariable("id") String id) {
         customerContactService.enable(id);
     }
 
@@ -126,7 +126,7 @@ public class CustomerContactController {
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE,
             PermissionConstants.CUSTOMER_MANAGEMENT_CONTACT_UPDATE}, logical = Logical.OR)
     @Operation(summary = "禁用联系人")
-    public void disable(@PathVariable String id, @RequestBody CustomerContactDisableRequest request) {
+    public void disable(@PathVariable("id") String id, @RequestBody CustomerContactDisableRequest request) {
         customerContactService.disable(id, request);
     }
 
@@ -134,7 +134,7 @@ public class CustomerContactController {
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_DELETE,
             PermissionConstants.CUSTOMER_MANAGEMENT_CONTACT_DELETE}, logical = Logical.OR)
     @Operation(summary = "删除客户联系人")
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         customerContactService.delete(id);
     }
 
@@ -142,7 +142,7 @@ public class CustomerContactController {
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_DELETE,
             PermissionConstants.CUSTOMER_MANAGEMENT_CONTACT_DELETE}, logical = Logical.OR)
     @Operation(summary = "检查客户联系人是否有关联商机")
-    public boolean checkOpportunity(@PathVariable String id) {
+    public boolean checkOpportunity(@PathVariable("id") String id) {
         return customerContactService.checkOpportunity(id);
     }
 

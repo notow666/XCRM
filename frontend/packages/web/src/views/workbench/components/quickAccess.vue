@@ -127,7 +127,7 @@
 
   const displayQuickAccessList = ref<QuickAccessItem[]>([]);
   const quickAccessPermissionList = computed<QuickAccessItem[]>(() =>
-    quickAccessList.filter((item) => hasAnyPermission(item.permission))
+    quickAccessList.filter((item) => hasAnyPermission(item.permission) && item.enable)
   );
 
   onMounted(async () => {
@@ -135,6 +135,7 @@
     const savePermissionList = savedKeys
       .map((key) => quickAccessPermissionList.value.find((item) => item.key === key))
       .filter(Boolean) as QuickAccessItem[];
+
     if (savePermissionList.length) {
       displayQuickAccessList.value = savePermissionList;
     } else {

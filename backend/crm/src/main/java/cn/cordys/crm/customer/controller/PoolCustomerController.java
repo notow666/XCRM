@@ -72,14 +72,14 @@ public class PoolCustomerController {
     @GetMapping("/delete/{id}")
     @Operation(summary = "删除客户")
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_POOL_DELETE})
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         poolCustomerService.delete(id);
     }
 
     @GetMapping("/get/{id}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_POOL_READ)
     @Operation(summary = "客户详情")
-    public CustomerGetResponse get(@PathVariable String id) {
+    public CustomerGetResponse get(@PathVariable("id") String id) {
         return customerService.get(id);
     }
 

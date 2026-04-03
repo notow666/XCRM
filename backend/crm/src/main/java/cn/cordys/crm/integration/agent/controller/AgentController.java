@@ -51,7 +51,7 @@ public class AgentController {
     @GetMapping("/detail/{id}")
     @Operation(summary = "智能体-详情")
     @RequiresPermissions(PermissionConstants.AGENT_READ)
-    public AgentDetailResponse getDetail(@PathVariable String id) {
+    public AgentDetailResponse getDetail(@PathVariable("id") String id) {
         return agentBaseService.getDetail(id);
     }
 
@@ -74,7 +74,7 @@ public class AgentController {
     @GetMapping("/delete/{id}")
     @RequiresPermissions(PermissionConstants.AGENT_DELETE)
     @Operation(summary = "智能体-删除")
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         agentBaseService.delete(id);
     }
 
@@ -89,7 +89,7 @@ public class AgentController {
     @GetMapping("/collect/{id}")
     @RequiresPermissions(PermissionConstants.AGENT_READ)
     @Operation(summary = "智能体收藏")
-    public void collect(@PathVariable String id) {
+    public void collect(@PathVariable("id") String id) {
         agentBaseService.collect(id, SessionUtils.getUserId());
     }
 
@@ -97,7 +97,7 @@ public class AgentController {
     @GetMapping("/un-collect/{id}")
     @RequiresPermissions(PermissionConstants.AGENT_READ)
     @Operation(summary = "智能体取消收藏")
-    public void unCollect(@PathVariable String id) {
+    public void unCollect(@PathVariable("id") String id) {
         agentBaseService.unCollect(id, SessionUtils.getUserId());
     }
 
@@ -144,7 +144,7 @@ public class AgentController {
     @GetMapping("/application/{workspaceId}")
     @Operation(summary = "获取智能体应用")
     @RequiresPermissions(PermissionConstants.AGENT_READ)
-    public List<OptionDTO> getApplication(@PathVariable String workspaceId) {
+    public List<OptionDTO> getApplication(@PathVariable("workspaceId") String workspaceId) {
         return agentBaseService.application(workspaceId, OrganizationContext.getOrganizationId());
     }
 

@@ -43,7 +43,7 @@ public class DashboardController {
     @GetMapping("/detail/{id}")
     @Operation(summary = "仪表板-详情")
     @RequiresPermissions(PermissionConstants.DASHBOARD_READ)
-    public DashboardDetailResponse getDashboardDetail(@PathVariable String id) {
+    public DashboardDetailResponse getDashboardDetail(@PathVariable("id") String id) {
         return dashboardService.getDashboardDetail(id);
     }
 
@@ -66,7 +66,7 @@ public class DashboardController {
     @GetMapping("/delete/{id}")
     @RequiresPermissions(PermissionConstants.DASHBOARD_DELETE)
     @Operation(summary = "仪表板-删除")
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         dashboardService.delete(id);
     }
 
@@ -82,7 +82,7 @@ public class DashboardController {
     @GetMapping("/collect/{id}")
     @RequiresPermissions(PermissionConstants.DASHBOARD_READ)
     @Operation(summary = "仪表板收藏")
-    public void collect(@PathVariable String id) {
+    public void collect(@PathVariable("id") String id) {
         dashboardService.collect(id, SessionUtils.getUserId());
     }
 
@@ -90,7 +90,7 @@ public class DashboardController {
     @GetMapping("/un-collect/{id}")
     @RequiresPermissions(PermissionConstants.DASHBOARD_READ)
     @Operation(summary = "仪表板取消收藏")
-    public void unCollect(@PathVariable String id) {
+    public void unCollect(@PathVariable("id") String id) {
         dashboardService.unCollect(id, SessionUtils.getUserId());
     }
 

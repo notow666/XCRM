@@ -7,7 +7,7 @@
     <select id="selectList" resultType="cn.cordys.crm.system.domain.Navigation">
         select id, navigation_key, enable, organization_id, pos
         from sys_navigation
-        where organization_id = #{orgId}
+        where organization_id = #{orgId} and enable = true
         order by pos
     </select>
 

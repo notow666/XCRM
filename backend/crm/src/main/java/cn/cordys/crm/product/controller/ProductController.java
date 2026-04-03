@@ -61,7 +61,7 @@ public class ProductController {
     @GetMapping("/get/{id}")
     @RequiresPermissions(PermissionConstants.PRODUCT_MANAGEMENT_READ)
     @Operation(summary = "产品详情")
-    public ProductGetResponse get(@PathVariable String id) {
+    public ProductGetResponse get(@PathVariable("id") String id) {
         return productService.get(id);
     }
 
@@ -89,7 +89,7 @@ public class ProductController {
     @GetMapping("/delete/{id}")
     @RequiresPermissions(PermissionConstants.PRODUCT_MANAGEMENT_DELETE)
     @Operation(summary = "删除产品")
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         productService.delete(id);
     }
 

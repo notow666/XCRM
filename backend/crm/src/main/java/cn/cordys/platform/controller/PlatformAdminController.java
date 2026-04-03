@@ -50,7 +50,7 @@ public class PlatformAdminController {
 
     @GetMapping("/tenant/{tenantId}")
     @Operation(summary = "租户详情")
-    public PlatformTenantItemResponse tenantDetail(@PathVariable String tenantId) {
+    public PlatformTenantItemResponse tenantDetail(@PathVariable("tenantId") String tenantId) {
         assertPlatformAdmin();
         return platformAdminService.getTenantDetail(tenantId);
     }
@@ -74,14 +74,14 @@ public class PlatformAdminController {
 
     @GetMapping("/tenant/provision/task/{taskId}")
     @Operation(summary = "租户创建任务详情")
-    public PlatformTenantProvisionTaskResponse provisionTask(@PathVariable String taskId) {
+    public PlatformTenantProvisionTaskResponse provisionTask(@PathVariable("taskId") String taskId) {
         assertPlatformAdmin();
         return platformAdminService.getTenantProvisionTask(taskId);
     }
 
     @PostMapping("/tenant/{tenantId}/status")
     @Operation(summary = "租户启停")
-    public void updateStatus(@PathVariable String tenantId,
+    public void updateStatus(@PathVariable("tenantId") String tenantId,
                              @RequestParam(value = "enabled", required = false) Boolean enabled,
                              @RequestBody(required = false) Map<String, Object> payload) {
         String operator = assertPlatformAdmin();
@@ -102,28 +102,28 @@ public class PlatformAdminController {
 
     @PostMapping("/tenant/{tenantId}/freeze")
     @Operation(summary = "冻结租户")
-    public void freeze(@PathVariable String tenantId) {
+    public void freeze(@PathVariable("tenantId") String tenantId) {
         String operator = assertPlatformAdmin();
         platformAdminService.updateTenantStatus(tenantId, false, operator);
     }
 
     @PostMapping("/tenant/{tenantId}/unfreeze")
     @Operation(summary = "解冻租户")
-    public void unfreeze(@PathVariable String tenantId) {
+    public void unfreeze(@PathVariable("tenantId") String tenantId) {
         String operator = assertPlatformAdmin();
         platformAdminService.updateTenantStatus(tenantId, true, operator);
     }
 
     @GetMapping("/tenant/{tenantId}/health")
     @Operation(summary = "租户健康检查")
-    public PlatformTenantHealthResponse health(@PathVariable String tenantId) {
+    public PlatformTenantHealthResponse health(@PathVariable("tenantId") String tenantId) {
         assertPlatformAdmin();
         return platformAdminService.checkTenantHealth(tenantId);
     }
 
     @PostMapping("/tenant/{tenantId}/migrate")
     @Operation(summary = "重跑租户迁移")
-    public void rerunMigrate(@PathVariable String tenantId) {
+    public void rerunMigrate(@PathVariable("tenantId") String tenantId) {
         String operator = assertPlatformAdmin();
         platformAdminService.rerunTenantMigrate(tenantId, operator);
     }

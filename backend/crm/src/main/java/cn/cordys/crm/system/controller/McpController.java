@@ -23,7 +23,7 @@ public class McpController {
 
     @GetMapping("/form/config/{formKey}")
     @Operation(summary = "获取表单配置")
-    public List<SimpleField> getMcpField(@PathVariable String formKey) {
+    public List<SimpleField> getMcpField(@PathVariable("formKey") String formKey) {
         return moduleFormService.getMcpFields(formKey, OrganizationContext.getOrganizationId());
     }
 }

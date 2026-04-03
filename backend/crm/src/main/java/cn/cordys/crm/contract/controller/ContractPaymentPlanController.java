@@ -72,7 +72,7 @@ public class ContractPaymentPlanController {
     @GetMapping("/get/{id}")
     @RequiresPermissions(PermissionConstants.CONTRACT_PAYMENT_PLAN_READ)
     @Operation(summary = "合同回款计划详情")
-    public ContractPaymentPlanGetResponse get(@PathVariable String id){
+    public ContractPaymentPlanGetResponse get(@PathVariable("id") String id){
         return contractPaymentPlanService.getWithDataPermissionCheck(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
@@ -93,7 +93,7 @@ public class ContractPaymentPlanController {
     @GetMapping("/delete/{id}")
     @RequiresPermissions(PermissionConstants.CONTRACT_PAYMENT_PLAN_DELETE)
     @Operation(summary = "删除合同回款计划")
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
 		contractPaymentPlanService.delete(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 

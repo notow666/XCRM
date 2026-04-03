@@ -49,14 +49,14 @@ public class OrderUserViewController {
     @GetMapping("/delete/{id}")
     @RequiresPermissions(PermissionConstants.ORDER_READ)
     @Operation(summary = "删除订单视图")
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         userViewService.delete(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
     @GetMapping("/detail/{id}")
     @RequiresPermissions(PermissionConstants.ORDER_READ)
     @Operation(summary = "订单视图详情")
-    public UserViewResponse viewDetail(@PathVariable String id) {
+    public UserViewResponse viewDetail(@PathVariable("id") String id) {
         return userViewService.getViewDetail(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), FormKey.ORDER.getKey());
     }
 
@@ -72,7 +72,7 @@ public class OrderUserViewController {
     @GetMapping("/fixed/{id}")
     @RequiresPermissions(PermissionConstants.ORDER_READ)
     @Operation(summary = "视图固定/取消固定")
-    public void fixed(@PathVariable String id) {
+    public void fixed(@PathVariable("id") String id) {
         userViewService.fixed(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
@@ -87,7 +87,7 @@ public class OrderUserViewController {
     @GetMapping("/enable/{id}")
     @RequiresPermissions(PermissionConstants.ORDER_READ)
     @Operation(summary = "视图-启用/禁用")
-    public void enable(@PathVariable String id) {
+    public void enable(@PathVariable("id") String id) {
         userViewService.enable(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 }

@@ -435,6 +435,10 @@ public class RoleService {
                     continue;
                 }
                 List<PermissionDefinitionItem> temp = JSON.parseArray(content, PermissionDefinitionItem.class);
+
+                if(CollectionUtils.isNotEmpty(temp)) {
+                    temp = PermissionDefinitionItem.filterTree(temp, PermissionDefinitionItem::getDisplay);
+                }
                 if (permissionDefinitions == null) {
                     permissionDefinitions = temp;
                 } else {

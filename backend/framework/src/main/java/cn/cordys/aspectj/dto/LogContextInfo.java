@@ -34,11 +34,6 @@ public class LogContextInfo implements java.io.Serializable {
      */
     private String resourceName;
 
-    /**
-     * 租户ID（租户中心日志时用于路由及落库）
-     */
-    private String tenantId;
-
     @Override
     public String toString() {
         return JSON.toJSONString(this);

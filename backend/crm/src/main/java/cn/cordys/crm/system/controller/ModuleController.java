@@ -42,7 +42,7 @@ public class ModuleController {
     @GetMapping("/switch/{id}")
     @Operation(summary = "单个模块开启或关闭")
     @RequiresPermissions(PermissionConstants.MODULE_SETTING_UPDATE)
-    public void switchModule(@PathVariable String id) {
+    public void switchModule(@PathVariable("id") String id) {
         moduleService.switchModule(id, SessionUtils.getUserId());
     }
 

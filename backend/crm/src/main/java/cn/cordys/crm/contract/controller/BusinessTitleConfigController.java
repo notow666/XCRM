@@ -35,7 +35,7 @@ public class BusinessTitleConfigController {
     @GetMapping("/switch/{id}")
     @Operation(summary = "必填/非必填设置")
     @RequiresPermissions(value = {PermissionConstants.MODULE_SETTING_UPDATE})
-    public void switchRequired(@PathVariable String id) {
+    public void switchRequired(@PathVariable("id") String id) {
         businessTitleConfigService.switchRequired(id);
     }
 }

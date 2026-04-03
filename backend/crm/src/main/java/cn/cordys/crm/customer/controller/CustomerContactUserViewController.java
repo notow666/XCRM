@@ -50,14 +50,14 @@ public class CustomerContactUserViewController {
     @GetMapping("/delete/{id}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_CONTACT_READ)
     @Operation(summary = "删除联系人视图")
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         userViewService.delete(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
     @GetMapping("/detail/{id}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_CONTACT_READ)
     @Operation(summary = "联系人视图详情")
-    public UserViewResponse viewDetail(@PathVariable String id) {
+    public UserViewResponse viewDetail(@PathVariable("id") String id) {
         return userViewService.getViewDetail(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), FormKey.CONTACT.getKey());
     }
 
@@ -73,7 +73,7 @@ public class CustomerContactUserViewController {
     @GetMapping("/fixed/{id}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_CONTACT_READ)
     @Operation(summary = "联系人视图固定/取消固定")
-    public void fixed(@PathVariable String id) {
+    public void fixed(@PathVariable("id") String id) {
         userViewService.fixed(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
@@ -88,7 +88,7 @@ public class CustomerContactUserViewController {
     @GetMapping("/enable/{id}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_CONTACT_READ)
     @Operation(summary = "联系人视图-启用/禁用")
-    public void enable(@PathVariable String id) {
+    public void enable(@PathVariable("id") String id) {
         userViewService.enable(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 

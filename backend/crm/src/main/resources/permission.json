@@ -91,6 +91,7 @@
       {
         "id": "SYSTEM_SETTING",
         "name": "permission.system.setting.name",
+        "display": false,
         "permissions": [
           {
             "id": "SYSTEM_SETTING:READ"
@@ -199,6 +200,7 @@
       {
         "id": "CUSTOMER_MANAGEMENT_CONTACT",
         "name": "permission.customer.customer_contact.name",
+        "display": false,
         "permissions": [
           {
             "id": "CUSTOMER_MANAGEMENT_CONTACT:READ"
@@ -229,6 +231,7 @@
       {
         "id": "CLUE_MANAGEMENT_CLUE",
         "name": "permission.clue_management.clue.name",
+        "display": false,
         "permissions": [
           {
             "id": "CLUE_MANAGEMENT:READ"
@@ -323,6 +326,7 @@
       {
         "id": "OPPORTUNITY_MANAGEMENT_QUOTATION",
         "name": "permission.opportunity_management.opportunity_quotation.name",
+        "display": false,
         "permissions": [
           {
             "id": "OPPORTUNITY_QUOTATION:READ"
@@ -353,10 +357,12 @@
   {
     "id": "PRODUCT_MANAGEMENT",
     "name": "permission.product_management.name",
+    "display": false,
     "children": [
       {
         "id": "PRODUCT_MANAGEMENT_PRODUCT",
         "name": "permission.product_management.product.name",
+        "display": false,
         "permissions": [
           {
             "id": "PRODUCT_MANAGEMENT:READ"
@@ -378,6 +384,7 @@
       {
         "id": "PRODUCT_MANAGEMENT_PRICE",
         "name": "permission.product_management.price.name",
+        "display": false,
         "permissions": [
           {
             "id": "PRICE:READ"
@@ -405,10 +412,12 @@
     "id": "DASHBOARD_MANAGEMENT",
     "name": "permission.dashboard_management.name",
     "license": false,
+    "display": false,
     "children": [
       {
         "id": "DASHBOARD",
         "name": "permission.dashboard.name",
+        "display": false,
         "permissions": [
           {
             "id": "DASHBOARD:READ",
@@ -463,10 +472,12 @@
     "id": "AGENT_MANAGEMENT",
     "name": "permission.agent_management.name",
     "license": false,
+    "display": false,
     "children": [
       {
         "id": "AGENT",
         "name": "permission.agent.name",
+        "display": false,
         "permissions": [
           {
             "id": "AGENT:READ",
@@ -492,10 +503,12 @@
     "id": "TENDER_MANAGEMENT",
     "name": "permission.tender_management.name",
     "license": false,
+    "display": false,
     "children": [
       {
         "id": "TENDER",
         "name": "permission.tender.name",
+        "display": false,
         "permissions": [
           {
             "id": "TENDER:READ",
@@ -595,6 +608,7 @@
       {
         "id": "BUSINESS_TITLE",
         "name": "permission.business_title.name",
+        "display": false,
         "permissions": [
           {
             "id": "CONTRACT_BUSINESS_TITLE:READ",
@@ -625,6 +639,7 @@
       {
         "id": "CONTRACT_INVOICE",
         "name": "permission.contract.invoice.name",
+        "display": false,
         "permissions": [
           {
             "id": "CONTRACT_INVOICE:READ"
@@ -652,10 +667,12 @@
     "id": "ORDER_MANAGEMENT",
     "name": "permission.order_management.name",
     "license": false,
+    "display": false,
     "children": [
       {
         "id": "ORDER",
         "name": "permission.order.name",
+        "display": false,
         "permissions": [
           {
             "id": "ORDER:READ"

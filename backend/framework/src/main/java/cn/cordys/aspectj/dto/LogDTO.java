@@ -67,9 +67,6 @@ public class LogDTO {
     @Schema(description = "tranceId")
     private String traceId;
 
-    @Schema(description = "租户ID")
-    private String tenantId;
-
     /**
      * 原始值
      */

@@ -1,0 +1,606 @@
+2026-04-02 09:11:03.903 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 2580 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-02 09:11:03.903 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-02 09:11:11.827 [] [] [] INFO  cn.cordys.Application - Started Application in 8.347 seconds (process running for 8.908)
+2026-04-02 09:11:11.830 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
+2026-04-02 09:11:11.833 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=vivo, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_vivo?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-02 09:11:11.914 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=vivo
+2026-04-02 09:11:11.914 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-02 09:11:11.967 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
+2026-04-02 09:11:11.967 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
+2026-04-02 09:11:11.967 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
+2026-04-02 09:11:12.122 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=37, hostName=240e:398:3e0:d500:a51e:8d3e:dc98:7b5f, port=1775092271978-1868855080, type=2, launchDate=1775092271979, modified=1775092271979, created=1775092271979)
+2026-04-02 09:11:12.122 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=37
+2026-04-02 09:11:12.122 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
+2026-04-02 09:11:12.138 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
+2026-04-02 09:11:12.139 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
+2026-04-02 09:11:12.161 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
+2026-04-02 09:11:12.204 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
+2026-04-02 09:11:12.208 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=vivo
+2026-04-02 09:11:12.208 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=vivo
+2026-04-02 09:11:12.212 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=vivo
+2026-04-02 09:11:12.239 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=vivo
+2026-04-02 09:11:12.241 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
+2026-04-02 09:11:12.245 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
+2026-04-02 09:12:11.970 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 09:12:11.975 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
+2026-04-02 09:12:11.985 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 09:12:12.002 [] [] [] INFO  c.c.c.i.d.s.DataEaseSyncService - 定时同步DataEase数据，tenantId=default, 组织ID=100001
+2026-04-02 09:12:12.021 [] [] [] INFO  c.c.c.i.d.s.DataEaseSyncService - 定时同步DataEase数据，tenantId=vivo, 组织ID=100001
+2026-04-02 09:12:12.072 [] [] [] INFO  cn.cordys.crm.system.job.SessionJob - 用户会话统计: {}
+2026-04-02 09:12:12.130 [] [] [] INFO  c.c.crm.system.job.TaskCleanupJob - 执行清理任务，tenantId=default
+2026-04-02 09:12:12.130 [] [] [] INFO  c.c.crm.system.job.TaskCleanupJob - 开始执行所有清理任务
+2026-04-02 09:12:12.135 [] [] [] INFO  c.c.c.s.j.l.CleanTempResourceListener - 开始清理临时目录资源
+2026-04-02 09:12:12.142 [] [] [] INFO  c.c.c.s.j.l.CleanTempResourceListener - 临时目录资源清理完成
+2026-04-02 09:12:12.142 [] [] [] INFO  c.c.c.s.j.l.CluePoolRecycleListener - 开始回收线索资源
+2026-04-02 09:12:12.147 [] [] [] INFO  c.c.c.s.j.l.CluePoolRecycleListener - 没有启用的自动回收线索池，回收任务结束
+2026-04-02 09:12:12.147 [] [] [] INFO  c.c.c.s.j.l.CustomerPoolRecycleListener - 开始回收客户资源
+2026-04-02 09:12:12.151 [] [] [] INFO  c.c.c.s.j.l.CustomerPoolRecycleListener - 没有启用的自动回收公海，回收任务结束
+2026-04-02 09:12:12.151 [] [] [] INFO  c.c.c.s.j.l.FollowUpPlanRemindListener - 跟进计划到期提醒
+2026-04-02 09:12:12.157 [] [] [] INFO  c.c.c.s.j.l.FollowUpPlanRemindListener - 跟进计划到期提醒完成
+2026-04-02 09:12:12.157 [] [] [] INFO  c.c.c.s.j.l.OpportunityRuleListener - 开始回收商机资源
+2026-04-02 09:12:12.161 [] [] [] INFO  c.c.c.s.j.l.OpportunityRuleListener - 没有启用的自动回收商机规则，回收任务结束
+2026-04-02 09:12:12.161 [] [] [] INFO  c.c.crm.system.job.TaskCleanupJob - 所有清理任务执行完成
+2026-04-02 09:12:12.161 [] [] [] INFO  c.c.crm.system.job.TaskCleanupJob - 执行清理任务，tenantId=vivo
+2026-04-02 09:12:12.161 [] [] [] INFO  c.c.crm.system.job.TaskCleanupJob - 开始执行所有清理任务
+2026-04-02 09:12:12.163 [] [] [] INFO  c.c.c.s.j.l.CleanTempResourceListener - 开始清理临时目录资源
+2026-04-02 09:12:12.163 [] [] [] INFO  c.c.c.s.j.l.CleanTempResourceListener - 临时目录资源清理完成
+2026-04-02 09:12:12.163 [] [] [] INFO  c.c.c.s.j.l.CluePoolRecycleListener - 开始回收线索资源
+2026-04-02 09:12:12.168 [] [] [] INFO  c.c.c.s.j.l.CluePoolRecycleListener - 没有启用的自动回收线索池，回收任务结束
+2026-04-02 09:12:12.168 [] [] [] INFO  c.c.c.s.j.l.CustomerPoolRecycleListener - 开始回收客户资源
+2026-04-02 09:12:12.178 [] [] [] INFO  c.c.c.s.j.l.CustomerPoolRecycleListener - 没有启用的自动回收公海，回收任务结束
+2026-04-02 09:12:12.178 [] [] [] INFO  c.c.c.s.j.l.FollowUpPlanRemindListener - 跟进计划到期提醒
+2026-04-02 09:12:12.182 [] [] [] INFO  c.c.c.s.j.l.FollowUpPlanRemindListener - 跟进计划到期提醒完成
+2026-04-02 09:12:12.182 [] [] [] INFO  c.c.c.s.j.l.OpportunityRuleListener - 开始回收商机资源
+2026-04-02 09:12:12.184 [] [] [] INFO  c.c.c.s.j.l.OpportunityRuleListener - 没有启用的自动回收商机规则，回收任务结束
+2026-04-02 09:12:12.185 [] [] [] INFO  c.c.crm.system.job.TaskCleanupJob - 所有清理任务执行完成
+2026-04-02 09:14:12.955 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-02 09:15:00.026 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 09:15:00.026 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 09:16:44.699 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 1 
+2026-04-02 09:16:44.699 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - User ID or Client ID is blank, cannot add client.
+2026-04-02 09:16:48.593 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 1 
+2026-04-02 09:20:00.062 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 09:20:00.062 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 09:25:00.041 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 09:25:00.046 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 09:30:00.075 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 09:30:00.075 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 09:35:00.894 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 09:35:00.894 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 09:40:00.049 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 09:40:00.049 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 09:45:00.025 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 09:45:00.026 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 09:50:00.056 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 09:50:00.057 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 09:52:12.983 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 10244 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-02 09:52:12.984 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-02 09:52:21.634 [] [] [] INFO  cn.cordys.Application - Started Application in 9.133 seconds (process running for 9.813)
+2026-04-02 09:52:21.637 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
+2026-04-02 09:52:21.640 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=vivo, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_vivo?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-02 09:52:21.741 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=vivo
+2026-04-02 09:52:21.741 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-02 09:52:21.797 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
+2026-04-02 09:52:21.797 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
+2026-04-02 09:52:21.798 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
+2026-04-02 09:52:21.891 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=38, hostName=240e:398:3e0:d500:a51e:8d3e:dc98:7b5f, port=1775094741809-1446598133, type=2, launchDate=1775094741811, modified=1775094741811, created=1775094741811)
+2026-04-02 09:52:21.892 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=38
+2026-04-02 09:52:21.893 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
+2026-04-02 09:52:21.913 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
+2026-04-02 09:52:21.913 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
+2026-04-02 09:52:21.937 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
+2026-04-02 09:52:21.982 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
+2026-04-02 09:52:21.985 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=vivo
+2026-04-02 09:52:21.986 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=vivo
+2026-04-02 09:52:21.990 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=vivo
+2026-04-02 09:52:22.012 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=vivo
+2026-04-02 09:52:22.013 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
+2026-04-02 09:52:22.020 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
+2026-04-02 09:52:33.388 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-02 09:52:46.418 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 1 
+2026-04-02 09:53:21.800 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
+2026-04-02 09:55:00.085 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 09:55:00.085 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 09:55:41.402 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 1 
+2026-04-02 09:56:02.970 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 1 
+2026-04-02 09:56:14.033 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 1 
+2026-04-02 09:57:04.491 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 1 
+2026-04-02 09:57:15.868 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 1 
+2026-04-02 09:59:49.558 [338738822185639937] [vivo] [admin] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-02 10:00:00.054 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 10:00:00.054 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 10:00:03.460 [338738942444724225] [vivo] [admin] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-02 10:00:31.785 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 1 
+2026-04-02 10:01:29.972 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 1 
+2026-04-02 10:01:39.102 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 1 
+2026-04-02 10:05:00.025 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 10:05:00.025 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 10:10:00.609 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 10:10:00.609 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 10:15:00.037 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 10:15:00.037 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 10:20:00.020 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 10:20:00.020 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 10:25:00.053 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 10:25:00.053 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 10:30:00.043 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 10:30:00.043 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 10:35:00.028 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 10:35:00.028 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 10:36:10.505 [338757556832985088] [vivo] [admin] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-02 10:37:26.987 [338758209668014080] [vivo] [admin] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-02 10:37:31.753 [338758252617687040] [vivo] [admin] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-02 10:37:31.753 [338758252617687040] [vivo] [admin] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-02 10:40:00.065 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 10:40:00.066 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 10:45:00.112 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 10:45:00.113 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 10:48:01.897 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 17128 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-02 10:48:01.897 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-02 10:48:09.934 [] [] [] INFO  cn.cordys.Application - Started Application in 8.455 seconds (process running for 8.975)
+2026-04-02 10:48:09.937 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
+2026-04-02 10:48:09.940 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=vivo, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_vivo?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-02 10:48:10.032 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=vivo
+2026-04-02 10:48:10.032 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-02 10:48:10.087 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
+2026-04-02 10:48:10.087 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
+2026-04-02 10:48:10.088 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
+2026-04-02 10:48:10.228 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=39, hostName=240e:398:3e0:d500:a51e:8d3e:dc98:7b5f, port=1775098090097-96103780, type=2, launchDate=1775098090099, modified=1775098090099, created=1775098090099)
+2026-04-02 10:48:10.229 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=39
+2026-04-02 10:48:10.229 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
+2026-04-02 10:48:10.246 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
+2026-04-02 10:48:10.246 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
+2026-04-02 10:48:10.267 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
+2026-04-02 10:48:10.312 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
+2026-04-02 10:48:10.316 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=vivo
+2026-04-02 10:48:10.316 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=vivo
+2026-04-02 10:48:10.323 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=vivo
+2026-04-02 10:48:10.366 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=vivo
+2026-04-02 10:48:10.371 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
+2026-04-02 10:48:10.380 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
+2026-04-02 10:49:10.392 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
+2026-04-02 10:50:00.024 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 10:50:00.034 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 10:55:00.027 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 10:55:00.030 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 11:00:00.028 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 11:00:00.029 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 11:02:30.950 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-02 11:05:00.091 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 11:05:00.093 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 11:10:00.044 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 11:10:00.044 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 11:12:10.476 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 1 
+2026-04-02 11:15:00.031 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 11:15:00.032 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 11:20:00.078 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 11:20:00.079 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 11:25:00.034 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 11:25:00.034 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 11:29:07.483 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 2 
+2026-04-02 11:29:43.517 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 2 
+2026-04-02 11:30:00.113 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 11:30:00.114 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 11:30:15.852 [338785431170740224] [vivo] [338767856164564993] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-02 11:30:52.067 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 2 
+2026-04-02 11:31:16.600 [338785955156750336] [vivo] [338767314998685697] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-02 11:31:16.666 [338785955156750336] [vivo] [338767314998685697] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-02 11:31:20.851 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 3 
+2026-04-02 11:31:59.352 [338786324523937792] [vivo] [338767314998685697] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-02 11:35:00.053 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 11:35:00.054 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 11:36:25.852 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 6532 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-02 11:36:25.853 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-02 11:36:34.060 [] [] [] INFO  cn.cordys.Application - Started Application in 8.616 seconds (process running for 9.121)
+2026-04-02 11:36:34.062 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
+2026-04-02 11:36:34.065 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=vivo, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_vivo?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-02 11:36:34.146 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=vivo
+2026-04-02 11:36:34.146 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-02 11:36:34.201 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
+2026-04-02 11:36:34.201 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
+2026-04-02 11:36:34.201 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
+2026-04-02 11:36:34.287 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=40, hostName=240e:398:3e0:d500:a51e:8d3e:dc98:7b5f, port=1775100994211-1621014945, type=2, launchDate=1775100994213, modified=1775100994213, created=1775100994213)
+2026-04-02 11:36:34.288 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=40
+2026-04-02 11:36:34.288 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
+2026-04-02 11:36:34.302 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
+2026-04-02 11:36:34.302 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
+2026-04-02 11:36:34.350 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
+2026-04-02 11:36:34.466 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
+2026-04-02 11:36:34.472 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=vivo
+2026-04-02 11:36:34.472 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=vivo
+2026-04-02 11:36:34.477 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=vivo
+2026-04-02 11:36:34.502 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=vivo
+2026-04-02 11:36:34.505 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
+2026-04-02 11:36:34.511 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
+2026-04-02 11:36:37.017 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Shutdown UID Generator...
+2026-04-02 11:36:40.633 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 6840 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-02 11:36:40.634 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-02 11:36:48.571 [] [] [] INFO  cn.cordys.Application - Started Application in 8.357 seconds (process running for 8.829)
+2026-04-02 11:36:48.574 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
+2026-04-02 11:36:48.576 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=vivo, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_vivo?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-02 11:36:48.647 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=vivo
+2026-04-02 11:36:48.647 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-02 11:36:48.698 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
+2026-04-02 11:36:48.698 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
+2026-04-02 11:36:48.698 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
+2026-04-02 11:36:48.760 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=41, hostName=240e:398:3e0:d500:a51e:8d3e:dc98:7b5f, port=1775101008708-2001136202, type=2, launchDate=1775101008710, modified=1775101008710, created=1775101008710)
+2026-04-02 11:36:48.761 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=41
+2026-04-02 11:36:48.761 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
+2026-04-02 11:36:48.781 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
+2026-04-02 11:36:48.781 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
+2026-04-02 11:36:48.810 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
+2026-04-02 11:36:48.869 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
+2026-04-02 11:36:48.872 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=vivo
+2026-04-02 11:36:48.872 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=vivo
+2026-04-02 11:36:48.876 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=vivo
+2026-04-02 11:36:48.897 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=vivo
+2026-04-02 11:36:48.899 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
+2026-04-02 11:36:48.902 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
+2026-04-02 11:37:10.817 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-02 11:37:18.537 [338789064713080832] [vivo] [admin] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-02 11:37:48.904 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
+2026-04-02 11:38:34.750 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 1 
+2026-04-02 11:40:00.037 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 11:40:00.050 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 11:45:00.039 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 11:45:00.039 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 11:50:00.102 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 11:50:00.102 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 11:51:15.852 [338796254488334337] [vivo] [338767314998685697] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-02 11:55:00.049 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 11:55:00.049 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 11:56:45.868 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 2 
+2026-04-02 12:00:00.017 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 12:00:00.019 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 12:05:00.039 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 12:05:00.039 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 12:10:00.031 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 12:10:00.031 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 12:15:00.030 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 12:15:00.030 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 12:20:00.083 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 12:20:00.083 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 12:25:00.099 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 12:25:00.099 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 12:30:00.050 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 12:30:00.050 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 12:35:00.061 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 12:35:00.061 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 12:40:00.045 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 12:40:00.045 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 12:45:00.026 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 12:45:00.026 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 12:50:00.025 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 12:50:00.025 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 12:55:00.045 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 12:55:00.045 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 13:00:00.022 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 13:00:00.030 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 13:05:00.034 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 13:05:00.034 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 13:10:00.017 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 13:10:00.017 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 13:15:00.020 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 13:15:00.020 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 13:20:00.033 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 13:20:00.043 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 13:25:00.041 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 13:25:00.041 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 13:30:00.040 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 13:30:00.042 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 13:35:00.061 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 13:35:00.063 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 13:39:33.218 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 2 
+2026-04-02 13:40:00.036 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 13:40:00.037 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 13:43:43.729 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 2 
+2026-04-02 13:45:00.044 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 13:45:00.044 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 13:50:00.051 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 13:50:00.051 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 13:53:16.049 [338859141399482368] [vivo] [admin] INFO  c.c.c.s.e.l.CustomFieldImportEventListener - 数据导入完成, 总行数: 1
+2026-04-02 13:53:24.981 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 2 
+2026-04-02 13:55:00.033 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 13:55:00.034 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 14:00:00.049 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 14:00:00.049 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 14:05:00.019 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 14:05:00.019 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 14:10:00.043 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 14:10:00.043 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 14:11:52.096 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 2 
+2026-04-02 14:12:36.393 [338869105723609089] [default] [admin] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-02 14:12:44.928 [338869174443085826] [default] [admin] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-02 14:13:01.056 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 2 
+2026-04-02 14:15:00.045 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 14:15:00.045 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 14:20:00.022 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 14:20:00.022 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 14:25:00.043 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 14:25:00.043 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 14:30:00.036 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 14:30:00.036 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 14:35:00.029 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 14:35:00.029 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 14:40:00.044 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 14:40:00.044 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 14:40:11.326 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 2 
+2026-04-02 14:40:43.876 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 2 
+2026-04-02 14:40:55.800 [338883700022480898] [vivo] [338767314998685697] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-02 14:41:04.445 [338883777331892226] [vivo] [338767314998685697] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-02 14:41:12.193 [338883846051368960] [vivo] [338767314998685697] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-02 14:41:26.557 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 2 
+2026-04-02 14:41:56.569 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 2 
+2026-04-02 14:45:00.044 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 14:45:00.044 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 14:50:00.025 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 14:50:00.025 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 14:55:00.037 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 14:55:00.037 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 15:00:00.024 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 15:00:00.024 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 15:05:00.018 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 15:05:00.018 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 15:10:00.025 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 15:10:00.025 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 15:15:00.023 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 15:15:00.023 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 15:20:00.024 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 15:20:00.024 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 15:25:00.019 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 15:25:00.019 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 15:30:00.029 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 15:30:00.029 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 15:35:00.020 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 15:35:00.020 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 15:40:00.032 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 15:40:00.034 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 15:45:00.019 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 15:45:00.019 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 15:50:00.031 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 15:50:00.032 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 15:51:28.713 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 2 
+2026-04-02 15:55:00.051 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 15:55:00.051 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 16:00:00.020 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 16:00:00.022 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 16:00:26.279 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 16636 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-02 16:00:26.279 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-02 16:00:35.593 [] [] [] INFO  cn.cordys.Application - Started Application in 9.773 seconds (process running for 10.366)
+2026-04-02 16:00:35.597 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
+2026-04-02 16:00:35.599 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=vivo, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_vivo?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-02 16:00:35.687 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=vivo
+2026-04-02 16:00:35.688 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-02 16:00:35.739 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
+2026-04-02 16:00:35.740 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
+2026-04-02 16:00:35.740 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
+2026-04-02 16:00:35.809 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=42, hostName=240e:398:3e0:d500:a51e:8d3e:dc98:7b5f, port=1775116835750-335493766, type=2, launchDate=1775116835752, modified=1775116835752, created=1775116835752)
+2026-04-02 16:00:35.809 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=42
+2026-04-02 16:00:35.810 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
+2026-04-02 16:00:35.834 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
+2026-04-02 16:00:35.834 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
+2026-04-02 16:00:35.865 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
+2026-04-02 16:00:35.918 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
+2026-04-02 16:00:35.922 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=vivo
+2026-04-02 16:00:35.922 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=vivo
+2026-04-02 16:00:35.926 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=vivo
+2026-04-02 16:00:35.951 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=vivo
+2026-04-02 16:00:35.953 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
+2026-04-02 16:00:35.957 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
+2026-04-02 16:01:35.756 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
+2026-04-02 16:05:00.028 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 16:05:00.031 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 16:10:00.019 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 16:10:00.020 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 16:15:00.019 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 16:15:00.020 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 16:20:00.032 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 16:20:00.033 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 16:22:29.668 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Shutdown UID Generator...
+2026-04-02 16:22:37.873 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 17608 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-02 16:22:37.874 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-02 16:22:45.928 [] [] [] INFO  cn.cordys.Application - Started Application in 8.46 seconds (process running for 8.92)
+2026-04-02 16:22:45.930 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
+2026-04-02 16:22:45.934 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=vivo, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_vivo?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-02 16:22:46.017 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=vivo
+2026-04-02 16:22:46.018 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-02 16:22:46.079 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
+2026-04-02 16:22:46.079 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
+2026-04-02 16:22:46.080 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
+2026-04-02 16:22:46.220 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=43, hostName=240e:398:3e0:d500:a51e:8d3e:dc98:7b5f, port=1775118166090-763176419, type=2, launchDate=1775118166092, modified=1775118166092, created=1775118166092)
+2026-04-02 16:22:46.221 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=43
+2026-04-02 16:22:46.221 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
+2026-04-02 16:22:46.237 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
+2026-04-02 16:22:46.237 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
+2026-04-02 16:22:46.258 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
+2026-04-02 16:22:46.302 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
+2026-04-02 16:22:46.306 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=vivo
+2026-04-02 16:22:46.306 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=vivo
+2026-04-02 16:22:46.310 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=vivo
+2026-04-02 16:22:46.334 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=vivo
+2026-04-02 16:22:46.336 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
+2026-04-02 16:22:46.341 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
+2026-04-02 16:23:46.095 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
+2026-04-02 16:25:00.093 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 16:25:00.096 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 16:30:00.326 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 16:30:00.335 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 16:35:00.249 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 16:35:00.250 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 16:40:00.088 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 16:40:00.088 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 16:45:00.049 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 16:45:00.049 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 16:50:00.109 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 16:50:00.109 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 16:55:00.088 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 16:55:00.088 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 17:00:00.078 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 17:00:00.078 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 17:05:00.058 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 17:05:00.058 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 17:10:00.039 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 17:10:00.040 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 17:15:00.101 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 17:15:00.101 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 17:20:00.048 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 17:20:00.048 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 17:25:00.029 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 17:25:00.029 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 17:30:00.052 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 17:30:00.052 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 17:35:00.093 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 17:35:00.093 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 17:35:55.595 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-02 17:40:00.042 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 17:40:00.044 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 17:45:00.372 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 17:45:00.372 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 17:50:00.031 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 17:50:00.031 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 17:55:00.023 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 17:55:00.023 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 18:00:00.037 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 18:00:00.040 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 18:05:00.055 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 18:05:00.055 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 18:10:00.035 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 18:10:00.035 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 18:15:00.017 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 18:15:00.017 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 18:20:00.051 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 18:20:00.051 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 18:25:00.038 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 18:25:00.038 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 18:30:00.050 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 18:30:00.050 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 18:35:00.026 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 18:35:00.026 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 18:40:00.036 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 18:40:00.036 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 18:45:00.049 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 18:45:00.049 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 18:50:00.106 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 18:50:00.106 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 18:55:00.032 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 18:55:00.032 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 19:00:00.040 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 19:00:00.040 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 19:05:00.045 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 19:05:00.045 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 19:10:00.035 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 19:10:00.035 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 19:15:00.033 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 19:15:00.033 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 19:20:00.062 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 19:20:00.062 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 19:25:00.024 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 19:25:00.024 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 19:30:00.049 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 19:30:00.049 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 19:35:00.051 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 19:35:00.051 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 19:40:00.030 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 19:40:00.030 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 19:45:00.030 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 19:45:00.030 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 19:50:00.047 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 19:50:00.047 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 19:55:00.015 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 19:55:00.015 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 20:00:00.044 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 20:00:00.053 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 20:05:00.040 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 20:05:00.040 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 20:10:00.047 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 20:10:00.047 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 20:15:00.031 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 20:15:00.031 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 20:20:00.022 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 20:20:00.022 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 20:25:00.042 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 20:25:00.042 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 20:30:00.038 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 20:30:00.038 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 20:35:00.031 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 20:35:00.031 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 20:40:00.037 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 20:40:00.037 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 20:45:00.024 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 20:45:00.024 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 20:50:00.030 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 20:50:00.030 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 20:55:00.043 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 20:55:00.043 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 21:00:00.023 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 21:00:00.023 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 21:05:00.035 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 21:05:00.035 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 21:10:00.025 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 21:10:00.025 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 21:15:00.020 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 21:15:00.020 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 21:20:00.026 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 21:20:00.026 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 21:25:00.021 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 21:25:00.021 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 21:30:00.029 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 21:30:00.038 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 21:35:00.039 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 21:35:00.039 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 21:40:00.022 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 21:40:00.022 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 21:45:00.025 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 21:45:00.025 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 21:50:00.023 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 21:50:00.023 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 21:55:00.025 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 21:55:00.030 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 22:00:00.035 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 22:00:00.039 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 22:05:00.032 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 22:05:00.035 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 22:10:00.235 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 22:10:00.235 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 22:15:00.027 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 22:15:00.027 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 22:20:00.023 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 22:20:00.023 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 22:25:00.025 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 22:25:00.031 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 22:30:00.026 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 22:30:00.026 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 22:35:00.020 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 22:35:00.020 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 22:40:00.032 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 22:40:00.032 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 22:45:00.017 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 22:45:00.017 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 22:50:00.077 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 22:50:00.077 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 22:55:00.614 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 22:55:00.614 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 23:00:00.063 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 23:00:00.063 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 23:05:00.051 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 23:05:00.051 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 23:10:00.033 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 23:10:00.033 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 23:15:00.031 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 23:15:00.031 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 23:20:00.045 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 23:20:00.045 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 23:25:00.057 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 23:25:00.057 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 23:30:00.111 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 23:30:00.111 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 23:35:00.033 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 23:35:00.033 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 23:40:00.059 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 23:40:00.059 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 23:45:00.105 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 23:45:00.105 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 23:50:00.035 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 23:50:00.035 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo
+2026-04-02 23:55:00.028 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-02 23:55:00.028 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=vivo

@@ -101,7 +101,7 @@ public class OpportunityController {
     @GetMapping("/delete/{id}")
     @Operation(summary = "删除商机")
     @RequiresPermissions(PermissionConstants.OPPORTUNITY_MANAGEMENT_DELETE)
-    public void deleteOpportunity(@PathVariable String id) {
+    public void deleteOpportunity(@PathVariable("id") String id) {
         opportunityService.delete(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
@@ -124,7 +124,7 @@ public class OpportunityController {
     @GetMapping("/get/{id}")
     @RequiresPermissions(PermissionConstants.OPPORTUNITY_MANAGEMENT_READ)
     @Operation(summary = "商机详情")
-    public OpportunityDetailResponse get(@PathVariable String id) {
+    public OpportunityDetailResponse get(@PathVariable("id") String id) {
         return opportunityService.getWithDataPermissionCheck(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
@@ -152,7 +152,7 @@ public class OpportunityController {
     @GetMapping("/contact/list/{opportunityId}")
     @Operation(summary = "商机下的联系人列表")
     @RequiresPermissions(PermissionConstants.OPPORTUNITY_MANAGEMENT_READ)
-    public CustomerContactListAllResponse list(@Validated @PathVariable String opportunityId) {
+    public CustomerContactListAllResponse list(@Validated @PathVariable("opportunityId") String opportunityId) {
         return opportunityService.getContactList(opportunityId, OrganizationContext.getOrganizationId());
     }
 

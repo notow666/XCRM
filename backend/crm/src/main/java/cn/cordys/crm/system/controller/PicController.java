@@ -29,7 +29,7 @@ public class PicController {
 
     @GetMapping("/preview/{id}")
     @Operation(summary = "预览图片")
-    public ResponseEntity<org.springframework.core.io.Resource> preview(@PathVariable String id) {
+    public ResponseEntity<org.springframework.core.io.Resource> preview(@PathVariable("id") String id) {
         return picService.getResource(id);
     }
 }

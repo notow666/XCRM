@@ -92,14 +92,14 @@ public class ContractPaymentRecordController {
 	@GetMapping("/delete/{id}")
 	@RequiresPermissions(PermissionConstants.CONTRACT_PAYMENT_RECORD_DELETE)
 	@Operation(summary = "删除回款记录")
-	public void delete(@PathVariable String id) {
+	public void delete(@PathVariable("id") String id) {
 		contractPaymentRecordService.delete(id);
 	}
 
 	@GetMapping("/get/{id}")
 	@RequiresPermissions(PermissionConstants.CONTRACT_PAYMENT_RECORD_READ)
 	@Operation(summary = "回款记录详情")
-	public ContractPaymentRecordGetResponse get(@PathVariable String id) {
+	public ContractPaymentRecordGetResponse get(@PathVariable("id") String id) {
 		return contractPaymentRecordService.getWithDataPermissionCheck(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
 	}
 

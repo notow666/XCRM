@@ -76,14 +76,14 @@ public class PoolClueController {
     @GetMapping("/delete/{id}")
     @Operation(summary = "删除线索")
     @RequiresPermissions(value = {PermissionConstants.CLUE_MANAGEMENT_POOL_DELETE})
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         poolClueService.delete(id);
     }
 
     @GetMapping("/get/{id}")
     @RequiresPermissions(PermissionConstants.CLUE_MANAGEMENT_POOL_READ)
     @Operation(summary = "线索详情")
-    public ClueGetResponse get(@PathVariable String id) {
+    public ClueGetResponse get(@PathVariable("id") String id) {
         return clueService.get(id);
     }
 

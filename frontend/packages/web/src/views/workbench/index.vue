@@ -126,7 +126,7 @@
   // ];
   // const rangeTime = ref<[number, number]>();
 
-  const quickAccessPermissionList = computed(() => quickAccessList.flatMap((item) => item.permission));
+  const quickAccessPermissionList = computed(() => quickAccessList.flatMap((item) => item.permission && item.enable));
 
   // 计划
   const showPersonalInfo = ref<boolean>(false);

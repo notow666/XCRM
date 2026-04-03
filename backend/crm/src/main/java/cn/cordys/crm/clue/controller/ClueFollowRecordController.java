@@ -63,7 +63,7 @@ public class ClueFollowRecordController {
     @GetMapping("/get/{id}")
     @RequiresPermissions(value = {PermissionConstants.CLUE_MANAGEMENT_READ, PermissionConstants.CLUE_MANAGEMENT_POOL_READ}, logical = Logical.OR)
     @Operation(summary = "线索跟进记录详情")
-    public FollowUpRecordDetailResponse get(@PathVariable String id) {
+    public FollowUpRecordDetailResponse get(@PathVariable("id") String id) {
         return followUpRecordService.get(id, OrganizationContext.getOrganizationId());
     }
 
@@ -71,7 +71,7 @@ public class ClueFollowRecordController {
     @GetMapping("/delete/{id}")
     @Operation(summary = "线索删除跟进记录")
     @RequiresPermissions(PermissionConstants.CLUE_MANAGEMENT_UPDATE)
-    public void deleteRecord(@PathVariable String id) {
+    public void deleteRecord(@PathVariable("id") String id) {
         followUpRecordService.delete(id);
     }
 }

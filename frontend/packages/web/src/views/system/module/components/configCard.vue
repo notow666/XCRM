@@ -1,37 +1,37 @@
 <template>
   <div class="nav-config-list">
-    <div v-for="item of moduleConfigList" :key="item.key" class="nav-config-item">
+    <div v-for="item of moduleConfigList" :key="item.key" v-show="item.enable" class="nav-config-item">
       <div class="nav-config-item-title">
-        <div class="nav-config-item-icon">
-          <CrmIcon :type="item.icon ?? ''" :size="20" class="text-[var(--text-n10)]" />
+          <div class="nav-config-item-icon">
+            <CrmIcon :type="item.icon ?? ''" :size="20" class="text-[var(--text-n10)]" />
+          </div>
+          <div>{{ item.label }}</div>
         </div>
-        <div>{{ item.label }}</div>
-      </div>
       <div class="nav-config-item-action">
-        <CrmButtonGroup
-          v-permission="['MODULE_SETTING:UPDATE']"
-          :list="item.groupList"
-          @select="(key) => handleSelect(key, item)"
-        >
-          <template #more>
-            <CrmMoreAction
-              :options="getMoreList(item.key)"
-              trigger="hover"
-              @select="(item) => handleMoreSelect(item.key as string)"
-            >
-              <n-button type="primary" text :keyboard="false">{{ t('common.more') }}</n-button>
-            </CrmMoreAction>
-          </template>
-        </CrmButtonGroup>
-        <n-divider v-if="item.groupList.length" v-permission="['MODULE_SETTING:UPDATE']" class="!mx-[4px]" vertical />
+          <CrmButtonGroup
+              v-permission="['MODULE_SETTING:UPDATE']"
+              :list="item.groupList"
+              @select="(key) => handleSelect(key, item)"
+          >
+            <template #more>
+              <CrmMoreAction
+                  :options="getMoreList(item.key)"
+                  trigger="hover"
+                  @select="(item) => handleMoreSelect(item.key as string)"
+              >
+                <n-button type="primary" text :keyboard="false">{{ t('common.more') }}</n-button>
+              </CrmMoreAction>
+            </template>
+          </CrmButtonGroup>
+          <n-divider v-if="item.groupList.length" v-permission="['MODULE_SETTING:UPDATE']" class="!mx-[4px]" vertical />
 
-        <NSwitch
-          size="small"
-          :disabled="!hasAnyPermission(['MODULE_SETTING:UPDATE'])"
-          :value="item.enable"
-          @update:value="(value:boolean)=>toggleModule(value,item)"
-        />
-      </div>
+          <NSwitch
+              size="small"
+              :disabled="!hasAnyPermission(['MODULE_SETTING:UPDATE'])"
+              :value="item.enable"
+              @update:value="(value:boolean)=>toggleModule(value,item)"
+          />
+        </div>
     </div>
   </div>
   <customManagementFormDrawer v-model:visible="customerManagementFormVisible" />

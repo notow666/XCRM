@@ -60,21 +60,21 @@ public class CustomerPoolController {
     @GetMapping("/no-pick/{id}")
     @Operation(summary = "公海池是否存在未领取线索")
     @RequiresPermissions(value = {PermissionConstants.MODULE_SETTING_UPDATE})
-    public boolean checkNoPick(@PathVariable String id) {
+    public boolean checkNoPick(@PathVariable("id") String id) {
         return customerPoolService.checkNoPick(id);
     }
 
     @GetMapping("/delete/{id}")
     @Operation(summary = "删除公海池")
     @RequiresPermissions(value = {PermissionConstants.MODULE_SETTING_UPDATE})
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         customerPoolService.delete(id);
     }
 
     @GetMapping("/switch/{id}")
     @Operation(summary = "启用/禁用公海池")
     @RequiresPermissions(value = {PermissionConstants.MODULE_SETTING_UPDATE})
-    public void switchStatus(@PathVariable String id) {
+    public void switchStatus(@PathVariable("id") String id) {
         customerPoolService.switchStatus(id, SessionUtils.getUserId());
     }
 }

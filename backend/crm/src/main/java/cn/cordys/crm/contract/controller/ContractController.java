@@ -250,7 +250,7 @@ public class ContractController {
     @GetMapping("/invoice/statistic/{contractId}")
     @RequiresPermissions({PermissionConstants.CONTRACT_READ, PermissionConstants.CONTRACT_INVOICE_READ})
     @Operation(summary = "合同详情-发票列表统计")
-    public CustomerInvoiceStatisticResponse calculateCustomerInvoiceStatistic(@PathVariable String contractId) {
+    public CustomerInvoiceStatisticResponse calculateCustomerInvoiceStatistic(@PathVariable("contractId") String contractId) {
         BigDecimal invoiceAmount = contractInvoiceService.calculateContractInvoiceAmount(contractId, SessionUtils.getUserId(),
                 OrganizationContext.getOrganizationId());
 

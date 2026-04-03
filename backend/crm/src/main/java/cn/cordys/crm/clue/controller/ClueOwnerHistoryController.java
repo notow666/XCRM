@@ -30,7 +30,7 @@ public class ClueOwnerHistoryController {
     @GetMapping("/list/{clueId}")
     @RequiresPermissions(value = {PermissionConstants.CLUE_MANAGEMENT_READ, PermissionConstants.CLUE_MANAGEMENT_POOL_READ}, logical = Logical.OR)
     @Operation(summary = "线索责任人历史列表")
-    public List<ClueOwnerListResponse> list(@PathVariable String clueId) {
+    public List<ClueOwnerListResponse> list(@PathVariable("clueId") String clueId) {
         return clueOwnerHistoryService.list(clueId, OrganizationContext.getOrganizationId());
     }
 }

@@ -53,21 +53,21 @@ public class UserKeyController {
     @GetMapping("/delete/{id}")
     @RequiresPermissions(PermissionConstants.PERSONAL_API_KEY_DELETE)
     @Operation(summary = "个人中心-APIKEY-删除")
-    public void delete(@PathVariable String id) {
+    public void delete(@PathVariable("id") String id) {
         userKeyService.deleteUserKey(id);
     }
 
     @GetMapping("/enable/{id}")
     @Operation(summary = "个人中心-APIKEY-启用")
     @RequiresPermissions(PermissionConstants.PERSONAL_API_KEY_UPDATE)
-    public void enable(@PathVariable String id) {
+    public void enable(@PathVariable("id") String id) {
         userKeyService.enableUserKey(id);
     }
 
     @GetMapping("/disable/{id}")
     @Operation(summary = "个人中心-APIKEY-启用")
     @RequiresPermissions(PermissionConstants.PERSONAL_API_KEY_UPDATE)
-    public void disable(@PathVariable String id) {
+    public void disable(@PathVariable("id") String id) {
         userKeyService.disableUserKey(id);
     }
 
