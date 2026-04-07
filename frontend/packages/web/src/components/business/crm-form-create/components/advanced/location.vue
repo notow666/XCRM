@@ -29,7 +29,7 @@
       @change="handleCityAndDetailChange"
     />
     <n-input
-      v-if="props.fieldConfig.locationType === 'detail'"
+      v-if="props.fieldConfig.locationType === 'detail' || props.fieldConfig.locationType === 'CHINA_PC'"
       v-model:value="detail"
       :maxlength="200"
       :placeholder="t('crmFormCreate.advanced.inputLocationDetail')"
@@ -73,7 +73,7 @@
   const detail = ref('');
 
   function handleCityAndDetailChange() {
-    if (props.fieldConfig.locationType !== 'detail') {
+    if (props.fieldConfig.locationType !== 'detail' && props.fieldConfig.locationType !== 'CHINA_PC') {
       detail.value = '';
     }
     value.value = city.value || detail.value ? `${city.value || ''}-${detail.value || ''}` : '';

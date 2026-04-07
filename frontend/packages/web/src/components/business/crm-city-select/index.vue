@@ -26,7 +26,7 @@
     defineProps<{
       placeholder?: string;
       checkStrategy?: 'all' | 'child' | 'parent';
-      range?: 'PCD' | 'PC' | 'detail' | 'C' | 'P';
+      range?: 'PCD' | 'PC' | 'detail' | 'C' | 'P' | 'CHINA_PC';
     }>(),
     {
       range: 'PCD',

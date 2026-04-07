@@ -81,6 +81,7 @@ export default {
   'crmFormDesign.C': 'Country',
   'crmFormDesign.P': 'Country-Province',
   'crmFormDesign.PC': 'Country-Province-City',
+  'crmFormDesign.CHINA_PC': 'Province-City-Detailed Address',
   'crmFormDesign.PCD': 'Country-Province-City-District',
   'crmFormDesign.PCDDetail': 'Country-Province-City-District-Detailed Address',
   'crmFormDesign.dataSourceSingle': 'Data Single Select',

@@ -15,7 +15,7 @@
 
     <select id="list" resultType="cn.cordys.crm.customer.dto.response.CustomerListResponse">
         select c.id, c.`name`, if(c.in_shared_pool, null, c.owner) as owner, c.create_time, c.update_time, c.create_user, c.update_user, c.collection_time, c.pool_id,
-               c.follower, c.follow_time, c.reason_id
+               c.follower, c.follow_time, c.reason_id, c.mobile
                 <if test="dataPermission != null and dataPermission.visible">
                     ,cc.collaboration_type
                 </if>
@@ -198,7 +198,7 @@
 
     <select id="sourceList" resultType="cn.cordys.crm.customer.dto.response.CustomerListResponse">
         select distinct c.id, c.`name`, if(c.in_shared_pool, null, c.owner) as owner, c.create_time, c.update_time, c.create_user, c.update_user, c.collection_time, c.pool_id,
-        c.follower, c.follow_time
+        c.follower, c.follow_time, c.mobile
         from customer c left join customer_collaboration cc on c.id = cc.customer_id and cc.user_id = #{userId}
 
         <include refid="fieldConditionJoin">
@@ -451,7 +451,7 @@
 
     <select id="checkRepeatCustomer" resultType="cn.cordys.crm.search.response.advanced.AdvancedCustomerResponse">
         select c.id, c.`name`, if(c.in_shared_pool, null, c.owner) as owner, c.create_time, c.update_time, c.create_user, c.update_user, c.collection_time, c.pool_id,
-        c.follower, c.follow_time, c.reason_id
+        c.follower, c.follow_time, c.reason_id, c.mobile
         from customer c
 
         <include refid="fieldConditionJoin">
@@ -556,7 +556,7 @@
 
     <select id="getListByIds" resultType="cn.cordys.crm.customer.dto.response.CustomerListResponse">
         select c.id, c.`name`, c.owner, c.create_time, c.update_time, c.create_user, c.update_user, c.collection_time, c.pool_id,
-               c.follower, c.follow_time, c.in_shared_pool, c.organization_id, c.reason_id
+               c.follower, c.follow_time, c.in_shared_pool, c.organization_id, c.reason_id, c.mobile
         from customer c
         where c.id in
         <foreach collection="ids" item="id" open="(" close=")" separator=",">
@@ -600,7 +600,7 @@
 
     <select id="customerPoolList" resultType="cn.cordys.crm.search.response.advanced.AdvancedCustomerPoolResponse">
         select c.id, c.`name`, if(c.in_shared_pool, null, c.owner) as owner, c.create_time, c.update_time, c.create_user, c.update_user, c.collection_time, c.pool_id,
-        c.follower, c.follow_time, c.reason_id
+        c.follower, c.follow_time, c.reason_id, c.mobile
         from customer c
 
         <include refid="fieldConditionJoin">
@@ -673,7 +673,7 @@
     </select>
 
     <select id="globalSearchList" resultType="cn.cordys.crm.search.response.global.GlobalCustomerResponse">
-        select c.id, c.`name`, if(c.in_shared_pool, null, c.owner) as owner, c.create_time, c.follow_time
+        select c.id, c.`name`, if(c.in_shared_pool, null, c.owner) as owner, c.create_time, c.follow_time, c.mobile
         from customer c
         <include refid="fieldConditionJoin">
             <property name="conditions" value="request.combineSearch.conditions"/>

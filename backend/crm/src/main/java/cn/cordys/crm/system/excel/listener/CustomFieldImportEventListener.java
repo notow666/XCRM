@@ -136,8 +136,9 @@ public class CustomFieldImportEventListener<T> extends CustomFieldCheckEventList
             consumer.accept(this.dataList, this.fields, this.blobFields);
         } catch (Exception e) {
             // 入库异常,不影响后续批次
-            log.error("批量插入异常: {}", e.getCause().getMessage());
-            throw new GenericException(e.getCause());
+            Throwable cause = e.getCause();
+            log.error("批量插入异常: {}", cause != null ? cause.getMessage() : e.getMessage());
+            throw new GenericException(cause != null ? cause : e);
         } finally {
             // 批次插入成功, 统计&&清理
             successCount += this.dataList.size();

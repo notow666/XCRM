@@ -24,6 +24,10 @@ public enum BusinessModuleField {
      */
     CUSTOMER_NAME("customerName", "name", Set.of("rules.required", "mobile", "readable"), FormKey.CUSTOMER.getKey()),
     /**
+     * 客户手机号
+     */
+    CUSTOMER_MOBILE("customerMobile", "mobile", Set.of("rules.required", "rules.unique", "mobile", "readable"), FormKey.CUSTOMER.getKey()),
+    /**
      * 负责人
      */
     CUSTOMER_OWNER("customerOwner", "owner", Set.of("rules.required", "mobile", "readable"), FormKey.CUSTOMER.getKey()),

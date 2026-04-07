@@ -607,6 +607,10 @@
               value: 'PC',
             },
             {
+              label: t('crmFormDesign.CHINA_PC'),
+              value: 'CHINA_PC',
+            },
+            {
               label: t('crmFormDesign.PCD'),
               value: 'PCD',
             },

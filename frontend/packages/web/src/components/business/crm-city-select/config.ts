@@ -9113,7 +9113,7 @@ export const COUNTRIES_TREE: CascaderOption[] = [
   },
 ];
 
-export function getCountriesByLevel(level?: 'C' | 'P' | 'PC' | 'PCD' | 'detail') {
+export function getCountriesByLevel(level?: 'C' | 'P' | 'PC' | 'PCD' | 'detail' | 'CHINA_PC') {
   switch (level) {
     case 'C':
       // 仅国家层级：去掉所有 children
@@ -9126,6 +9126,10 @@ export function getCountriesByLevel(level?: 'C' | 'P' | 'PC' | 'PCD' | 'detail')
     case 'PC':
       // 国家 - 省 - 市
       return [CHINA_PC, ...COUNTRIES_TREE];
+
+    case 'CHINA_PC':
+      // 仅中国省市，跳过国家选择，直接显示省份列表
+      return CHINA_PC.children as CascaderOption[];
 
     case 'PCD':
     default:

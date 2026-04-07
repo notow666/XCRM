@@ -80,6 +80,7 @@ export default {
   'crmFormDesign.C': '国家',
   'crmFormDesign.P': '国家-省',
   'crmFormDesign.PC': '国家-省-市',
+  'crmFormDesign.CHINA_PC': '省-市-详细地址',
   'crmFormDesign.PCD': '国家-省-市-区',
   'crmFormDesign.PCDDetail': '国家-省-市-区-详细地址',
   'crmFormDesign.dataSourceSingle': '数据单选',

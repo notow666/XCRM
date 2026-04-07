@@ -32,6 +32,8 @@ public class CustomerUpdateRequest {
     @Schema(description = "自定义字段")
     private List<BaseModuleFieldValue> moduleFields;
 
+    @Schema(description = "手机号码")
+    private String mobile;
 
     private Boolean agentInvoke = false;
 }

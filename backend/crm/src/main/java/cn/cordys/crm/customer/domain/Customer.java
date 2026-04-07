@@ -45,4 +45,7 @@ public class Customer extends BaseModel {
 
     @Schema(description = "客户阶段ID")
     private String stage;
+
+    @Schema(description = "手机号码")
+    private String mobile;
 }

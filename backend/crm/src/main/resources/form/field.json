@@ -12,7 +12,7 @@
       "titleColor": "#323535"
     },
     {
-      "name": "客户名称",
+      "name": "客户姓名",
       "internalKey": "customerName",
       "type": "INPUT",
       "showLabel": true,
@@ -30,77 +30,26 @@
       "mobile": true
     },
     {
-      "name": "客户行业",
-      "internalKey": "customerIndustry",
-      "type": "SELECT",
+      "name": "手机号码",
+      "internalKey": "customerMobile",
+      "type": "PHONE",
       "showLabel": true,
       "readable": true,
       "editable": true,
       "fieldWidth": 1,
-      "options": [
+      "format": "11",
+      "rules": [
         {
-          "label": "互联网",
-          "value": "1"
+          "key": "required"
         },
         {
-          "label": "金融",
-          "value": "2"
-        },
-        {
-          "label": "制造业",
-          "value": "3"
+          "key": "unique"
         }
-      ]
+      ],
+      "mobile": true
     },
     {
-      "name": "客户等级",
-      "internalKey": "customerLevel",
-      "type": "SELECT",
-      "showLabel": true,
-      "defaultValue": "1",
-      "readable": true,
-      "editable": true,
-      "fieldWidth": 1,
-      "options": [
-        {
-          "label": "重要客户",
-          "value": "1"
-        },
-        {
-          "label": "一般客户",
-          "value": "2"
-        },
-        {
-          "label": "战略客户",
-          "value": "3"
-        }
-      ]
-    },
-    {
-      "name": "客户类型",
-      "internalKey": "customerType",
-      "type": "SELECT",
-      "showLabel": true,
-      "readable": true,
-      "editable": true,
-      "fieldWidth": 1,
-      "options": [
-        {
-          "label": "无",
-          "value": "1"
-        },
-        {
-          "label": "最终客户",
-          "value": "2"
-        },
-        {
-          "label": "代理商",
-          "value": "3"
-        }
-      ]
-    },
-    {
-      "name": "客户来源",
+      "name": "来源",
       "internalKey": "customerSource",
       "type": "SELECT",
       "showLabel": true,
@@ -117,34 +66,14 @@
           "value": "2"
         },
         {
-          "label": "维保",
+          "label": "转介绍",
           "value": "3"
-        },
-        {
-          "label": "续约",
-          "value": "4"
-        },
-        {
-          "label": "扩容",
-          "value": "5"
-        },
-        {
-          "label": "增购",
-          "value": "6"
-        }
-      ],
-      "showControlRules": [
-        {
-          "value": "1",
-          "fieldIds": [
-            "customerOnlineSource"
-          ]
         }
       ]
     },
     {
-      "name": "线上来源详情",
-      "internalKey": "customerOnlineSource",
+      "name": "客户等级",
+      "internalKey": "customerLevel",
       "type": "SELECT",
       "showLabel": true,
       "readable": true,
@@ -152,27 +81,37 @@
       "fieldWidth": 1,
       "options": [
         {
-          "label": "400电话",
+          "label": "重要客户",
           "value": "1"
         },
         {
-          "label": "官网咨询",
+          "label": "一般客户",
           "value": "2"
         },
         {
-          "label": "社区用户",
+          "label": "低价值客户",
           "value": "3"
         }
       ]
     },
     {
-      "name": "客户标签",
+      "name": "标签",
       "internalKey": "customerTag",
       "type": "INPUT_MULTIPLE",
       "showLabel": true,
       "readable": true,
       "editable": true,
       "fieldWidth": 1
+    },
+    {
+      "name": "单位",
+      "internalKey": "customerCompany",
+      "type": "INPUT",
+      "showLabel": true,
+      "readable": true,
+      "editable": true,
+      "fieldWidth": 1,
+      "mobile": true
     },
     {
       "name": "地址信息",
@@ -186,10 +125,10 @@
       "titleColor": "#323535"
     },
     {
-      "name": "地区",
+      "name": "地区城市",
       "internalKey": "customerArea",
       "type": "LOCATION",
-      "locationType": "detail",
+      "locationType": "CHINA_PC",
       "showLabel": true,
       "readable": true,
       "editable": true,

@@ -423,12 +423,34 @@ public class CustomerService {
 
         customerMapper.insert(customer);
 
+        // 自动创建联系人
+        createDefaultContact(customer, userId, orgId);
+
         baseService.handleAddLog(customer, request.getModuleFields());
         // 通知
         commonNoticeSendService.sendNotice(NotificationConstants.Module.CUSTOMER,
                 NotificationConstants.Event.CUSTOMER_ADD, customer.getName(), userId,
                 orgId, List.of(customer.getOwner()), true);
         return customer;
+    }
+
+    /**
+     * 创建默认联系人
+     *
+     * @param customer 客户
+     * @param userId   当前用户
+     * @param orgId    组织ID
+     */
+    private void createDefaultContact(Customer customer, String userId, String orgId) {
+        if (StringUtils.isBlank(customer.getMobile())) {
+            return;
+        }
+        CustomerContactAddRequest contactRequest = new CustomerContactAddRequest();
+        contactRequest.setCustomerId(customer.getId());
+        contactRequest.setName(customer.getName());
+        contactRequest.setPhone(customer.getMobile());
+        contactRequest.setOwner(customer.getOwner());
+        customerContactService.add(contactRequest, userId, orgId);
     }
 
     @OperationLog(module = LogModule.CUSTOMER_INDEX, type = LogType.UPDATE, resourceId = "{#request.id}")
@@ -772,14 +794,35 @@ public class CustomerService {
             List<BaseField> fields = moduleFormService.getAllFields(FormKey.CUSTOMER.getKey(), currentOrg);
             CustomImportAfterDoConsumer<Customer, BaseResourceSubField> afterDo = (customers, customerFields, customerFieldBlobs) -> {
                 List<LogDTO> logs = new ArrayList<>();
+                List<CustomerContact> contacts = new ArrayList<>();
                 customers.forEach(customer -> {
                     customer.setCollectionTime(customer.getCreateTime());
                     customer.setInSharedPool(false);
                     logs.add(new LogDTO(currentOrg, customer.getId(), currentUser, LogType.ADD, LogModule.CUSTOMER_INDEX, customer.getName()));
+                    // 导入时也自动创建联系人
+                    if (StringUtils.isNotBlank(customer.getMobile())) {
+                        CustomerContact contact = new CustomerContact();
+                        contact.setId(IDGenerator.nextStr());
+                        contact.setCustomerId(customer.getId());
+                        contact.setName(customer.getName());
+                        contact.setPhone(customer.getMobile());
+                        contact.setOwner(customer.getOwner());
+                        contact.setOrganizationId(currentOrg);
+                        contact.setCreateTime(System.currentTimeMillis());
+                        contact.setUpdateTime(System.currentTimeMillis());
+                        contact.setCreateUser(currentUser);
+                        contact.setUpdateUser(currentUser);
+                        contact.setEnable(true);
+                        contacts.add(contact);
+                    }
                 });
                 customerMapper.batchInsert(customers);
                 customerFieldMapper.batchInsert(customerFields.stream().map(field -> BeanUtils.copyBean(new CustomerField(), field)).toList());
                 customerFieldBlobMapper.batchInsert(customerFieldBlobs.stream().map(field -> BeanUtils.copyBean(new CustomerFieldBlob(), field)).toList());
+                // 批量插入联系人
+                if (CollectionUtils.isNotEmpty(contacts)) {
+                    customerContactMapper.batchInsert(contacts);
+                }
                 // record logs
                 logService.batchAdd(logs);
             };
