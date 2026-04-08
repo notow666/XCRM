@@ -120,6 +120,18 @@ export const pathMap: PathMapItem[] = [
     ],
   },
   {
+    key: 'TASK',
+    route: AppRouteEnum.TASK,
+    locale: 'module.task',
+    children: [
+      {
+        key: 'TASK_INDEX',
+        route: AppRouteEnum.TASK_INDEX,
+        locale: 'module.task',
+      },
+    ],
+  },
+  {
     key: 'CLUE_MANAGEMENT',
     route: AppRouteEnum.CLUE_MANAGEMENT,
     locale: 'module.clueManagement',

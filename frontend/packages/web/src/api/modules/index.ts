@@ -108,6 +108,8 @@ export const {
   getFollowRecordViewList,
   getFollowPlanViewDetail,
   getFollowRecordViewDetail,
+  getTaskFollowPlanPage,
+  completeTaskFollowPlan,
 } = followApi;
 
 export const {

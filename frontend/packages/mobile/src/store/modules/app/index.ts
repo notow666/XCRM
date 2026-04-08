@@ -46,6 +46,10 @@ const defaultModuleConfig = [
     moduleKey: ModuleConfigEnum.PRODUCT_MANAGEMENT,
     enable: true,
   },
+  {
+    moduleKey: ModuleConfigEnum.TASK,
+    enable: true,
+  },
 ];
 
 const useAppStore = defineStore('app', {

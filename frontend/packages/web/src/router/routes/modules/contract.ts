@@ -46,26 +46,26 @@ const contract: AppRouteRecordRaw = {
         permissions: ['CONTRACT_PAYMENT_RECORD:READ'],
       },
     },
-    {
-      path: 'contractInvoice',
-      name: ContractRouteEnum.CONTRACT_INVOICE,
-      component: () => import('@/views/contract/invoice/index.vue'),
-      meta: {
-        locale: 'module.invoice',
-        isTopMenu: true,
-        permissions: ['CONTRACT_INVOICE:READ'],
-      },
-    },
-    {
-      path: 'contractBusinessName',
-      name: ContractRouteEnum.CONTRACT_BUSINESS_NAME,
-      component: () => import('@/views/contract/businessTitle/index.vue'),
-      meta: {
-        locale: 'module.businessTitle',
-        isTopMenu: true,
-        permissions: ['CONTRACT_BUSINESS_TITLE:READ'],
-      },
-    },
+    // {
+    //   path: 'contractInvoice',
+    //   name: ContractRouteEnum.CONTRACT_INVOICE,
+    //   component: () => import('@/views/contract/invoice/index.vue'),
+    //   meta: {
+    //     locale: 'module.invoice',
+    //     isTopMenu: true,
+    //     permissions: ['CONTRACT_INVOICE:READ'],
+    //   },
+    // },
+    // {
+    //   path: 'contractBusinessName',
+    //   name: ContractRouteEnum.CONTRACT_BUSINESS_NAME,
+    //   component: () => import('@/views/contract/businessTitle/index.vue'),
+    //   meta: {
+    //     locale: 'module.businessTitle',
+    //     isTopMenu: true,
+    //     permissions: ['CONTRACT_BUSINESS_TITLE:READ'],
+    //   },
+    // },
   ],
 };
 

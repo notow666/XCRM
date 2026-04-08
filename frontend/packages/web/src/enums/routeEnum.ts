@@ -77,6 +77,11 @@ export enum TenderRouteEnum {
   TENDER_INDEX = 'tenderIndex',
 }
 
+export enum TaskRouteEnum {
+  TASK = 'task',
+  TASK_INDEX = 'taskIndex',
+}
+
 export enum ManagementCenterRouteEnum {
   MANAGEMENT_CENTER = 'managementCenter',
   MANAGEMENT_CENTER_OVERVIEW = 'managementCenterOverview',
@@ -104,5 +109,6 @@ export const AppRouteEnum = {
   ...ContractRouteEnum,
   ...OrderRouteEnum,
   ...TenderRouteEnum,
+  ...TaskRouteEnum,
   ...ManagementCenterRouteEnum,
 };

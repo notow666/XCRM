@@ -26,16 +26,16 @@ const customer: AppRouteRecordRaw = {
         permissions: ['CUSTOMER_MANAGEMENT:READ'],
       },
     },
-    {
-      path: 'contact',
-      name: CustomerRouteEnum.CUSTOMER_CONTACT,
-      component: () => import('@/views/customer/contact.vue'),
-      meta: {
-        locale: 'menu.contact',
-        isTopMenu: true,
-        permissions: ['CUSTOMER_MANAGEMENT_CONTACT:READ'],
-      },
-    },
+    // {
+    //   path: 'contact',
+    //   name: CustomerRouteEnum.CUSTOMER_CONTACT,
+    //   component: () => import('@/views/customer/contact.vue'),
+    //   meta: {
+    //     locale: 'menu.contact',
+    //     isTopMenu: true,
+    //     permissions: ['CUSTOMER_MANAGEMENT_CONTACT:READ'],
+    //   },
+    // },
     {
       path: 'openSea',
       name: CustomerRouteEnum.CUSTOMER_OPEN_SEA,

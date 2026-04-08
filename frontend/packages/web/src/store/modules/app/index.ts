@@ -87,6 +87,10 @@ const defaultModuleConfig = [
     enable: true,
   },
   {
+    moduleKey: ModuleConfigEnum.TASK,
+    enable: true,
+  },
+  {
     moduleKey: ModuleConfigEnum.CLUE_MANAGEMENT,
     enable: true,
   },

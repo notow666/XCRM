@@ -445,6 +445,29 @@ public class FollowUpPlanService extends BaseFollowUpService {
     }
 
     /**
+     * 客户进入私海并落到首阶段后，生成一条跟进计划待办（与任务模块复用同一张表）。
+     */
+    public void createInitialStageFollowPlanForCustomer(String customerId, String ownerId, String orgId) {
+        LambdaQueryWrapper<FollowUpPlan> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(FollowUpPlan::getCustomerId, customerId)
+                .eq(FollowUpPlan::getOwner, ownerId)
+                .eq(FollowUpPlan::getType, FollowUpPlanType.CUSTOMER.name())
+                .in(FollowUpPlan::getStatus, List.of(FollowUpPlanStatusType.PREPARED.name(), FollowUpPlanStatusType.UNDERWAY.name()));
+        List<FollowUpPlan> existing = followUpPlanMapper.selectListByLambda(queryWrapper);
+        if (CollectionUtils.isNotEmpty(existing)) {
+            return;
+        }
+        FollowUpPlanAddRequest request = new FollowUpPlanAddRequest();
+        request.setCustomerId(customerId);
+        request.setType(FollowUpPlanType.CUSTOMER.name());
+        request.setContent(Translator.get("task.initial_follow_plan_content"));
+        request.setOwner(ownerId);
+        request.setMethod("2");
+        request.setEstimatedTime(System.currentTimeMillis());
+        add(request, ownerId, orgId);
+    }
+
+    /**
      * 拦截跟进记录的操作权限
      *
      * @param id    记录ID

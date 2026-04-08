@@ -10,6 +10,7 @@ import {
   OrderRouteEnum,
   ProductRouteEnum,
   SystemRouteEnum,
+  TaskRouteEnum,
   TenderRouteEnum,
   WorkbenchRouteEnum,
 } from '@/enums/routeEnum';
@@ -58,6 +59,7 @@ export const featureRouteMap: Record<string, any> = {
   [DashboardRouteEnum.DASHBOARD]: ModuleConfigEnum.DASHBOARD,
   [AgentRouteEnum.AGENT]: ModuleConfigEnum.AGENT,
   [TenderRouteEnum.TENDER]: ModuleConfigEnum.TENDER,
+  [TaskRouteEnum.TASK]: ModuleConfigEnum.TASK,
 };
 
 export const allMenuRouteMap: Record<string, any> = {

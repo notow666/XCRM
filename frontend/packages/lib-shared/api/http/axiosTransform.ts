@@ -43,6 +43,7 @@ export interface CreateAxiosOptions extends AxiosRequestConfig {
     msg: string,
     msgDetail: string | Record<string, any>,
     code?: number,
-    noErrorTip?: boolean
+    noErrorTip?: boolean,
+    requestUrl?: string
   ) => void;
 }

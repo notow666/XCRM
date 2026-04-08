@@ -16,18 +16,19 @@ const lead: AppRouteRecordRaw = {
     collapsedLocale: 'menu.clue',
   },
   children: [
+      // 隐藏线索
+    // {
+    //   path: 'index',
+    //   name: ClueRouteEnum.CLUE_MANAGEMENT_CLUE,
+    //   component: () => import('@/views/clueManagement/clue/index.vue'),
+    //   meta: {
+    //     locale: 'menu.clue',
+    //     isTopMenu: true,
+    //     permissions: ['CLUE_MANAGEMENT:READ'],
+    //   },
+    // },
     {
       path: 'index',
-      name: ClueRouteEnum.CLUE_MANAGEMENT_CLUE,
-      component: () => import('@/views/clueManagement/clue/index.vue'),
-      meta: {
-        locale: 'menu.clue',
-        isTopMenu: true,
-        permissions: ['CLUE_MANAGEMENT:READ'],
-      },
-    },
-    {
-      path: 'leadPool',
       name: ClueRouteEnum.CLUE_MANAGEMENT_POOL,
       component: () => import('@/views/clueManagement/cluePool/index.vue'),
       meta: {

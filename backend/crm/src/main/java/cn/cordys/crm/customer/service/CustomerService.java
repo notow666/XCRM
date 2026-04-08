@@ -423,6 +423,8 @@ public class CustomerService {
 
         customerMapper.insert(customer);
 
+        followUpPlanService.createInitialStageFollowPlanForCustomer(customer.getId(), customer.getOwner(), orgId);
+
         // 自动创建联系人
         createDefaultContact(customer, userId, orgId);
 

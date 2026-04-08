@@ -15,4 +15,7 @@ public class FollowUpPlanPageRequest extends BasePageRequest {
 
     @Schema(description = "是否是为我的计划(默认false,个人中心查询时传入true)")
     private boolean myPlan = false;
+
+    @Schema(description = "任务模块列表：仅客户私海、未完成跟进计划")
+    private Boolean taskModuleQuery;
 }

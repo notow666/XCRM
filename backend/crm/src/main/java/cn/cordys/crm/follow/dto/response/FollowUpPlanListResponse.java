@@ -98,4 +98,10 @@ public class FollowUpPlanListResponse {
 
     @Schema(description = "自定义字段集合")
     private List<BaseModuleFieldValue> moduleFields;
+
+    @Schema(description = "客户当前阶段ID")
+    private String customerStageId;
+
+    @Schema(description = "客户当前阶段名称")
+    private String customerStageName;
 }

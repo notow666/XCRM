@@ -34,6 +34,9 @@ export enum ModuleConfigEnum {
 
   /** 招标 */
   TENDER = 'tender',
+
+  /** 任务（跟进计划待办） */
+  TASK = 'task',
 }
 
 // 添加员工API

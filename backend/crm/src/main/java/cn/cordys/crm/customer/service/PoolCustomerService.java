@@ -25,6 +25,9 @@ import cn.cordys.crm.customer.dto.request.PoolCustomerPickRequest;
 import cn.cordys.crm.customer.mapper.ExtCustomerCapacityMapper;
 import cn.cordys.crm.customer.mapper.ExtCustomerMapper;
 import cn.cordys.crm.customer.mapper.ExtCustomerOwnerMapper;
+import cn.cordys.crm.customer.mapper.ExtCustomerStageConfigMapper;
+import cn.cordys.crm.follow.service.FollowUpPlanService;
+import cn.cordys.crm.opportunity.dto.response.StageConfigResponse;
 import cn.cordys.crm.system.constants.NotificationConstants;
 import cn.cordys.crm.system.domain.User;
 import cn.cordys.crm.system.dto.FilterConditionDTO;
@@ -92,6 +95,10 @@ public class PoolCustomerService {
     private BaseChartService baseChartService;
     @Resource
     private ExtCustomerOwnerMapper extCustomerOwnerMapper;
+    @Resource
+    private ExtCustomerStageConfigMapper extCustomerStageConfigMapper;
+    @Resource
+    private FollowUpPlanService followUpPlanService;
 
     /**
      * 获取当前用户公海选项
@@ -406,7 +413,13 @@ public class PoolCustomerService {
         customer.setCollectionTime(now);
         customer.setUpdateUser(ownerId);
         customer.setUpdateTime(now);
+        List<StageConfigResponse> stageConfigList = extCustomerStageConfigMapper.getStageConfigList(currentOrgId);
+        if (CollectionUtils.isNotEmpty(stageConfigList)) {
+            customer.setStage(stageConfigList.getFirst().getId());
+        }
         extCustomerMapper.updateIncludeNullById(customer);
+
+        followUpPlanService.createInitialStageFollowPlanForCustomer(customerId, ownerId, currentOrgId);
 
         // 只更新最近一次销售负责人的联系人（联系人为空的）
         String recentOwner = extCustomerOwnerMapper.getRecentOwner(customerId);

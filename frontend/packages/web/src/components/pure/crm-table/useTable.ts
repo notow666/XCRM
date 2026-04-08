@@ -1,5 +1,6 @@
 import { UnwrapRef } from 'vue';
 import { cloneDeep } from 'lodash-es';
+import axios from 'axios';
 import dayjs from 'dayjs';
 
 import type { CommonList, FilterConditionItem, SortParams, TableQueryParams } from '@lib/shared/models/common';
@@ -222,6 +223,10 @@ export default function useTable<T>(
         }
       });
     } catch (error: any) {
+      // 路由切换时会 cancel 未完成请求，不应清空表格或向外抛出未处理异常
+      if (axios.isCancel(error) || error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') {
+        return;
+      }
       propsRes.value.data = [];
       // eslint-disable-next-line no-console
       console.error(error);

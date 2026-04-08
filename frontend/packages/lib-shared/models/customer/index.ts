@@ -121,6 +121,9 @@ export interface CustomerFollowPlanListItem extends CustomerFollowRecordListItem
   status: StatusTagKey;
   method: string;
   converted: boolean;
+  /** 任务模块列表回填：客户当前阶段 */
+  customerStageId?: string;
+  customerStageName?: string;
 }
 
 export interface SaveCustomerContractParams {

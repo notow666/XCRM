@@ -366,14 +366,15 @@
           label: t('module.clue.cluePool'),
           key: 'cluePool',
         },
-        {
-          label: t('module.clue.capacitySet'),
-          key: 'capacitySet',
-        },
-        {
-          label: t('common.more'),
-          slotName: 'more',
-        },
+          // 隐藏线索池库容设置
+        // {
+        //   label: t('module.clue.capacitySet'),
+        //   key: 'capacitySet',
+        // },
+        // {
+        //   label: t('common.more'),
+        //   slotName: 'more',
+        // },
       ],
       enable: true,
     },
@@ -468,6 +469,13 @@
           key: 'orderStateFlow',
         },
       ],
+    },
+    {
+      label: t('module.task'),
+      key: ModuleConfigEnum.TASK,
+      icon: 'iconicon_data_plan',
+      enable: true,
+      groupList: [],
     },
     // TODO 不上 xxw
     // {

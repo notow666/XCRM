@@ -15,6 +15,10 @@ export const GetFollowPlanUrl = '/follow/plan/get'; // 跟进计划详情
 export const UpdateFollowPlanUrl = '/follow/plan/update';
 export const AddFollowPlanUrl = '/follow/plan/add';
 
+// 任务模块（跟进计划待办）
+export const TaskFollowPlanPageUrl = '/task/follow/plan/page';
+export const TaskFollowPlanCompleteUrl = '/task/follow/plan/complete';
+
 // 视图
 export const AddFollowRecordViewUrl = '/follow/record/view/add';
 export const UpdateFollowRecordViewUrl = '/follow/record/view/update';

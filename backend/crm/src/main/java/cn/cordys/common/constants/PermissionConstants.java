@@ -242,5 +242,10 @@ public class PermissionConstants {
     public static final String ORDER_DELETE = "ORDER:DELETE";
     public static final String ORDER_DOWNLOAD = "ORDER:DOWNLOAD";
     /*------ end: ORDER_ROLE ------*/
+
+    /*------ start: TASK (跟进计划待办视图) ------*/
+    public static final String TASK_READ = "TASK:READ";
+    public static final String TASK_COMPLETE = "TASK:COMPLETE";
+    /*------ end: TASK ------*/
 }
 

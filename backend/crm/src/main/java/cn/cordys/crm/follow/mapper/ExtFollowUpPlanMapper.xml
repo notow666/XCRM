@@ -50,7 +50,14 @@
         <if test="request.myPlan">
             AND fup.owner = #{userId}
         </if>
-        <if test="request.status != null and request.status != '' and request.status != 'ALL'">
+        <if test="request.taskModuleQuery != null and request.taskModuleQuery">
+            AND fup.type = 'CUSTOMER'
+            AND fup.customer_id is not null
+            AND cu.id is not null
+            AND cu.in_shared_pool is false
+            AND fup.status in ('PREPARED','UNDERWAY')
+        </if>
+        <if test="request.status != null and request.status != '' and request.status != 'ALL' and (request.taskModuleQuery == null or request.taskModuleQuery == false)">
             AND fup.status = #{request.status}
         </if>
 
