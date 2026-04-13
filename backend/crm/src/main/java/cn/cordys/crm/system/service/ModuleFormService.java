@@ -133,6 +133,12 @@ public class ModuleFormService {
     private FieldSourceServiceProvider fieldSourceServiceProvider;
     @Resource
     private ModuleFieldService moduleFieldService;
+    @Lazy
+    @Resource
+    private cn.cordys.crm.customer.service.CustomerFollowWayService customerFollowWayService;
+    @Lazy
+    @Resource
+    private cn.cordys.crm.customer.service.CustomerFailReasonService customerFailReasonService;
 
     /**
      * 获取模块表单配置
@@ -172,12 +178,16 @@ public class ModuleFormService {
         businessModuleFormConfig.setFormProp(config.getFormProp());
         // 设置业务字段参数
         List<BaseField> flattenFields = flattenSourceRefFields(config.getFields());
-        businessModuleFormConfig.setFields(flattenFields.stream()
+        List<BaseField> processedFields = flattenFields.stream()
                 .peek(this::setFieldRefOption)
                 .peek(this::setFieldBusinessParam)
                 .peek(this::reloadPropOfSubRefFields)
-                .collect(Collectors.toList())
-        );
+                .collect(Collectors.toList());
+        // 跟进相关表单加载动态选项
+        if (FormKey.FOLLOW_RECORD.getKey().equals(formKey) || FormKey.FOLLOW_PLAN.getKey().equals(formKey)) {
+            processedFields.forEach(field -> setFollowUpFieldOptions(field, organizationId));
+        }
+        businessModuleFormConfig.setFields(processedFields);
         return businessModuleFormConfig;
     }
 
@@ -749,6 +759,33 @@ public class ModuleFormService {
         } else {
             field.setBusinessKey(null);
             field.setDisabledProps(null);
+        }
+    }
+
+    /**
+     * 设置跟进相关字段的动态选项
+     *
+     * @param field 字段
+     * @param organizationId 组织ID
+     */
+    public void setFollowUpFieldOptions(BaseField field, String organizationId) {
+        if (!(field instanceof SelectField selectField)) {
+            return;
+        }
+        String internalKey = field.getInternalKey();
+        List<cn.cordys.common.dto.OptionDTO> options = null;
+        if ("recordMethod".equals(internalKey) || "planMethod".equals(internalKey)) {
+            options = customerFollowWayService.getOptionList(organizationId);
+        } else if ("recordFailReason".equals(internalKey)) {
+            options = customerFailReasonService.getOptionList(organizationId);
+        }
+        if (options != null && !options.isEmpty()) {
+            selectField.setOptions(options.stream().map(opt -> {
+                cn.cordys.crm.system.dto.field.base.OptionProp optionProp = new cn.cordys.crm.system.dto.field.base.OptionProp();
+                optionProp.setLabel(opt.getName());
+                optionProp.setValue(String.valueOf(opt.getId()));
+                return optionProp;
+            }).collect(Collectors.toList()));
         }
     }
 

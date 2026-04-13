@@ -39,4 +39,13 @@ public class FollowUpRecord extends BaseModel {
 
     @Schema(description = "联系人")
     private String contactId;
+
+    @Schema(description = "跟进结果: IN_PROGRESS-跟进中, COMPLETED-跟进完成, FAILED-无效")
+    private String followResult;
+
+    @Schema(description = "客户阶段状态: NEW/IN_PROGRESS/COMPLETED/FAILED")
+    private String stageStatus;
+
+    @Schema(description = "客户阶段ID")
+    private String stage;
 }

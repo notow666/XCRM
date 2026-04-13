@@ -90,6 +90,21 @@ public class FollowUpRecordListResponse {
     @Schema(description = "资源类型")
     private String resourceType;
 
+    @Schema(description = "客户阶段ID")
+    private String stage;
+
+    @Schema(description = "客户阶段状态")
+    private String stageStatus;
+
+    @Schema(description = "客户阶段名称")
+    private String stageName;
+
+    @Schema(description = "跟进结果: IN_PROGRESS-跟进中, COMPLETED-跟进完成, FAILED-无效")
+    private String followResult;
+
+    @Schema(description = "失败原因")
+    private String failReason;
+
     @Schema(description = "自定义字段集合")
     private List<BaseModuleFieldValue> moduleFields;
 }

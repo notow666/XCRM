@@ -19,6 +19,7 @@
         draggable
         class="!p-0"
         :move="handleMove"
+        :can-edit="(element) => !element.isFixed"
         @save-row="handleSave"
         @drag="dragEnd"
         @cancel-row="handleCancelRow"

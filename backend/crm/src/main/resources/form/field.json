@@ -787,54 +787,13 @@
   ],
   "record": [
     {
-      "name": "跟进类型",
-      "internalKey": "recordType",
-      "type": "SELECT",
-      "showLabel": true,
-      "readable": true,
-      "editable": true,
-      "fieldWidth": 1,
-      "options": [
-        {
-          "label": "客户",
-          "value": "CUSTOMER"
-        },
-        {
-          "label": "线索",
-          "value": "CLUE"
-        }
-      ],
-      "rules": [
-        {
-          "key": "required"
-        }
-      ],
-      "showControlRules": [
-        {
-          "value": "CUSTOMER",
-          "fieldIds": [
-            "recordCustomer",
-            "recordOpportunity",
-            "recordContact"
-          ]
-        },
-        {
-          "value": "CLUE",
-          "fieldIds": [
-            "recordClue"
-          ]
-        }
-      ],
-      "mobile": true
-    },
-    {
       "name": "客户名称",
       "internalKey": "recordCustomer",
       "type": "DATA_SOURCE",
       "dataSourceType": "CUSTOMER",
       "showLabel": true,
       "readable": true,
-      "editable": true,
+      "editable": false,
       "fieldWidth": 1,
       "rules": [
         {
@@ -844,40 +803,13 @@
       "mobile": true
     },
     {
-      "name": "公司名称",
-      "internalKey": "recordClue",
-      "type": "DATA_SOURCE",
-      "dataSourceType": "CLUE",
+      "name": "负责人",
+      "internalKey": "recordOwner",
+      "type": "MEMBER",
+      "hasCurrentUser": true,
       "showLabel": true,
       "readable": true,
-      "editable": true,
-      "fieldWidth": 1,
-      "rules": [
-        {
-          "key": "required"
-        }
-      ],
-      "mobile": true
-    },
-    {
-      "name": "商机",
-      "internalKey": "recordOpportunity",
-      "type": "DATA_SOURCE",
-      "dataSourceType": "OPPORTUNITY",
-      "showLabel": true,
-      "readable": true,
-      "editable": true,
-      "fieldWidth": 1,
-      "mobile": true
-    },
-    {
-      "name": "联系人",
-      "internalKey": "recordContact",
-      "type": "DATA_SOURCE",
-      "dataSourceType": "CONTACT",
-      "showLabel": true,
-      "readable": true,
-      "editable": true,
+      "editable": false,
       "fieldWidth": 1,
       "rules": [
         {
@@ -894,16 +826,7 @@
       "readable": true,
       "editable": true,
       "fieldWidth": 1,
-      "options": [
-        {
-          "label": "到访",
-          "value": "1"
-        },
-        {
-          "label": "电话",
-          "value": "2"
-        }
-      ],
+      "options": [],
       "rules": [
         {
           "key": "required"
@@ -928,32 +851,6 @@
       "mobile": true
     },
     {
-      "name": "负责人",
-      "internalKey": "recordOwner",
-      "type": "MEMBER",
-      "hasCurrentUser": true,
-      "showLabel": true,
-      "readable": true,
-      "editable": true,
-      "fieldWidth": 1,
-      "rules": [
-        {
-          "key": "required"
-        }
-      ],
-      "mobile": true
-    },
-    {
-      "name": "意向产品",
-      "internalKey": "recordProduct",
-      "type": "DATA_SOURCE_MULTIPLE",
-      "dataSourceType": "PRODUCT",
-      "showLabel": true,
-      "readable": true,
-      "editable": true,
-      "fieldWidth": 1
-    },
-    {
       "name": "跟进内容",
       "internalKey": "recordDescription",
       "type": "TEXTAREA",
@@ -967,12 +864,20 @@
         }
       ],
       "mobile": true
-    }
-  ],
-  "plan": [
+    },
     {
-      "name": "跟进类型",
-      "internalKey": "planType",
+      "name": "附件",
+      "internalKey": "recordAttachment",
+      "type": "ATTACHMENT",
+      "showLabel": true,
+      "readable": true,
+      "editable": true,
+      "fieldWidth": 1,
+      "mobile": true
+    },
+    {
+      "name": "跟进结果",
+      "internalKey": "recordResult",
       "type": "SELECT",
       "showLabel": true,
       "readable": true,
@@ -980,12 +885,16 @@
       "fieldWidth": 1,
       "options": [
         {
-          "label": "客户",
-          "value": "CUSTOMER"
+          "label": "跟进中",
+          "value": "IN_PROGRESS"
         },
         {
-          "label": "线索",
-          "value": "CLUE"
+          "label": "跟进完成",
+          "value": "COMPLETED"
+        },
+        {
+          "label": "无效客户",
+          "value": "FAILED"
         }
       ],
       "rules": [
@@ -993,24 +902,29 @@
           "key": "required"
         }
       ],
+      "mobile": true,
       "showControlRules": [
         {
-          "value": "CUSTOMER",
+          "value": "FAILED",
           "fieldIds": [
-            "planCustomer",
-            "planOpportunity",
-            "planContact"
-          ]
-        },
-        {
-          "value": "CLUE",
-          "fieldIds": [
-            "planClue"
+            "recordFailReason"
           ]
         }
-      ],
-      "mobile": true
+      ]
     },
+    {
+      "name": "失败原因",
+      "internalKey": "recordFailReason",
+      "type": "SELECT",
+      "showLabel": true,
+      "readable": true,
+      "editable": true,
+      "fieldWidth": 1,
+      "options": [],
+      "mobile": true
+    }
+  ],
+  "plan": [
     {
       "name": "客户名称",
       "internalKey": "planCustomer",
@@ -1018,7 +932,7 @@
       "dataSourceType": "CUSTOMER",
       "showLabel": true,
       "readable": true,
-      "editable": true,
+      "editable": false,
       "fieldWidth": 1,
       "rules": [
         {
@@ -1028,53 +942,50 @@
       "mobile": true
     },
     {
-      "name": "公司名称",
-      "internalKey": "planClue",
-      "type": "DATA_SOURCE",
-      "dataSourceType": "CLUE",
+      "name": "节点",
+      "internalKey": "planNextStage",
+      "type": "INPUT",
       "showLabel": true,
       "readable": true,
-      "editable": true,
+      "editable": false,
+      "fieldWidth": 1,
+      "mobile": true
+    },
+    {
+      "name": "负责人",
+      "internalKey": "planOwner",
+      "type": "MEMBER",
+      "hasCurrentUser": true,
+      "showLabel": true,
+      "readable": true,
+      "editable": false,
       "fieldWidth": 1,
       "rules": [
         {
           "key": "required"
         }
-      ],
-      "mobile": true
-    },
-    {
-      "name": "商机",
-      "internalKey": "planOpportunity",
-      "type": "DATA_SOURCE",
-      "dataSourceType": "OPPORTUNITY",
-      "showLabel": true,
-      "readable": true,
-      "editable": true,
-      "fieldWidth": 1,
-      "mobile": true
-    },
-    {
-      "name": "联系人",
-      "internalKey": "planContact",
-      "type": "DATA_SOURCE",
-      "dataSourceType": "CONTACT",
-      "showLabel": true,
-      "readable": true,
-      "editable": true,
-      "fieldWidth": 1,
-      "rules": [
-        {
-          "key": "required"
-        }
-      ],
-      "mobile": true
+      ]
     },
     {
       "name": "预计开始时间",
       "internalKey": "planStartTime",
       "type": "DATE_TIME",
       "dateType": "date",
+      "showLabel": true,
+      "readable": true,
+      "editable": true,
+      "fieldWidth": 1,
+      "rules": [
+        {
+          "key": "required"
+        }
+      ],
+      "mobile": true
+    },
+    {
+      "name": "预计处理人员",
+      "internalKey": "planProcessor",
+      "type": "MEMBER",
       "showLabel": true,
       "readable": true,
       "editable": true,
@@ -1094,47 +1005,13 @@
       "readable": true,
       "editable": true,
       "fieldWidth": 1,
-      "options": [
-        {
-          "label": "到访",
-          "value": "1"
-        },
-        {
-          "label": "电话",
-          "value": "2"
-        }
-      ],
+      "options": [],
       "rules": [
         {
           "key": "required"
         }
       ],
       "mobile": true
-    },
-    {
-      "name": "负责人",
-      "internalKey": "planOwner",
-      "type": "MEMBER",
-      "hasCurrentUser": true,
-      "showLabel": true,
-      "readable": true,
-      "editable": true,
-      "fieldWidth": 1,
-      "rules": [
-        {
-          "key": "required"
-        }
-      ]
-    },
-    {
-      "name": "意向产品",
-      "internalKey": "planProduct",
-      "type": "DATA_SOURCE_MULTIPLE",
-      "dataSourceType": "PRODUCT",
-      "showLabel": true,
-      "readable": true,
-      "editable": true,
-      "fieldWidth": 1
     },
     {
       "name": "预计沟通内容",
@@ -1144,11 +1021,16 @@
       "readable": true,
       "editable": true,
       "fieldWidth": 1,
-      "rules": [
-        {
-          "key": "required"
-        }
-      ],
+      "mobile": true
+    },
+    {
+      "name": "附件",
+      "internalKey": "planAttachment",
+      "type": "ATTACHMENT",
+      "showLabel": true,
+      "readable": true,
+      "editable": true,
+      "fieldWidth": 1,
       "mobile": true
     }
   ],

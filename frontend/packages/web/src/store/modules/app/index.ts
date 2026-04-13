@@ -484,7 +484,15 @@ const useAppStore = defineStore('app', {
     },
   },
   persist: {
-    paths: ['menuIconStatus', 'pageConfig', 'moduleConfigList', 'navTopConfigList', 'activePlatformResource', 'tenantId', 'orgId'],
+    paths: [
+      'menuIconStatus',
+      'pageConfig',
+      'moduleConfigList',
+      'navTopConfigList',
+      'activePlatformResource',
+      'tenantId',
+      'orgId',
+    ],
   },
 });
 

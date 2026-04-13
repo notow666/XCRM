@@ -29,4 +29,7 @@ public class CustomerStageConfig extends BaseModel {
 
     @Schema(description = "组织id")
     private String organizationId;
+
+    @Schema(description = "是否固定节点: true-固定不可删除/编辑, false-可自定义")
+    private Boolean isFixed;
 }

@@ -22,6 +22,8 @@ import cn.cordys.common.service.BaseService;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.Translator;
+import cn.cordys.crm.customer.domain.Customer;
+import cn.cordys.crm.customer.service.CustomerStageService;
 import cn.cordys.crm.follow.constants.FollowUpPlanStatusType;
 import cn.cordys.crm.follow.constants.FollowUpPlanType;
 import cn.cordys.crm.follow.domain.FollowUpPlan;
@@ -49,6 +51,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
@@ -69,6 +72,12 @@ public class FollowUpPlanService extends BaseFollowUpService {
     private ModuleFormService moduleFormService;
     @Resource
     private PermissionCache permissionCache;
+
+    @Resource
+    private cn.cordys.mybatis.BaseMapper<Customer> customerMapper;
+
+    @Resource
+    private CustomerStageService customerStageService;
 
     /**
      * 新建跟进计划
@@ -92,10 +101,64 @@ public class FollowUpPlanService extends BaseFollowUpService {
         if (StringUtils.isBlank(request.getOwner())) {
             followUpPlan.setOwner(userId);
         }
+        // 填充显示字段
+        fillDisplayFields(followUpPlan, request, orgId);
+        // 新建跟进计划的阶段状态默认为 NEW
+        if (StringUtils.isNotBlank(followUpPlan.getNextStage())) {
+            followUpPlan.setNextStageStatus(CustomerStageService.STATUS_NEW);
+        }
         //保存自定义字段
         followUpPlanFieldService.saveModuleField(followUpPlan, orgId, userId, request.getModuleFields(), false);
         followUpPlanMapper.insert(followUpPlan);
+
+        handleCustomerStageTransition(request, orgId);
+
         return followUpPlan;
+    }
+
+    /**
+     * 填充显示字段
+     */
+    private void fillDisplayFields(FollowUpPlan followUpPlan, FollowUpPlanAddRequest request, String orgId) {
+        // 如果类型是客户，填充客户名称
+        if (FormKey.CUSTOMER.getKey().equals(request.getType()) && StringUtils.isNotBlank(request.getCustomerId())) {
+            if (StringUtils.isBlank(request.getCustomerName())) {
+                Customer customer = customerMapper.selectByPrimaryKey(request.getCustomerId());
+                if (customer != null) {
+                    followUpPlan.setCustomerName(customer.getName());
+                }
+            }
+            if (StringUtils.isBlank(request.getOwnerName()) && StringUtils.isNotBlank(followUpPlan.getOwner())) {
+                Map<String, String> userNameMap = baseService.getUserNameMap(List.of(followUpPlan.getOwner()));
+                followUpPlan.setOwnerName(userNameMap.get(followUpPlan.getOwner()));
+            }
+        }
+        // 填充节点名称
+        if (StringUtils.isNotBlank(request.getNextStage())) {
+            if (StringUtils.isBlank(request.getNextStageName())) {
+                cn.cordys.crm.customer.domain.CustomerStageConfig stageConfig = customerStageService.getStageConfigById(request.getNextStage(), orgId);
+                if (stageConfig != null) {
+                    followUpPlan.setNextStageName(stageConfig.getName());
+                }
+            }
+        }
+    }
+
+    private void handleCustomerStageTransition(FollowUpPlanAddRequest request, String orgId) {
+        if (StringUtils.isBlank(request.getCustomerId())) {
+            return;
+        }
+
+        if (StringUtils.isBlank(request.getNextStage())) {
+            return;
+        }
+
+        Customer customer = new Customer();
+        customer.setId(request.getCustomerId());
+        customer.setStage(request.getNextStage());
+        customer.setStageStatus(CustomerStageService.STATUS_NEW);
+
+        customerMapper.update(customer);
     }
 
 
@@ -223,7 +286,8 @@ public class FollowUpPlanService extends BaseFollowUpService {
         List<String> createUserIds = list.stream().map(FollowUpPlanListResponse::getCreateUser).toList();
         List<String> updateUserIds = list.stream().map(FollowUpPlanListResponse::getUpdateUser).toList();
         List<String> ownerIds = list.stream().map(FollowUpPlanListResponse::getOwner).toList();
-        List<String> userIds = Stream.of(createUserIds, updateUserIds, ownerIds)
+        List<String> processorIds = list.stream().map(FollowUpPlanListResponse::getProcessor).filter(StringUtils::isNotBlank).toList();
+        List<String> userIds = Stream.of(createUserIds, updateUserIds, ownerIds, processorIds)
                 .flatMap(Collection::stream)
                 .distinct()
                 .toList();
@@ -253,6 +317,7 @@ public class FollowUpPlanService extends BaseFollowUpService {
             planResponse.setOwnerName(userNameMap.get(planResponse.getOwner()));
             planResponse.setContactName(contactMap.get(planResponse.getContactId()));
             planResponse.setCustomerName(customerMap.get(planResponse.getCustomerId()));
+            planResponse.setProcessorName(userNameMap.get(planResponse.getProcessor()));
             planResponse.setOpportunityName(opportunityMap.get(planResponse.getOpportunityId()));
             planResponse.setClueName(clueMap.get(planResponse.getClueId()));
             planResponse.setPhone(contactPhoneMap.get(planResponse.getContactId()));
@@ -309,6 +374,16 @@ public class FollowUpPlanService extends BaseFollowUpService {
         List<OptionDTO> clueOption = moduleFormService.getBusinessFieldOption(buildList,
                 FollowUpPlanListResponse::getClueId, FollowUpPlanListResponse::getClueName);
         optionMap.put(BusinessModuleField.FOLLOW_PLAN_CLUE.getBusinessKey(), clueOption);
+
+        //下一阶段
+        List<OptionDTO> nextStageOption = moduleFormService.getBusinessFieldOption(buildList,
+                FollowUpPlanListResponse::getNextStage, FollowUpPlanListResponse::getNextStageName);
+        optionMap.put(BusinessModuleField.FOLLOW_PLAN_NEXT_STAGE.getBusinessKey(), nextStageOption);
+
+        //预计处理人员
+        List<OptionDTO> processorOption = moduleFormService.getBusinessFieldOption(buildList,
+                FollowUpPlanListResponse::getProcessor, FollowUpPlanListResponse::getProcessorName);
+        optionMap.put(BusinessModuleField.FOLLOW_PLAN_PROCESSOR.getBusinessKey(), processorOption);
 
 
         response.setOptionMap(optionMap);

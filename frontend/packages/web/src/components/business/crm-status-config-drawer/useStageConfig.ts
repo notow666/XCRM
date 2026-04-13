@@ -47,6 +47,9 @@ export default function useStageConfig(type: StatusBizType): UseStatusConfigRetu
   }
 
   function getDropdownOptions(element: StatusRowItem): ActionsItem[] {
+    // 固定节点不显示任何操作
+    if (element.isFixed) return [];
+
     if (element.type === 'END') return [];
 
     const minAfootCount = form.value.list.filter((item) => item.type === 'AFOOT').length === 1;
@@ -92,8 +95,10 @@ export default function useStageConfig(type: StatusBizType): UseStatusConfigRetu
       list: (res.stageConfigList || []).map((item: StageConfigItem) => ({
         ...item,
         _key: item.id,
+        // 固定节点不可编辑
         editing: false,
-        draggable: item.type !== 'END',
+        // 固定节点或 END 类型不可拖拽
+        draggable: !item.isFixed && item.type !== 'END',
         ...(strategyConfig.value.normalizeItem?.(item) || {}),
       })),
     };
@@ -105,6 +110,12 @@ export default function useStageConfig(type: StatusBizType): UseStatusConfigRetu
   }
 
   async function handleSave(element: StatusRowItem, done: () => void, index: number) {
+    // 固定节点不可编辑
+    if (element.isFixed) {
+      done();
+      return;
+    }
+
     if (element.id) {
       await apiConfig.value.update(strategyConfig.value.buildUpdateParams(element));
     } else {
@@ -171,9 +182,25 @@ export default function useStageConfig(type: StatusBizType): UseStatusConfigRetu
     const children = Array.from(evt.from.children);
     const draggedIndex = children.indexOf(evt.dragged);
     const targetIndex = children.indexOf(evt.related);
+    const draggedItem = form.value.list[draggedIndex];
 
-    if (draggedIndex >= form.value.list.length - 2) return false;
-    if (targetIndex >= form.value.list.length - 2) return false;
+    // 固定节点不能移动
+    if (draggedItem?.isFixed) return false;
+
+    // 找到所有固定节点的索引
+    const fixedIndices = form.value.list
+      .map((item, index) => (item.isFixed ? index : -1))
+      .filter((index) => index !== -1);
+
+    // 第一个固定节点（跟进），第二个固定节点（回款）
+    const followIndex = fixedIndices[0];
+    const paymentIndex = fixedIndices[1];
+
+    // 不能拖到跟进前面
+    if (targetIndex <= followIndex) return false;
+
+    // 不能拖到回款位置或后面（包含无效客户）
+    if (targetIndex >= paymentIndex) return false;
 
     return true;
   }

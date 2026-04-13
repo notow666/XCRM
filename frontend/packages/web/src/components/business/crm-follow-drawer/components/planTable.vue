@@ -138,7 +138,7 @@
   import CrmViewSelect from '@/components/business/crm-view-select/index.vue';
   import DetailDrawer from './detailDrawer.vue';
 
-  import { deleteFollowPlan, updateFollowPlanStatus } from '@/api/modules';
+  import { deleteFollowPlan, getCustomerNextStage, updateFollowPlanStatus } from '@/api/modules';
   import { baseFilterConfigList } from '@/config/clue';
   import useFormCreateTable from '@/hooks/useFormCreateTable';
   import useLocalForage from '@/hooks/useLocalForage';
@@ -266,10 +266,47 @@
     converted: false,
   });
   const realFollowSourceId = ref<string | undefined>('');
+
   function handleEdit(item: any) {
     realFollowSourceId.value = item.id;
     formDrawerVisible.value = true;
     otherFollowRecordSaveParams.value.converted = item.converted;
+  }
+
+  async function openPlanForm(data: Record<string, any>) {
+    let nextStageId = '';
+    let nextStageName = '';
+    let ownerName = '';
+    let { customerName } = data;
+
+    // 如果是客户类型，从后端获取下一阶段信息
+    if (data.resourceType === 'CUSTOMER' && data.customerId) {
+      try {
+        const res = await getCustomerNextStage(data.customerId);
+        if (res) {
+          nextStageId = res.nextStageId;
+          nextStageName = res.nextStageName;
+          ownerName = res.ownerName || '';
+          customerName = res.customerName || customerName;
+        }
+      } catch (error) {
+        console.error('获取客户下一阶段信息失败', error);
+      }
+    }
+
+    otherFollowRecordSaveParams.value = {
+      converted: false,
+      customerId: data.customerId,
+      customerName,
+      opportunityId: data.opportunityId,
+      contactId: data.contactId,
+      type: data.resourceType,
+      nextStage: nextStageId,
+      nextStageName,
+      ownerName,
+    };
+    realFollowSourceId.value = undefined;
+    formDrawerVisible.value = true;
   }
 
   function handleAfterSave() {
@@ -277,6 +314,7 @@
       refreshKey.value += 1;
     }
     tableRefreshId.value += 1;
+    otherFollowRecordSaveParams.value = { converted: false };
   }
 
   function handleActionSelect(row: any, actionKey: string) {
@@ -429,6 +467,10 @@
       propsEvent.value.pageChange(propsRes.value.crmPagination.page + 1);
     }
   }
+
+  defineExpose({
+    openPlanForm,
+  });
 </script>
 
 <style lang="less" scoped>

@@ -419,7 +419,8 @@ public class PoolCustomerService {
         }
         extCustomerMapper.updateIncludeNullById(customer);
 
-        followUpPlanService.createInitialStageFollowPlanForCustomer(customerId, ownerId, currentOrgId);
+        // 客户从公海进入私海时不再自动创建跟进计划（需求：2026-04-10）
+        // followUpPlanService.createInitialStageFollowPlanForCustomer(customerId, ownerId, currentOrgId);
 
         // 只更新最近一次销售负责人的联系人（联系人为空的）
         String recentOwner = extCustomerOwnerMapper.getRecentOwner(customerId);

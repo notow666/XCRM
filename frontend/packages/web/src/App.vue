@@ -159,7 +159,10 @@
 
     const currentPath = router.currentRoute.value.path || '';
     const isTenantLoginRoute = /\/[^/]+\/login$/.test(currentPath);
-    if (!isTenantLoginRoute && WHITE_LIST.find((el) => window.location.hash.split('#')[1].includes(el.path)) === undefined) {
+    if (
+      !isTenantLoginRoute &&
+      WHITE_LIST.find((el) => window.location.hash.split('#')[1].includes(el.path)) === undefined
+    ) {
       await userStore.checkIsLogin(isWXWork || isDingTalk || isLark);
     }
     appStore.setLoginLoading(false);

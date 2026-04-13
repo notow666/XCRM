@@ -24,6 +24,10 @@ import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.Translator;
 import cn.cordys.crm.clue.domain.Clue;
 import cn.cordys.crm.customer.domain.Customer;
+import cn.cordys.crm.customer.domain.CustomerStageConfig;
+import cn.cordys.crm.customer.service.CustomerFailReasonService;
+import cn.cordys.crm.customer.service.CustomerFollowWayService;
+import cn.cordys.crm.customer.service.CustomerStageService;
 import cn.cordys.crm.follow.constants.FollowUpPlanType;
 import cn.cordys.crm.follow.domain.FollowUpRecord;
 import cn.cordys.crm.follow.dto.CustomerDataDTO;
@@ -44,6 +48,7 @@ import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
@@ -58,6 +63,7 @@ import java.util.stream.Stream;
 
 @Service
 @Transactional(rollbackFor = Exception.class)
+@Slf4j
 public class FollowUpRecordService extends BaseFollowUpService {
     @Resource
     private BaseMapper<FollowUpRecord> followUpRecordMapper;
@@ -80,15 +86,24 @@ public class FollowUpRecordService extends BaseFollowUpService {
     @Resource
     private PermissionCache permissionCache;
 
+    @Resource
+    private CustomerStageService customerStageService;
+    @Resource
+    private CustomerFollowWayService customerFollowWayService;
+    @Resource
+    private CustomerFailReasonService customerFailReasonService;
+    @Resource
+    private cn.cordys.crm.system.service.ModuleFieldService moduleFieldService;
+
     /**
      * 添加跟进记录
      *
-     * @param request
-     * @param userId
-     * @param orgId
-     *
-     * @return
-     */
+      * @param request
+      * @param userId
+      * @param orgId
+      *
+      * @return
+      */
     public FollowUpRecord add(FollowUpRecordAddRequest request, String userId, String orgId) {
         FollowUpRecord followUpRecord = BeanUtils.copyBean(new FollowUpRecord(), request);
         long time = System.currentTimeMillis();
@@ -101,6 +116,18 @@ public class FollowUpRecordService extends BaseFollowUpService {
         if (StringUtils.isBlank(request.getOwner())) {
             followUpRecord.setOwner(userId);
         }
+        String followResult = request.getFollowResult();
+
+        // 保存时记录客户的当前阶段状态（有customerId说明是客户跟进记录）
+        if (StringUtils.isNotBlank(request.getCustomerId())) {
+            Customer customer = customerMapper.selectByPrimaryKey(request.getCustomerId());
+            if (customer != null) {
+                followUpRecord.setStage(customer.getStage());
+                followUpRecord.setStageStatus(followResult);
+                followUpRecord.setFollowResult(followResult);
+
+            }
+        }
 
         //保存自定义字段
         followUpRecordFieldService.saveModuleField(followUpRecord, orgId, userId, request.getModuleFields(), false);
@@ -108,7 +135,38 @@ public class FollowUpRecordService extends BaseFollowUpService {
         followUpRecordMapper.insert(followUpRecord);
 
         handleFollowTimeAndFollower(request.getCustomerId(), request.getOpportunityId(), request.getClueId(), request.getFollowTime(), request.getOwner());
+
+        handleCustomerStageStatus(request, orgId);
+
         return followUpRecord;
+    }
+
+
+
+    private void handleCustomerStageStatus(FollowUpRecordAddRequest request, String orgId) {
+        if (StringUtils.isBlank(request.getCustomerId())) {
+            return;
+        }
+
+        String followResult = request.getFollowResult();
+
+
+        if (StringUtils.isBlank(followResult)) {
+            return;
+        }
+        Customer customer = new Customer();
+        customer.setId(request.getCustomerId());
+        customer.setStageStatus(followResult);
+
+        if (CustomerStageService.STATUS_FAILED.equals(followResult)) {
+            customer.setFailReason(request.getFailReason());
+            String failStageId = customerStageService.getFailStageId(orgId);
+            if (StringUtils.isNotBlank(failStageId)) {
+                customer.setStage(failStageId);
+            }
+        }
+
+        customerMapper.update(customer);
     }
 
 
@@ -284,6 +342,14 @@ public class FollowUpRecordService extends BaseFollowUpService {
             recordListResponse.setPhone(contactPhoneMap.get(recordListResponse.getContactId()));
             recordListResponse.setResourceType(recordListResponse.getType());
 
+            // 填充客户阶段名称（stageStatus已直接从数据库获取，只需根据stage获取stageName）
+            if (StringUtils.isNotBlank(recordListResponse.getStage())) {
+                cn.cordys.crm.customer.domain.CustomerStageConfig stageConfig = customerStageService.getStageConfigById(recordListResponse.getStage(), orgId);
+                if (stageConfig != null) {
+                    recordListResponse.setStageName(stageConfig.getName());
+                }
+            }
+
             UserResponse userResponse = userDeptMap.get(recordListResponse.getOwner());
             if (userResponse != null) {
                 recordListResponse.setDepartmentId(userResponse.getDepartmentId());
@@ -337,6 +403,22 @@ public class FollowUpRecordService extends BaseFollowUpService {
         List<OptionDTO> clueOption = moduleFormService.getBusinessFieldOption(response,
                 FollowUpRecordDetailResponse::getClueId, FollowUpRecordDetailResponse::getClueName);
         optionMap.put(BusinessModuleField.FOLLOW_RECORD_CLUE.getBusinessKey(), clueOption);
+
+        // 跟进方式选项
+        List<OptionDTO> followWayOptions = customerFollowWayService.getOptionList(orgId);
+        optionMap.put(BusinessModuleField.FOLLOW_METHOD.getBusinessKey(), followWayOptions);
+
+        // 失败原因选项
+        List<OptionDTO> failReasonOptions = customerFailReasonService.getOptionList(orgId);
+        optionMap.put(BusinessModuleField.FOLLOW_FAIL_REASON.getBusinessKey(), failReasonOptions);
+
+        // 跟进结果选项（静态选项）
+        List<OptionDTO> followResultOptions = List.of(
+                createOptionDTO("IN_PROGRESS", "跟进中"),
+                createOptionDTO("COMPLETED", "跟进完成"),
+                createOptionDTO("FAILED", "无效客户")
+        );
+        optionMap.put(BusinessModuleField.FOLLOW_RESULT.getBusinessKey(), followResultOptions);
 
         response.setOptionMap(optionMap);
 
@@ -409,6 +491,19 @@ public class FollowUpRecordService extends BaseFollowUpService {
         List<OptionDTO> contactFieldOption = moduleFormService.getBusinessFieldOption(recordList,
                 FollowUpRecordListResponse::getContactId, FollowUpRecordListResponse::getContactName);
         optionMap.put(BusinessModuleField.OPPORTUNITY_CONTACT.getBusinessKey(), contactFieldOption);
+        // 跟进方式选项
+        List<OptionDTO> followWayOptions = customerFollowWayService.getOptionList(orgId);
+        optionMap.put(BusinessModuleField.FOLLOW_METHOD.getBusinessKey(), followWayOptions);
+        // 失败原因选项
+        List<OptionDTO> failReasonOptions = customerFailReasonService.getOptionList(orgId);
+        optionMap.put(BusinessModuleField.FOLLOW_FAIL_REASON.getBusinessKey(), failReasonOptions);
+        // 跟进结果选项（静态选项）
+        List<OptionDTO> followResultOptions = List.of(
+                createOptionDTO("IN_PROGRESS", "跟进中"),
+                createOptionDTO("COMPLETED", "跟进完成"),
+                createOptionDTO("FAILED", "无效客户")
+        );
+        optionMap.put(BusinessModuleField.FOLLOW_RESULT.getBusinessKey(), followResultOptions);
         return optionMap;
     }
 
@@ -575,5 +670,19 @@ public class FollowUpRecordService extends BaseFollowUpService {
         if (!hasPermission) {
             throw new GenericException(Translator.get("no.operation.permission"));
         }
+    }
+
+    /**
+     * 创建选项DTO
+     *
+     * @param id   选项值
+     * @param name 选项名称
+     * @return 选项DTO
+     */
+    private OptionDTO createOptionDTO(String id, String name) {
+        OptionDTO option = new OptionDTO();
+        option.setId(id);
+        option.setName(name);
+        return option;
     }
 }

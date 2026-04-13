@@ -90,4 +90,13 @@ public class CustomerListResponse {
 
     @Schema(description = "手机号码")
     private String mobile;
+
+    @Schema(description = "阶段ID")
+    private String stage;
+
+    @Schema(description = "阶段名称")
+    private String stageName;
+
+    @Schema(description = "阶段状态")
+    private String stageStatus;
 }

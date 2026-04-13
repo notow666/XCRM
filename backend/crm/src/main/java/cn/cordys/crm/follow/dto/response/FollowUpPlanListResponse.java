@@ -104,4 +104,19 @@ public class FollowUpPlanListResponse {
 
     @Schema(description = "客户当前阶段名称")
     private String customerStageName;
+
+    @Schema(description = "下一阶段ID")
+    private String nextStage;
+
+    @Schema(description = "下一阶段名称")
+    private String nextStageName;
+
+    @Schema(description = "阶段状态")
+    private String nextStageStatus;
+
+    @Schema(description = "预计处理人员")
+    private String processor;
+
+    @Schema(description = "预计处理人员名称")
+    private String processorName;
 }

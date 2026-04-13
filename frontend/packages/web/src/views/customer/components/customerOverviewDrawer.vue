@@ -37,16 +37,9 @@
     <template #rightTop>
       <CrmWorkflowCard
         v-model:stage="currentStatus"
-        :show-confirm-status="true"
         class="mb-[16px]"
         :stage-config-list="stageConfig?.stageConfigList || []"
-        is-limit-back
-        :back-stage-permission="['CUSTOMER_MANAGEMENT:UPDATE']"
-        :source-id="props.sourceId"
-        :operation-permission="['CUSTOMER_MANAGEMENT:UPDATE']"
-        :update-api="updateCustomerStage"
-        :afoot-roll-back="stageConfig?.afootRollBack"
-        :end-roll-back="stageConfig?.endRollBack"
+        readonly
         @load-detail="handleSaved"
       />
     </template>
@@ -70,12 +63,21 @@
           :refresh-key="refreshKey"
           :initial-source-name="sourceName"
           :show-add="
-            collaborationType !== 'READ_ONLY' && hasAnyPermission(['CUSTOMER_MANAGEMENT:UPDATE']) && !props.readonly
+            collaborationType !== 'READ_ONLY' &&
+            hasAnyPermission(['CUSTOMER_MANAGEMENT:UPDATE']) &&
+            !props.readonly &&
+            !isCustomerCompleted
           "
           :show-action="
-            collaborationType !== 'READ_ONLY' && hasAnyPermission(['CUSTOMER_MANAGEMENT:UPDATE']) && !props.readonly
+            collaborationType !== 'READ_ONLY' &&
+            hasAnyPermission(['CUSTOMER_MANAGEMENT:UPDATE']) &&
+            !props.readonly &&
+            !(activeTab === 'followPlan' && isCustomerCompleted)
           "
           :parentFormKey="FormDesignKeyEnum.CUSTOMER"
+          :customer-stage-status="customerStageStatus"
+          :customer-stage="currentStatus"
+          @saved="handleSaved"
         />
         <CrmHeaderTable
           v-else-if="activeTab === 'headRecord'"
@@ -180,7 +182,6 @@
     getCustomerHeaderList,
     getCustomerStageConfig,
     updateCustomer,
-    updateCustomerStage2,
   } from '@/api/modules';
   import useModal from '@/hooks/useModal';
   import { hasAnyPermission } from '@/utils/permission';
@@ -211,6 +212,12 @@
   const refreshKey = ref(0);
   const stageConfig = ref<Awaited<ReturnType<typeof getCustomerStageConfig>>>();
   const currentStatus = ref<string>('');
+  const customerStageStatus = ref<string>('');
+  const customerFailReason = ref<string>('');
+
+  const isCustomerCompleted = computed(() =>
+    currentStatus.value === 'stage_fail' || currentStatus.value === 'stage_payment'
+  );
 
   async function initStageConfig() {
     try {
@@ -222,10 +229,6 @@
       // eslint-disable-next-line no-console
       console.log('initStageConfig error:', error);
     }
-  }
-
-  async function updateCustomerStage(data: { id: string; stage: string }) {
-    return updateCustomerStage2(data);
   }
 
   onMounted(() => {
@@ -439,6 +442,12 @@
       if (detail?.stage) {
         currentStatus.value = detail.stage;
       }
+      if (detail?.stageStatus) {
+        customerStageStatus.value = detail.stageStatus;
+      }
+      if (detail?.failReason) {
+        customerFailReason.value = detail.failReason;
+      }
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log('getCustomerDetailStage error:', error);
@@ -463,6 +472,9 @@
     sourceName.value = _sourceName || '';
     if (detail?.stage) {
       currentStatus.value = detail.stage;
+    }
+    if (detail?.stageStatus) {
+      customerStageStatus.value = detail.stageStatus;
     }
   }
 

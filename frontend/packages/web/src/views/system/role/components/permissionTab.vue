@@ -176,7 +176,7 @@
     const isEnterprise = licenseStore.hasLicense();
 
     permissions.forEach((item) => {
-      console.log(item)
+      console.log(item);
       if (!isEnterprise && item.license) return;
 
       const children = isEnterprise ? item.children || [] : item.children?.filter((child) => !child.license) || [];

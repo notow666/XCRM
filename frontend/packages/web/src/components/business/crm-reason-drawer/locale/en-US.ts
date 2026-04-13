@@ -7,4 +7,8 @@ export default {
   'crmReasonDrawer.deleteReasonContentTip':
     'Warning: Existing records using this reason may show inconsistencies after deletion!',
   'crmReasonDrawer.addReason': 'Add reason',
+  'crmReasonDrawer.addFailReason': 'Add fail reason',
+  'crmReasonDrawer.addFollowWay': 'Add follow-up method',
+  'crmReasonDrawer.deleteTitleTip': 'Confirm removal of {title}?',
+  'crmReasonDrawer.deleteContentTip': 'Warning: Existing records may show inconsistencies after deletion!',
 };

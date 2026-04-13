@@ -150,6 +150,15 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
       title: t('customer.lastFollowUpDate'),
       key: 'followTime',
     },
+    {
+      title: t('customer.stage'),
+      key: 'stageDisplayName',
+    },
+    {
+      title: t('customer.failReason'),
+      key: 'failReason',
+      condition: (form: Record<string, any>) => form.stage === 'stage_fail' && form.failReason,
+    },
   ];
 
   const contactInternalFields = [
@@ -559,6 +568,31 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
         if (!asyncApi || !props.sourceId?.value) return;
         form = await asyncApi(props.sourceId?.value);
       }
+        // 计算客户阶段显示名称
+      if (
+        [FormDesignKeyEnum.CUSTOMER, FormDesignKeyEnum.SEARCH_ADVANCED_CUSTOMER].includes(
+          props.formKey.value as FormDesignKeyEnum
+        ) &&
+        (form.stage != null || form.stageStatus != null)
+      ) {
+        const prefixMap: Record<string, string> = {
+          NEW: '待',
+          IN_PROGRESS: '',
+          COMPLETED: '已',
+          FAILED: '',
+        };
+        const suffixMap: Record<string, string> = {
+          NEW: '',
+          IN_PROGRESS: '中',
+          COMPLETED: '',
+          FAILED: '',
+        };
+        const status = form.stageStatus || '';
+        const prefix = status ? (prefixMap[status] || '') : '';
+        const suffix = status ? (suffixMap[status] || '') : '';
+        const name = form.stageName || '';
+        form.stageDisplayName = prefix + name + suffix || '-';
+      }
       descriptions.value = [];
       detail.value = form;
       collaborationType.value = form.collaborationType;
@@ -581,6 +615,9 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
         }
       });
       [...(internalFieldMap[props.formKey.value] || []), ...staticFields].forEach((field) => {
+        if (field.condition && !field.condition(form)) {
+          return;
+        }
         descriptions.value.push({
           label: field.title,
           value: formatInternalFieldValue(field.key, form[field.key]),
@@ -951,7 +988,6 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
       ) &&
       props.sourceId?.value
     ) {
-      // 客户跟进计划和记录，需要赋予类型字段默认为客户，客户字段默认值为当前客户
       if (field.businessKey === 'type') {
         return {
           defaultValue: 'CUSTOMER',
@@ -968,6 +1004,27 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
         return {
           defaultValue: initFieldValue(field, props.sourceId?.value || ''),
           initialOptions: specialInitialOptions.value,
+        };
+      }
+      if (field.businessKey === 'nextStage' && props.otherSaveParams?.value?.nextStageName) {
+        return {
+          defaultValue: props.otherSaveParams.value.nextStageName,
+        };
+      }
+      if (field.businessKey === 'processor' && props.otherSaveParams?.value?.owner) {
+        return {
+          defaultValue: props.otherSaveParams.value.owner,
+          initialOptions: [{ id: props.otherSaveParams.value.owner, name: props.otherSaveParams.value.ownerName || '' }],
+        };
+      }
+      // 无效客户和已完成客户场景下，跟进结果默认"跟进中"且不可更改
+      // 根据 customerStage 判断（stage_fail 或 stage_payment）
+      const customerStage = props.otherSaveParams?.value?.customerStage;
+      if (field.businessKey === 'recordResult' && (customerStage === 'stage_fail' || customerStage === 'stage_payment')) {
+        return {
+          defaultValue: 'IN_PROGRESS',
+          initialOptions: field.initialOptions,
+          editable: false,
         };
       }
     }
@@ -1109,7 +1166,7 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
 
   function initFormFieldConfig(fields: FormCreateField[]) {
     fieldList.value = fields.map((item) => {
-      const { defaultValue, initialOptions } = specialFormFieldInit(item);
+      const { defaultValue, initialOptions, ...specialRest } = specialFormFieldInit(item);
       if (item.showControlRules?.length) {
         // 将字段的控制显隐规则存储到 fieldShowControlMap 中
         item.showControlRules?.forEach((rule) => {
@@ -1137,6 +1194,7 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
       }
       return {
         ...item,
+        ...specialRest,
         defaultValue,
         initialOptions,
         fieldWidth: safeFractionConvert(item.fieldWidth),
@@ -1377,7 +1435,6 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
           }
         }
         if (item.businessKey) {
-          // 存在业务字段，则按照业务字段的key存储
           params[item.businessKey] = form[item.id] ?? '';
         } else {
           params.moduleFields.push({
@@ -1389,6 +1446,17 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
 
       if (needModuleFormConfigParamsType.includes(props.formKey.value)) {
         params.moduleFormConfigDTO = moduleFormConfig.value;
+      }
+      // otherSaveParams中以_开头的key用于强制覆盖表单字段值
+      if (props.otherSaveParams?.value) {
+        const otherParams = props.otherSaveParams.value;
+        Object.keys(otherParams).forEach((key) => {
+          if (key.startsWith('_') && key.length > 1) {
+            const realKey = key.slice(1);
+            params[realKey] = otherParams[key];
+            delete params[key];
+          }
+        });
       }
       let res;
       if (props.sourceId?.value && props.needInitDetail?.value) {

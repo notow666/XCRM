@@ -1,9 +1,9 @@
 <template>
   <div class="banner-wrap">
     <img class="img" :style="props.isPreview ? 'height: 100%;' : 'height: 100vh'" :src="innerBanner" />
-<!--    <a href="https://cordys.cn/" target="_blank" class="logo-link">-->
-<!--      <img :src="innerLogo" />-->
-<!--    </a>-->
+    <!--    <a href="https://cordys.cn/" target="_blank" class="logo-link">-->
+    <!--      <img :src="innerLogo" />-->
+    <!--    </a>-->
   </div>
 </template>
 

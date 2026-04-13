@@ -1,0 +1,2 @@
+-- 删除错误的 DDL（失败原因只需要存 customer 表，不需要 follow_up_record 表）
+-- ALTER TABLE follow_up_record ADD COLUMN fail_reason VARCHAR(255) DEFAULT NULL COMMENT '失败原因';

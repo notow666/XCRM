@@ -48,4 +48,10 @@ public class Customer extends BaseModel {
 
     @Schema(description = "手机号码")
     private String mobile;
+
+    @Schema(description = "阶段状态: NEW-待xxx, IN_PROGRESS-xxx中, COMPLETED-已xxx, FAILED-无效")
+    private String stageStatus;
+
+    @Schema(description = "失败原因")
+    private String failReason;
 }

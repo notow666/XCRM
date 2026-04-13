@@ -48,6 +48,26 @@ public class FollowUpPlanAddRequest {
     @Schema(description = "跟进方式", requiredMode = Schema.RequiredMode.REQUIRED)
     private String method;
 
+    @Size(max = 32)
+    @Schema(description = "下一阶段ID")
+    private String nextStage;
+
+    @Size(max = 32)
+    @Schema(description = "预计处理人员")
+    private String processor;
+
+    @Size(max = 100)
+    @Schema(description = "客户名称")
+    private String customerName;
+
+    @Size(max = 100)
+    @Schema(description = "节点名称")
+    private String nextStageName;
+
+    @Size(max = 100)
+    @Schema(description = "负责人名称")
+    private String ownerName;
+
     @Schema(description = "自定义字段")
     private List<BaseModuleFieldValue> moduleFields;
 }

@@ -8,14 +8,14 @@
   </div>
   <div v-else class="login-form" :style="props.isPreview ? 'height: inherit' : 'height: 100vh'">
     <div class="title">
-<!--      <div class="flex justify-center">-->
-<!--        <img :src="innerLogo" class="h-[52px] w-[240px]" />-->
-<!--      </div>-->
-<!--      <div class="title-0 mt-[16px] flex justify-center">-->
-<!--        <span class="title-welcome">-->
-<!--          {{ t(innerSlogan || '') || t('login.form.title') }}-->
-<!--        </span>-->
-<!--      </div>-->
+      <!--      <div class="flex justify-center">-->
+      <!--        <img :src="innerLogo" class="h-[52px] w-[240px]" />-->
+      <!--      </div>-->
+      <!--      <div class="title-0 mt-[16px] flex justify-center">-->
+      <!--        <span class="title-welcome">-->
+      <!--          {{ t(innerSlogan || '') || t('login.form.title') }}-->
+      <!--        </span>-->
+      <!--      </div>-->
     </div>
 
     <div class="form mt-[40px] min-w-[480px]">
@@ -122,7 +122,14 @@
   import { FormInst, NButton, NDivider, NForm, NFormItem, NInput, NSpin, useMessage } from 'naive-ui';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
-  import { clearToken, getLoginType, hasToken, isLoginExpires, setLoginExpires, setLoginType } from '@lib/shared/method/auth';
+  import {
+    clearToken,
+    getLoginType,
+    hasToken,
+    isLoginExpires,
+    setLoginExpires,
+    setLoginType,
+  } from '@lib/shared/method/auth';
   import { encrypted } from '@lib/shared/method/index';
   import { getLocalStorage } from '@lib/shared/method/local-storage';
 

@@ -75,10 +75,9 @@
         </div>
       </CrmCard>
       <CrmCard v-if="activeTab === PersonalEnum.MY_PLAN" no-content-padding hide-footer :special-height="64">
+        <!-- 2026-04-10: 隐藏"我的计划"入口的写计划按钮，功能移至客户详情页 -->
         <FollowDetail
-          :show-add="
-            hasAnyPermission(['CUSTOMER_MANAGEMENT:UPDATE', 'CLUE_MANAGEMENT:UPDATE', 'OPPORTUNITY_MANAGEMENT:UPDATE'])
-          "
+          :show-add="false"
           :refresh-key="refreshKey"
           active-type="followPlan"
           wrapper-class="h-[calc(100vh-155px)]"

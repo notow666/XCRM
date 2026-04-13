@@ -33,5 +33,7 @@ public class CustomerStageConfigResponse {
         private Long pos;
         @Schema(description = "当前阶段是否存在数据")
         private Boolean stageHasData = false;
+        @Schema(description = "是否固定节点: true-固定不可删除/编辑, false-可自定义")
+        private Boolean isFixed = false;
     }
 }

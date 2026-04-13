@@ -421,6 +421,15 @@ export const {
   deleteCustomerStage,
   sortCustomerStage,
   updateCustomerStage2,
+  getCustomerFailReasonList,
+  addCustomerFailReason,
+  updateCustomerFailReason,
+  deleteCustomerFailReason,
+  getCustomerFollowWayList,
+  addCustomerFollowWay,
+  updateCustomerFollowWay,
+  deleteCustomerFollowWay,
+  getCustomerNextStage,
 } = customerApi;
 
 export const {

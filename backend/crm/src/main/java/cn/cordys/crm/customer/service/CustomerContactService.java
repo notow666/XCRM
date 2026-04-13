@@ -332,6 +332,24 @@ public class CustomerContactService {
         OperationLogContext.setResourceName(originCustomerContact.getName());
     }
 
+    /**
+     * 根据客户ID批量删除联系人
+     *
+     * @param customerIds 客户ID列表
+     */
+    public void deleteByCustomerIds(List<String> customerIds) {
+        if (CollectionUtils.isEmpty(customerIds)) {
+            return;
+        }
+        // 删除联系人字段
+        customerIds.forEach(customerId -> {
+            List<CustomerContact> contacts = customerContactMapper.selectListByLambda(new LambdaQueryWrapper<CustomerContact>().eq(CustomerContact::getCustomerId, customerId));
+            contacts.forEach(contact -> customerContactFieldService.deleteByResourceId(contact.getId()));
+        });
+        // 删除联系人
+        customerContactMapper.deleteByLambda(new LambdaQueryWrapper<CustomerContact>().in(CustomerContact::getCustomerId, customerIds));
+    }
+
     @OperationLog(module = LogModule.CUSTOMER_CONTACT, type = LogType.UPDATE, resourceId = "{#id}")
     public void enable(String id) {
         changeEnable(id, true, StringUtils.EMPTY);

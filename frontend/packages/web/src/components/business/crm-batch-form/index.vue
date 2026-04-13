@@ -168,11 +168,17 @@
                   </n-button>
                 </template>
                 <template v-else>
-                  <n-button ghost class="px-[7px]" @click="handleEditRow(index as number)">
+                  <n-button
+                    v-if="!props.canEdit || props.canEdit(element)"
+                    ghost
+                    class="px-[7px]"
+                    @click="handleEditRow(index as number)"
+                  >
                     <template #icon>
                       <CrmIcon type="iconicon_edit" :size="16" />
                     </template>
                   </n-button>
+                  <span v-else class="w-[32px]"></span>
                   <CrmPopConfirm
                     v-if="props.popConfirmProps"
                     :show="popShow[element.id]"
@@ -277,6 +283,7 @@
       disabledAddTooltip?: string;
       maxLimitLength?: number;
       needInitFormRow?: boolean; // 是否需要初始化一行数据
+      canEdit?: (element: Record<string, any>) => boolean; // 是否可以编辑某一行
     }>(),
     {
       maxHeight: '100%',

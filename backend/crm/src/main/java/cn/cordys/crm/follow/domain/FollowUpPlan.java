@@ -45,4 +45,22 @@ public class FollowUpPlan extends BaseModel {
 
     @Schema(description = "是否转为跟进记录")
     private Boolean converted;
+
+    @Schema(description = "下一阶段ID")
+    private String nextStage;
+
+    @Schema(description = "预计处理人员")
+    private String processor;
+
+    @Schema(description = "客户名称")
+    private String customerName;
+
+    @Schema(description = "节点名称")
+    private String nextStageName;
+
+    @Schema(description = "负责人名称")
+    private String ownerName;
+
+    @Schema(description = "阶段状态")
+    private String nextStageStatus;
 }

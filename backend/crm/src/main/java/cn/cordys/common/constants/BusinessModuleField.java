@@ -31,6 +31,14 @@ public enum BusinessModuleField {
      * 负责人
      */
     CUSTOMER_OWNER("customerOwner", "owner", Set.of("rules.required", "mobile", "readable"), FormKey.CUSTOMER.getKey()),
+    /**
+     * 客户阶段
+     */
+    CUSTOMER_STAGE("customerStage", "stage", Set.of(), FormKey.CUSTOMER.getKey()),
+    /**
+     * 失败原因
+     */
+    CUSTOMER_FAIL_REASON("customerFailReason", "failReason", Set.of(), FormKey.CUSTOMER.getKey()),
     /*------ end: CUSTOMER ------*/
 
     /*------ start: CLUE ------*/
@@ -151,6 +159,14 @@ public enum BusinessModuleField {
      * 跟进方式
      */
     FOLLOW_METHOD("recordMethod", "followMethod", Set.of(), FormKey.FOLLOW_RECORD.getKey()),
+    /**
+     * 跟进结果
+     */
+    FOLLOW_RESULT("recordResult", "followResult", Set.of(), FormKey.FOLLOW_RECORD.getKey()),
+    /**
+     * 失败原因
+     */
+    FOLLOW_FAIL_REASON("recordFailReason", "failReason", Set.of(), FormKey.FOLLOW_RECORD.getKey()),
     /*------ end: FOLLOW_UP_RECORD ------*/
 
 
@@ -191,6 +207,14 @@ public enum BusinessModuleField {
      * 跟进方式
      */
     FOLLOW_PLAN_METHOD("planMethod", "method", Set.of(), FormKey.FOLLOW_PLAN.getKey()),
+    /**
+     * 下一阶段
+     */
+    FOLLOW_PLAN_NEXT_STAGE("planNextStage", "nextStage", Set.of(), FormKey.FOLLOW_PLAN.getKey()),
+    /**
+     * 预计处理人员
+     */
+    FOLLOW_PLAN_PROCESSOR("planProcessor", "processor", Set.of(), FormKey.FOLLOW_PLAN.getKey()),
 
 
     /*------ end: FOLLOW_UP_PLAN ------*/

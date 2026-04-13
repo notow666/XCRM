@@ -131,7 +131,16 @@ import {
   UpdateCustomerStageRollbackUrl,
   DeleteCustomerStageUrl,
   SortCustomerStageUrl,
+  GetCustomerNextStageUrl,
   UpdateCustomerStageUrl2,
+  GetCustomerFailReasonListUrl,
+  AddCustomerFailReasonUrl,
+  UpdateCustomerFailReasonUrl,
+  DeleteCustomerFailReasonUrl,
+  GetCustomerFollowWayListUrl,
+  AddCustomerFollowWayUrl,
+  UpdateCustomerFollowWayUrl,
+  DeleteCustomerFollowWayUrl,
 } from '@lib/shared/api/requrls/customer';
 import type {
   ChartResponseDataItem,
@@ -231,9 +240,63 @@ export default function useProductApi(CDR: CordysAxios) {
     return CDR.post({ url: SortCustomerStageUrl, data: ids });
   }
 
+  // 获取客户下一阶段信息
+  function getCustomerNextStage(customerId: string) {
+    return CDR.get<{
+      customerId: string;
+      customerName: string;
+      currentStageId: string;
+      currentStageName: string;
+      nextStageId: string;
+      nextStageName: string;
+      owner: string;
+      ownerName: string;
+    }>({ url: `${GetCustomerNextStageUrl}/${customerId}` });
+  }
+
   // 更新客户阶段（业务）
   function updateCustomerStage2(data: UpdateCustomerStageParams) {
     return CDR.post({ url: UpdateCustomerStageUrl2, data });
+  }
+
+  // 获取客户失败原因列表
+  function getCustomerFailReasonList() {
+    return CDR.get<{ id: string; name: string; pos: number }[]>({ url: GetCustomerFailReasonListUrl });
+  }
+
+  // 添加客户失败原因
+  function addCustomerFailReason(data: { name: string }) {
+    return CDR.post({ url: AddCustomerFailReasonUrl, data });
+  }
+
+  // 更新客户失败原因
+  function updateCustomerFailReason(data: { id: string; name: string }) {
+    return CDR.put({ url: UpdateCustomerFailReasonUrl, data });
+  }
+
+  // 删除客户失败原因
+  function deleteCustomerFailReason(id: string) {
+    return CDR.delete({ url: `${DeleteCustomerFailReasonUrl}/${id}` });
+  }
+
+  // 获取客户跟进方式列表
+  function getCustomerFollowWayList() {
+    return CDR.get<{ id: string; name: string; pos: number }[]>({ url: GetCustomerFollowWayListUrl });
+  }
+
+  // 添加客户跟进方式
+  function addCustomerFollowWay(data: { name: string }) {
+    return CDR.post({ url: AddCustomerFollowWayUrl, data });
+  }
+
+  // 更新客户跟进方式
+  function updateCustomerFollowWay(data: { id: string; name: string }) {
+    return CDR.put({ url: UpdateCustomerFollowWayUrl, data });
+  }
+
+  // 删除客户跟进方式
+  function deleteCustomerFollowWay(id: string) {
+    return CDR.delete({ url: `${DeleteCustomerFollowWayUrl}/${id}` });
   }
 
   // 添加客户
@@ -981,6 +1044,15 @@ export default function useProductApi(CDR: CordysAxios) {
     updateCustomerStageRollback,
     deleteCustomerStage,
     sortCustomerStage,
+    getCustomerNextStage,
     updateCustomerStage2,
+    getCustomerFailReasonList,
+    addCustomerFailReason,
+    updateCustomerFailReason,
+    deleteCustomerFailReason,
+    getCustomerFollowWayList,
+    addCustomerFollowWay,
+    updateCustomerFollowWay,
+    deleteCustomerFollowWay,
   };
 }

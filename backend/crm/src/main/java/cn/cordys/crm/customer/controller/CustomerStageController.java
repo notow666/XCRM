@@ -5,6 +5,7 @@ import cn.cordys.context.OrganizationContext;
 import cn.cordys.crm.customer.dto.request.CustomerStageAddRequest;
 import cn.cordys.crm.customer.dto.request.CustomerStageRollBackRequest;
 import cn.cordys.crm.customer.dto.request.CustomerStageUpdateRequest;
+import cn.cordys.crm.customer.dto.response.CustomerNextStageResponse;
 import cn.cordys.crm.customer.dto.response.CustomerStageConfigResponse;
 import cn.cordys.crm.customer.service.CustomerStageService;
 import cn.cordys.security.SessionUtils;
@@ -64,5 +65,11 @@ public class CustomerStageController {
     @RequiresPermissions(PermissionConstants.MODULE_SETTING_UPDATE)
     public void sort(@RequestBody List<String> ids) {
         customerStageService.sort(ids, OrganizationContext.getOrganizationId());
+    }
+
+    @GetMapping("/next-stage/{customerId}")
+    @Operation(summary = "获取客户下一阶段信息（用于跟进计划表单预填）")
+    public CustomerNextStageResponse getNextStage(@PathVariable("customerId") String customerId) {
+        return customerStageService.getCustomerNextStage(customerId, OrganizationContext.getOrganizationId());
     }
 }

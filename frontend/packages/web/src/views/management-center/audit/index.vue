@@ -1,5 +1,5 @@
 <template>
-  <CrmCard  no-content-padding hide-footer>
+  <CrmCard no-content-padding hide-footer>
     <div class="p-4">
       <div class="mb-3 flex items-center gap-2">
         <n-input v-model:value="tenantId" clearable placeholder="tenantId" class="w-[240px]" />

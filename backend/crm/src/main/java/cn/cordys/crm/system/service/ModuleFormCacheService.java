@@ -1,5 +1,6 @@
 package cn.cordys.crm.system.service;
 
+import cn.cordys.common.constants.FormKey;
 import cn.cordys.common.util.CommonBeanFactory;
 import cn.cordys.crm.system.dto.field.base.BaseField;
 import cn.cordys.crm.system.dto.request.ModuleFormSaveRequest;
@@ -61,14 +62,18 @@ public class ModuleFormCacheService {
         ModuleFormConfigDTO businessModuleFormConfig = new ModuleFormConfigDTO();
         businessModuleFormConfig.setFormProp(config.getFormProp());
 
-		// 设置业务字段参数
-		List<BaseField> flattenFields = moduleFormService.flattenSourceRefFields(config.getFields());
-		businessModuleFormConfig.setFields(flattenFields.stream()
-				.peek(moduleFormService::setFieldRefOption)
-				.peek(moduleFormService::setFieldBusinessParam)
-				.peek(moduleFormService::reloadPropOfSubRefFields)
-				.collect(Collectors.toList())
-		);
+        // 设置业务字段参数
+        List<BaseField> flattenFields = moduleFormService.flattenSourceRefFields(config.getFields());
+        List<BaseField> processedFields = flattenFields.stream()
+                .peek(moduleFormService::setFieldRefOption)
+                .peek(moduleFormService::setFieldBusinessParam)
+                .peek(moduleFormService::reloadPropOfSubRefFields)
+                .collect(Collectors.toList());
+        // 跟进相关表单加载动态选项
+        if (FormKey.FOLLOW_RECORD.getKey().equals(formKey) || FormKey.FOLLOW_PLAN.getKey().equals(formKey)) {
+            processedFields.forEach(field -> moduleFormService.setFollowUpFieldOptions(field, organizationId));
+        }
+        businessModuleFormConfig.setFields(processedFields);
         return businessModuleFormConfig;
     }
 }

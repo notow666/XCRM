@@ -21,6 +21,10 @@
         fup.method,
         fup.converted,
         fup.status,
+        fup.next_stage,
+        fup.next_stage_name,
+        fup.next_stage_status,
+        fup.processor,
         if (fup.type = 'CLUE', c.pool_id, cu.pool_id) as poolId
         FROM
         follow_up_plan fup
@@ -110,7 +114,7 @@
             </foreach>
         </if>
 
-        ORDER BY fup.estimated_time DESC, fup.create_time DESC
+        ORDER BY fup.update_time DESC, fup.create_time DESC
     </select>
 
 
@@ -164,6 +168,10 @@
         fup.method,
         fup.converted,
         fup.status,
+        fup.next_stage,
+        fup.next_stage_name,
+        fup.next_stage_status,
+        fup.processor,
         fup.organization_id,
         if (fup.type = 'CLUE', c.pool_id, cu.pool_id) as poolId
         FROM follow_up_plan fup

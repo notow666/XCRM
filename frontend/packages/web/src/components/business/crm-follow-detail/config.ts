@@ -18,10 +18,6 @@ export const statusTabList = ref<TabPaneProps[]>([
     tab: t('common.all'),
   },
   {
-    name: CustomerFollowPlanStatusEnum.PREPARED,
-    tab: t('common.notStarted'),
-  },
-  {
     name: CustomerFollowPlanStatusEnum.UNDERWAY,
     tab: t('common.inProgress'),
   },
@@ -37,20 +33,20 @@ export const statusTabList = ref<TabPaneProps[]>([
 
 export const descriptionList: DescriptionItem[] = [
   {
-    key: 'contactName',
-    label: t('common.contact'),
-    value: 'contactName',
-  },
-  {
-    key: 'phone',
-    label: t('common.phoneNumber'),
-    value: 'phone',
+    key: 'stageName',
+    label: t('customer.stage'),
+    value: 'stageName',
   },
   {
     key: 'ownerName',
     label: '',
     value: 'ownerName',
     formConfigField: 'owner',
+  },
+  {
+    key: 'processorName',
+    label: '预计处理人员',
+    value: 'processorName',
   },
   {
     key: 'createTime',

@@ -51,7 +51,6 @@ export default function useMenuTree() {
       if (!_routes) return null;
 
       const collector = _routes.map((element) => {
-
         const isManagementCenterRoot =
           element.name === ManagementCenterRouteEnum.MANAGEMENT_CENTER ||
           String(element.path || '').startsWith('/management-center');

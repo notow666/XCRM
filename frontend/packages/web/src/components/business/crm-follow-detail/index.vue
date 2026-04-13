@@ -1,21 +1,12 @@
 <template>
-  <div :class="`crm-follow-detail p-[24px] ${props.wrapperClass}`">
-    <div class="mb-[16px] flex items-center justify-between">
+  <div :class="`crm-follow-detail ${props.wrapperClass}`">
+    <div class="p-[24px] pb-[16px] flex items-center justify-between">
       <div>
         <n-button v-if="showAdd" type="primary" @click="handleAdd">
           {{ t(props.activeType === 'followPlan' ? 'crmFollowRecord.writePlan' : 'crmFollowRecord.writeRecord') }}
         </n-button>
       </div>
       <div class="flex gap-[12px]">
-        <CrmTab
-          v-if="props.activeType === 'followPlan'"
-          v-model:active-tab="activeStatus"
-          no-content
-          :tab-list="statusTabList"
-          type="segment"
-          @change="() => loadFollowList(true)"
-        >
-        </CrmTab>
         <CrmSearchInput
           v-model:value="followKeyword"
           :placeholder="t('common.byKeywordSearch')"
@@ -24,10 +15,10 @@
         />
       </div>
     </div>
-    <n-spin :show="loading" class="h-full">
+    <n-spin :show="loading" class="flex-1">
       <FollowRecord
         v-model:data="data"
-        :virtual-scroll-height="`${props.virtualScrollHeight || '1000px'}`"
+        :virtual-scroll-height="'100%'"
         :get-description-fun="getDescriptionFun"
         key-field="id"
         :disabled-open-detail="props.followApiKey !== 'myPlan'"
@@ -38,12 +29,13 @@
         @change="changePlanStatus"
       >
         <template #headerAction="{ item }">
-          <div v-if="getShowAction(item)" class="flex items-center gap-[12px]">
+          <div class="flex items-center gap-[12px]">
             <n-button type="primary" class="text-btn-primary" quaternary @click="handleDetail(item)">
               {{ t('common.detail') }}
             </n-button>
             <n-button
               v-if="
+                showEditAndDelete(item) &&
                 props.activeType === 'followPlan' &&
                 [CustomerFollowPlanStatusEnum.COMPLETED].includes(item.status) &&
                 !item.converted
@@ -57,11 +49,12 @@
             </n-button>
             <n-button
               v-if="
-                props.activeType === 'followRecord' ||
-                (props.activeType === 'followPlan' &&
-                  ![CustomerFollowPlanStatusEnum.CANCELLED, CustomerFollowPlanStatusEnum.CANCELLED].includes(
-                    item.status
-                  ))
+                showEditAndDelete(item) &&
+                (props.activeType === 'followRecord' ||
+                  (props.activeType === 'followPlan' &&
+                    ![CustomerFollowPlanStatusEnum.CANCELLED, CustomerFollowPlanStatusEnum.CANCELLED].includes(
+                      item.status
+                    )))
               "
               type="primary"
               class="text-btn-primary"
@@ -70,7 +63,13 @@
             >
               {{ t('common.edit') }}
             </n-button>
-            <n-button type="error" class="text-btn-error" quaternary @click="handleDelete(item)">
+            <n-button
+              v-if="showEditAndDelete(item)"
+              type="error"
+              class="text-btn-error"
+              quaternary
+              @click="handleDelete(item)"
+            >
               {{ t('common.delete') }}
             </n-button>
           </div>
@@ -96,7 +95,7 @@
       :link-form-info="linkFormFieldMap"
       :link-form-key="linkFormKey"
       :link-scenario="linkScenario"
-      :other-save-params="props.activeType === 'followPlan' ? otherFollowRecordSaveParams : undefined"
+      :other-save-params="otherSaveParams"
       @saved="handleAfterSave"
     />
 
@@ -106,9 +105,9 @@
       :source-id="sourceId"
       :source-name="sourceName"
       :refresh-key="refreshDetailKey"
+      :hide-edit-delete="activeType === 'followPlan' || activeType === 'followRecord'"
       @delete="handleDelete(activeItem as FollowDetailItem)"
       @edit="handleEdit(activeItem as FollowDetailItem)"
-    />
     />
   </div>
 </template>
@@ -129,6 +128,7 @@
   import CrmFormCreateDrawer from '@/components/business/crm-form-create-drawer/index.vue';
   import FollowRecord from './followRecord.vue';
 
+  import { getCustomerNextStage } from '@/api/modules';
   import useFormCreateApi from '@/hooks/useFormCreateApi';
   import { hasAnyPermission } from '@/utils/permission';
 
@@ -151,11 +151,17 @@
     showAdd?: boolean; // 显示增加按钮
     anyPermission?: string[]; // 无任一权限展示无权限
     parentFormKey?: FormDesignKeyEnum; // 上级表单key
+    customerStageStatus?: string; // 客户阶段状态（待/中/已）
+    customerStage?: string; // 客户阶段ID（stage_fail/stage_payment）
   }
 
   const props = withDefaults(defineProps<FollowDetailProps>(), {
     showAction: true,
   });
+
+  const emit = defineEmits<{
+    (e: 'saved'): void;
+  }>();
 
   const realFormKey = ref<FormDesignKeyEnum>(FormDesignKeyEnum.FOLLOW_PLAN_BUSINESS);
   const refreshDetailKey = ref(0);
@@ -201,8 +207,45 @@
 
   const needInitDetail = ref(false);
   const activePlan = ref();
-  const otherFollowRecordSaveParams = ref({
+  const otherFollowRecordSaveParams = ref<Record<string, any>>({
     converted: false,
+    customerStageStatus: '',
+    customerStage: '',
+  });
+
+  const planFormSaveParams = ref<Record<string, any>>({ converted: false });
+
+  watch(() => props.customerStageStatus, (val) => {
+    if (val) {
+      otherFollowRecordSaveParams.value.customerStageStatus = val;
+    }
+  }, { immediate: true });
+
+  watch(() => props.customerStage, (val) => {
+    if (val) {
+      otherFollowRecordSaveParams.value.customerStage = val;
+    }
+  }, { immediate: true });
+
+  const otherSaveParams = computed(() => {
+    if (realFormKey.value === FormDesignKeyEnum.FOLLOW_PLAN_CUSTOMER) {
+      return planFormSaveParams.value;
+    }
+    if (props.activeType === 'followPlan') {
+      return otherFollowRecordSaveParams.value;
+    }
+    // 跟进记录场景：传递 customerStageStatus 和 customerStage
+    if (props.activeType === 'followRecord') {
+      const params: Record<string, any> = {};
+      if (props.customerStageStatus) {
+        params.customerStageStatus = props.customerStageStatus;
+      }
+      if (props.customerStage) {
+        params.customerStage = props.customerStage;
+      }
+      return Object.keys(params).length ? params : undefined;
+    }
+    return undefined;
   });
 
   const linkFormKey = ref(FormDesignKeyEnum.FOLLOW_PLAN_BUSINESS);
@@ -234,7 +277,7 @@
     formKey: computed(() => linkFormKey.value),
     sourceId: linkSourceId,
     needInitDetail: computed(() => needInitDetail.value),
-    otherSaveParams: computed(() => otherFollowRecordSaveParams.value),
+    otherSaveParams: otherFollowRecordSaveParams,
   });
 
   onMounted(async () => {
@@ -257,16 +300,25 @@
             },
           ]
         : []),
-      ...descriptionList.map((descriptionItem) => {
-        if (!descriptionItem.formConfigField) {
-          return descriptionItem;
-        }
-        const label = fieldList.value.find((field) => field.businessKey === descriptionItem.formConfigField)?.name;
-        return {
-          ...descriptionItem,
-          label,
-        };
-      }),
+      ...descriptionList
+        .filter((descItem) => {
+          // 跟进记录场景下过滤掉 ownerName 和 processorName
+          if (props.activeType === 'followRecord' && (descItem.key === 'ownerName' || descItem.key === 'processorName')) {
+            return false;
+          }
+          return true;
+        })
+        .map((descriptionItem) => {
+          // 无 formConfigField 的字段（如 processor）直接使用配置中的 label
+          if (!descriptionItem.formConfigField) {
+            return descriptionItem;
+          }
+          const label = fieldList.value.find((field) => field.businessKey === descriptionItem.formConfigField)?.name;
+          return {
+            ...descriptionItem,
+            label,
+          };
+        }),
     ];
 
     if (isClue) {
@@ -292,7 +344,26 @@
     needInitDetail.value = false;
     if (props.activeType === 'followPlan') {
       isConverted.value = false;
-      otherFollowRecordSaveParams.value.converted = isConverted.value;
+      const params: Record<string, any> = { converted: false, type: 'CUSTOMER' };
+      if (props.sourceId && props.followApiKey === FormDesignKeyEnum.CUSTOMER) {
+        try {
+          const res = await getCustomerNextStage(props.sourceId);
+          if (res) {
+            params.customerId = props.sourceId;
+            params.customerName = res.customerName || '';
+            params.nextStage = res.nextStageId || '';
+            params._nextStage = res.nextStageId || '';
+            params.nextStageName = res.nextStageName || '';
+            params.owner = res.owner || '';
+            params.ownerName = res.ownerName || '';
+          }
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error('获取客户下一阶段信息失败', error);
+        }
+      }
+      otherFollowRecordSaveParams.value = params;
+      planFormSaveParams.value = { ...params };
     } else {
       linkFormKey.value = props.parentFormKey || linkFormKey.value;
       await initFormConfig();
@@ -342,12 +413,23 @@
     [FormDesignKeyEnum.BUSINESS]: ['OPPORTUNITY_MANAGEMENT:UPDATE'],
   };
 
-  function getShowAction(item: FollowDetailItem) {
+function getShowAction(item: FollowDetailItem) {
+    // 跟进计划场景下隐藏编辑删除按钮
+    if (props.activeType === 'followPlan') {
+      return false;
+    }
     if (props.followApiKey === 'myPlan') {
       const permission = planPermission[getApiKey(item) as keyof typeof followFormKeyMap];
       return hasAnyPermission(permission);
     }
     return props.showAction;
+  }
+
+function showEditAndDelete(item: FollowDetailItem) {
+    if (props.activeType === 'followPlan' || props.activeType === 'followRecord') {
+      return false;
+    }
+    return getShowAction(item);
   }
 
   // 更新计划为已转记录
@@ -373,7 +455,53 @@
     loadFollowList();
   }
 
-  function handleAfterSave() {
+  async function openPlanForm(customerId: string, opportunityId?: string, contactId?: string) {
+    let nextStageId = '';
+    let nextStageName = '';
+    let owner = '';
+    let ownerName = '';
+    let customerName = '';
+
+    try {
+      const res = await getCustomerNextStage(customerId);
+      if (res) {
+        nextStageId = res.nextStageId;
+        nextStageName = res.nextStageName;
+        owner = res.owner || '';
+        ownerName = res.ownerName || '';
+        customerName = res.customerName || '';
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('获取客户下一阶段信息失败', error);
+    }
+
+    planFormSaveParams.value = {
+      converted: false,
+      customerId,
+      customerName,
+      opportunityId: opportunityId || '',
+      contactId: contactId || '',
+      type: 'CUSTOMER',
+      nextStage: nextStageId,
+      _nextStage: nextStageId,
+      nextStageName,
+      owner,
+      ownerName,
+    };
+    realFormKey.value = FormDesignKeyEnum.FOLLOW_PLAN_CUSTOMER;
+    realFollowSourceId.value = customerId;
+    needInitDetail.value = false;
+    formDrawerVisible.value = true;
+  }
+
+  function handleAfterSave(res?: any) {
+    if (realFormKey.value === FormDesignKeyEnum.FOLLOW_PLAN_CUSTOMER) {
+      planFormSaveParams.value = { converted: false };
+      loadFollowList();
+      emit('saved');
+      return;
+    }
     if (isConverted.value) {
       updatePlan();
     } else {
@@ -382,6 +510,10 @@
     if (showDetailDrawer.value) {
       refreshDetailKey.value += 1;
     }
+    if (res?.followResult === 'COMPLETED' && res?.customerId) {
+      openPlanForm(res.customerId, res.opportunityId, res.contactId);
+    }
+    emit('saved');
   }
 
   watch(
@@ -404,10 +536,20 @@
 
 <style lang="less" scoped>
   .crm-follow-detail {
-    @apply overflow-hidden;
-
+    height: 100%;
+    display: flex;
+    flex-direction: column;
     border-radius: @border-radius-medium;
     background: var(--text-n10);
+  }
+  :deep(.n-spin) {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+  :deep(.n-spin-container) {
+    height: 100%;
+    overflow: hidden;
   }
   :deep(.n-tabs) {
     width: auto;

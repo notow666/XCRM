@@ -191,7 +191,9 @@ const useUserStore = defineStore('user', {
       const isLoginStatus = await this.isLogin(isDisabledErrorTip);
       if (isLoginStatus) {
         if (isLoginPage()) {
-          await router.push({ name: this.userInfo.source === 'PLATFORM' ? 'managementCenterOverview' : 'workbenchIndex' });
+          await router.push({
+            name: this.userInfo.source === 'PLATFORM' ? 'managementCenterOverview' : 'workbenchIndex',
+          });
         }
       } else if (!isLoginPage()) {
         const appStore = useAppStore();

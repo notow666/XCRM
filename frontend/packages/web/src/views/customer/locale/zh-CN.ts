@@ -61,4 +61,6 @@ export default {
   'customer.selectedMergeAccountTooltip':
     '已选客户：从列表中选定的客户；其他客户：数据可见负责的客户。负责人选择：已选客户：仅可选择已选客户的负责人；其他客户：负责人保持不变',
   'customer.selectedMergeAccountNumber': '已选{number}个客户',
+  'customer.stage': '客户阶段',
+  'customer.failReason': '失败原因',
 };

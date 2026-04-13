@@ -223,16 +223,30 @@
 
   const formDrawerVisible = ref(false);
   const realFollowSourceId = ref<string | undefined>('');
+
   function handleEdit(item: any) {
     realFollowSourceId.value = item.id;
     formDrawerVisible.value = true;
   }
 
-  function handleAfterSave() {
+  const emit = defineEmits<{
+    (e: 'open-plan', data: Record<string, any>): void;
+  }>();
+
+  function handleAfterSave(res?: any) {
     if (showDetailDrawer.value) {
       refreshKey.value += 1;
     }
     tableRefreshId.value += 1;
+    if (res?.followResult === 'COMPLETED' && res?.customerId) {
+      emit('open-plan', {
+        customerId: res.customerId,
+        customerName: res.customerName || '',
+        resourceType: 'CUSTOMER',
+        opportunityId: res.opportunityId || '',
+        contactId: res.contactId || '',
+      });
+    }
   }
 
   function handleActionSelect(row: any, actionKey: string) {
@@ -361,14 +375,40 @@
       }),
     ];
 
+    // 线索时隐藏联系人/手机号/客户阶段
     if (isClue) {
-      lastDescriptionList = lastDescriptionList.filter((e) => !['contactName', 'phone'].includes(e.key));
+      lastDescriptionList = lastDescriptionList.filter((e) => !['contactName', 'phone', 'stageName'].includes(e.key));
     }
 
-    return (lastDescriptionList.map((desc) => ({
-      ...desc,
-      value: item[desc.key as keyof any],
-    })) || []) as Description[];
+    return (lastDescriptionList.map((desc) => {
+      // 处理客户阶段状态显示
+      if (desc.key === 'stageName') {
+        const prefixMap: Record<string, string> = {
+          NEW: '待',
+          IN_PROGRESS: '',
+          COMPLETED: '已',
+          FAILED: '',
+        };
+        const suffixMap: Record<string, string> = {
+          NEW: '',
+          IN_PROGRESS: '中',
+          COMPLETED: '',
+          FAILED: '',
+        };
+        const status = item.stageStatus || '';
+        const prefix = status ? prefixMap[status] || '' : '';
+        const suffix = status ? suffixMap[status] || '' : '';
+        const name = item.stageName || '-';
+        return {
+          ...desc,
+          value: `${prefix}${name}${suffix}`,
+        };
+      }
+      return {
+        ...desc,
+        value: item[desc.key as keyof any],
+      };
+    }) || []) as Description[];
   }
 
   function handleReachBottom() {
@@ -381,6 +421,14 @@
       propsEvent.value.pageChange(propsRes.value.crmPagination.page + 1);
     }
   }
+
+  function refresh() {
+    tableRefreshId.value += 1;
+  }
+
+  defineExpose({
+    refresh,
+  });
 </script>
 
 <style lang="less" scoped>

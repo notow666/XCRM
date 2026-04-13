@@ -106,6 +106,12 @@
     "
     @saved="handleFormCreateSaved"
   />
+  <CrmFormCreateDrawer
+    v-model:visible="planFormDrawerVisible"
+    :form-key="FormDesignKeyEnum.FOLLOW_PLAN_CUSTOMER"
+    :other-save-params="planFormSaveParams"
+    @saved="handlePlanSaved"
+  />
   <CrmTableExportModal
     v-model:show="showExportModal"
     :params="exportParams"
@@ -166,7 +172,14 @@
   import customerOverviewDrawer from './customerOverviewDrawer.vue';
   import mergeAccountModal from './mergeAccountModal.vue';
 
-  import { batchDeleteCustomer, batchTransferCustomer, deleteCustomer, updateCustomer } from '@/api/modules';
+  import {
+    batchDeleteCustomer,
+    batchTransferCustomer,
+    deleteCustomer,
+    getCustomerNextStage,
+    getCustomerStageConfig,
+    updateCustomer,
+  } from '@/api/modules';
   import { baseFilterConfigList } from '@/config/clue';
   import useFormCreateApi from '@/hooks/useFormCreateApi';
   import useFormCreateTable from '@/hooks/useFormCreateTable';
@@ -212,6 +225,19 @@
     customerId: '',
     id: '',
   });
+
+  const planFormDrawerVisible = ref(false);
+  const planFormSaveParams = ref<Record<string, any>>({ converted: false });
+
+  const stageConfig = ref<Awaited<ReturnType<typeof getCustomerStageConfig>>>();
+  async function initStageConfig() {
+    try {
+      stageConfig.value = await getCustomerStageConfig();
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log('initStageConfig error:', error);
+    }
+  }
 
   function handleNewClick() {
     needInitDetail.value = false;
@@ -496,6 +522,7 @@
     handleAdvanceFilter,
     handleSearchData,
   });
+  await initStageConfig();
   const { useTableRes, customFieldsFilterConfig, fieldList } = await useFormCreateTable({
     formKey: props.formKey,
     disabledSelection: (row: any) => {
@@ -598,6 +625,26 @@
               { default: () => row.clueCount }
             );
       },
+      stage: (row: any) => {
+        if (!row.stageName && !row.stageStatus) return '-';
+        const prefixMap: Record<string, string> = {
+          NEW: '待',
+          IN_PROGRESS: '',
+          COMPLETED: '已',
+          FAILED: '',
+        };
+        const suffixMap: Record<string, string> = {
+          NEW: '',
+          IN_PROGRESS: '中',
+          COMPLETED: '',
+          FAILED: '',
+        };
+        const status = row.stageStatus || '';
+        const prefix = status ? (prefixMap[status] || '') : '';
+        const suffix = status ? (suffixMap[status] || '') : '';
+        const name = row.stageName || '';
+        return `${prefix}${name}${suffix}` || '-';
+      },
     },
     permission: [
       'CUSTOMER_MANAGEMENT:RECYCLE',
@@ -608,6 +655,7 @@
     containerClass: '.crm-customer-table',
     hiddenTotal: ref(!!props.hiddenTotal),
     readonly: props.readonly,
+    customerStage: stageConfig.value?.stageConfigList || [],
   });
   const { propsRes, propsEvent, tableQueryParams, loadList, setLoadListParams, setAdvanceFilter } = useTableRes;
   const tableColumns = computed(() => {
@@ -696,14 +744,59 @@
   }
   handleSearchData.value = searchData;
 
+  async function openPlanForm(customerId: string, opportunityId?: string, contactId?: string) {
+    let nextStageId = '';
+    let nextStageName = '';
+    let owner = '';
+    let ownerName = '';
+    let customerName = '';
+
+    try {
+      const res = await getCustomerNextStage(customerId);
+      if (res) {
+        nextStageId = res.nextStageId;
+        nextStageName = res.nextStageName;
+        owner = res.owner || '';
+        ownerName = res.ownerName || '';
+        customerName = res.customerName || '';
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('获取客户下一阶段信息失败', error);
+    }
+
+    planFormSaveParams.value = {
+      converted: false,
+      customerId,
+      customerName,
+      opportunityId: opportunityId || '',
+      contactId: contactId || '',
+      type: 'CUSTOMER',
+      nextStage: nextStageId,
+      _nextStage: nextStageId,
+      nextStageName,
+      owner,
+      ownerName,
+    };
+    planFormDrawerVisible.value = true;
+  }
+
+  function handlePlanSaved() {
+    planFormSaveParams.value = { converted: false };
+    searchData();
+  }
+
   function handleFormCreateSaved(res: any) {
     if (needInitDetail.value || activeFormKey.value === FormDesignKeyEnum.FOLLOW_RECORD_CUSTOMER) {
       searchData(undefined, res.id);
     } else {
       searchData();
     }
-    // 新建客户后不再自动打开联系人表单，直接返回列表
     formCreateDrawerVisible.value = false;
+
+    if (res?.followResult === 'COMPLETED' && res?.customerId) {
+      openPlanForm(res.customerId, res.opportunityId, res.contactId);
+    }
   }
 
   function handleGeneratedChart(res: FilterResult, form: FilterForm) {

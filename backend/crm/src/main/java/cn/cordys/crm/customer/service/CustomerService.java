@@ -162,6 +162,9 @@ public class CustomerService {
     @Resource
     private BaseMapper<CustomerContact> customerContactMapper;
 
+    @Resource
+    private CustomerFailReasonService customerFailReasonService;
+
     public PagerWithOption<List<CustomerListResponse>> list(CustomerPageRequest request, String userId, String orgId, DeptDataPermissionDTO deptDataPermission) {
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         List<CustomerListResponse> list = extCustomerMapper.list(request, orgId, userId, deptDataPermission);
@@ -344,6 +347,17 @@ public class CustomerService {
         customerGetResponse.setOptionMap(optionMap);
         customerGetResponse.setModuleFields(customerFields);
 
+        // 失败原因名称转换
+        if (StringUtils.isNotBlank(customer.getFailReason())) {
+            List<OptionDTO> failReasonOptions = customerFailReasonService.getOptionList(customer.getOrganizationId());
+            String failReasonName = failReasonOptions.stream()
+                    .filter(opt -> opt.getId().equals(customer.getFailReason()))
+                    .map(OptionDTO::getName)
+                    .findFirst()
+                    .orElse(customer.getFailReason());
+            customerGetResponse.setFailReason(failReasonName);
+        }
+
         // 公海原因
         DictConfigDTO dictConf = dictService.getDictConf(DictModule.CUSTOMER_POOL_RS.name(), customer.getOrganizationId());
         List<Dict> dictList = dictConf.getDictList();
@@ -393,6 +407,15 @@ public class CustomerService {
         // 附件信息
         customerGetResponse.setAttachmentMap(moduleFormService.getAttachmentMap(customerFormConfig, customerFields));
 
+        // 填充阶段名称和状态
+        if (StringUtils.isNotBlank(customerGetResponse.getStage())) {
+            CustomerStageConfig stageConfig = customerStageService.getStageConfigById(customerGetResponse.getStage(), customer.getOrganizationId());
+            if (stageConfig != null) {
+                customerGetResponse.setStageName(stageConfig.getName());
+            }
+            // stageStatus 已通过 BeanUtils.copyBean 从 customer 中复制
+        }
+
         return customerGetResponse;
     }
 
@@ -412,10 +435,11 @@ public class CustomerService {
         customer.setId(IDGenerator.nextStr());
         customer.setInSharedPool(false);
 
-        // 设置客户阶段为第一个阶段
+        // 设置客户阶段为第一个阶段，状态为NEW（待跟进）
         List<cn.cordys.crm.opportunity.dto.response.StageConfigResponse> stageConfigList = extCustomerStageConfigMapper.getStageConfigList(orgId);
         if (CollectionUtils.isNotEmpty(stageConfigList)) {
             customer.setStage(stageConfigList.getFirst().getId());
+            customer.setStageStatus("NEW");
         }
 
         //保存自定义字段
@@ -423,7 +447,8 @@ public class CustomerService {
 
         customerMapper.insert(customer);
 
-        followUpPlanService.createInitialStageFollowPlanForCustomer(customer.getId(), customer.getOwner(), orgId);
+        // 手动创建客户时不再自动创建跟进计划（需求：2026-04-10）
+        // followUpPlanService.createInitialStageFollowPlanForCustomer(customer.getId(), customer.getOwner(), orgId);
 
         // 自动创建联系人
         createDefaultContact(customer, userId, orgId);
@@ -498,41 +523,43 @@ public class CustomerService {
         return customer;
     }
 
-    @OperationLog(module = LogModule.CUSTOMER_INDEX, type = LogType.UPDATE, resourceId = "{#request.id}")
-    public void updateStage(CustomerStageRequest request, String orgId) {
-        System.out.println("=== updateStage called === id=" + request.getId() + " stage=" + request.getStage());
-        Customer oldCustomer = customerMapper.selectByPrimaryKey(request.getId());
-        if (oldCustomer == null) {
-            throw new GenericException(Translator.get("customer_not_found"));
-        }
-
-        List<cn.cordys.crm.opportunity.dto.response.StageConfigResponse> stageConfigList = extCustomerStageConfigMapper.getStageConfigList(orgId);
-
-        Map<String, String> stageMap = stageConfigList.stream()
-                .collect(java.util.stream.Collectors.toMap(
-                        cn.cordys.crm.opportunity.dto.response.StageConfigResponse::getId,
-                        cn.cordys.crm.opportunity.dto.response.StageConfigResponse::getName
-                ));
-
-        Customer newCustomer = new Customer();
-        newCustomer.setId(request.getId());
-        newCustomer.setStage(request.getStage());
-
-        customerMapper.update(newCustomer);
-
-        Map<String, String> originalVal = new java.util.HashMap<>(1);
-        originalVal.put("stage", stageMap.get(oldCustomer.getStage()));
-        Map<String, String> modifiedVal = new java.util.HashMap<>(1);
-        modifiedVal.put("stage", stageMap.get(request.getStage()));
-
-        OperationLogContext.setContext(
-                cn.cordys.aspectj.dto.LogContextInfo.builder()
-                        .resourceName(oldCustomer.getName())
-                        .originalValue(originalVal)
-                        .modifiedValue(modifiedVal)
-                        .build()
-        );
-    }
+    // 【已禁用】客户详情页面阶段跳转功能已禁用，此方法不再被调用
+    // 客户阶段变更现在通过跟进流程自动触发（FollowUpPlanService.handleCustomerStageTransition）
+    // @OperationLog(module = LogModule.CUSTOMER_INDEX, type = LogType.UPDATE, resourceId = "{#request.id}")
+    // public void updateStage(CustomerStageRequest request, String orgId) {
+    //     System.out.println("=== updateStage called === id=" + request.getId() + " stage=" + request.getStage());
+    //     Customer oldCustomer = customerMapper.selectByPrimaryKey(request.getId());
+    //     if (oldCustomer == null) {
+    //         throw new GenericException(Translator.get("customer_not_found"));
+    //     }
+    //
+    //     List<cn.cordys.crm.opportunity.dto.response.StageConfigResponse> stageConfigList = extCustomerStageConfigMapper.getStageConfigList(orgId);
+    //
+    //     Map<String, String> stageMap = stageConfigList.stream()
+    //             .collect(java.util.stream.Collectors.toMap(
+    //                     cn.cordys.crm.opportunity.dto.response.StageConfigResponse::getId,
+    //                     cn.cordys.crm.opportunity.dto.response.StageConfigResponse::getName
+    //             ));
+    //
+    //     Customer newCustomer = new Customer();
+    //     newCustomer.setId(request.getId());
+    //     newCustomer.setStage(request.getStage());
+    //
+    //     customerMapper.update(newCustomer);
+    //
+    //     Map<String, String> originalVal = new java.util.HashMap<>(1);
+    //     originalVal.put("stage", stageMap.get(oldCustomer.getStage()));
+    //     Map<String, String> modifiedVal = new java.util.HashMap<>(1);
+    //     modifiedVal.put("stage", stageMap.get(request.getStage()));
+    //
+    //     OperationLogContext.setContext(
+    //             cn.cordys.aspectj.dto.LogContextInfo.builder()
+    //                     .resourceName(oldCustomer.getName())
+    //                     .originalValue(originalVal)
+    //                     .modifiedValue(modifiedVal)
+    //                     .build()
+    //     );
+    // }
 
     private void updateModuleField(Customer customer, List<BaseModuleFieldValue> moduleFields, String orgId, String userId) {
         if (moduleFields == null) {
@@ -626,6 +653,8 @@ public class CustomerService {
     }
 
     public void deleteCustomerResource(List<String> ids) {
+        // 先删除联系人
+        customerContactService.deleteByCustomerIds(ids);
         // 删除客户
         customerMapper.deleteByIds(ids);
         // 删除客户模块字段
@@ -643,7 +672,8 @@ public class CustomerService {
     }
 
     public void checkResourceRef(List<String> ids) {
-        if (extCustomerMapper.hasRefOpportunity(ids) || extCustomerMapper.hasRefContact(ids)) {
+        // 删除时会级联删除联系人，所以只检查商机引用
+        if (extCustomerMapper.hasRefOpportunity(ids)) {
             throw new GenericException(CustomerResultCode.CUSTOMER_RESOURCE_REF);
         }
     }
@@ -794,12 +824,19 @@ public class CustomerService {
     public ImportResponse realImport(MultipartFile file, String currentOrg, String currentUser) {
         try {
             List<BaseField> fields = moduleFormService.getAllFields(FormKey.CUSTOMER.getKey(), currentOrg);
+            // 获取默认阶段ID
+            String defaultStageId = customerStageService.getDefaultStageId(currentOrg);
             CustomImportAfterDoConsumer<Customer, BaseResourceSubField> afterDo = (customers, customerFields, customerFieldBlobs) -> {
                 List<LogDTO> logs = new ArrayList<>();
                 List<CustomerContact> contacts = new ArrayList<>();
                 customers.forEach(customer -> {
                     customer.setCollectionTime(customer.getCreateTime());
                     customer.setInSharedPool(false);
+                    // 设置默认阶段
+                    if (StringUtils.isBlank(customer.getStage()) && StringUtils.isNotBlank(defaultStageId)) {
+                        customer.setStage(defaultStageId);
+                        customer.setStageStatus(CustomerStageService.STATUS_NEW);
+                    }
                     logs.add(new LogDTO(currentOrg, customer.getId(), currentUser, LogType.ADD, LogModule.CUSTOMER_INDEX, customer.getName()));
                     // 导入时也自动创建联系人
                     if (StringUtils.isNotBlank(customer.getMobile())) {

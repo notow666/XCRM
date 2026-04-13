@@ -47,6 +47,9 @@ export interface CustomerDetail {
   updateUserName: string;
   moduleFields: ModuleField[];
   stage?: string;
+  stageName?: string;
+  stageStatus?: string;
+  failReason?: string;
 }
 
 export interface SaveCustomerFollowRecordParams {
@@ -97,6 +100,9 @@ export interface CustomerFollowRecordListItem {
   departmentId: string;
   departmentName: string;
   poolId: string;
+  stage?: string; // 客户阶段ID
+  stageName?: string; // 客户阶段名称
+  stageStatus?: string; // 客户阶段状态: NEW/IN_PROGRESS/COMPLETED/FAILED
   moduleFields: ModuleField[];
 }
 
@@ -124,6 +130,16 @@ export interface CustomerFollowPlanListItem extends CustomerFollowRecordListItem
   /** 任务模块列表回填：客户当前阶段 */
   customerStageId?: string;
   customerStageName?: string;
+  /** 下一阶段ID */
+  nextStage?: string;
+  /** 下一阶段名称 */
+  nextStageName?: string;
+  /** 阶段状态 */
+  nextStageStatus?: string;
+  /** 预计处理人员 */
+  processor?: string;
+  /** 预计处理人员名称 */
+  processorName?: string;
 }
 
 export interface SaveCustomerContractParams {

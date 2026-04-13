@@ -74,6 +74,7 @@ export interface FormCreateTableProps {
   hiddenTotal?: Ref<boolean>;
   opportunityStage?: StageConfigItem[]; // 商机阶段筛选项
   orderStage?: StageConfigItem[];
+  customerStage?: StageConfigItem[]; // 客户阶段筛选项
   hiddenAllScreen?: boolean;
   hiddenRefresh?: boolean;
 }
@@ -289,6 +290,23 @@ export default async function useFormCreateTable(props: FormCreateTableProps) {
       sortOrder: false,
       sorter: true,
       render: (row: any) => (row.followTime ? dayjs(row.followTime).format('YYYY-MM-DD') : '-'),
+    },
+    {
+      title: t('customer.stage'),
+      width: 150,
+      key: 'stage',
+      ellipsis: {
+        tooltip: true,
+      },
+      filter: true,
+      sortOrder: false,
+      sorter: true,
+      filterOptions:
+        props.customerStage?.map((e) => ({
+          label: e.name,
+          value: e.id,
+        })) || [],
+      render: props.specialRender?.stage,
     },
   ];
 

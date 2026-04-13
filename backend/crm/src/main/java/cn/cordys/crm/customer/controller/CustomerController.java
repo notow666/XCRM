@@ -121,12 +121,14 @@ public class CustomerController {
         return customerService.update(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
-    @PostMapping("/update-stage")
-    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE)
-    @Operation(summary = "更新客户阶段")
-    public void updateStage(@Validated @RequestBody CustomerStageRequest request) {
-        customerService.updateStage(request, OrganizationContext.getOrganizationId());
-    }
+    // 【已禁用】客户详情页面阶段跳转功能已禁用，此接口不再被调用
+    // 客户阶段变更现在通过跟进流程自动触发（FollowUpPlanService.handleCustomerStageTransition）
+    // @PostMapping("/update-stage")
+    // @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE)
+    // @Operation(summary = "更新客户阶段")
+    // public void updateStage(@Validated @RequestBody CustomerStageRequest request) {
+    //     customerService.updateStage(request, OrganizationContext.getOrganizationId());
+    // }
 
     @GetMapping("/delete/{id}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_DELETE)

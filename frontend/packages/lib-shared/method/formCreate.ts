@@ -142,7 +142,6 @@ export function parseModuleFieldValue(item: FormCreateField, fieldValue: string 
   const { t } = useI18n();
   let value: string | string[] = fieldValue || '';
   if (options) {
-    // 若字段值是选项值，则取选项值的name
     if (Array.isArray(fieldValue)) {
       value = fieldValue.map((e) => {
         const option = options.find((opt) => opt.id === e);
@@ -164,7 +163,6 @@ export function parseModuleFieldValue(item: FormCreateField, fieldValue: string 
       FieldTypeEnum.DEPARTMENT_MULTIPLE,
     ].includes(item.type)
   ) {
-    // 数据源/成员/部门类型字段，且没有匹配到 options，则显示不存在
     if (Array.isArray(fieldValue)) {
       value = fieldValue.map(() => t('common.optionNotExist'));
     } else {
@@ -198,12 +196,9 @@ export function parseModuleFieldValue(item: FormCreateField, fieldValue: string 
 export function parseFormDetailValue(item: FormCreateField, form: FormDetail, sourceName?: Ref<string>) {
   const { t } = useI18n();
   if (item.businessKey && !item.resourceFieldId) {
-    // 引用数据源字段使用 id 读取数据，而不是 businessKey
     const options = form.optionMap?.[item.businessKey];
-    // 业务标准字段读取最外层，读取form[item.businessKey]取到 id 值，然后去 options 里取 name
     let name: string | string[] = '';
     const value = form[item.businessKey];
-    // 若字段值是选项值，则取选项值的name
     if (options) {
       if (Array.isArray(value)) {
         name = value.map((e) => {
@@ -232,7 +227,6 @@ export function parseFormDetailValue(item: FormCreateField, form: FormDetail, so
     return name || form[item.businessKey];
   }
   const options = form.optionMap?.[item.id];
-  // 其他的字段读取moduleFields
   const field = form.moduleFields?.find((moduleField: ModuleField) => moduleField.fieldId === item.id);
   if (item.type === FieldTypeEnum.ATTACHMENT) {
     return form.attachmentMap?.[item.id] || [];

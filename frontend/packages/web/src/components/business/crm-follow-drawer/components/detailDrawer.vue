@@ -9,10 +9,10 @@
     :footer="false"
   >
     <template #titleRight>
-      <n-button type="primary" ghost class="n-btn-outline-primary" @click="handleEdit">
+      <n-button v-if="!hideEditDelete" type="primary" ghost class="n-btn-outline-primary" @click="handleEdit">
         {{ t('common.edit') }}
       </n-button>
-      <n-button type="error" ghost class="n-btn-outline-error ml-[12px]" @click="handleDelete">
+      <n-button v-if="!hideEditDelete" type="error" ghost class="n-btn-outline-error ml-[12px]" @click="handleDelete">
         {{ t('common.delete') }}
       </n-button>
     </template>
@@ -48,6 +48,7 @@
     formKey: FormDesignKeyEnum;
     sourceName: string;
     refreshKey: number;
+    hideEditDelete?: boolean;
   }>();
 
   const showDrawer = defineModel<boolean>('show', {

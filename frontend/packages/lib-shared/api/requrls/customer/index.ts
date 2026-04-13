@@ -142,4 +142,15 @@ export const UpdateCustomerStageUrl = '/customer/stage/update';
 export const UpdateCustomerStageRollbackUrl = '/customer/stage/update-rollback';
 export const DeleteCustomerStageUrl = '/customer/stage/delete';
 export const SortCustomerStageUrl = '/customer/stage/sort';
+export const GetCustomerNextStageUrl = '/customer/stage/next-stage';
 export const UpdateCustomerStageUrl2 = '/account/update-stage';
+
+export const GetCustomerFailReasonListUrl = '/customer/fail-reason/list';
+export const AddCustomerFailReasonUrl = '/customer/fail-reason';
+export const UpdateCustomerFailReasonUrl = '/customer/fail-reason';
+export const DeleteCustomerFailReasonUrl = '/customer/fail-reason';
+
+export const GetCustomerFollowWayListUrl = '/customer/follow-way/list';
+export const AddCustomerFollowWayUrl = '/customer/follow-way';
+export const UpdateCustomerFollowWayUrl = '/customer/follow-way';
+export const DeleteCustomerFollowWayUrl = '/customer/follow-way';
