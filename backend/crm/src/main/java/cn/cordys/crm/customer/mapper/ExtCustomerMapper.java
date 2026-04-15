@@ -6,6 +6,7 @@ import cn.cordys.common.dto.DeptDataPermissionDTO;
 import cn.cordys.common.dto.OptionDTO;
 import cn.cordys.common.dto.chart.ChartResult;
 import cn.cordys.crm.customer.domain.Customer;
+import cn.cordys.crm.customer.dto.MobileConflictDTO;
 import cn.cordys.crm.customer.dto.request.CustomerBatchTransferRequest;
 import cn.cordys.crm.customer.dto.request.CustomerChartAnalysisDbRequest;
 import cn.cordys.crm.customer.dto.request.CustomerPageRequest;
@@ -106,9 +107,16 @@ public interface ExtCustomerMapper {
      */
     int countByStage(@Param("stageId") String stageId, @Param("orgId") String orgId);
 
-    List<String> getPrivatePoolMobiles(@Param("orgId") String orgId, @Param("mobiles") List<String> mobiles);
-
-    List<String> getOtherPoolMobiles(@Param("orgId") String orgId, @Param("poolId") String poolId, @Param("mobiles") List<String> mobiles);
+    /**
+     * 合并查询手机号冲突信息（客户池冲突 + 其他公海池冲突）
+     * 替代原来的 getPrivatePoolMobiles 和 getOtherPoolMobiles 两次查询
+     *
+     * @param orgId   组织ID
+     * @param poolId  目标公海池ID
+     * @param mobiles 手机号列表
+     * @return 冲突信息列表，包含手机号和冲突类型
+     */
+    List<MobileConflictDTO> getMobileConflicts(@Param("orgId") String orgId, @Param("poolId") String poolId, @Param("mobiles") List<String> mobiles);
 
     List<Customer> getPoolCustomersByMobiles(@Param("orgId") String orgId, @Param("poolId") String poolId, @Param("mobiles") List<String> mobiles);
 

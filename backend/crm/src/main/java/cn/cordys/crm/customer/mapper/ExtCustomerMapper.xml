@@ -759,23 +759,19 @@
         and organization_id = #{orgId}
     </select>
 
-    <select id="getPrivatePoolMobiles" resultType="java.lang.String">
-        SELECT DISTINCT c.mobile FROM customer c
+    <!-- 合并查询手机号冲突信息（客户池冲突 + 其他公海池冲突），一次查询替代原来两次查询 -->
+    <select id="getMobileConflicts" resultType="cn.cordys.crm.customer.dto.MobileConflictDTO">
+        SELECT DISTINCT 
+            c.mobile,
+            CASE 
+                WHEN c.in_shared_pool = false THEN 'PRIVATE'
+                WHEN c.in_shared_pool = true AND c.pool_id != #{poolId} THEN 'OTHER_POOL'
+                ELSE 'NONE'
+            END AS conflictType
+        FROM customer c
         WHERE c.organization_id = #{orgId}
-        AND c.in_shared_pool = false
         AND c.mobile IS NOT NULL AND c.mobile != ''
-        AND c.mobile IN
-        <foreach collection="mobiles" item="mobile" open="(" separator="," close=")">
-            #{mobile}
-        </foreach>
-    </select>
-
-    <select id="getOtherPoolMobiles" resultType="java.lang.String">
-        SELECT DISTINCT c.mobile FROM customer c
-        WHERE c.organization_id = #{orgId}
-        AND c.in_shared_pool = true
-        AND c.pool_id != #{poolId}
-        AND c.mobile IS NOT NULL AND c.mobile != ''
+        AND (c.in_shared_pool = false OR (c.in_shared_pool = true AND c.pool_id != #{poolId}))
         AND c.mobile IN
         <foreach collection="mobiles" item="mobile" open="(" separator="," close=")">
             #{mobile}
