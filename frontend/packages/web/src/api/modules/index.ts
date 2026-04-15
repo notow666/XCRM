@@ -430,6 +430,12 @@ export const {
   updateCustomerFollowWay,
   deleteCustomerFollowWay,
   getCustomerNextStage,
+  preCheckImportPoolCustomer,
+  importPoolCustomer,
+  downloadPoolCustomerTemplate,
+  downloadPoolImportErrorFile,
+  transferPoolCustomer,
+  batchTransferPoolCustomer,
 } = customerApi;
 
 export const {

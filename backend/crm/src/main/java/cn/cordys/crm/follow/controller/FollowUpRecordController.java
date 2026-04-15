@@ -80,11 +80,20 @@ public class FollowUpRecordController {
         return followUpRecordService.get(id, OrganizationContext.getOrganizationId());
     }
 
-	@PostMapping("/add")
-	@Operation(summary = "添加跟进记录")
-	public FollowUpRecord add(@Validated @RequestBody FollowUpRecordAddRequest request) {
-		return followUpRecordService.add(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
-	}
+@PostMapping("/add")
+    @Operation(summary = "添加跟进记录")
+    public FollowUpRecord add(@Validated @RequestBody FollowUpRecordAddRequest request) {
+        if (request.getType() == null) {
+            if (request.getCustomerId() != null) {
+                request.setType("CUSTOMER");
+            } else if (request.getClueId() != null) {
+                request.setType("CLUE");
+            } else if (request.getOpportunityId() != null) {
+                request.setType("OPPORTUNITY");
+            }
+        }
+        return followUpRecordService.add(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
 
     @PostMapping("/update")
     @Operation(summary = "更新跟进记录")

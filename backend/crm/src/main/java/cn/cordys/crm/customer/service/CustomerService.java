@@ -134,6 +134,8 @@ public class CustomerService {
     @Resource
     private UserExtendService userExtendService;
     @Resource
+    private BaseMapper<CustomerPool> customerPoolMapper;
+    @Resource
     private ExtCustomerPoolMapper extCustomerPoolMapper;
     @Resource
     private CustomerContactService customerContactService;
@@ -696,13 +698,23 @@ public class CustomerService {
         List<String> owners = getOwners(customers);
         dataScopeService.checkDataPermission(currentUser, orgId, owners, PermissionConstants.CUSTOMER_MANAGEMENT_RECYCLE);
 
-        List<String> ownerIds = getOwners(customers);
-        Map<String, CustomerPool> ownersDefaultPoolMap = customerPoolService.getOwnersDefaultPoolMap(ownerIds, orgId);
+        // 如果指定了poolId，则使用指定的公海；否则使用责任人默认公海
+        CustomerPool specifiedPool = null;
+        if (StringUtils.isNotBlank(request.getPoolId())) {
+            specifiedPool = customerPoolMapper.selectByPrimaryKey(request.getPoolId());
+        }
+
+        Map<String, CustomerPool> ownersDefaultPoolMap = null;
+        if (specifiedPool == null) {
+            List<String> ownerIds = getOwners(customers);
+            ownersDefaultPoolMap = customerPoolService.getOwnersDefaultPoolMap(ownerIds, orgId);
+        }
 
         int success = 0;
         List<LogDTO> logs = new ArrayList<>();
+        List<String> customerIds = new ArrayList<>();
         for (Customer customer : customers) {
-            CustomerPool customerPool = ownersDefaultPoolMap.get(customer.getOwner());
+            CustomerPool customerPool = specifiedPool != null ? specifiedPool : ownersDefaultPoolMap.get(customer.getOwner());
             if (customerPool == null) {
                 // 未找到默认公海，不移入
                 continue;
@@ -710,6 +722,8 @@ public class CustomerService {
             //更新责任人
             customerContactService.updateContactOwner(customer.getId(), "-", customer.getOwner(), orgId);
 
+            // 记录需要删除跟进记录的客户ID
+            customerIds.add(customer.getId());
 
             // 日志
             LogDTO logDTO = new LogDTO(orgId, customer.getId(), currentUser, LogType.MOVE_TO_CUSTOMER_POOL, LogModule.CUSTOMER_INDEX, customer.getName());
@@ -737,6 +751,13 @@ public class CustomerService {
 
         logService.batchAdd(logs);
 
+        // 删除跟进记录和跟进计划
+        if (CollectionUtils.isNotEmpty(customerIds)) {
+            log.info("批量移入公海删除跟进记录，客户IDs: {}", String.join(",", customerIds));
+            followUpRecordService.deleteByCustomerIds(customerIds);
+            followUpPlanService.deleteByCustomerIds(customerIds);
+        }
+
         return BatchAffectResponse.builder().success(success).fail(request.getIds().size() - success).build();
     }
 
@@ -750,6 +771,7 @@ public class CustomerService {
     public BatchAffectResponse toPool(PoolReasonRequest request, String currentUser, String orgId) {
         BatchPoolReasonRequest batchRequest = new BatchPoolReasonRequest();
         batchRequest.setReasonId(request.getReasonId());
+        batchRequest.setPoolId(request.getPoolId());
         batchRequest.setIds(List.of(request.getId()));
         return batchToPool(batchRequest, currentUser, orgId);
     }

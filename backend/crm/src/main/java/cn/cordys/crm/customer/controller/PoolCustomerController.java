@@ -10,8 +10,10 @@ import cn.cordys.crm.customer.dto.CustomerPoolDTO;
 import cn.cordys.crm.customer.dto.request.*;
 import cn.cordys.crm.customer.dto.response.CustomerGetResponse;
 import cn.cordys.crm.customer.dto.response.CustomerListResponse;
+import cn.cordys.crm.customer.dto.response.PoolCustomerImportCheckResponse;
 import cn.cordys.crm.customer.service.CustomerPoolExportService;
 import cn.cordys.crm.customer.service.CustomerService;
+import cn.cordys.crm.customer.service.PoolCustomerImportService;
 import cn.cordys.crm.customer.service.PoolCustomerService;
 import cn.cordys.crm.system.dto.request.PoolBatchAssignRequest;
 import cn.cordys.crm.system.dto.request.PoolBatchPickRequest;
@@ -21,10 +23,12 @@ import cn.cordys.security.SessionUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -39,10 +43,11 @@ public class PoolCustomerController {
     private CustomerService customerService;
     @Resource
     private CustomerPoolExportService customerPoolExportService;
+    @Resource
+    private PoolCustomerImportService poolCustomerImportService;
 
     @GetMapping("/options")
     @Operation(summary = "获取当前用户公海选项")
-    @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_POOL_READ})
     public List<CustomerPoolDTO> getPoolOptions() {
         return poolCustomerService.getPoolOptions(SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
@@ -104,6 +109,22 @@ public class PoolCustomerController {
         poolCustomerService.batchDelete(request.getBatchIds(), SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
+    @PostMapping("/transfer")
+    @Operation(summary = "转移客户到指定公海池")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_POOL_TRANSFER)
+    public void transfer(@Validated @RequestBody PoolTransferRequest request) {
+        poolCustomerService.transfer(request.getCustomerId(), request.getTargetPoolId(),
+                SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
+    @PostMapping("/batch-transfer")
+    @Operation(summary = "批量转移客户到指定公海池")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_POOL_TRANSFER)
+    public void batchTransfer(@Validated @RequestBody PoolBatchTransferRequest request) {
+        poolCustomerService.batchTransfer(request.getBatchIds(), request.getTargetPoolId(),
+                SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
     @PostMapping("/batch-update")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_POOL_UPDATE)
     @Operation(summary = "批量更新客户")
@@ -131,5 +152,34 @@ public class PoolCustomerController {
     @Operation(summary = "客户图表生成")
     public List<ChartResult> chart(@Validated @RequestBody PoolCustomerChartAnalysisRequest request) {
         return poolCustomerService.chart(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), null);
+    }
+
+    @GetMapping("/template/download")
+    @Operation(summary = "下载公海导入模板")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_POOL_IMPORT)
+    public void downloadImportTpl(HttpServletResponse response) {
+        poolCustomerImportService.downloadImportTpl(response, OrganizationContext.getOrganizationId());
+    }
+
+    @PostMapping("/import/pre-check")
+    @Operation(summary = "公海导入预检查")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_POOL_IMPORT)
+    public PoolCustomerImportCheckResponse preCheck(@RequestParam("file") MultipartFile file,
+                                                     @RequestParam("poolId") String poolId) {
+        return poolCustomerImportService.preCheck(file, poolId, OrganizationContext.getOrganizationId(), SessionUtils.getUserId());
+    }
+
+    @PostMapping("/import")
+    @Operation(summary = "公海导入")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_POOL_IMPORT)
+    public String realImport(@RequestParam("file") MultipartFile file,
+                             @RequestParam("poolId") String poolId) {
+        return poolCustomerImportService.realImport(file, poolId, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
+    @GetMapping("/import/error-file/{fileId}")
+    @Operation(summary = "下载公海导入错误文件")
+    public void downloadErrorFile(@PathVariable("fileId") String fileId, HttpServletResponse response) {
+        poolCustomerImportService.downloadErrorFile(fileId, OrganizationContext.getOrganizationId(), response);
     }
 }

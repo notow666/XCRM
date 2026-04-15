@@ -18,7 +18,7 @@ import java.util.Optional;
 @Slf4j
 public class EasyExcelExporter {
     public void buildExportResponse(HttpServletResponse response, String fileName) {
-        response.setContentType("application/vnd.ms-excel");
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setHeader("Content-disposition", "attachment;filename=" + URLEncoder.encode(fileName, StandardCharsets.UTF_8) + ".xlsx");
     }

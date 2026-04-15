@@ -11,6 +11,9 @@ public class PoolReasonRequest {
     @Schema(description = "id", requiredMode = Schema.RequiredMode.REQUIRED)
     private String id;
 
+    @Schema(description = "目标公海池ID")
+    private String poolId;
+
     @Schema(description = "原因")
     private String reasonId;
 }

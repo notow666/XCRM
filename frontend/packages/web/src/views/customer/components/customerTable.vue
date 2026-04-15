@@ -125,9 +125,11 @@
     :reason-key="ReasonTypeEnum.CUSTOMER_POOL_RS"
     :source-id="moveIds"
     :name="initialSourceName"
+    :pool-id="selectedPoolId"
     type="warning"
     @refresh="Array.isArray(moveIds) ? (tableRefreshId += 1) : removeItemFromList(moveIds.toString())"
   />
+  <CrmSelectPoolModal v-model:show="showSelectPoolModal" :name="initialSourceName" @confirm="handlePoolSelected" />
 
   <CrmBatchEditModal
     v-model:visible="showEditModal"
@@ -165,6 +167,7 @@
   import CrmImportButton from '@/components/business/crm-import-button/index.vue';
   import CrmMoveModal from '@/components/business/crm-move-modal/index.vue';
   import CrmOperationButton from '@/components/business/crm-operation-button/index.vue';
+  import CrmSelectPoolModal from '@/components/business/crm-select-pool-modal/index.vue';
   import CrmTableExportModal from '@/components/business/crm-table-export-modal/index.vue';
   import TransferModal from '@/components/business/crm-transfer-modal/index.vue';
   import TransferForm from '@/components/business/crm-transfer-modal/transferForm.vue';
@@ -307,10 +310,18 @@
 
   const showMoveModal = ref(false);
   const moveIds = ref<(string | number) | (string | number)[]>('');
+  const showSelectPoolModal = ref(false);
+  const selectedPoolId = ref<string>('');
 
   function handleMoveToOpenSea(row?: any) {
     initialSourceName.value = row?.name ?? '';
     moveIds.value = row?.id ? row.id : checkedRowKeys.value;
+    showSelectPoolModal.value = true;
+  }
+
+  function handlePoolSelected(poolId: string) {
+    selectedPoolId.value = poolId;
+    showSelectPoolModal.value = false;
     showMoveModal.value = true;
   }
 
@@ -640,8 +651,8 @@
           FAILED: '',
         };
         const status = row.stageStatus || '';
-        const prefix = status ? (prefixMap[status] || '') : '';
-        const suffix = status ? (suffixMap[status] || '') : '';
+        const prefix = status ? prefixMap[status] || '' : '';
+        const suffix = status ? suffixMap[status] || '' : '';
         const name = row.stageName || '';
         return `${prefix}${name}${suffix}` || '-';
       },

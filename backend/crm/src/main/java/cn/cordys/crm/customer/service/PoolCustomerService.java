@@ -292,6 +292,84 @@ public class PoolCustomerService {
     }
 
     /**
+     * 转移客户到指定公海池
+     *
+     * @param customerId   客户ID
+     * @param targetPoolId 目标公海池ID
+     * @param currentUser  当前用户ID
+     * @param currentOrgId 当前组织ID
+     */
+    public void transfer(String customerId, String targetPoolId, String currentUser, String currentOrgId) {
+        Customer customer = customerMapper.selectByPrimaryKey(customerId);
+        if (customer == null) {
+            throw new GenericException(Translator.get("customer_not_exist"));
+        }
+        if (!Boolean.TRUE.equals(customer.getInSharedPool())) {
+            throw new GenericException(Translator.get("pool_transfer_only_pool_customer"));
+        }
+        CustomerPool targetPool = poolMapper.selectByPrimaryKey(targetPoolId);
+        if (targetPool == null) {
+            throw new GenericException(Translator.get("pool_import_pool_not_exist"));
+        }
+        if (!targetPool.getEnable()) {
+            throw new GenericException(Translator.get("pool_import_pool_disabled"));
+        }
+
+        long now = System.currentTimeMillis();
+        customer.setPoolId(targetPoolId);
+        customer.setOwner(null);
+        customer.setCollectionTime(null);
+        customer.setStage(null);
+        customer.setStageStatus(null);
+        customer.setUpdateUser(currentUser);
+        customer.setUpdateTime(now);
+        extCustomerMapper.updateIncludeNullById(customer);
+
+        logService.add(new LogDTO(currentOrgId, customer.getId(), currentUser, LogType.UPDATE, LogModule.CUSTOMER_POOL,
+                Translator.getWithArgs("pool_transfer_log", customer.getName(), targetPool.getName())));
+    }
+
+    /**
+     * 批量转移客户到指定公海池
+     *
+     * @param customerIds  客户ID集合
+     * @param targetPoolId 目标公海池ID
+     * @param currentUser  当前用户ID
+     * @param currentOrgId 当前组织ID
+     */
+    public void batchTransfer(List<String> customerIds, String targetPoolId, String currentUser, String currentOrgId) {
+        CustomerPool targetPool = poolMapper.selectByPrimaryKey(targetPoolId);
+        if (targetPool == null) {
+            throw new GenericException(Translator.get("pool_import_pool_not_exist"));
+        }
+        if (!targetPool.getEnable()) {
+            throw new GenericException(Translator.get("pool_import_pool_disabled"));
+        }
+
+        List<Customer> customers = customerMapper.selectByIds(customerIds);
+        for (Customer customer : customers) {
+            if (!Boolean.TRUE.equals(customer.getInSharedPool())) {
+                throw new GenericException(Translator.get("pool_transfer_only_pool_customer"));
+            }
+        }
+
+        long now = System.currentTimeMillis();
+        for (Customer customer : customers) {
+            customer.setPoolId(targetPoolId);
+            customer.setOwner(null);
+            customer.setCollectionTime(null);
+            customer.setStage(null);
+            customer.setStageStatus(null);
+            customer.setUpdateUser(currentUser);
+            customer.setUpdateTime(now);
+            extCustomerMapper.updateIncludeNullById(customer);
+
+            logService.add(new LogDTO(currentOrgId, customer.getId(), currentUser, LogType.UPDATE, LogModule.CUSTOMER_POOL,
+                    Translator.getWithArgs("pool_transfer_log", customer.getName(), targetPool.getName())));
+        }
+    }
+
+    /**
      * 校验库容
      *
      * @param processCount 处理数量
@@ -416,6 +494,7 @@ public class PoolCustomerService {
         List<StageConfigResponse> stageConfigList = extCustomerStageConfigMapper.getStageConfigList(currentOrgId);
         if (CollectionUtils.isNotEmpty(stageConfigList)) {
             customer.setStage(stageConfigList.getFirst().getId());
+            customer.setStageStatus(CustomerStageService.STATUS_NEW);
         }
         extCustomerMapper.updateIncludeNullById(customer);
 

@@ -132,6 +132,7 @@
   const tabList = ref([
     { name: '', tab: t('common.all') },
     { name: SystemResourceMessageTypeEnum.CUSTOMER, tab: t('menu.customer') },
+    { name: SystemResourceMessageTypeEnum.CUSTOMER_POOL_IMPORT, tab: t('module.poolImport') },
     { name: SystemResourceMessageTypeEnum.CLUE, tab: t('menu.clue') },
     { name: SystemResourceMessageTypeEnum.OPPORTUNITY, tab: t('menu.opportunity') },
     { name: SystemResourceMessageTypeEnum.CONTRACT, tab: t('module.contract') },
@@ -190,6 +191,8 @@
         return t('menu.customer');
       case SystemResourceMessageTypeEnum.CUSTOMER_POOL:
         return t('module.openSea');
+      case SystemResourceMessageTypeEnum.CUSTOMER_POOL_IMPORT:
+        return t('module.poolImport');
       case SystemResourceMessageTypeEnum.CLUE:
         return t('menu.clue');
       case SystemResourceMessageTypeEnum.CLUE_POOL:

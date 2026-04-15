@@ -1,0 +1,20 @@
+export default {
+  'poolImportButton.title': 'Pool Import',
+  'poolImportButton.selectPool': 'Select Pool',
+  'poolImportButton.selectPoolPlaceholder': 'Please select a pool to import',
+  'poolImportButton.importAlertDesc':
+    'Please select a pool and edit content according to the Excel template format before uploading',
+  'poolImportButton.checkPassed': 'Validation Passed',
+  'poolImportButton.checkFailed': 'Validation Failed',
+  'poolImportButton.errorSummary': 'Error Summary',
+  'poolImportButton.fieldValidation': 'Field validation failed',
+  'poolImportButton.excelDuplicate': 'Duplicate mobile in Excel',
+  'poolImportButton.privateConflict': 'Exists in customer pool',
+  'poolImportButton.otherPoolConflict': 'Exists in other pool',
+  'poolImportButton.downloadErrorFile': 'Download Error File',
+  'poolImportButton.canImport': 'Validation passed, ready to import',
+  'poolImportButton.modifyAndReUpload': 'Please modify error data and re-upload',
+  'poolImportButton.backToUpload': 'Back to Upload',
+  'poolImportButton.preCheckFailed': 'Pre-check failed, please review your data',
+  'poolImportButton.importFailed': 'Import failed, please try again',
+};

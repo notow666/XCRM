@@ -37,6 +37,8 @@ import {
   DisableCustomerContactUrl,
   DownloadAccountTemplateUrl,
   DownloadContactTemplateUrl,
+  DownloadPoolCustomerTemplateUrl,
+  DownloadPoolImportErrorFileUrl,
   DragAccountPoolViewUrl,
   DragContactViewUrl,
   DragCustomerViewUrl,
@@ -95,6 +97,7 @@ import {
   GetOpenSeaOptionsUrl,
   ImportAccountUrl,
   ImportContactUrl,
+  ImportPoolCustomerUrl,
   IsCustomerOpenSeaNoPickUrl,
   MergeAccountPageUrl,
   MergeAccountUrl,
@@ -103,6 +106,7 @@ import {
   PoolAccountBatchUpdateUrl,
   PreCheckAccountImportUrl,
   PreCheckContactImportUrl,
+  PreCheckPoolCustomerImportUrl,
   SaveCustomerRelationUrl,
   SwitchCustomerOpenSeaUrl,
   UpdateAccountPoolViewUrl,
@@ -141,6 +145,8 @@ import {
   AddCustomerFollowWayUrl,
   UpdateCustomerFollowWayUrl,
   DeleteCustomerFollowWayUrl,
+  TransferPoolCustomerUrl,
+  BatchTransferPoolCustomerUrl,
 } from '@lib/shared/api/requrls/customer';
 import type {
   ChartResponseDataItem,
@@ -206,6 +212,7 @@ import type {
 import type { OrderItem } from '@lib/shared/models/order';
 import type { CluePoolItem, FormDesignConfigDetailParams, OpportunityItem } from '@lib/shared/models/system/module';
 import { ValidateInfo } from '@lib/shared/models/system/org';
+import type { PoolCustomerImportCheckResponse } from '@lib/shared/models/customer';
 import type { ViewItem, ViewParams } from '@lib/shared/models/view';
 import type { ContractItem, PaymentPlanItem, PaymentRecordItem } from '@lib/shared/models/contract';
 
@@ -847,6 +854,52 @@ export default function useProductApi(CDR: CordysAxios) {
     return CDR.uploadFile({ url: ImportContactUrl }, { fileList: [file] }, 'file');
   }
 
+  // 公海导入
+  function preCheckImportPoolCustomer(file: File, poolId: string) {
+    return CDR.uploadFile<{ data: PoolCustomerImportCheckResponse }>(
+      { url: PreCheckPoolCustomerImportUrl, params: { poolId } },
+      { fileList: [file] },
+      'file'
+    );
+  }
+
+  function importPoolCustomer(file: File, poolId: string) {
+    return CDR.uploadFile(
+      { url: ImportPoolCustomerUrl, params: { poolId } },
+      { fileList: [file] },
+      'file'
+    );
+  }
+
+  function downloadPoolCustomerTemplate() {
+    return CDR.get(
+      {
+        url: DownloadPoolCustomerTemplateUrl,
+        responseType: 'blob',
+      },
+      { isTransformResponse: false, isReturnNativeResponse: true }
+    );
+  }
+
+  function downloadPoolImportErrorFile(fileId: string) {
+    return CDR.get(
+      {
+        url: DownloadPoolImportErrorFileUrl + '/' + fileId,
+        responseType: 'blob',
+      },
+      { isTransformResponse: false, isReturnNativeResponse: true }
+    );
+  }
+
+  // 公海转移
+  function transferPoolCustomer(customerId: string, targetPoolId: string) {
+    return CDR.post({ url: TransferPoolCustomerUrl, data: { customerId, targetPoolId } });
+  }
+
+  function batchTransferPoolCustomer(batchIds: string[], targetPoolId: string) {
+    return CDR.post({ url: BatchTransferPoolCustomerUrl, data: { batchIds, targetPoolId } });
+  }
+
   // 公海视图
   function addAccountPoolView(data: ViewParams) {
     return CDR.post({ url: AddAccountPoolViewUrl, data });
@@ -1054,5 +1107,11 @@ export default function useProductApi(CDR: CordysAxios) {
     addCustomerFollowWay,
     updateCustomerFollowWay,
     deleteCustomerFollowWay,
+    preCheckImportPoolCustomer,
+    importPoolCustomer,
+    downloadPoolCustomerTemplate,
+    downloadPoolImportErrorFile,
+    transferPoolCustomer,
+    batchTransferPoolCustomer,
   };
 }

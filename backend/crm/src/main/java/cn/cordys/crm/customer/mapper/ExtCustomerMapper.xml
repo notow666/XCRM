@@ -712,7 +712,16 @@
 
     <update id="updateIncludeNullById" parameterType="cn.cordys.crm.customer.domain.Customer">
         update customer set pool_id = #{customer.poolId}, in_shared_pool = #{customer.inSharedPool}, owner = #{customer.owner},
-                collection_time = #{customer.collectionTime}, update_time = #{customer.updateTime}
+                collection_time = #{customer.collectionTime}, stage = #{customer.stage}, stage_status = #{customer.stageStatus},
+                update_time = #{customer.updateTime}
+        where id = #{customer.id}
+    </update>
+
+    <update id="moveToPoolIncludeStage" parameterType="cn.cordys.crm.customer.domain.Customer">
+        update customer set name = #{customer.name}, mobile = #{customer.mobile}, pool_id = #{customer.poolId}, in_shared_pool = #{customer.inSharedPool}, owner = #{customer.owner},
+                collection_time = #{customer.collectionTime}, follower = #{customer.follower}, follow_time = #{customer.followTime},
+                reason_id = #{customer.reasonId}, stage = #{customer.stage}, stage_status = #{customer.stageStatus}, fail_reason = #{customer.failReason},
+                update_time = #{customer.updateTime}, update_user = #{customer.updateUser}
         where id = #{customer.id}
     </update>
 
@@ -748,5 +757,42 @@
         select count(1) from customer
         where stage = #{stageId}
         and organization_id = #{orgId}
+    </select>
+
+    <select id="getPrivatePoolMobiles" resultType="java.lang.String">
+        SELECT DISTINCT c.mobile FROM customer c
+        WHERE c.organization_id = #{orgId}
+        AND c.in_shared_pool = false
+        AND c.mobile IS NOT NULL AND c.mobile != ''
+        AND c.mobile IN
+        <foreach collection="mobiles" item="mobile" open="(" separator="," close=")">
+            #{mobile}
+        </foreach>
+    </select>
+
+    <select id="getOtherPoolMobiles" resultType="java.lang.String">
+        SELECT DISTINCT c.mobile FROM customer c
+        WHERE c.organization_id = #{orgId}
+        AND c.in_shared_pool = true
+        AND c.pool_id != #{poolId}
+        AND c.mobile IS NOT NULL AND c.mobile != ''
+        AND c.mobile IN
+        <foreach collection="mobiles" item="mobile" open="(" separator="," close=")">
+            #{mobile}
+        </foreach>
+    </select>
+
+    <select id="getPoolCustomersByMobiles" resultType="cn.cordys.crm.customer.domain.Customer">
+        SELECT c.id, c.name, c.mobile, c.stage, c.stage_status, c.organization_id, c.pool_id,
+               c.in_shared_pool, c.owner, c.create_user, c.create_time, c.update_user, c.update_time
+        FROM customer c
+        WHERE c.organization_id = #{orgId}
+        AND c.in_shared_pool = true
+        AND c.pool_id = #{poolId}
+        AND c.mobile IS NOT NULL AND c.mobile != ''
+        AND c.mobile IN
+        <foreach collection="mobiles" item="mobile" open="(" separator="," close=")">
+            #{mobile}
+        </foreach>
     </select>
 </mapper>

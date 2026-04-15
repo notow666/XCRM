@@ -74,6 +74,14 @@ public class PermissionConstants {
     public static final String CUSTOMER_MANAGEMENT_POOL_EXPORT = "CUSTOMER_MANAGEMENT_POOL:EXPORT";
     /*------ end: CUSTOMER_MANAGEMENT_POOL ------*/
 
+    /*------ start: CUSTOMER_MANAGEMENT_POOL_IMPORT ------*/
+    public static final String CUSTOMER_MANAGEMENT_POOL_IMPORT = "CUSTOMER_MANAGEMENT_POOL:IMPORT";
+    /*------ end: CUSTOMER_MANAGEMENT_POOL_IMPORT ------*/
+
+    /*------ start: CUSTOMER_MANAGEMENT_POOL_TRANSFER ------*/
+    public static final String CUSTOMER_MANAGEMENT_POOL_TRANSFER = "CUSTOMER_MANAGEMENT_POOL:TRANSFER";
+    /*------ end: CUSTOMER_MANAGEMENT_POOL_TRANSFER ------*/
+
 
     /*------ start: CUSTOMER_MANAGEMENT_CONTACT ------*/
     public static final String CUSTOMER_MANAGEMENT_CONTACT_READ = "CUSTOMER_MANAGEMENT_CONTACT:READ";

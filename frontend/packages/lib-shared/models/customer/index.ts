@@ -353,11 +353,13 @@ export interface UpdateFollowPlanStatusParams {
 
 export interface MoveToPublicPoolParams {
   id: string | number;
+  poolId?: string | null;
   reasonId?: string | null;
 }
 
 export interface BatchMoveToPublicPoolParams {
   ids: (string | number)[];
+  poolId?: string | null;
   reasonId?: string | null;
 }
 
@@ -438,4 +440,21 @@ export interface UpdateCustomerStageParams {
   id: string;
   stage: string;
   failureReason?: string;
+}
+
+export interface PoolImportErrorSummary {
+  fieldValidationCount: number;
+  excelDuplicateCount: number;
+  privateConflictCount: number;
+  otherPoolConflictCount: number;
+}
+
+export interface PoolCustomerImportCheckResponse {
+  passed: boolean;
+  totalCount: number;
+  successCount: number;
+  errorCount: number;
+  errorSummary?: PoolImportErrorSummary;
+  errorFileId?: string;
+  errorFileName?: string;
 }

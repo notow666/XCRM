@@ -13,6 +13,9 @@ public class BatchPoolReasonRequest {
     @Schema(description = "id", requiredMode = Schema.RequiredMode.REQUIRED)
     private List<String> ids;
 
+    @Schema(description = "目标公海池ID")
+    private String poolId;
+
     @Schema(description = "原因")
     private String reasonId;
 }

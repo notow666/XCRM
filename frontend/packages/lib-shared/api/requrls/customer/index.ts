@@ -136,6 +136,16 @@ export const EnableAccountPoolViewUrl = 'pool/account/view/enable';
 export const DragAccountPoolViewUrl = 'pool/account/view/edit/pos';
 export const generateCustomerPoolChartUrl = '/pool/account/chart';
 
+// 公海导入
+export const PreCheckPoolCustomerImportUrl = '/pool/account/import/pre-check';
+export const ImportPoolCustomerUrl = '/pool/account/import';
+export const DownloadPoolCustomerTemplateUrl = '/pool/account/template/download';
+export const DownloadPoolImportErrorFileUrl = '/pool/account/import/error-file';
+
+// 公海转移
+export const TransferPoolCustomerUrl = '/pool/account/transfer';
+export const BatchTransferPoolCustomerUrl = '/pool/account/batch-transfer';
+
 export const GetCustomerStageConfigUrl = '/customer/stage/get';
 export const AddCustomerStageUrl = '/customer/stage/add';
 export const UpdateCustomerStageUrl = '/customer/stage/update';

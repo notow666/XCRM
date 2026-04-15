@@ -88,6 +88,8 @@ public interface ExtCustomerMapper {
      */
     void updateIncludeNullById(@Param("customer") Customer customer);
 
+    void moveToPoolIncludeStage(@Param("customer") Customer customer);
+
     void batchUpdate(@Param("request") BatchUpdateDbParam request);
 
     List<OptionDTO> getCustomerPoolId(@Param("ids") List<String> ids);
@@ -103,5 +105,11 @@ public interface ExtCustomerMapper {
      * @return 客户数量
      */
     int countByStage(@Param("stageId") String stageId, @Param("orgId") String orgId);
+
+    List<String> getPrivatePoolMobiles(@Param("orgId") String orgId, @Param("mobiles") List<String> mobiles);
+
+    List<String> getOtherPoolMobiles(@Param("orgId") String orgId, @Param("poolId") String poolId, @Param("mobiles") List<String> mobiles);
+
+    List<Customer> getPoolCustomersByMobiles(@Param("orgId") String orgId, @Param("poolId") String poolId, @Param("mobiles") List<String> mobiles);
 
 }

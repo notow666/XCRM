@@ -138,9 +138,11 @@
         :reason-key="ReasonTypeEnum.CUSTOMER_POOL_RS"
         :source-id="props.sourceId"
         :name="sourceName"
+        :pool-id="selectedPoolId"
         type="warning"
         @refresh="emit('deleted')"
       />
+      <CrmSelectPoolModal v-model:show="showSelectPoolModal" :name="sourceName" @confirm="handlePoolSelected" />
       <ContractDetailDrawer
         v-model:visible="showContractDetailDrawer"
         :sourceId="activeSourceId"
@@ -166,6 +168,7 @@
   import CrmHeaderTable from '@/components/business/crm-header-table/index.vue';
   import CrmMoveModal from '@/components/business/crm-move-modal/index.vue';
   import CrmOverviewDrawer from '@/components/business/crm-overview-drawer/index.vue';
+  import CrmSelectPoolModal from '@/components/business/crm-select-pool-modal/index.vue';
   import type { TabContentItem } from '@/components/business/crm-tab-setting/type';
   import TransferForm from '@/components/business/crm-transfer-modal/transferForm.vue';
   import CrmWorkflowCard from '@/components/business/crm-workflow-card/index.vue';
@@ -196,6 +199,7 @@
     (e: 'saved'): void;
     (e: 'deleted'): void;
     (e: 'transfer'): void;
+    (e: 'button-select', key: string): void;
   }>();
 
   const { t } = useI18n();
@@ -215,8 +219,8 @@
   const customerStageStatus = ref<string>('');
   const customerFailReason = ref<string>('');
 
-  const isCustomerCompleted = computed(() =>
-    currentStatus.value === 'stage_fail' || currentStatus.value === 'stage_payment'
+  const isCustomerCompleted = computed(
+    () => currentStatus.value === 'stage_fail' || currentStatus.value === 'stage_payment'
   );
 
   async function initStageConfig() {
@@ -422,7 +426,14 @@
 
   // 移入公海
   const showMoveModal = ref(false);
+  const showSelectPoolModal = ref(false);
+  const selectedPoolId = ref<string>('');
   function handleMoveToPublicPool() {
+    showSelectPoolModal.value = true;
+  }
+  function handlePoolSelected(poolId: string) {
+    selectedPoolId.value = poolId;
+    showSelectPoolModal.value = false;
     showMoveModal.value = true;
   }
 

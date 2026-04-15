@@ -39,6 +39,7 @@
         >
           {{ t('common.exportAll') }}
         </n-button>
+        <CrmPoolImportButton @import-success="searchData" />
       </div>
     </template>
     <template #actionRight>
@@ -105,6 +106,12 @@
     :form-key="FormDesignKeyEnum.CUSTOMER_OPEN_SEA"
     @refresh="handleRefresh"
   />
+  <CrmTransferToPoolModal
+    v-model:show="showTransferModal"
+    :customer-id="activeTransferCustomerId"
+    :batch-ids="activeTransferBatchIds"
+    @success="handleTransferSuccess"
+  />
 </template>
 
 <script setup lang="ts">
@@ -130,9 +137,11 @@
   import CrmTableButton from '@/components/pure/crm-table-button/index.vue';
   import CrmBatchEditModal from '@/components/business/crm-batch-edit-modal/index.vue';
   import CrmOperationButton from '@/components/business/crm-operation-button/index.vue';
+  import CrmPoolImportButton from '@/components/business/crm-pool-import-button/index.vue';
   import CrmTableExportModal from '@/components/business/crm-table-export-modal/index.vue';
   import TransferModal from '@/components/business/crm-transfer-modal/index.vue';
   import TransferForm from '@/components/business/crm-transfer-modal/transferForm.vue';
+  import CrmTransferToPoolModal from '@/components/business/crm-transfer-to-pool-modal/index.vue';
   import CrmViewSelect from '@/components/business/crm-view-select/index.vue';
   import openSeaOverviewDrawer from './openSeaOverviewDrawer.vue';
   import addOrEditPoolDrawer from '@/views/system/module/components/addOrEditPoolDrawer.vue';
@@ -232,6 +241,11 @@
         permission: ['CUSTOMER_MANAGEMENT_POOL:UPDATE'],
       },
       {
+        label: t('common.batchTransfer'),
+        key: 'batchTransfer',
+        permission: ['CUSTOMER_MANAGEMENT_POOL:TRANSFER'],
+      },
+      {
         label: t('common.batchDelete'),
         key: 'batchDelete',
         permission: ['CUSTOMER_MANAGEMENT_POOL:DELETE'],
@@ -321,6 +335,14 @@
     });
   }
 
+  // 批量转移
+  const showBatchTransferModal = ref(false);
+
+  function handleBatchTransferSuccess() {
+    checkedRowKeys.value = [];
+    tableRefreshId.value += 1;
+  }
+
   const claimLoading = ref(false);
 
   const operationGroupList = computed<ActionsItem[]>(() => {
@@ -353,6 +375,11 @@
         label: t('common.delete'),
         key: 'delete',
         permission: ['CUSTOMER_MANAGEMENT_POOL:DELETE'],
+      },
+      {
+        label: t('common.transfer'),
+        key: 'transfer',
+        permission: ['CUSTOMER_MANAGEMENT_POOL:TRANSFER'],
       },
     ];
   });
@@ -428,8 +455,23 @@
   }
 
   const showEditModal = ref(false);
+
+  const showTransferModal = ref(false);
+  const activeTransferCustomerId = ref<string>('');
+  const activeTransferBatchIds = ref<string[]>([]);
   function handleBatchEdit() {
     showEditModal.value = true;
+  }
+
+  function handleBatchTransfer() {
+    activeTransferCustomerId.value = '';
+    activeTransferBatchIds.value = checkedRowKeys.value as string[];
+    showTransferModal.value = true;
+  }
+
+  function handleTransferSuccess() {
+    checkedRowKeys.value = [];
+    tableRefreshId.value += 1;
   }
 
   function handleBatchAction(item: ActionsItem) {
@@ -445,6 +487,9 @@
         break;
       case 'batchEdit':
         handleBatchEdit();
+        break;
+      case 'batchTransfer':
+        handleBatchTransfer();
         break;
       case 'exportChecked':
         isExportAll.value = false;
@@ -465,6 +510,11 @@
         break;
       case 'delete':
         handleDelete(row);
+        break;
+      case 'transfer':
+        activeTransferBatchIds.value = [];
+        activeTransferCustomerId.value = row.id;
+        showTransferModal.value = true;
         break;
       default:
         break;
@@ -489,9 +539,9 @@
     containerClass: `.crm-open-sea-table-${props.formKey}`,
     operationColumn: props.readonly
       ? undefined
-      : {
+        : {
           key: 'operation',
-          width: currentLocale.value === 'en-US' ? 200 : 150,
+          width: currentLocale.value === 'en-US' ? 280 : 220,
           fixed: 'right',
           render: (row: any) =>
             h(

@@ -7,7 +7,7 @@ export interface QuickAccessItem {
   key: FormDesignKeyEnum;
   icon: string;
   permission: string[];
-  enable: boolean
+  enable: boolean;
 }
 
 export const quickAccessList: QuickAccessItem[] = [

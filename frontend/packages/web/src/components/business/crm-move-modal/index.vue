@@ -58,6 +58,7 @@
     reasonKey: ReasonKey;
     name: string;
     sourceId: DataTableRowKey[] | DataTableRowKey;
+    poolId?: string;
     type?: 'error' | 'success' | 'warning' | 'info';
   }>();
 
@@ -129,6 +130,7 @@
       if (isBatch) {
         const { success, fail } = await batchMoveApiMap[props.reasonKey]({
           ids: props.sourceId,
+          poolId: props.poolId,
           reasonId: form.value.reason,
         });
         successCount.value = success;
@@ -137,6 +139,7 @@
       } else {
         const { success, fail } = await moveApiMap[props.reasonKey]({
           id: props.sourceId,
+          poolId: props.poolId,
           reasonId: form.value.reason,
         });
         successCount.value = success;

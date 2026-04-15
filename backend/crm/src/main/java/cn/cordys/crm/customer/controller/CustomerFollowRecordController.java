@@ -34,6 +34,9 @@ public class CustomerFollowRecordController {
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE)
     @Operation(summary = "添加客户跟进记录")
     public FollowUpRecord add(@Validated @RequestBody FollowUpRecordAddRequest request) {
+        if (request.getType() == null) {
+            request.setType("CUSTOMER");
+        }
         return followUpRecordService.add(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 

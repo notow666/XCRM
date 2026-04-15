@@ -126,4 +126,5 @@ export default {
   'module.contract.businessNameValidateConfig': '工商抬头表单必填设置',
   'module.contract.invoiceFormSetting': '发票表单设置',
   'module.invoice': '发票记录',
+  'module.poolImport': '公海导入',
 };
