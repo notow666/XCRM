@@ -261,7 +261,7 @@
                 order by
                 <choose>
                     <when test="${sort}.name in
-                        {'name', 'owner', 'create_time', 'update_time', 'follower', 'follow_time', 'create_user', 'update_user', 'collection_time', 'reason_id'}">
+                        {'name', 'owner', 'create_time', 'update_time', 'follower', 'follow_time', 'create_user', 'update_user', 'collection_time', 'reason_id', 'mobile', 'stage', 'stage_status'}">
                         c.${sortName} ${sortType}, c.id ASC
                     </when>
                     <when test="${sort}.name == 'department_id'">
@@ -287,7 +287,7 @@
         <if test="${conditions} != null and ${conditions}.size() > 0">
             <foreach collection="${conditions}" item="condition" index="i">
                 <if test="condition.name not in
-                {'name', 'owner', 'createTime', 'updateTime', 'follower', 'followTime', 'createUser', 'updateUser', 'departmentId'}">
+                {'name', 'owner', 'createTime', 'updateTime', 'follower', 'followTime', 'createUser', 'updateUser', 'departmentId', 'mobile', 'stage', 'stageStatus'}">
                     <if test="condition.multipleValue">
                         left join customer_field_blob ${tablePrefix}_${i}
                         on c.id = ${tablePrefix}_${i}.resource_id and ${tablePrefix}_${i}.field_id = #{condition.name}
@@ -313,7 +313,7 @@
                     left join sys_organization_user sou_sort on c.owner = sou_sort.user_id
                 </when>
                 <when test="${sort}.name not in
-                    {'name', 'owner', 'create_time', 'update_time', 'follower', 'follow_time', 'create_user', 'update_user', 'collection_time', 'reason_id'}">
+                    {'name', 'owner', 'create_time', 'update_time', 'follower', 'follow_time', 'create_user', 'update_user', 'collection_time', 'reason_id', 'mobile', 'stage', 'stage_status'}">
                     left join customer_field sort_table
                     on c.id = sort_table.resource_id and sort_table.field_id = #{sortName}
                     left join sys_module_field module_table on sort_table.field_id = module_table.id
@@ -433,6 +433,24 @@
                 <include refid="cn.cordys.common.mapper.CommonMapper.condition">
                     <property name="condition" value="condition"/>
                     <property name="column" value="c.reason_id"/>
+                </include>
+            </when>
+            <when test="condition.name == 'mobile'">
+                <include refid="cn.cordys.common.mapper.CommonMapper.condition">
+                    <property name="condition" value="condition"/>
+                    <property name="column" value="c.mobile"/>
+                </include>
+            </when>
+            <when test="condition.name == 'stage'">
+                <include refid="cn.cordys.common.mapper.CommonMapper.condition">
+                    <property name="condition" value="condition"/>
+                    <property name="column" value="c.stage"/>
+                </include>
+            </when>
+            <when test="condition.name == 'stageStatus'">
+                <include refid="cn.cordys.common.mapper.CommonMapper.condition">
+                    <property name="condition" value="condition"/>
+                    <property name="column" value="c.stage_status"/>
                 </include>
             </when>
             <otherwise>
@@ -723,6 +741,84 @@
                 reason_id = #{customer.reasonId}, stage = #{customer.stage}, stage_status = #{customer.stageStatus}, fail_reason = #{customer.failReason},
                 update_time = #{customer.updateTime}, update_user = #{customer.updateUser}
         where id = #{customer.id}
+    </update>
+
+    <update id="batchMoveToPoolIncludeStage" parameterType="java.util.List">
+        UPDATE customer 
+        SET name = CASE id 
+            <foreach collection="customers" item="customer">
+                WHEN #{customer.id} THEN #{customer.name}
+            </foreach>
+        END,
+        mobile = CASE id
+            <foreach collection="customers" item="customer">
+                WHEN #{customer.id} THEN #{customer.mobile}
+            </foreach>
+        END,
+        pool_id = CASE id
+            <foreach collection="customers" item="customer">
+                WHEN #{customer.id} THEN #{customer.poolId}
+            </foreach>
+        END,
+        in_shared_pool = CASE id
+            <foreach collection="customers" item="customer">
+                WHEN #{customer.id} THEN #{customer.inSharedPool}
+            </foreach>
+        END,
+        owner = CASE id
+            <foreach collection="customers" item="customer">
+                WHEN #{customer.id} THEN #{customer.owner}
+            </foreach>
+        END,
+        collection_time = CASE id
+            <foreach collection="customers" item="customer">
+                WHEN #{customer.id} THEN #{customer.collectionTime}
+            </foreach>
+        END,
+        follower = CASE id
+            <foreach collection="customers" item="customer">
+                WHEN #{customer.id} THEN #{customer.follower}
+            </foreach>
+        END,
+        follow_time = CASE id
+            <foreach collection="customers" item="customer">
+                WHEN #{customer.id} THEN #{customer.followTime}
+            </foreach>
+        END,
+        reason_id = CASE id
+            <foreach collection="customers" item="customer">
+                WHEN #{customer.id} THEN #{customer.reasonId}
+            </foreach>
+        END,
+        stage = CASE id
+            <foreach collection="customers" item="customer">
+                WHEN #{customer.id} THEN #{customer.stage}
+            </foreach>
+        END,
+        stage_status = CASE id
+            <foreach collection="customers" item="customer">
+                WHEN #{customer.id} THEN #{customer.stageStatus}
+            </foreach>
+        END,
+        fail_reason = CASE id
+            <foreach collection="customers" item="customer">
+                WHEN #{customer.id} THEN #{customer.failReason}
+            </foreach>
+        END,
+        update_time = CASE id
+            <foreach collection="customers" item="customer">
+                WHEN #{customer.id} THEN #{customer.updateTime}
+            </foreach>
+        END,
+        update_user = CASE id
+            <foreach collection="customers" item="customer">
+                WHEN #{customer.id} THEN #{customer.updateUser}
+            </foreach>
+        END
+        WHERE id IN
+        <foreach collection="customers" item="customer" open="(" close=")" separator=",">
+            #{customer.id}
+        </foreach>
     </update>
 
     <update id="batchUpdate">

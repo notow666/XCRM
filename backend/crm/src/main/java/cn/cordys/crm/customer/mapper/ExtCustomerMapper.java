@@ -91,6 +91,8 @@ public interface ExtCustomerMapper {
 
     void moveToPoolIncludeStage(@Param("customer") Customer customer);
 
+    void batchMoveToPoolIncludeStage(@Param("customers") List<Customer> customers);
+
     void batchUpdate(@Param("request") BatchUpdateDbParam request);
 
     List<OptionDTO> getCustomerPoolId(@Param("ids") List<String> ids);

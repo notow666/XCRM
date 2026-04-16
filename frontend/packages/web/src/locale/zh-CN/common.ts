@@ -106,6 +106,8 @@ export default {
   'common.exporting': '正在导出',
   'common.exportSuccessful': '导出成功',
   'common.exportFailed': '导出失败',
+  'common.importSuccessful': '导入成功',
+  'common.importFailed': '导入失败',
   'common.downloadFile': '下载文件',
   'common.import': '导入',
   'common.collapseAll': '收起全部',

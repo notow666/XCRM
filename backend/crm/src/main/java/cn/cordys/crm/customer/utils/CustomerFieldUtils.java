@@ -10,6 +10,7 @@ public class CustomerFieldUtils {
     public static LinkedHashMap<String, Object> getSystemFieldMap(CustomerListResponse data) {
         LinkedHashMap<String, Object> systemFieldMap = new LinkedHashMap<>();
         systemFieldMap.put("name", data.getName());
+        systemFieldMap.put("mobile", data.getMobile());
         systemFieldMap.put("owner", data.getOwnerName());
         systemFieldMap.put("collectionTime", TimeUtils.getDateTimeStr(data.getCollectionTime()));
         systemFieldMap.put("createUser", data.getCreateUserName());
