@@ -8,12 +8,14 @@ import cn.cordys.aspectj.constants.CodeVariableType;
 import cn.cordys.aspectj.context.OperationLogContext;
 import cn.cordys.aspectj.handler.OperationLogService;
 import cn.cordys.common.util.CommonBeanFactory;
+import cn.cordys.security.SessionUser;
 import cn.cordys.security.SessionUtils;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.MDC;
 import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.SmartInitializingSingleton;
@@ -24,6 +26,8 @@ import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static cn.cordys.common.constants.MdcConstants.USER_ID_KEY;
 
 /**
  * 日志记录拦截器，拦截方法执行并生成日志记录。
@@ -175,7 +179,13 @@ public class OperationOperationLogInterceptor extends OperationLogValueParser im
     private String resolveOperatorId(OperationLogBuilder operation, List<String> templates) {
         if (StringUtils.isEmpty(operation.getOperatorId())) {
             // 如果没有标注操作人，则获取登入用户
-            operation.setOperatorId(SessionUtils.getUserId());
+            SessionUser sessionUser = SessionUtils.getUser();
+            if(sessionUser != null) {
+                operation.setOperatorId(sessionUser.getId());
+            }
+            else{
+                operation.setOperatorId(MDC.get(USER_ID_KEY));
+            }
         }
         templates.add(operation.getOperatorId());
         return operation.getOperatorId();

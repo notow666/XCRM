@@ -14,6 +14,11 @@
         </include>
     </select>
 
+    <select id="listByEnable" resultType="cn.cordys.crm.customer.dto.CustomerPoolDTO">
+        select * from customer_pool
+        where organization_id = #{orgId} and `enable` = true
+    </select>
+
     <update id="updatePickRule" parameterType="cn.cordys.crm.customer.domain.CustomerPoolPickRule">
         update customer_pool_pick_rule set limit_on_number = #{rule.limitOnNumber}, pick_number = #{rule.pickNumber}, limit_pre_owner = #{rule.limitPreOwner},
            pick_interval_days = #{rule.pickIntervalDays}, update_user = #{rule.updateUser}, update_time = #{rule.updateTime},

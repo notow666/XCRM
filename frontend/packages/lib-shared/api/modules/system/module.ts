@@ -20,6 +20,7 @@ import {
   GetCluePoolPageUrl,
   GetCustomerCapacityPageUrl,
   GetCustomerPoolPageUrl,
+  GetCustomerPoolListUrl,
   GetFieldClueListUrl,
   GetFieldContractListUrl,
   GetFieldContractPaymentPlanListUrl,
@@ -226,6 +227,10 @@ export default function useProductApi(CDR: CordysAxios) {
   // 公海相关API
   function getCustomerPoolPage(data: TableQueryParams) {
     return CDR.post<CommonList<CluePoolItem>>({ url: GetCustomerPoolPageUrl, data });
+  }
+
+  function getCustomerPoolListByEnable() {
+    return CDR.post<CommonList<CluePoolItem>>({ url: GetCustomerPoolListUrl });
   }
 
   function addCustomerPool(data: CluePoolParams) {
@@ -438,6 +443,7 @@ export default function useProductApi(CDR: CordysAxios) {
     addCapacity,
     deleteCapacity,
     getCustomerPoolPage,
+    getCustomerPoolListByEnable,
     addCustomerPool,
     updateCustomerPool,
     switchCustomerPoolStatus,

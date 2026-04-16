@@ -7,8 +7,10 @@ import cn.cordys.aspectj.context.OperationLogContext;
 import cn.cordys.aspectj.dto.LogContextInfo;
 import cn.cordys.common.constants.BusinessModuleField;
 import cn.cordys.common.constants.FormKey;
+import cn.cordys.common.constants.InternalRole;
 import cn.cordys.common.dto.BasePageRequest;
 import cn.cordys.common.dto.condition.CombineSearch;
+import cn.cordys.common.dto.condition.FilterCondition;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.BeanUtils;
@@ -18,6 +20,7 @@ import cn.cordys.common.utils.RecycleConditionUtils;
 import cn.cordys.crm.clue.domain.*;
 import cn.cordys.crm.clue.dto.CluePoolDTO;
 import cn.cordys.crm.clue.dto.CluePoolFieldConfigDTO;
+import cn.cordys.crm.clue.dto.CluePoolDistributeRuleDTO;
 import cn.cordys.crm.clue.dto.CluePoolPickRuleDTO;
 import cn.cordys.crm.clue.dto.CluePoolRecycleRuleDTO;
 import cn.cordys.crm.clue.dto.request.CluePoolAddRequest;
@@ -61,6 +64,8 @@ public class CluePoolService {
     @Resource
     private BaseMapper<CluePoolRecycleRule> cluePoolRecycleRuleMapper;
     @Resource
+    private BaseMapper<CluePoolDistributeRule> cluePoolDistributeRuleMapper;
+    @Resource
     private ExtCluePoolMapper extCluePoolMapper;
     @Resource
     private UserExtendService userExtendService;
@@ -103,6 +108,12 @@ public class CluePoolService {
         Map<String, CluePoolRecycleRule> recycleRuleMap = recycleRules.stream()
                 .collect(Collectors.toMap(CluePoolRecycleRule::getPoolId, recycleRule -> recycleRule));
 
+        LambdaQueryWrapper<CluePoolDistributeRule> distributeRuleWrapper = new LambdaQueryWrapper<>();
+        distributeRuleWrapper.in(CluePoolDistributeRule::getCluePoolId, poolIds);
+        List<CluePoolDistributeRule> distributeRules = cluePoolDistributeRuleMapper.selectListByLambda(distributeRuleWrapper);
+        Map<String, CluePoolDistributeRule> distributeRuleMap = distributeRules.stream()
+                .collect(Collectors.toMap(CluePoolDistributeRule::getCluePoolId, rule -> rule));
+
         Map<String, List<CluePoolHiddenField>> hiddenFieldMap = getCluePoolHiddenFieldsByPoolIds(poolIds)
                 .stream()
                 .collect(Collectors.groupingBy(CluePoolHiddenField::getPoolId));
@@ -118,12 +129,50 @@ public class CluePoolService {
             CluePoolPickRuleDTO pickRule = new CluePoolPickRuleDTO();
             BeanUtils.copyBean(pickRule, pickRuleMap.get(pool.getId()));
             CluePoolRecycleRuleDTO recycleRule = new CluePoolRecycleRuleDTO();
+            recycleRule.setOperator(CombineSearch.SearchMode.AND.name());
+            recycleRule.setConditions(new ArrayList<>());
             CluePoolRecycleRule cluePoolRecycleRule = recycleRuleMap.get(pool.getId());
-            BeanUtils.copyBean(recycleRule, cluePoolRecycleRule);
-            recycleRule.setConditions(JSON.parseArray(cluePoolRecycleRule.getCondition(), RuleConditionDTO.class));
-            delOldTime(recycleRule);
+            if (cluePoolRecycleRule != null) {
+                BeanUtils.copyBean(recycleRule, cluePoolRecycleRule);
+                if (StringUtils.isNotBlank(cluePoolRecycleRule.getCondition())) {
+                    recycleRule.setConditions(JSON.parseArray(cluePoolRecycleRule.getCondition(), RuleConditionDTO.class));
+                }
+                delOldTimeConditions(recycleRule.getConditions());
+            }
             pool.setPickRule(pickRule);
             pool.setRecycleRule(recycleRule);
+
+            CluePoolDistributeRuleDTO distributeRuleDto = new CluePoolDistributeRuleDTO();
+            CombineSearch distributeCombineSearch = new CombineSearch();
+            distributeCombineSearch.setSearchMode(CombineSearch.SearchMode.AND.name());
+            distributeCombineSearch.setConditions(new ArrayList<>());
+            distributeRuleDto.setCombineSearch(distributeCombineSearch);
+            CluePoolDistributeRule cluePoolDistributeRule = distributeRuleMap.get(pool.getId());
+            if (cluePoolDistributeRule != null) {
+                distributeRuleDto.setCustomerPoolId(cluePoolDistributeRule.getCustomerPoolId());
+                if (StringUtils.isNotBlank(cluePoolDistributeRule.getCondition())) {
+                    String rawCondition = cluePoolDistributeRule.getCondition().trim();
+                    if (rawCondition.startsWith("[")) {
+                        // backward compatibility for old list JSON
+                        List<RuleConditionDTO> oldConditions = JSON.parseArray(rawCondition, RuleConditionDTO.class);
+                        CombineSearch oldCombineSearch = new CombineSearch();
+                        oldCombineSearch.setSearchMode(StringUtils.defaultIfBlank(cluePoolDistributeRule.getOperator(), CombineSearch.SearchMode.AND.name()));
+                        oldCombineSearch.setConditions(oldConditions.stream().map(item -> {
+                            cn.cordys.common.dto.condition.FilterCondition fc = new cn.cordys.common.dto.condition.FilterCondition();
+                            fc.setName(item.getColumn());
+                            fc.setOperator(item.getOperator());
+                            fc.setValue(item.getValue());
+                            fc.setType("TIME_RANGE_PICKER");
+                            fc.setMultipleValue(false);
+                            return fc;
+                        }).toList());
+                        distributeRuleDto.setCombineSearch(oldCombineSearch);
+                    } else {
+                        distributeRuleDto.setCombineSearch(JSON.parseObject(rawCondition, CombineSearch.class));
+                    }
+                }
+            }
+            pool.setDistributeRule(distributeRuleDto);
 
             Set<String> hiddenFieldIds;
             if (hiddenFieldMap.get(pool.getId()) != null) {
@@ -140,8 +189,11 @@ public class CluePoolService {
         return pools;
     }
 
-    private void delOldTime(CluePoolRecycleRuleDTO recycleRule) {
-        recycleRule.getConditions().forEach(condition -> {
+    private void delOldTimeConditions(List<RuleConditionDTO> conditions) {
+        if (CollectionUtils.isEmpty(conditions)) {
+            return;
+        }
+        conditions.forEach(condition -> {
             if (Strings.CS.equals(condition.getColumn(), RecycleConditionColumnKey.STORAGE_TIME)
                     && Strings.CS.equals(condition.getOperator(), RecycleConditionOperator.DYNAMICS.name())) {
                 String[] split = condition.getValue().split(",");
@@ -184,12 +236,17 @@ public class CluePoolService {
      */
     @OperationLog(module = LogModule.SYSTEM_MODULE, type = LogType.ADD)
     public void add(CluePoolAddRequest request, String currentUserId, String currentOrgId) {
+        String scopeId = userExtendService.getDefaultTopDepartmentScope(currentOrgId);
+        if(StringUtils.isBlank(scopeId)) {
+            throw new GenericException(Translator.get("top_department_not_exist"));
+        }
+
         CluePool pool = new CluePool();
         BeanUtils.copyBean(pool, request);
         pool.setId(IDGenerator.nextStr());
         pool.setOrganizationId(currentOrgId);
-        pool.setOwnerId(JSON.toJSONString(request.getOwnerIds()));
-        pool.setScopeId(JSON.toJSONString(request.getScopeIds()));
+        pool.setOwnerId(JSON.toJSONString(List.of(InternalRole.ORG_ADMIN.getValue())));
+        pool.setScopeId(JSON.toJSONString(List.of(scopeId)));
         pool.setCreateTime(System.currentTimeMillis());
         pool.setCreateUser(currentUserId);
         pool.setUpdateTime(System.currentTimeMillis());
@@ -224,6 +281,29 @@ public class CluePoolService {
 
         cluePoolRecycleRuleMapper.insert(recycleRule);
 
+        if(Boolean.TRUE.equals(request.getDistribute())){
+            CluePoolDistributeRuleDTO drDto = request.getDistributeRule() != null ? request.getDistributeRule() : CluePoolDistributeRuleDTO.builder().build();
+            if (StringUtils.isBlank(drDto.getCustomerPoolId())) {
+                throw new GenericException(Translator.get("clue_pool_distribute_customer_pool_required"));
+            }
+            CluePoolDistributeRule distributeRuleEntity = new CluePoolDistributeRule();
+            distributeRuleEntity.setId(IDGenerator.nextStr());
+            distributeRuleEntity.setCluePoolId(pool.getId());
+            distributeRuleEntity.setCustomerPoolId(StringUtils.defaultString(drDto.getCustomerPoolId(), ""));
+            CombineSearch distributeCombineSearch = drDto.getCombineSearch() != null ? drDto.getCombineSearch() : new CombineSearch();
+            distributeRuleEntity.setOperator(StringUtils.defaultString(distributeCombineSearch.getSearchMode(), CombineSearch.SearchMode.AND.name()));
+            try {
+                distributeRuleEntity.setCondition(JSON.toJSONString(distributeCombineSearch));
+            } catch (Exception e) {
+                throw new GenericException(Translator.get("customer_rule_condition_error"));
+            }
+            distributeRuleEntity.setCreateTime(System.currentTimeMillis());
+            distributeRuleEntity.setCreateUser(currentUserId);
+            distributeRuleEntity.setUpdateTime(System.currentTimeMillis());
+            distributeRuleEntity.setUpdateUser(currentUserId);
+            cluePoolDistributeRuleMapper.insert(distributeRuleEntity);
+        }
+
         batchInsertCluePoolHiddenFields(pool.getId(), request.getHiddenFieldIds());
 
         // 添加日志上下文
@@ -243,11 +323,16 @@ public class CluePoolService {
     public void update(CluePoolUpdateRequest request, String currentUserId, String currentOrgId) {
         CluePool originPool = checkPoolExist(request.getId());
 
+        String scopeId = userExtendService.getDefaultTopDepartmentScope(currentOrgId);
+        if(StringUtils.isBlank(scopeId)) {
+            throw new GenericException(Translator.get("top_department_not_exist"));
+        }
+
         CluePool pool = new CluePool();
         BeanUtils.copyBean(pool, request);
         pool.setOrganizationId(currentOrgId);
-        pool.setOwnerId(JSON.toJSONString(request.getOwnerIds()));
-        pool.setScopeId(JSON.toJSONString(request.getScopeIds()));
+        pool.setOwnerId(JSON.toJSONString(List.of(InternalRole.ORG_ADMIN.getValue())));
+        pool.setScopeId(JSON.toJSONString(List.of(scopeId)));
         pool.setUpdateTime(System.currentTimeMillis());
         pool.setUpdateUser(currentUserId);
 
@@ -273,6 +358,43 @@ public class CluePoolService {
         recycleRule.setUpdateUser(currentUserId);
 
         extCluePoolMapper.updateRecycleRule(recycleRule);
+
+        if (Boolean.TRUE.equals(request.getDistribute())){
+            CluePoolDistributeRuleDTO drDto = request.getDistributeRule() != null ? request.getDistributeRule() : CluePoolDistributeRuleDTO.builder().build();
+            if (StringUtils.isBlank(drDto.getCustomerPoolId())) {
+                throw new GenericException(Translator.get("clue_pool_distribute_customer_pool_required"));
+            }
+            CluePoolDistributeRule distributeRuleEntity = new CluePoolDistributeRule();
+            distributeRuleEntity.setCluePoolId(pool.getId());
+            distributeRuleEntity.setCustomerPoolId(StringUtils.defaultString(drDto.getCustomerPoolId(), ""));
+            CombineSearch distributeCombineSearch = drDto.getCombineSearch() != null ? drDto.getCombineSearch() : new CombineSearch();
+            distributeRuleEntity.setOperator(StringUtils.defaultString(distributeCombineSearch.getSearchMode(), CombineSearch.SearchMode.AND.name()));
+            try {
+                distributeRuleEntity.setCondition(JSON.toJSONString(distributeCombineSearch));
+            } catch (Exception e) {
+                throw new GenericException(Translator.get("customer_rule_condition_error"));
+            }
+            distributeRuleEntity.setUpdateTime(System.currentTimeMillis());
+            distributeRuleEntity.setUpdateUser(currentUserId);
+
+            LambdaQueryWrapper<CluePoolDistributeRule> distExistWrapper = new LambdaQueryWrapper<>();
+            distExistWrapper.eq(CluePoolDistributeRule::getCluePoolId, pool.getId());
+            if (CollectionUtils.isEmpty(cluePoolDistributeRuleMapper.selectListByLambda(distExistWrapper))) {
+                distributeRuleEntity.setId(IDGenerator.nextStr());
+                distributeRuleEntity.setCreateTime(System.currentTimeMillis());
+                distributeRuleEntity.setCreateUser(currentUserId);
+                cluePoolDistributeRuleMapper.insert(distributeRuleEntity);
+            } else {
+                extCluePoolMapper.updateDistributeRule(distributeRuleEntity);
+            }
+        }
+        else{
+            LambdaQueryWrapper<CluePoolDistributeRule> distExistWrapper = new LambdaQueryWrapper<>();
+            distExistWrapper.eq(CluePoolDistributeRule::getCluePoolId, pool.getId());
+            if (CollectionUtils.isNotEmpty(cluePoolDistributeRuleMapper.selectListByLambda(distExistWrapper))) {
+                cluePoolDistributeRuleMapper.deleteByLambda(distExistWrapper);
+            }
+        }
 
         if (request.getHiddenFieldIds() != null) {
             deleteCluePoolHiddenFieldByPoolId(pool.getId());
@@ -338,6 +460,9 @@ public class CluePoolService {
         CluePoolRecycleRule recycleRule = new CluePoolRecycleRule();
         recycleRule.setPoolId(id);
         cluePoolRecycleRuleMapper.delete(recycleRule);
+        CluePoolDistributeRule distributeRule = new CluePoolDistributeRule();
+        distributeRule.setCluePoolId(id);
+        cluePoolDistributeRuleMapper.delete(distributeRule);
         deleteCluePoolHiddenFieldByPoolId(id);
 
         // 设置操作对象
@@ -442,7 +567,7 @@ public class CluePoolService {
      *
      * @return 线索池
      */
-    private CluePool checkPoolExist(String id) {
+    public CluePool checkPoolExist(String id) {
         CluePool pool = cluePoolMapper.selectByPrimaryKey(id);
         if (pool == null) {
             throw new GenericException(Translator.get("clue_pool_not_exist"));
@@ -482,13 +607,28 @@ public class CluePoolService {
      * @return 是否符合回收规则
      */
     public boolean checkRecycled(Clue clue, CluePoolRecycleRule recycleRule) {
-        boolean allMatch = Strings.CS.equals(CombineSearch.SearchMode.AND.name(), recycleRule.getOperator());
-        List<RuleConditionDTO> conditions = JSON.parseArray(recycleRule.getCondition(), RuleConditionDTO.class);
+        if (recycleRule == null) {
+            return false;
+        }
+        return matchesTimeRule(clue, recycleRule.getOperator(), recycleRule.getCondition());
+    }
+
+    /**
+     * 线索是否满足时间类规则（回收/分发条件 JSON 结构相同）
+     */
+    public boolean matchesTimeRule(Clue clue, String operator, String conditionJson) {
+        if (StringUtils.isBlank(conditionJson)) {
+            return false;
+        }
+        boolean allMatch = Strings.CS.equals(CombineSearch.SearchMode.AND.name(), operator);
+        List<RuleConditionDTO> conditions = JSON.parseArray(conditionJson, RuleConditionDTO.class);
+        if (CollectionUtils.isEmpty(conditions)) {
+            return false;
+        }
         if (allMatch) {
             return conditions.stream().allMatch(condition -> matchTime(condition, clue));
-        } else {
-            return conditions.stream().anyMatch(condition -> matchTime(condition, clue));
         }
+        return conditions.stream().anyMatch(condition -> matchTime(condition, clue));
     }
 
     /**
@@ -500,10 +640,11 @@ public class CluePoolService {
      * @return 是否匹配
      */
     private boolean matchTime(RuleConditionDTO condition, Clue clue) {
+        List<String> scope = condition.getScope() != null ? condition.getScope() : Collections.emptyList();
         if (Strings.CS.equals(condition.getColumn(), RecycleConditionColumnKey.STORAGE_TIME)) {
-            if (condition.getScope().contains(RecycleConditionScopeKey.CREATED)) {
+            if (scope.contains(RecycleConditionScopeKey.CREATED)) {
                 return RecycleConditionUtils.matchTime(condition, clue.getCreateTime());
-            } else if (condition.getScope().contains(RecycleConditionScopeKey.PICKED)) {
+            } else if (scope.contains(RecycleConditionScopeKey.PICKED)) {
                 return RecycleConditionUtils.matchTime(condition, clue.getCollectionTime());
             } else {
                 return RecycleConditionUtils.matchTime(condition, clue.getCreateTime()) || RecycleConditionUtils.matchTime(condition, clue.getCollectionTime());
@@ -511,5 +652,56 @@ public class CluePoolService {
         } else {
             return RecycleConditionUtils.matchTime(condition, clue.getFollowTime());
         }
+    }
+
+    /**
+     * 分发规则条件匹配（基于 CombineSearch 的 FilterCondition）
+     */
+    public boolean matchDistributeCondition(Clue clue, FilterCondition filterCondition) {
+        if (filterCondition == null) {
+            return false;
+        }
+        Long sourceTime = Strings.CS.equals(filterCondition.getName(), RecycleConditionColumnKey.STORAGE_TIME)
+                ? clue.getCreateTime()
+                : clue.getFollowTime();
+        String operator = filterCondition.getCombineOperator();
+        if (Strings.CS.equalsAny(operator, FilterCondition.CombineConditionOperator.EMPTY.name(),
+                FilterCondition.CombineConditionOperator.NOT_EMPTY.name())) {
+            return Strings.CS.equals(operator, FilterCondition.CombineConditionOperator.EMPTY.name())
+                    ? sourceTime == null
+                    : sourceTime != null;
+        }
+        if (sourceTime == null) {
+            return false;
+        }
+        Object combineValue = filterCondition.getCombineValue();
+        if (combineValue instanceof List<?> values && values.size() >= 2) {
+            long start = Long.parseLong(values.get(0).toString());
+            long end = Long.parseLong(values.get(1).toString());
+            return sourceTime >= start && sourceTime <= end;
+        }
+        if (combineValue == null) {
+            return false;
+        }
+        long target = Long.parseLong(combineValue.toString());
+        if (Strings.CS.equals(operator, FilterCondition.CombineConditionOperator.GT.name())) {
+            return sourceTime > target;
+        }
+        if (Strings.CS.equals(operator, FilterCondition.CombineConditionOperator.LT.name())) {
+            return sourceTime < target;
+        }
+        if (Strings.CS.equals(operator, FilterCondition.CombineConditionOperator.GE.name())) {
+            return sourceTime >= target;
+        }
+        if (Strings.CS.equals(operator, FilterCondition.CombineConditionOperator.LE.name())) {
+            return sourceTime <= target;
+        }
+        if (Strings.CS.equals(operator, FilterCondition.CombineConditionOperator.EQUALS.name())) {
+            return sourceTime.equals(target);
+        }
+        if (Strings.CS.equals(operator, FilterCondition.CombineConditionOperator.NOT_EQUALS.name())) {
+            return !sourceTime.equals(target);
+        }
+        return false;
     }
 }

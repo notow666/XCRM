@@ -9,6 +9,7 @@ import cn.cordys.common.constants.BusinessModuleField;
 import cn.cordys.common.constants.FormKey;
 import cn.cordys.common.constants.InternalUser;
 import cn.cordys.common.constants.LinkScenarioKey;
+import cn.cordys.common.domain.BaseModel;
 import cn.cordys.common.domain.BaseModuleFieldValue;
 import cn.cordys.common.domain.BaseResourceField;
 import cn.cordys.common.dto.ExportHeadDTO;
@@ -110,6 +111,8 @@ public class ModuleFormService {
     private org.springframework.core.io.Resource formResource;
     @Value("classpath:form/field.json")
     private org.springframework.core.io.Resource fieldResource;
+    @Value("classpath:form/clue_2_customer.json")
+    private org.springframework.core.io.Resource linkedResource;
     @Resource
     private BaseMapper<ModuleForm> moduleFormMapper;
     @Resource
@@ -223,6 +226,11 @@ public class ModuleFormService {
             throw new GenericException(Translator.get("module.form.not_exist"));
         }
         preCheckForFieldSave(saveParam);
+
+        if(Strings.CS.equals(FormKey.CUSTOMER.getKey(), saveParam.getFormKey())) {
+            copyFieldOfCustomer2Clue(saveParam, currentUserId, currentOrgId);
+        }
+
         ModuleFormConfigDTO oldConfig = new ModuleFormConfigDTO();
         oldConfig.setFields(getAllFields(saveParam.getFormKey(), currentOrgId));
         ModuleForm form = forms.getFirst();
@@ -266,9 +274,86 @@ public class ModuleFormService {
         if (CollectionUtils.isNotEmpty(saveParam.getFields())) {
             saveFields(saveParam.getFields(), form.getId(), currentUserId);
         }
-
         // 返回表单配置
-        return getConfig(form.getFormKey(), currentOrgId);
+        return getConfig(saveParam.getFormKey(), currentOrgId);
+    }
+
+    /**
+     * 客户表单同步线索表单
+     * @param saveParam
+     * @param currentUserId
+     * @param currentOrgId
+     */
+    private void copyFieldOfCustomer2Clue(ModuleFormSaveRequest saveParam, String currentUserId, String currentOrgId) {
+        List<BaseField> cusetomerNewFieldList = saveParam.getFields();
+        ModuleFormConfigDTO formConfigDTO = getBusinessFormConfig(FormKey.CLUE.getKey(), currentOrgId);
+
+        Map<String, String> idMap = new HashMap<>(formConfigDTO.getFields().size());
+        Map<String, String> internalKeyMap = new HashMap<>(formConfigDTO.getFields().size());
+        formConfigDTO.getFields().forEach(f -> {
+            idMap.put(f.getName(), f.getId());
+            internalKeyMap.put(f.getName(), f.getInternalKey());
+        });
+
+        Map<String, String> linked = new HashMap<>(idMap.size());
+        List<BaseField> fieldList = cusetomerNewFieldList.stream()
+                .map(f -> {
+                    BaseField copy = JSON.parseObject(JSON.toJSONString(f), f.getClass());
+                    String current = copy.getId();
+                    String id;
+                    if(idMap.containsKey(copy.getName())){
+                        id = idMap.get(copy.getName());
+                        copy.setInternalKey(internalKeyMap.get(copy.getName()));
+                    }
+                    else {
+                        id = IDGenerator.nextStr();
+                        copy.setInternalKey(null);
+                    }
+                    copy.setId(id);
+                    if(!Strings.CS.equals(FieldType.DIVIDER.name(), copy.getType())) {
+                        linked.put(current, id);
+                    }
+                    return copy;
+                }).collect(Collectors.toList());
+
+        List<LinkField> linkFields = linked.entrySet().stream()
+                .map(en -> {
+                    LinkField linkField = new LinkField();
+                    linkField.setCurrent(en.getKey());
+                    linkField.setLink(en.getValue());
+                    return linkField;
+                }).toList();
+
+        saveParam.getFormProp().getLinkProp()
+                .put(
+                        FormKey.CLUE.getKey(),
+                        List.of(
+                                LinkScenario.builder()
+                                        .key(LinkScenarioKey.CLUE_TO_CUSTOMER.name())
+                                        .linkFields(linkFields).build()));
+
+        LambdaQueryWrapper<ModuleForm> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ModuleForm::getFormKey, FormKey.CLUE.getKey())
+                .eq(ModuleForm::getOrganizationId, currentOrgId);
+        List<ModuleForm> clues = moduleFormMapper.selectListByLambda(queryWrapper);
+        if (CollectionUtils.isEmpty(clues)) {
+            return;
+        }
+        ModuleForm clue = clues.getFirst();
+        LambdaQueryWrapper<ModuleField> fieldWrapper = new LambdaQueryWrapper<>();
+        fieldWrapper.eq(ModuleField::getFormId, clue.getId());
+        List<ModuleField> fields = moduleFieldMapper.selectListByLambda(fieldWrapper);
+
+        // 重置流水号
+        resetSerial(fields, fieldList, FormKey.CLUE.getKey(), currentOrgId);
+        if (CollectionUtils.isNotEmpty(fields)) {
+            List<String> fieldIds = fields.stream().map(ModuleField::getId).toList();
+            extModuleFieldMapper.deleteByIds(fieldIds);
+            extModuleFieldMapper.deletePropByIds(fieldIds);
+        }
+        if (CollectionUtils.isNotEmpty(fieldList)) {
+            saveFields(fieldList, clue.getId(), currentUserId);
+        }
     }
 
     /**
@@ -305,7 +390,8 @@ public class ModuleFormService {
      */
     private void saveFields(List<BaseField> saveFields, String saveFormId, String currentUserId) {
         // 剔除引用字段&&并保留到数据源引用字段
-        List<String> showFields = saveFields.stream().filter(f -> f instanceof DatasourceField sourceField && CollectionUtils.isNotEmpty(sourceField.getShowFields()))
+        List<String> showFields = saveFields.stream()
+                .filter(f -> f instanceof DatasourceField sourceField && CollectionUtils.isNotEmpty(sourceField.getShowFields()))
                 .flatMap(sf -> ((DatasourceField) sf).getShowFields().stream()).distinct().toList();
         List<BaseField> refFields = saveFields.stream().filter(f -> showFields.contains(f.getId()))
                 .collect(Collectors.toMap(BaseField::getId, Function.identity(), (a, b) -> a)).values().stream()
@@ -323,11 +409,14 @@ public class ModuleFormService {
             moduleField.setInternalKey(field.getInternalKey());
             moduleField.setType(field.getType());
             moduleField.setName(field.getName());
-            moduleField.setPos(pos.getAndIncrement());
+            long increment = pos.getAndIncrement();
+            moduleField.setPos(increment);
+            field.setPos(increment);
             moduleField.setCreateTime(System.currentTimeMillis());
             moduleField.setCreateUser(currentUserId);
             moduleField.setUpdateTime(System.currentTimeMillis());
             moduleField.setUpdateUser(currentUserId);
+            moduleField.setDeletable(field.getDeletable());
             addFields.add(moduleField);
             ModuleFieldBlob fieldBlob = new ModuleFieldBlob();
             fieldBlob.setId(field.getId());
@@ -394,7 +483,8 @@ public class ModuleFormService {
             LambdaQueryWrapper<ModuleFieldBlob> blobWrapper = new LambdaQueryWrapper<>();
             blobWrapper.in(ModuleFieldBlob::getId, fieldIds);
             List<ModuleFieldBlob> fieldBlobs = moduleFieldBlobMapper.selectListByLambda(blobWrapper);
-            Map<String, String> fieldBlobMap = fieldBlobs.stream().collect(Collectors.toMap(ModuleFieldBlob::getId, ModuleFieldBlob::getProp));
+            Map<String, String> fieldBlobMap = fieldBlobs.stream()
+                    .collect(Collectors.toMap(ModuleFieldBlob::getId, ModuleFieldBlob::getProp));
             fields.forEach(field -> {
                 BaseField baseField = JSON.parseObject(fieldBlobMap.get(field.getId()), BaseField.class);
                 baseField.setType(field.getType());
@@ -997,13 +1087,18 @@ public class ModuleFormService {
     }
 
 	/**
-	 * 初始化线索转联系人表单联动规则
+	 * TODO 初始化线索转联系人表单联动规则
 	 */
 	@SuppressWarnings("unchecked")
 	public void initContactFormLinkRules() {
 		// 加载初始化的字段信息
 		LambdaQueryWrapper<ModuleField> fieldWrapper = new LambdaQueryWrapper<>();
-		fieldWrapper.in(ModuleField::getInternalKey, List.of("contactName", "contactPhone", "clueContactName", "clueContactPhone"));
+		fieldWrapper.in(ModuleField::getInternalKey,
+                List.of(
+                        BusinessModuleField.CUSTOMER_CONTACT_NAME.getKey(),
+                        BusinessModuleField.CUSTOMER_CONTACT_PHONE.getKey(),
+                        BusinessModuleField.CLUE_NAME.getKey(),
+                        BusinessModuleField.CLUE_CONTACT_PHONE.getKey()));
 		List<ModuleField> fields = moduleFieldMapper.selectListByLambda(fieldWrapper);
 		if (CollectionUtils.isEmpty(fields) || fields.size() < 4) {
 			log.error("未找到对应的内置字段，无法初始化联动规则");
@@ -1012,12 +1107,12 @@ public class ModuleFormService {
 		Map<String, String> fieldMap = fields.stream().collect(Collectors.toMap(ModuleField::getInternalKey, ModuleField::getId));
 		// 构建联动规则
 		LinkField contactNameLink = new LinkField();
-		contactNameLink.setCurrent(fieldMap.get("contactName"));
-		contactNameLink.setLink(fieldMap.get("clueContactName"));
+		contactNameLink.setCurrent(fieldMap.get(BusinessModuleField.CUSTOMER_CONTACT_NAME.getKey()));
+		contactNameLink.setLink(fieldMap.get(BusinessModuleField.CLUE_NAME.getKey()));
 		contactNameLink.setEnable(true);
 		LinkField contactPhoneLink = new LinkField();
-		contactPhoneLink.setCurrent(fieldMap.get("contactPhone"));
-		contactPhoneLink.setLink(fieldMap.get("clueContactPhone"));
+		contactPhoneLink.setCurrent(fieldMap.get(BusinessModuleField.CUSTOMER_CONTACT_PHONE.getKey()));
+		contactPhoneLink.setLink(fieldMap.get(BusinessModuleField.CLUE_CONTACT_PHONE.getKey()));
 		contactPhoneLink.setEnable(true);
 		// 更新表单属性
 		LambdaQueryWrapper<ModuleForm> wrapper = new LambdaQueryWrapper<>();
@@ -1125,6 +1220,9 @@ public class ModuleFormService {
         moduleFormBlobMapper.batchInsert(formBlobs);
         // init form fields
         initFormFields(formKeyMap);
+
+        // 初始化线索转客户表单联动
+        initClue2Customer(formKeyMap);
     }
 
     /**
@@ -1150,6 +1248,7 @@ public class ModuleFormService {
                     }
                     ModuleField field = supplyFieldInfo(initField, formId, pos.getAndIncrement(), controlKeyPreMap);
                     initField.put("id", field.getId());
+                    initField.put("deletable", field.getDeletable());
                     fields.add(field);
                     if (initField.containsKey(CONTROL_RULES_KEY)) {
                         List<ControlRuleProp> controlRules = JSON.parseArray(JSON.toJSONString(initField.get(CONTROL_RULES_KEY)), ControlRuleProp.class);
@@ -1182,6 +1281,46 @@ public class ModuleFormService {
         } catch (Exception e) {
             log.error("表单字段初始化失败", e);
             throw new GenericException("表单字段初始化失败", e);
+        }
+    }
+
+    /**
+     * 初始化线索转客户联动配置
+     * @param formKeyMap
+     */
+    private void initClue2Customer(Map<String, String> formKeyMap) {
+        String clueId = formKeyMap.get(FormKey.CLUE.getKey());
+        String customerId = formKeyMap.get(FormKey.CUSTOMER.getKey());
+
+        LambdaQueryWrapper<ModuleField> fieldWrapper = new LambdaQueryWrapper<>();
+        fieldWrapper.eq(ModuleField::getFormId, clueId);
+        List<ModuleField> clueFields = moduleFieldMapper.selectListByLambda(fieldWrapper);
+        Map<String, String> map1 = clueFields.stream()
+                .collect(Collectors.toMap(ModuleField::getInternalKey, BaseModel::getId));
+
+        fieldWrapper = new LambdaQueryWrapper<>();
+        fieldWrapper.eq(ModuleField::getFormId, customerId);
+        List<ModuleField> customerFields = moduleFieldMapper.selectListByLambda(fieldWrapper);
+        Map<String, String> map2 = customerFields.stream()
+                .collect(Collectors.toMap(ModuleField::getInternalKey, BaseModel::getId));
+
+        try {
+            ModuleFormBlob moduleFormBlob = moduleFormBlobMapper.selectByPrimaryKey(customerId);
+            FormProp formProp = JSON.parseObject(moduleFormBlob.getProp(), FormProp.class);
+            LinkScenario linkScenario = JSON.parseObject(linkedResource.getInputStream(), LinkScenario.class);
+            linkScenario.getLinkFields().forEach(l -> {
+                l.setCurrent(map2.get(l.getCurrent()));
+                l.setLink(map1.get(l.getLink()));
+            });
+
+            Map<String, List<LinkScenario>> map = new HashMap<>(1);
+            map.put(FormKey.CLUE.getKey(), List.of(linkScenario));
+            formProp.setLinkProp(map);
+            moduleFormBlob.setProp(JSON.toJSONString(formProp));
+            moduleFormBlobMapper.updateById(moduleFormBlob);
+        } catch (Exception e) {
+            log.error("线索转客户联动字段初始化失败", e);
+            throw new GenericException("线索转客户联动字段初始化失败", e);
         }
     }
 
@@ -1234,7 +1373,7 @@ public class ModuleFormService {
      */
     private ModuleField supplyFieldInfo(Map<String, Object> fieldMap, String formId, Long pos, Map<String, String> controlKeyPreMap) {
         ModuleField field = new ModuleField();
-		field.setInternalKey(fieldMap.get("internalKey").toString());
+		field.setInternalKey(!fieldMap.containsKey("internalKey") || fieldMap.get("internalKey") == null ? null : fieldMap.get("internalKey").toString());
         field.setId(controlKeyPreMap.containsKey(field.getInternalKey()) ? controlKeyPreMap.get(field.getInternalKey()) : IDGenerator.nextStr());
         field.setFormId(formId);
         field.setType(fieldMap.get("type").toString());
@@ -1245,6 +1384,7 @@ public class ModuleFormService {
         field.setCreateUser(InternalUser.ADMIN.getValue());
         field.setUpdateTime(System.currentTimeMillis());
         field.setUpdateUser(InternalUser.ADMIN.getValue());
+        field.setDeletable(false);
         return field;
     }
 
@@ -1494,21 +1634,22 @@ public class ModuleFormService {
      * @param saveParam 保存参数
      */
     private void preCheckForFieldSave(ModuleFormSaveRequest saveParam) {
-        boolean businessDeleted = BusinessModuleField.isBusinessDeleted(saveParam.getFormKey(), saveParam.getFields());
-        if (businessDeleted) {
-            throw new GenericException(Translator.get("module.form.business_field.deleted"));
-        }
+//        boolean businessDeleted = BusinessModuleField.isBusinessDeleted(saveParam.getFormKey(), saveParam.getFields());
+//        if (businessDeleted) {
+//            throw new GenericException(Translator.get("module.form.business_field.deleted"));
+//        }
         boolean hasRepeatName = BusinessModuleField.hasRepeatName(saveParam.getFields());
         if (hasRepeatName) {
             throw new GenericException(Translator.get("module.form.fields.repeat"));
         }
-        Optional<BaseField> repeatOptional = saveParam.getFields().stream().filter(field -> {
-            if (field instanceof HasOption optionField) {
-                List<OptionProp> options = optionField.getOptions();
-                return CollectionUtils.isNotEmpty(options) && hasRepeatOption(options);
-            }
-            return false;
-        }).findAny();
+        Optional<BaseField> repeatOptional = saveParam.getFields().stream()
+                .filter(field -> {
+                    if (field instanceof HasOption optionField) {
+                        List<OptionProp> options = optionField.getOptions();
+                        return CollectionUtils.isNotEmpty(options) && hasRepeatOption(options);
+                    }
+                    return false;
+                }).findAny();
         if (repeatOptional.isPresent()) {
             BaseField field = repeatOptional.get();
             throw new GenericException(Translator.getWithArgs("module.form.fields.option.repeat", field.getName()));
@@ -1859,10 +2000,13 @@ public class ModuleFormService {
         Map<String, String> formKeyMap = forms.stream().collect(Collectors.toMap(ModuleForm::getId, ModuleForm::getFormKey));
         List<ModuleFormBlob> moduleFormBlobs = moduleFormBlobMapper.selectByIds(formKeyMap.keySet().stream().toList());
         for (ModuleFormBlob formBlob : moduleFormBlobs) {
+            String formKey = formKeyMap.get(formBlob.getId());
+            if(Strings.CS.equals(formKey, FormKey.CUSTOMER.getKey())) {
+                continue;
+            }
             Map<String, Object> propMap = JSON.parseMap(formBlob.getProp());
             Object linkProp = propMap.get("linkProp");
             Map<String, List<LinkScenario>> dataMap = new HashMap<>(2);
-            String formKey = formKeyMap.get(formBlob.getId());
             if (linkProp == null) {
                 if (Strings.CS.equals(formKey, FormKey.CUSTOMER.getKey())) {
                     dataMap.put(FormKey.CLUE.getKey(), List.of(LinkScenario.builder().key(LinkScenarioKey.CLUE_TO_CUSTOMER.name()).linkFields(new ArrayList<>()).build()));

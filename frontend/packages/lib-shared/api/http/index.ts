@@ -3,6 +3,7 @@ import { CordysAxios } from './Axios';
 import type { AxiosTransform, CreateAxiosOptions } from './axiosTransform';
 import { joinTimestamp } from './helper';
 import { ContentTypeEnum, RequestEnum } from '@lib/shared/enums/httpEnum';
+import axios from 'axios';
 import { useI18n } from '@lib/shared/hooks/useI18n';
 import { deepMerge, setObjToUrlParams } from '@lib/shared/method';
 import { getToken } from '@lib/shared/method/auth';
@@ -136,6 +137,14 @@ export default function createAxios(opt: Partial<CreateAxiosOptions>) {
      * @description: 响应错误处理
      */
     responseInterceptorsCatch: (error: any) => {
+      if (
+        axios.isCancel(error) ||
+        error?.name === 'CanceledError' ||
+        error?.code === 'ERR_CANCELED'
+      ) {
+        return Promise.reject(error);
+      }
+
       const { t } = useI18n();
       const { response, code, message, config } = error || {};
       const msg: string = response?.data?.message ?? '';

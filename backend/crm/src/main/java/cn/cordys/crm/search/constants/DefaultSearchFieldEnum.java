@@ -8,6 +8,7 @@ public class DefaultSearchFieldEnum {
 
     // 客户&公海
     public static final String CUSTOMER_NAME = "customerName";
+    public static final String CUSTOMER_MOBILE = "customerMobile";
 
     // 联系人
     public static final String CONTACT_CUSTOMER = "contactCustomer";

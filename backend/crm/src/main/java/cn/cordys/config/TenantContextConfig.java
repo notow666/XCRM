@@ -13,7 +13,7 @@ public class TenantContextConfig {
     public FilterRegistrationBean<TenantContextWebFilter> tenantContextWebFilter(TenantMetaService tenantMetaService) {
         FilterRegistrationBean<TenantContextWebFilter> registrationBean = new FilterRegistrationBean<>();
         registrationBean.setFilter(new TenantContextWebFilter(tenantMetaService));
-        registrationBean.setOrder(99);
+        registrationBean.setOrder(-110);
         return registrationBean;
     }
 }

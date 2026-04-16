@@ -18,6 +18,14 @@ export class CordysAxios {
 
   private readonly options: CreateAxiosOptions;
 
+  private isCanceledError(error: unknown): boolean {
+    return (
+      axios.isCancel(error) ||
+      (error as { name?: string; code?: string })?.name === 'CanceledError' ||
+      (error as { name?: string; code?: string })?.code === 'ERR_CANCELED'
+    );
+  }
+
   constructor(options: CreateAxiosOptions) {
     this.options = options;
     this.axiosInstance = axios.create(options);
@@ -137,7 +145,7 @@ export class CordysAxios {
           resolve(res as unknown as Promise<T>);
         })
         .catch((e: Error | AxiosError) => {
-          if (axios.isAxiosError(e)) {
+          if (axios.isAxiosError(e) && !this.isCanceledError(e)) {
             // 在这可重写axios错误消息
             // eslint-disable-next-line no-console
             console.log(e);
@@ -195,7 +203,7 @@ export class CordysAxios {
           resolve(res as unknown as Promise<T>);
         })
         .catch((e: Error | AxiosError) => {
-          if (axios.isAxiosError(e)) {
+          if (axios.isAxiosError(e) && !this.isCanceledError(e)) {
             // 在这可重写axios错误消息
             // eslint-disable-next-line no-console
             console.log(e);

@@ -37,6 +37,13 @@ public class CustomerPoolController {
         return PageUtils.setPageInfo(page, customerPoolService.page(request, OrganizationContext.getOrganizationId()));
     }
 
+    @PostMapping("/list")
+    @Operation(summary = "获取开启状态公海池列表")
+    @RequiresPermissions(value = {PermissionConstants.MODULE_SETTING_UPDATE})
+    public List<CustomerPoolDTO> list() {
+        return customerPoolService.listByEnable(OrganizationContext.getOrganizationId());
+    }
+
     @PostMapping("/add")
     @Operation(summary = "保存公海池")
     @RequiresPermissions(value = {PermissionConstants.MODULE_SETTING_UPDATE})

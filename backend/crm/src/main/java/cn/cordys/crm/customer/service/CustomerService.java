@@ -45,6 +45,7 @@ import cn.cordys.crm.follow.mapper.ExtFollowUpRecordMapper;
 import cn.cordys.crm.follow.service.FollowUpPlanService;
 import cn.cordys.crm.follow.service.FollowUpRecordService;
 import cn.cordys.crm.opportunity.domain.Opportunity;
+import cn.cordys.crm.opportunity.dto.response.StageConfigResponse;
 import cn.cordys.crm.opportunity.mapper.ExtOpportunityMapper;
 import cn.cordys.crm.system.constants.DictModule;
 import cn.cordys.crm.system.constants.NotificationConstants;
@@ -438,7 +439,7 @@ public class CustomerService {
         customer.setInSharedPool(false);
 
         // 设置客户阶段为第一个阶段，状态为NEW（待跟进）
-        List<cn.cordys.crm.opportunity.dto.response.StageConfigResponse> stageConfigList = extCustomerStageConfigMapper.getStageConfigList(orgId);
+        List<StageConfigResponse> stageConfigList = extCustomerStageConfigMapper.getStageConfigList(orgId);
         if (CollectionUtils.isNotEmpty(stageConfigList)) {
             customer.setStage(stageConfigList.getFirst().getId());
             customer.setStageStatus("NEW");
@@ -474,12 +475,22 @@ public class CustomerService {
         if (StringUtils.isBlank(customer.getMobile())) {
             return;
         }
-        CustomerContactAddRequest contactRequest = new CustomerContactAddRequest();
-        contactRequest.setCustomerId(customer.getId());
-        contactRequest.setName(customer.getName());
-        contactRequest.setPhone(customer.getMobile());
-        contactRequest.setOwner(customer.getOwner());
-        customerContactService.add(contactRequest, userId, orgId);
+
+        CustomerContact contact = new CustomerContact();
+        contact.setId(IDGenerator.nextStr());
+        contact.setCustomerId(customer.getId());
+        contact.setOwner(customer.getOwner());
+        contact.setName(customer.getName());
+        contact.setPhone(customer.getMobile());
+        contact.setEnable(true);
+        contact.setOrganizationId(orgId);
+        contact.setCreateUser(userId);
+        contact.setCreateTime(System.currentTimeMillis());
+        contact.setUpdateUser(userId);
+        contact.setUpdateTime(System.currentTimeMillis());
+
+        customerContactMapper.insert(contact);
+        baseService.handleAddLog(contact, null);
     }
 
     @OperationLog(module = LogModule.CUSTOMER_INDEX, type = LogType.UPDATE, resourceId = "{#request.id}")

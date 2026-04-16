@@ -4,6 +4,7 @@ import cn.cordys.common.constants.InternalRole;
 import cn.cordys.common.dto.BaseTreeNode;
 import cn.cordys.common.util.Translator;
 import cn.cordys.crm.system.constants.ScopeKey;
+import cn.cordys.crm.system.domain.Department;
 import cn.cordys.crm.system.domain.OrganizationUser;
 import cn.cordys.crm.system.domain.User;
 import cn.cordys.crm.system.domain.UserRole;
@@ -38,6 +39,11 @@ public class UserExtendService {
     private BaseMapper<UserRole> userRoleMapper;
     @Resource
     private BaseMapper<User> userMapper;
+
+    public String getDefaultTopDepartmentScope(String orgId) {
+        Department topDepartment = departmentService.getTopDepartment(orgId);
+        return topDepartment != null ? topDepartment.getId() : null;
+    }
 
     /**
      * 获取范围的所有负责人ID

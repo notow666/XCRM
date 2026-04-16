@@ -297,10 +297,12 @@
   {
     "id": "OPPORTUNITY_MANAGEMENT",
     "name": "permission.opportunity_management.name",
+    "display": false,
     "children": [
       {
         "id": "OPPORTUNITY_MANAGEMENT_OPPORTUNITY",
         "name": "permission.opportunity_management.opportunity.name",
+        "display": false,
         "permissions": [
           {
             "id": "OPPORTUNITY_MANAGEMENT:READ"
@@ -449,10 +451,12 @@
     "id": "PERSONAL_INFO",
     "name": "permission.personal_info.name",
     "license": false,
+    "display": false,
     "children": [
       {
         "id": "API_KEY",
         "name": "permission.api_key.name",
+        "display": false,
         "permissions": [
           {
             "id": "PERSONAL_API_KEY:READ",

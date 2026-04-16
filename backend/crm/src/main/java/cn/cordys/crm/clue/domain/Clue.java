@@ -65,4 +65,9 @@ public class Clue extends BaseModel {
 
     @Schema(description = "线索池原因ID")
     private String reasonId;
+
+    public void setName(String name) {
+        this.name = name;
+        this.contact = this.name;
+    }
 }

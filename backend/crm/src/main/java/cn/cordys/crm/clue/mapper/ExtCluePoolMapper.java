@@ -3,6 +3,7 @@ package cn.cordys.crm.clue.mapper;
 import cn.cordys.common.dto.BasePageRequest;
 import cn.cordys.crm.clue.domain.CluePool;
 import cn.cordys.crm.clue.domain.CluePoolPickRule;
+import cn.cordys.crm.clue.domain.CluePoolDistributeRule;
 import cn.cordys.crm.clue.domain.CluePoolRecycleRule;
 import cn.cordys.crm.clue.dto.CluePoolDTO;
 import org.apache.ibatis.annotations.Param;
@@ -34,6 +35,13 @@ public interface ExtCluePoolMapper {
      * @param rule 回收规则
      */
     void updateRecycleRule(@Param("rule") CluePoolRecycleRule rule);
+
+    /**
+     * 更新线索池分发规则
+     *
+     * @param rule 分发规则
+     */
+    void updateDistributeRule(@Param("rule") CluePoolDistributeRule rule);
 
     /**
      * 获取公海池集合

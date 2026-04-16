@@ -26,6 +26,12 @@
         where pool_id = #{rule.poolId}
     </update>
 
+    <update id="updateDistributeRule" parameterType="cn.cordys.crm.clue.domain.CluePoolDistributeRule">
+        update clue_pool_distribute_rule set customer_pool_id = #{rule.customerPoolId}, operator = #{rule.operator}, `condition` = #{rule.condition},
+                                             update_user = #{rule.updateUser}, update_time = #{rule.updateTime}
+        where clue_pool_id = #{rule.cluePoolId}
+    </update>
+
     <select id="getAllPool" resultType="cn.cordys.crm.clue.domain.CluePool">
         select * from clue_pool where organization_id = #{orgId} and enable = true order by create_time desc
     </select>

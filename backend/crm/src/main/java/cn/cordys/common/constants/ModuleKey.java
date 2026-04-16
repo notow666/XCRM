@@ -8,31 +8,37 @@ public enum ModuleKey {
     /**
      * 首页
      */
-    HOME("home"),
+    HOME("home", true, 1),
     /**
      * 线索管理
      */
-    CLUE("clue"),
+    CLUE("clue", true, 2),
     /**
      * 客户管理
      */
-    CUSTOMER("customer"),
+    CUSTOMER("customer", true, 3),
     /**
      * 商机管理
      */
-    BUSINESS("business"),
+    BUSINESS("business", false, 5),
     /**
      * 产品管理
      */
-    PRODUCT("product"),
+    PRODUCT("product", false, 6),
     /**
      * 系统设置
      */
-    SETTING("setting");
+    SETTING("setting", true, 99);
 
     private final String key;
 
-    ModuleKey(String key) {
+    private final boolean enable;
+
+    private final long pos;
+
+    ModuleKey(String key, boolean enable, long pos) {
         this.key = key;
+        this.enable = enable;
+        this.pos = pos;
     }
 }

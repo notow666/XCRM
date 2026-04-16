@@ -60,7 +60,7 @@
               </n-tooltip>
 
               <n-tooltip
-                v-if="!item.businessKey || item.resourceFieldId"
+                v-if="item.deletable && (!item.businessKey || item.resourceFieldId)"
                 :delay="300"
                 :show-arrow="false"
                 class="crm-form-design--composition-item-tools-tip"

@@ -19,7 +19,11 @@ public final class LogType {
      */
     public static final String UPDATE = "UPDATE";
     /**
-     * 移入公海
+     * 移入线索池
+     */
+    public static final String MOVE_TO_CLUE_POOL = "MOVE_TO_CLUE_POOL";
+    /**
+     * 移入公海池
      */
     public static final String MOVE_TO_CUSTOMER_POOL = "MOVE_TO_CUSTOMER_POOL";
     /**

@@ -127,6 +127,12 @@
           AND parent_id = 'NONE'
     </select>
 
+    <select id="getTopDepartment" resultType="cn.cordys.crm.system.domain.Department">
+        SELECT *
+        FROM sys_department
+        WHERE organization_id = #{orgId}
+          AND parent_id = 'NONE'
+    </select>
 
     <update id="updateDepartment" parameterType="cn.cordys.crm.system.domain.Department">
         update sys_department

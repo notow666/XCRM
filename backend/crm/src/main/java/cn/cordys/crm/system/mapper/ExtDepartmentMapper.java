@@ -43,6 +43,7 @@ public interface ExtDepartmentMapper {
     void batchUpdate(@Param("departmentList") List<Department> departmentList);
 
     Department getInternalDepartment(@Param("orgId") String orgId, @Param("resource") String resource);
+    Department getTopDepartment(@Param("orgId") String orgId);
 
     void updateDepartment(@Param("department") Department department);
 

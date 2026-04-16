@@ -94,6 +94,13 @@ public class ClueController {
         return clueService.add(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
+    @PostMapping("/push")
+    @RequiresPermissions(PermissionConstants.CLUE_MANAGEMENT_ADD)
+    @Operation(summary = "线索推送进线索池")
+    public void push(@Validated @RequestBody CluePushRequest request) {
+        clueService.push(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
     @PostMapping("/update")
     @RequiresPermissions(PermissionConstants.CLUE_MANAGEMENT_UPDATE)
     @Operation(summary = "更新线索")

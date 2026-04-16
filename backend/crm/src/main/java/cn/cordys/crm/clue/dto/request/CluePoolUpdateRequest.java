@@ -1,6 +1,7 @@
 package cn.cordys.crm.clue.dto.request;
 
 import cn.cordys.crm.clue.dto.CluePoolPickRuleDTO;
+import cn.cordys.crm.clue.dto.CluePoolDistributeRuleDTO;
 import cn.cordys.crm.clue.dto.CluePoolRecycleRuleDTO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
@@ -40,11 +41,18 @@ public class CluePoolUpdateRequest {
     @Schema(description = "自动回收")
     private Boolean auto;
 
+    @NotNull
+    @Schema(description = "自动分发到公海")
+    private Boolean distribute;
+
     @Schema(description = "领取规则")
     private CluePoolPickRuleDTO pickRule;
 
     @Schema(description = "回收规则")
     private CluePoolRecycleRuleDTO recycleRule;
+
+    @Schema(description = "分发规则")
+    private CluePoolDistributeRuleDTO distributeRule;
 
     @Schema(description = "隐藏字段ID集合")
     private Set<@NotBlank String> hiddenFieldIds;

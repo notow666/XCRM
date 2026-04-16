@@ -369,10 +369,10 @@
       key: ModuleConfigEnum.CLUE_MANAGEMENT,
       icon: 'iconicon_clue',
       groupList: [
-        {
-          label: t('module.clueFormSetting'),
-          key: 'newForm',
-        },
+        // {
+        //   label: t('module.clueFormSetting'),
+        //   key: 'newForm',
+        // },
         {
           label: t('module.clue.cluePool'),
           key: 'cluePool',
@@ -398,10 +398,10 @@
           label: t('module.customerFormSetting'),
           key: 'newForm',
         },
-        {
-          label: t('module.newContactForm'),
-          key: 'newContactForm',
-        },
+        // {
+        //   label: t('module.newContactForm'),
+        //   key: 'newContactForm',
+        // },
         {
           label: t('module.customer.openSea'),
           key: 'openSea',

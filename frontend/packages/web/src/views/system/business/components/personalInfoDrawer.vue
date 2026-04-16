@@ -97,6 +97,7 @@
 <script setup lang="ts">
   import { ref } from 'vue';
   import { NButton, NP, NScrollbar, NTag, TabPaneProps } from 'naive-ui';
+  import axios from 'axios';
 
   import { PersonalEnum } from '@lib/shared/enums/systemEnum';
   import { useI18n } from '@lib/shared/hooks/useI18n';
@@ -167,7 +168,15 @@
 
   async function searchData() {
     if (activeTab.value === PersonalEnum.INFO) {
-      personalInfo.value = await getPersonalInfo();
+      try {
+        personalInfo.value = await getPersonalInfo();
+      } catch (error: any) {
+        // Rapid tab/visibility changes may cancel duplicated in-flight requests.
+        if (axios.isCancel(error) || error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') {
+          return;
+        }
+        throw error;
+      }
     }
   }
   function edit() {

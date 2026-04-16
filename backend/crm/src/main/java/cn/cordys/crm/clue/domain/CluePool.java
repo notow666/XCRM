@@ -26,4 +26,7 @@ public class CluePool extends BaseModel {
 
     @Schema(description = "自动回收")
     private Boolean auto;
+
+    @Schema(description = "自动分发")
+    private Boolean distribute;
 }

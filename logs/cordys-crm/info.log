@@ -1,177 +1,310 @@
-2026-04-08 09:21:28.739 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 17456 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
-2026-04-08 09:21:28.739 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
-2026-04-08 09:21:38.482 [] [] [] INFO  cn.cordys.Application - Started Application in 10.255 seconds (process running for 11.351)
-2026-04-08 09:21:38.485 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
-2026-04-08 09:21:38.492 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
-2026-04-08 09:21:38.811 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
-2026-04-08 09:21:38.811 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
-2026-04-08 09:21:38.812 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
-2026-04-08 09:21:38.881 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=4, hostName=240e:398:3e0:d500:a852:b033:c2:4451, port=1775611298824-1496007044, type=2, launchDate=1775611298827, modified=1775611298827, created=1775611298827)
-2026-04-08 09:21:38.882 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=4
-2026-04-08 09:21:38.882 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
-2026-04-08 09:21:38.902 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
-2026-04-08 09:21:38.902 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
-2026-04-08 09:21:38.933 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
-2026-04-08 09:21:38.993 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
-2026-04-08 09:21:39.002 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
-2026-04-08 09:21:39.007 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
-2026-04-08 09:22:38.669 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 09:22:38.706 [] [] [] INFO  c.c.c.i.d.s.DataEaseSyncService - 定时同步DataEase数据，tenantId=default, 组织ID=100001
-2026-04-08 09:22:38.794 [] [] [] INFO  c.c.crm.system.job.TaskCleanupJob - 执行清理任务，tenantId=default
-2026-04-08 09:22:38.794 [] [] [] INFO  c.c.crm.system.job.TaskCleanupJob - 开始执行所有清理任务
-2026-04-08 09:22:38.817 [] [] [] INFO  cn.cordys.crm.system.job.SessionJob - 用户会话统计: {}
-2026-04-08 09:22:38.818 [] [] [] INFO  c.c.c.s.j.l.CleanTempResourceListener - 开始清理临时目录资源
-2026-04-08 09:22:38.832 [] [] [] INFO  c.c.c.s.j.l.CleanTempResourceListener - 临时目录资源清理完成
-2026-04-08 09:22:38.832 [] [] [] INFO  c.c.c.s.j.l.CluePoolRecycleListener - 开始回收线索资源
-2026-04-08 09:22:38.838 [] [] [] INFO  c.c.c.s.j.l.CluePoolRecycleListener - 没有启用的自动回收线索池，回收任务结束
-2026-04-08 09:22:38.838 [] [] [] INFO  c.c.c.s.j.l.CustomerPoolRecycleListener - 开始回收客户资源
-2026-04-08 09:22:38.843 [] [] [] INFO  c.c.c.s.j.l.CustomerPoolRecycleListener - 没有启用的自动回收公海，回收任务结束
-2026-04-08 09:22:38.843 [] [] [] INFO  c.c.c.s.j.l.FollowUpPlanRemindListener - 跟进计划到期提醒
-2026-04-08 09:22:38.843 [] [] [] INFO  c.c.c.s.j.l.FollowUpPlanRemindListener - 跟进计划到期提醒完成
-2026-04-08 09:22:38.843 [] [] [] INFO  c.c.c.s.j.l.OpportunityRuleListener - 开始回收商机资源
-2026-04-08 09:22:38.858 [] [] [] INFO  c.c.c.s.j.l.OpportunityRuleListener - 没有启用的自动回收商机规则，回收任务结束
-2026-04-08 09:22:38.858 [] [] [] INFO  c.c.crm.system.job.TaskCleanupJob - 所有清理任务执行完成
-2026-04-08 09:22:38.860 [] [] [] INFO  c.c.crm.system.job.NoticeExpireJob - 执行到期提醒任务，tenantId=default
-2026-04-08 09:22:38.860 [] [] [] INFO  c.c.crm.system.job.NoticeExpireJob - 商机报价单即将到期提醒
-2026-04-08 09:22:38.893 [] [] [] INFO  c.c.crm.system.job.NoticeExpireJob - 组织100001无即将到期商机报价单，时间范围1775923200000-1775836800000
-2026-04-08 09:22:38.893 [] [] [] INFO  c.c.crm.system.job.NoticeExpireJob - 组织100001商机报价单即将到期提醒发送通知成功
-2026-04-08 09:22:38.893 [] [] [] INFO  c.c.crm.system.job.NoticeExpireJob - 商机报价单到期提醒
-2026-04-08 09:22:38.903 [] [] [] INFO  c.c.crm.system.job.NoticeExpireJob - 组织100001无到期商机报价单
-2026-04-08 09:22:38.903 [] [] [] INFO  c.c.crm.system.job.NoticeExpireJob - 回款计划即将到期提醒
-2026-04-08 09:22:38.910 [] [] [] INFO  c.c.crm.system.job.NoticeExpireJob - 组织100001无即将到期回款计划,时间范围1775923200000-1775836800000
-2026-04-08 09:22:38.910 [] [] [] INFO  c.c.crm.system.job.NoticeExpireJob - 组织100001即将到期回款计划提醒完成
-2026-04-08 09:22:38.910 [] [] [] INFO  c.c.crm.system.job.NoticeExpireJob - 回款计划到期提醒
-2026-04-08 09:22:38.927 [] [] [] INFO  c.c.crm.system.job.NoticeExpireJob - 组织100001无到期回款计划
-2026-04-08 09:22:38.927 [] [] [] INFO  c.c.crm.system.job.NoticeExpireJob - 合同即将到期提醒
-2026-04-08 09:22:38.947 [] [] [] INFO  c.c.crm.system.job.NoticeExpireJob - 组织100001无即将到期合同，时间范围1775923200000-1775836800000
-2026-04-08 09:22:38.951 [] [] [] INFO  c.c.crm.system.job.NoticeExpireJob - 组织100001合同即将到期提醒发送通知成功
-2026-04-08 09:22:38.953 [] [] [] INFO  c.c.crm.system.job.NoticeExpireJob - 合同到期提醒
-2026-04-08 09:22:38.965 [] [] [] INFO  c.c.crm.system.job.NoticeExpireJob - 组织100001无到期合同
-2026-04-08 09:22:39.024 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
-2026-04-08 09:23:18.810 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
-2026-04-08 09:23:18.810 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - User ID or Client ID is blank, cannot add client.
-2026-04-08 09:25:00.023 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 09:28:39.011 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
-2026-04-08 09:30:00.030 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 09:32:30.066 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
-2026-04-08 11:35:06.767 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 19148 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
-2026-04-08 11:35:06.768 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
-2026-04-08 11:37:13.595 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 21140 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
-2026-04-08 11:37:13.595 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
-2026-04-08 11:37:22.573 [] [] [] INFO  cn.cordys.Application - Started Application in 9.437 seconds (process running for 9.975)
-2026-04-08 11:37:22.576 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
-2026-04-08 11:37:22.580 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
-2026-04-08 11:37:22.745 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
-2026-04-08 11:37:22.745 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
-2026-04-08 11:37:22.746 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
-2026-04-08 11:37:22.817 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=5, hostName=240e:398:3e0:d500:a852:b033:c2:4451, port=1775619442758-37330386, type=2, launchDate=1775619442760, modified=1775619442760, created=1775619442760)
-2026-04-08 11:37:22.818 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=5
-2026-04-08 11:37:22.818 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
-2026-04-08 11:37:22.837 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
-2026-04-08 11:37:22.837 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
-2026-04-08 11:37:22.863 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
-2026-04-08 11:37:22.911 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
-2026-04-08 11:37:22.915 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
-2026-04-08 11:37:22.918 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
-2026-04-08 11:38:22.676 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 11:38:22.760 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
-2026-04-08 11:40:00.100 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 11:40:57.371 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Shutdown UID Generator...
-2026-04-08 11:42:54.788 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 21508 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
-2026-04-08 11:42:54.788 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
-2026-04-08 11:43:03.611 [] [] [] INFO  cn.cordys.Application - Started Application in 9.28 seconds (process running for 9.873)
-2026-04-08 11:43:03.614 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
-2026-04-08 11:43:03.617 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
-2026-04-08 11:43:03.703 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
-2026-04-08 11:43:03.703 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
-2026-04-08 11:43:03.703 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
-2026-04-08 11:43:03.817 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=6, hostName=240e:398:3e0:d500:a852:b033:c2:4451, port=1775619783713-1191163185, type=2, launchDate=1775619783715, modified=1775619783715, created=1775619783715)
-2026-04-08 11:43:03.818 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=6
-2026-04-08 11:43:03.818 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
-2026-04-08 11:43:03.835 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
-2026-04-08 11:43:03.836 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
-2026-04-08 11:43:03.864 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
-2026-04-08 11:43:03.918 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
-2026-04-08 11:43:03.922 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
-2026-04-08 11:43:03.926 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
-2026-04-08 11:44:03.928 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
-2026-04-08 11:45:00.130 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 11:45:16.831 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
-2026-04-08 11:45:34.847 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
-2026-04-08 12:08:56.034 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 20228 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
-2026-04-08 12:08:56.034 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
-2026-04-08 12:09:04.174 [] [] [] INFO  cn.cordys.Application - Started Application in 8.615 seconds (process running for 9.186)
-2026-04-08 12:09:04.177 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
-2026-04-08 12:09:04.181 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
-2026-04-08 12:09:04.402 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
-2026-04-08 12:09:04.402 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
-2026-04-08 12:09:04.403 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
-2026-04-08 12:09:04.470 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=7, hostName=240e:398:3e0:d500:a852:b033:c2:4451, port=1775621344415-1099413435, type=2, launchDate=1775621344418, modified=1775621344418, created=1775621344418)
-2026-04-08 12:09:04.471 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=7
-2026-04-08 12:09:04.471 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
-2026-04-08 12:09:04.486 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
-2026-04-08 12:09:04.487 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
-2026-04-08 12:09:04.510 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
-2026-04-08 12:09:04.557 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
-2026-04-08 12:09:04.561 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
-2026-04-08 12:09:04.566 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
-2026-04-08 12:10:04.327 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 12:10:04.412 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
-2026-04-08 12:10:04.938 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 12:10:18.098 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
-2026-04-08 12:10:30.176 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
-2026-04-08 12:12:15.629 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
-2026-04-08 12:15:00.063 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 12:16:59.359 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
-2026-04-08 12:20:00.027 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 12:23:20.262 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 1 
-2026-04-08 12:25:00.089 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 12:29:29.594 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 18380 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
-2026-04-08 12:29:29.595 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
-2026-04-08 12:29:37.715 [] [] [] INFO  cn.cordys.Application - Started Application in 8.58 seconds (process running for 9.103)
-2026-04-08 12:29:37.718 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
-2026-04-08 12:29:37.721 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
-2026-04-08 12:29:37.897 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
-2026-04-08 12:29:37.898 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
-2026-04-08 12:29:37.898 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
-2026-04-08 12:29:37.971 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=8, hostName=240e:398:3e0:d500:a852:b033:c2:4451, port=1775622577911-1483510509, type=2, launchDate=1775622577914, modified=1775622577914, created=1775622577914)
-2026-04-08 12:29:37.973 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=8
-2026-04-08 12:29:37.973 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
-2026-04-08 12:29:37.992 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
-2026-04-08 12:29:37.992 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
-2026-04-08 12:29:38.018 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
-2026-04-08 12:29:38.065 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
-2026-04-08 12:29:38.069 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
-2026-04-08 12:29:38.074 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
-2026-04-08 12:29:51.657 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
-2026-04-08 12:30:37.874 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 12:30:37.904 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
-2026-04-08 12:30:38.388 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 12:31:01.115 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
-2026-04-08 12:35:00.028 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 12:36:00.922 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
-2026-04-08 13:38:26.588 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 20576 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
-2026-04-08 13:38:26.589 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
-2026-04-08 13:38:35.010 [] [] [] INFO  cn.cordys.Application - Started Application in 8.943 seconds (process running for 9.561)
-2026-04-08 13:38:35.013 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
-2026-04-08 13:38:35.016 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
-2026-04-08 13:38:35.103 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
-2026-04-08 13:38:35.103 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
-2026-04-08 13:38:35.103 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
-2026-04-08 13:38:35.188 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=9, hostName=240e:398:3e0:d500:a852:b033:c2:4451, port=1775626715113-1915711383, type=2, launchDate=1775626715115, modified=1775626715115, created=1775626715115)
-2026-04-08 13:38:35.189 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=9
-2026-04-08 13:38:35.189 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
-2026-04-08 13:38:35.211 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
-2026-04-08 13:38:35.212 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
-2026-04-08 13:38:35.242 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
-2026-04-08 13:38:35.306 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
-2026-04-08 13:38:35.311 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
-2026-04-08 13:38:35.315 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
-2026-04-08 13:39:35.191 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 13:39:35.331 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
-2026-04-08 13:40:00.034 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 13:41:45.777 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
-2026-04-08 13:45:00.025 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 13:50:00.023 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 13:55:00.024 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
-2026-04-08 14:00:00.022 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 09:04:08.940 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 17248 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-15 09:04:08.941 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 09:04:20.544 [] [] [] INFO  cn.cordys.Application - Started Application in 12.387 seconds (process running for 13.747)
+2026-04-15 09:04:20.548 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
+2026-04-15 09:04:20.553 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-15 09:05:02.731 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
+2026-04-15 09:05:02.731 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
+2026-04-15 09:05:02.731 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
+2026-04-15 09:05:02.803 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=1, hostName=240e:398:3e0:d500:a51e:8d3e:dc98:7b5f, port=1776215102744-993319646, type=2, launchDate=1776215102747, modified=1776215102747, created=1776215102747)
+2026-04-15 09:05:02.804 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=1
+2026-04-15 09:05:02.804 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
+2026-04-15 09:05:02.823 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
+2026-04-15 09:05:02.823 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
+2026-04-15 09:05:02.850 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
+2026-04-15 09:05:04.099 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
+2026-04-15 09:05:04.101 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
+2026-04-15 09:05:04.105 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
+2026-04-15 09:06:04.114 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
+2026-04-15 09:06:20.631 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 09:07:44.322 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 09:07:44.322 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - User ID or Client ID is blank, cannot add client.
+2026-04-15 09:07:56.746 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 09:09:46.775 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 09:10:00.041 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 10:24:11.891 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 1032 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-15 10:24:11.892 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 10:24:21.418 [] [] [] INFO  cn.cordys.Application - Started Application in 10.171 seconds (process running for 10.85)
+2026-04-15 10:24:21.422 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
+2026-04-15 10:24:21.427 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-15 10:24:21.549 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
+2026-04-15 10:24:21.549 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
+2026-04-15 10:24:21.549 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
+2026-04-15 10:24:21.694 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=2, hostName=240e:398:3e0:d500:a51e:8d3e:dc98:7b5f, port=1776219861565-576363340, type=2, launchDate=1776219861568, modified=1776219861568, created=1776219861568)
+2026-04-15 10:24:21.696 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=2
+2026-04-15 10:24:21.696 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
+2026-04-15 10:24:21.718 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
+2026-04-15 10:24:21.718 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
+2026-04-15 10:24:21.753 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
+2026-04-15 10:24:21.850 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
+2026-04-15 10:24:21.857 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
+2026-04-15 10:24:21.864 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
+2026-04-15 10:24:59.460 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 10:25:21.547 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 10:25:21.867 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
+2026-04-15 10:25:22.558 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 10:28:47.154 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 10:30:00.091 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 10:34:26.120 [348404869423439873] [default] [admin] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-15 10:34:26.120 [348404869423439873] [default] [admin] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-15 10:35:00.071 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 10:35:21.170 [348405350459777024] [default] [admin] INFO  c.c.c.s.n.s.i.InSiteNoticeSender - 系统内没有接收者
+2026-04-15 10:37:19.234 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 10:37:34.893 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 10:40:59.902 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 19116 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-15 10:40:59.903 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 10:41:10.268 [] [] [] INFO  cn.cordys.Application - Started Application in 10.828 seconds (process running for 11.408)
+2026-04-15 10:41:10.271 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
+2026-04-15 10:41:10.274 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-15 10:41:37.471 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 10:41:54.796 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
+2026-04-15 10:41:54.797 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
+2026-04-15 10:41:54.797 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
+2026-04-15 10:41:54.868 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=1, hostName=240e:398:3e0:d500:a51e:8d3e:dc98:7b5f, port=1776220914807-392862373, type=2, launchDate=1776220914809, modified=1776220914809, created=1776220914809)
+2026-04-15 10:41:54.869 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=1
+2026-04-15 10:41:54.869 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
+2026-04-15 10:41:54.885 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
+2026-04-15 10:41:54.885 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
+2026-04-15 10:41:54.915 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
+2026-04-15 10:41:56.152 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
+2026-04-15 10:41:56.154 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
+2026-04-15 10:41:56.158 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
+2026-04-15 10:42:37.557 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Shutdown UID Generator...
+2026-04-15 10:42:59.026 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 14964 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-15 10:42:59.027 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 10:43:08.492 [] [] [] INFO  cn.cordys.Application - Started Application in 9.931 seconds (process running for 10.438)
+2026-04-15 10:43:08.494 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
+2026-04-15 10:43:08.498 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-15 10:43:52.105 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
+2026-04-15 10:43:52.105 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
+2026-04-15 10:43:52.105 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
+2026-04-15 10:43:52.159 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=1, hostName=240e:398:3e0:d500:a51e:8d3e:dc98:7b5f, port=1776221032115-2120850650, type=2, launchDate=1776221032117, modified=1776221032117, created=1776221032117)
+2026-04-15 10:43:52.160 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=1
+2026-04-15 10:43:52.160 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
+2026-04-15 10:43:52.178 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
+2026-04-15 10:43:52.178 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
+2026-04-15 10:43:52.206 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
+2026-04-15 10:43:53.479 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
+2026-04-15 10:43:53.482 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
+2026-04-15 10:43:53.486 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
+2026-04-15 10:44:53.499 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
+2026-04-15 10:45:00.033 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 10:45:29.411 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 10:45:49.221 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 10:50:00.110 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 10:55:00.113 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 11:00:00.048 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 11:05:00.286 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 11:10:16.872 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 15708 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-15 11:10:16.872 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 11:10:25.056 [] [] [] INFO  cn.cordys.Application - Started Application in 8.791 seconds (process running for 9.39)
+2026-04-15 11:10:25.060 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
+2026-04-15 11:10:25.064 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-15 11:10:25.161 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
+2026-04-15 11:10:25.161 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
+2026-04-15 11:10:25.162 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
+2026-04-15 11:10:25.326 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=2, hostName=240e:398:3e0:d500:a51e:8d3e:dc98:7b5f, port=1776222625172-313676753, type=2, launchDate=1776222625175, modified=1776222625175, created=1776222625175)
+2026-04-15 11:10:25.327 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=2
+2026-04-15 11:10:25.327 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
+2026-04-15 11:10:25.344 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
+2026-04-15 11:10:25.344 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
+2026-04-15 11:10:25.370 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
+2026-04-15 11:10:25.425 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
+2026-04-15 11:10:25.429 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
+2026-04-15 11:10:25.434 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
+2026-04-15 11:11:25.168 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 11:11:25.439 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
+2026-04-15 11:15:00.028 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 11:20:00.027 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 11:25:00.022 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 11:30:00.078 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 11:35:00.051 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 11:38:10.434 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 11:40:00.074 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 11:45:00.047 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 11:45:49.145 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 11:50:00.080 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 11:51:01.702 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 11:53:24.508 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 15364 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-15 11:53:24.508 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 11:53:32.605 [] [] [] INFO  cn.cordys.Application - Started Application in 8.537 seconds (process running for 9.001)
+2026-04-15 11:53:32.608 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
+2026-04-15 11:53:32.611 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-15 11:53:32.711 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
+2026-04-15 11:53:32.711 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
+2026-04-15 11:53:32.712 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
+2026-04-15 11:53:32.765 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=3, hostName=240e:398:3e0:d500:a51e:8d3e:dc98:7b5f, port=1776225212722-2123650977, type=2, launchDate=1776225212724, modified=1776225212724, created=1776225212724)
+2026-04-15 11:53:32.766 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=3
+2026-04-15 11:53:32.766 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
+2026-04-15 11:53:32.783 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
+2026-04-15 11:53:32.783 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
+2026-04-15 11:53:32.811 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
+2026-04-15 11:53:32.878 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
+2026-04-15 11:53:32.883 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
+2026-04-15 11:53:32.889 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
+2026-04-15 11:54:32.718 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
+2026-04-15 11:54:42.421 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 11:55:00.052 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 11:56:20.196 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 8792 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-15 11:56:20.196 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 11:56:28.418 [] [] [] INFO  cn.cordys.Application - Started Application in 8.674 seconds (process running for 9.164)
+2026-04-15 11:56:28.421 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
+2026-04-15 11:56:28.425 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-15 11:56:28.522 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
+2026-04-15 11:56:28.522 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
+2026-04-15 11:56:28.522 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
+2026-04-15 11:56:28.664 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=4, hostName=240e:398:3e0:d500:a51e:8d3e:dc98:7b5f, port=1776225388532-1982369254, type=2, launchDate=1776225388534, modified=1776225388534, created=1776225388534)
+2026-04-15 11:56:28.665 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=4
+2026-04-15 11:56:28.665 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
+2026-04-15 11:56:28.685 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
+2026-04-15 11:56:28.685 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
+2026-04-15 11:56:28.710 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
+2026-04-15 11:56:28.759 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
+2026-04-15 11:56:28.763 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
+2026-04-15 11:56:28.768 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
+2026-04-15 11:57:28.538 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
+2026-04-15 11:57:59.531 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 12:00:00.068 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 12:05:00.053 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 12:10:00.057 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 12:15:00.106 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 12:20:00.057 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 12:25:00.030 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 12:30:00.052 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 12:35:00.043 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 12:40:00.028 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 12:45:00.042 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 12:50:00.051 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 12:55:00.041 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 13:00:00.027 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 13:05:00.044 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 13:10:00.038 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 13:15:00.044 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 13:20:00.044 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 13:25:00.042 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 13:30:00.024 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 13:35:00.030 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 13:40:00.027 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 13:45:00.027 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 13:50:00.647 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 13:52:33.323 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 13:54:10.064 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 13:55:00.095 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 13:59:42.202 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 14:00:00.078 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 14:05:00.099 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 14:10:00.623 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 14:15:00.048 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 14:20:00.067 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 14:20:00.485 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 14:25:00.107 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 14:27:27.404 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 14:30:00.060 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 14:35:00.066 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 14:40:00.075 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 14:45:00.100 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 14:50:00.080 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 14:55:00.041 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 15:00:00.080 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 15:05:00.081 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 15:10:00.028 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 15:15:00.018 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 15:20:00.066 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 15:21:20.834 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 15:25:00.080 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 15:30:00.015 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 15:31:32.768 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 12320 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-15 15:31:32.768 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 15:31:39.837 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 1096 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-15 15:31:39.838 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 15:32:50.691 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 22412 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-15 15:32:50.692 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 15:32:59.016 [] [] [] INFO  cn.cordys.Application - Started Application in 8.9 seconds (process running for 9.521)
+2026-04-15 15:32:59.019 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
+2026-04-15 15:32:59.023 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-15 15:32:59.129 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate done, tenantId=default
+2026-04-15 15:32:59.129 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
+2026-04-15 15:32:59.130 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
+2026-04-15 15:32:59.231 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=5, hostName=240e:398:3e0:d500:a51e:8d3e:dc98:7b5f, port=1776238379142-1954468193, type=2, launchDate=1776238379144, modified=1776238379144, created=1776238379144)
+2026-04-15 15:32:59.233 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=5
+2026-04-15 15:32:59.233 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
+2026-04-15 15:32:59.253 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
+2026-04-15 15:32:59.253 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
+2026-04-15 15:32:59.285 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
+2026-04-15 15:32:59.345 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
+2026-04-15 15:32:59.350 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
+2026-04-15 15:32:59.357 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
+2026-04-15 15:33:19.962 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 15:33:59.138 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
+2026-04-15 15:35:00.032 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 15:40:00.026 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 15:45:00.015 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 15:50:00.028 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 15:55:00.017 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 16:00:00.017 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 16:05:00.138 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 16:10:00.023 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 16:15:00.533 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 16:20:00.021 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 16:25:00.012 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 16:30:00.074 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 16:35:00.074 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 16:40:00.080 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 16:45:00.057 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 16:50:00.086 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 16:55:00.046 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 16:59:55.096 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 17:00:00.129 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 17:01:00.286 [] [] [] INFO  c.c.crm.system.notice.sse.SseService - 当前在线用户数: 0 
+2026-04-15 17:05:00.634 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-15 17:10:00.051 [] [] [] INFO  c.cordys.crm.system.job.NotifyOnJob - 执行公告通知定时任务，tenantId=default
+2026-04-16 10:43:15.894 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 14956 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-16 10:43:15.895 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-16 10:43:20.891 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Shutdown UID Generator...
+2026-04-16 10:44:17.986 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 404 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-16 10:44:17.987 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-16 10:44:26.463 [] [] [] INFO  cn.cordys.Application - Started Application in 8.914 seconds (process running for 9.408)
+2026-04-16 10:44:26.466 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
+2026-04-16 10:44:26.473 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-16 10:44:26.557 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
+2026-04-16 10:44:26.557 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
+2026-04-16 10:44:26.727 [] [] [] INFO  c.c.c.s.s.DisposableWorkerIdAssigner - Add worker node:WorkerNode(id=6, hostName=240e:398:3e0:d500:cc49:9fe2:a7d3:174d, port=1776307466568-1296199011, type=2, launchDate=1776307466570, modified=1776307466570, created=1776307466570)
+2026-04-16 10:44:26.728 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=6
+2026-04-16 10:44:26.728 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
+2026-04-16 10:44:26.751 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
+2026-04-16 10:44:26.751 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
+2026-04-16 10:44:26.792 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化默认组织数据，tenantId=default
+2026-04-16 10:44:26.858 [] [] [] INFO  cn.cordys.listener.AppListener - 停止导出任务，tenantId=default
+2026-04-16 10:44:26.866 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
+2026-04-16 10:44:26.870 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
+2026-04-16 10:45:14.857 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Shutdown UID Generator...
+2026-04-16 10:48:15.799 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 18744 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-16 10:48:15.799 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-16 10:48:25.630 [] [] [] INFO  cn.cordys.Application - Started Application in 10.281 seconds (process running for 10.851)
+2026-04-16 10:48:25.633 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
+2026-04-16 10:48:25.636 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-16 10:48:25.907 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
+2026-04-16 10:48:25.907 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
+2026-04-16 10:48:26.371 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=1
+2026-04-16 10:48:26.372 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
+2026-04-16 10:48:26.390 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
+2026-04-16 10:48:26.390 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
+2026-04-16 10:48:26.416 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
+2026-04-16 10:48:26.420 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
+2026-04-16 10:49:26.424 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
+2026-04-16 10:49:29.369 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Shutdown UID Generator...
+2026-04-16 10:52:53.145 [] [] [] INFO  cn.cordys.Application - Starting Application using Java 21 with PID 2476 (D:\workSpace\CordysCRM\backend\app\target\classes started by admin in D:\workSpace\CordysCRM)
+2026-04-16 10:52:53.146 [] [] [] INFO  cn.cordys.Application - No active profile set, falling back to 1 default profile: "default"
+2026-04-16 10:53:02.896 [] [] [] INFO  cn.cordys.Application - Started Application in 10.2 seconds (process running for 10.681)
+2026-04-16 10:53:02.899 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap start (order=-2147483648)
+2026-04-16 10:53:02.902 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - Tenant schema migrate start, tenantId=default, jdbcUrl=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+2026-04-16 10:53:03.199 [] [] [] INFO  c.c.config.TenantDataSourceBootstrap - TenantDataSourceBootstrap done
+2026-04-16 10:53:03.199 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 开始初始化配置 =====
+2026-04-16 10:53:03.700 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Initialized UID Generator: epoch=2025-01-01, bits=(time:30, worker:21, seq:12), workerId=1
+2026-04-16 10:53:03.700 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化RSA配置
+2026-04-16 10:53:03.720 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化租户业务配置，tenantId=default
+2026-04-16 10:53:03.721 [] [] [] INFO  cn.cordys.listener.AppListener - 初始化定时任务，tenantId=default
+2026-04-16 10:53:03.758 [] [] [] INFO  cn.cordys.listener.AppListener - 清理表单缓存
+2026-04-16 10:53:03.766 [] [] [] INFO  cn.cordys.listener.AppListener - ===== 完成初始化配置 =====
+2026-04-16 10:54:03.781 [] [] [] INFO  cn.cordys.quartz.SchedulerStarter - reschedule all jobs...
+2026-04-16 10:57:42.614 [] [] [] INFO  c.c.c.uid.impl.DefaultUidGenerator - Shutdown UID Generator...

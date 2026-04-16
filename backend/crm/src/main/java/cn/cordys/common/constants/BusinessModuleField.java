@@ -30,7 +30,7 @@ public enum BusinessModuleField {
     /**
      * 负责人
      */
-    CUSTOMER_OWNER("customerOwner", "owner", Set.of("rules.required", "mobile", "readable"), FormKey.CUSTOMER.getKey()),
+    CUSTOMER_OWNER("customerOwner", "owner", Set.of("rules.required", "mobile", "readable", "editable", "hasCurrentUser"), FormKey.CUSTOMER.getKey()),
     /**
      * 客户阶段
      */
@@ -49,7 +49,7 @@ public enum BusinessModuleField {
     /**
      * 负责人
      */
-    CLUE_OWNER("clueOwner", "owner", Set.of("rules.required", "mobile", "readable"), FormKey.CLUE.getKey()),
+    CLUE_OWNER("clueOwner", "owner", Set.of("rules.required", "mobile", "readable", "editable", "hasCurrentUser"), FormKey.CLUE.getKey()),
     /**
      * 联系人
      */
@@ -57,7 +57,7 @@ public enum BusinessModuleField {
     /**
      * 联系人电话
      */
-    CLUE_CONTACT_PHONE("clueContactPhone", "phone", Set.of(), FormKey.CLUE.getKey()),
+    CLUE_CONTACT_PHONE("clueContactPhone", "phone", Set.of("rules.required", "rules.unique", "mobile", "readable"), FormKey.CLUE.getKey()),
     /**
      * 意向产品
      */
@@ -362,7 +362,8 @@ public enum BusinessModuleField {
      * @return 是否被删除
      */
     public static boolean isBusinessDeleted(String formKey, List<BaseField> fields) {
-        List<BusinessModuleField> formBusinessFields = Arrays.stream(BusinessModuleField.values()).filter(field -> Strings.CS.equals(formKey, field.getFormKey())).toList();
+        List<BusinessModuleField> formBusinessFields = Arrays.stream(BusinessModuleField.values())
+                .filter(field -> Strings.CS.equals(formKey, field.getFormKey())).toList();
         if (CollectionUtils.isEmpty(formBusinessFields)) {
             return false;
         }

@@ -22,6 +22,13 @@ public interface ExtCustomerPoolMapper {
     List<CustomerPoolDTO> list(@Param("request") BasePageRequest request, @Param("orgId") String orgId);
 
     /**
+     * 开启状态的所有公海池
+     * @param orgId     组织ID
+     * @return
+     */
+    List<CustomerPoolDTO> listByEnable(@Param("orgId") String orgId);
+
+    /**
      * 更新公海池领取规则
      *
      * @param rule 领取规则

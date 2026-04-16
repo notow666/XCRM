@@ -467,6 +467,10 @@ public class DepartmentService extends MoveNodeService {
         return extDepartmentMapper.getInternalDepartment(orgId, resource);
     }
 
+    public Department getTopDepartment(String orgId) {
+        return extDepartmentMapper.getTopDepartment(orgId);
+    }
+
     /**
      * 更新部门信息
      *

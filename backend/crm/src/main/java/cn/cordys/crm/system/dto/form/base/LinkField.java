@@ -15,4 +15,8 @@ public class LinkField {
     private String link;
     @Schema(description = "是否启用联动")
     private boolean enable;
+
+    public LinkField() {
+        this.enable = true;
+    }
 }

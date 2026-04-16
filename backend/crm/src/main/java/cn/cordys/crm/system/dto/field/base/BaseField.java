@@ -102,6 +102,12 @@ public abstract class BaseField {
 	@Schema(description = "引用的子表格字段ID")
 	private String subTableFieldId;
 
+    /**
+     * 初始化的字段不可删除
+     */
+    @Schema(description = "是否可删除")
+    private Boolean deletable = true;
+
     @JsonIgnore
     public static boolean isBlob(String type) {
         return Strings.CS.equalsAny(type, FieldType.TEXTAREA.name(), FieldType.INPUT_MULTIPLE.name(),

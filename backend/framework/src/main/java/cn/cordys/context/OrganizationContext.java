@@ -1,6 +1,7 @@
 package cn.cordys.context;
 
 import cn.cordys.common.constants.InternalUser;
+import cn.cordys.common.constants.MdcConstants;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.response.result.CrmHttpResultCode;
 import cn.cordys.security.SessionUser;
@@ -8,6 +9,7 @@ import cn.cordys.security.SessionUtils;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
+import org.slf4j.MDC;
 
 import java.util.Set;
 
@@ -31,12 +33,15 @@ public class OrganizationContext {
         String orgId = ORGANIZATION_ID.get();
         SessionUser user = SessionUtils.getUser();
         if (user == null) {
-            // 没有登入，则为定时任务，直接返回
+            // 没有登入，则为API接口或者系统定时任务
+            String userId = MDC.get(MdcConstants.USER_ID_KEY);
+            if(StringUtils.isNotBlank(userId) && Strings.CS.equals(InternalUser.ADMIN.getValue(), userId)){
+                // 是管理员，则返回默认组织ID
+                return DEFAULT_ORGANIZATION_ID;
+            }
             return orgId;
         }
-
         boolean isAdmin = Strings.CS.equals(InternalUser.ADMIN.getValue(), user.getId());
-
         if (StringUtils.isBlank(orgId)) {
             Set<String> organizationIds = user.getOrganizationIds();
             if (CollectionUtils.isNotEmpty(organizationIds)) {

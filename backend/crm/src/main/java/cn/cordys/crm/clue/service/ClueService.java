@@ -8,6 +8,7 @@ import cn.cordys.aspectj.dto.LogContextInfo;
 import cn.cordys.aspectj.dto.LogDTO;
 import cn.cordys.common.constants.BusinessModuleField;
 import cn.cordys.common.constants.FormKey;
+import cn.cordys.common.constants.InternalUser;
 import cn.cordys.common.constants.LinkScenarioKey;
 import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.domain.BaseModuleFieldValue;
@@ -37,10 +38,12 @@ import cn.cordys.crm.clue.dto.response.ClueListResponse;
 import cn.cordys.crm.clue.mapper.ExtClueMapper;
 import cn.cordys.crm.customer.domain.Customer;
 import cn.cordys.crm.customer.domain.CustomerContact;
+import cn.cordys.crm.customer.domain.CustomerPool;
 import cn.cordys.crm.customer.dto.request.*;
 import cn.cordys.crm.customer.service.CustomerCollaborationService;
 import cn.cordys.crm.customer.service.CustomerContactService;
 import cn.cordys.crm.customer.service.CustomerService;
+import cn.cordys.crm.customer.mapper.ExtCustomerMapper;
 import cn.cordys.crm.customer.service.PoolCustomerService;
 import cn.cordys.crm.follow.constants.FollowUpPlanType;
 import cn.cordys.crm.follow.domain.*;
@@ -55,6 +58,8 @@ import cn.cordys.crm.system.constants.DictModule;
 import cn.cordys.crm.system.constants.NotificationConstants;
 import cn.cordys.crm.system.constants.SheetKey;
 import cn.cordys.crm.system.domain.Dict;
+import cn.cordys.crm.system.domain.ModuleField;
+import cn.cordys.crm.system.domain.ModuleForm;
 import cn.cordys.crm.system.dto.DictConfigDTO;
 import cn.cordys.crm.system.dto.field.base.BaseField;
 import cn.cordys.crm.system.dto.form.FormLinkFill;
@@ -88,6 +93,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -146,6 +152,10 @@ public class ClueService {
     @Resource
     private LogService logService;
     @Resource
+    private BaseMapper<CustomerPool> customerPoolMapper;
+    @Resource
+    private ExtCustomerMapper extCustomerMapper;
+    @Resource
     private BaseMapper<CustomerContact> customerContactMapper;
     @Resource
     private PermissionCache permissionCache;
@@ -177,6 +187,8 @@ public class ClueService {
     private BaseMapper<FollowUpPlanField> followUpPlanFieldMapper;
     @Resource
     private BaseMapper<FollowUpPlanFieldBlob> followUpPlanFieldBlobMapper;
+    @Resource
+    private BaseMapper<CluePoolDistributeRule> cluePoolDistributeRuleMapper;
 
     public PagerWithOption<List<ClueListResponse>> list(CluePageRequest request, String userId, String orgId,
                                                         DeptDataPermissionDTO deptDataPermission, Boolean source) {
@@ -310,8 +322,11 @@ public class ClueService {
      *
      * @return 线索详情
      */
-    public ClueGetResponse get(String id) {
+    public ClueGetResponse get(String id){
         Clue clue = clueMapper.selectByPrimaryKey(id);
+        return get(clue);
+    }
+    public ClueGetResponse get(Clue clue) {
         if (clue == null) {
             return null;
         }
@@ -319,7 +334,7 @@ public class ClueService {
         clueGetResponse = baseService.setCreateUpdateOwnerUserName(clueGetResponse);
 
         // 获取模块字段
-        List<BaseModuleFieldValue> clueFields = clueFieldService.getModuleFieldValuesByResourceId(id);
+        List<BaseModuleFieldValue> clueFields = clueFieldService.getModuleFieldValuesByResourceId(clue.getId());
         // 处理自定义字段选项数据
         ModuleFormConfigDTO customerFormConfig = getFormConfig(clue.getOrganizationId());
         // 获取选项值对应的 option
@@ -394,9 +409,10 @@ public class ClueService {
             clue.setOwner(userId);
         }
         poolClueService.validateCapacity(1, clue.getOwner(), orgId);
-        clue.setCreateTime(System.currentTimeMillis());
-        clue.setUpdateTime(System.currentTimeMillis());
-        clue.setCollectionTime(clue.getCreateTime());
+        long currented = System.currentTimeMillis();
+        clue.setCreateTime(currented);
+        clue.setUpdateTime(currented);
+        clue.setCollectionTime(currented);
         clue.setUpdateUser(userId);
         clue.setCreateUser(userId);
         clue.setOrganizationId(orgId);
@@ -410,6 +426,84 @@ public class ClueService {
         clueMapper.insert(clue);
         baseService.handleAddLog(clue, request.getModuleFields());
         return clue;
+    }
+
+    @Async
+    @OperationLog(module = LogModule.CLUE_POOL_INDEX, type = LogType.ADD, resourceName = "{#request.phone}")
+    public void push(CluePushRequest request, String userId, String orgId) {
+        try {
+            CluePool cluePool = cluePoolService.checkPoolExist(request.getPoolId());
+
+            List<BaseField> allFields = moduleFormService.getAllFields(FormKey.CLUE.getKey(), orgId);
+            Map<String, String> name2Id = allFields.stream()
+                    .collect(Collectors.toMap(BaseField::getName, BaseField::getId));
+            request.getModuleFields()
+                    .forEach(f -> {
+                        f.setFieldId(name2Id.get(f.getFieldId()));
+                    });
+
+            if(cluePool.getDistribute()) {
+                // 自动分发
+                CluePoolDistributeRule cluePoolDistributeRule = new CluePoolDistributeRule();
+                cluePoolDistributeRule.setCluePoolId(cluePool.getId());
+                CluePoolDistributeRule rule = cluePoolDistributeRuleMapper.selectOne(cluePoolDistributeRule);
+
+                Clue clue = BeanUtils.copyBean(new Clue(), request);
+                clue.setOwner(userId);
+                clue.setOrganizationId(orgId);
+                clueFieldService.saveModuleField(clue, orgId, userId, request.getModuleFields(), false);
+
+                boolean matched = rule.matchDistributeCondition(clue);
+                if(matched) {
+                    // 自动分发到公海池
+
+                }
+            }
+
+        } catch (GenericException e){
+            log.error("三方推送线索异常：线索池不存在；request ===> [{}]", JSON.toJSONString(request));
+            return;
+        }
+
+        long currented = System.currentTimeMillis();
+        Clue query = new Clue();
+        query.setPhone(request.getPhone());
+        Clue clue = clueMapper.selectOne(query);
+        if(clue != null) {
+            clue.setName(request.getName());
+            clue.setOwner(userId);
+            clue.setUpdateTime(currented);
+            clue.setUpdateUser(userId);
+            clue.setOrganizationId(orgId);
+            clue.setStage(ClueStatus.NEW.name());
+            clue.setInSharedPool(true);
+            clue.setPoolId(request.getPoolId());
+            clue.setProducts(null);
+
+            // 更新模块字段
+            updateModuleField(clue, request.getModuleFields(), orgId, userId);
+            clueMapper.update(clue);
+        }
+        else{
+            clue = BeanUtils.copyBean(new Clue(), request);
+            clue.setOwner(userId);
+            clue.setCreateTime(currented);
+            clue.setUpdateTime(currented);
+            clue.setCollectionTime(currented);
+            clue.setUpdateUser(userId);
+            clue.setCreateUser(userId);
+            clue.setOrganizationId(orgId);
+            clue.setId(IDGenerator.nextStr());
+            clue.setStage(ClueStatus.NEW.name());
+            clue.setInSharedPool(true);
+            clue.setPoolId(request.getPoolId());
+            clue.setProducts(null);
+
+            //保存自定义字段
+            clueFieldService.saveModuleField(clue, orgId, userId, request.getModuleFields(), false);
+            clueMapper.insert(clue);
+        }
+        baseService.handleAddLog(clue, request.getModuleFields());
     }
 
     @OperationLog(module = LogModule.CLUE_INDEX, type = LogType.UPDATE, resourceId = "{#request.id}")
@@ -528,6 +622,53 @@ public class ClueService {
                 orgId, List.of(clue.getOwner()), true);
     }
 
+    /**
+     * 系统自动将线索池内线索转客户并移入指定公海（定时任务）
+     */
+    public void autoDistributeToCustomerPool(Clue clue, String customerPoolId, String orgId) {
+        String systemUser = InternalUser.ADMIN.getValue();
+        CustomerPool targetPool = customerPoolMapper.selectByPrimaryKey(customerPoolId);
+        if (targetPool == null || !Boolean.TRUE.equals(targetPool.getEnable())
+                || !Strings.CS.equals(targetPool.getOrganizationId(), orgId)) {
+            throw new GenericException(Translator.get("customer_pool_not_exist"));
+        }
+        Clue freshClue = clueMapper.selectByPrimaryKey(clue.getId());
+        if (freshClue == null) {
+            return;
+        }
+        if (StringUtils.isNotBlank(clue.getTransitionId())
+                && Strings.CS.equals(FormKey.CUSTOMER.name(), clue.getTransitionType())) {
+            return;
+        }
+        Customer customer = generateCustomerByLinkForm(freshClue, systemUser, orgId);
+        if (StringUtils.isNotBlank(customer.getOwner())) {
+            customerContactService.updateContactOwner(customer.getId(), "-", customer.getOwner(), orgId);
+        }
+        long now = System.currentTimeMillis();
+        customer.setPoolId(customerPoolId);
+        customer.setInSharedPool(true);
+        customer.setOwner(null);
+        customer.setCollectionTime(null);
+        customer.setReasonId("system");
+        customer.setUpdateUser(systemUser);
+        customer.setUpdateTime(now);
+        extCustomerMapper.moveToPool(customer);
+
+        Customer persisted = customerMapper.selectByPrimaryKey(customer.getId());
+        TransformCsAssociateDTO transformCsAssociateDTO = transformCsAssociate(freshClue, persisted, systemUser, orgId);
+        freshClue.setTransitionId(persisted.getId());
+        freshClue.setTransitionType(FormKey.CUSTOMER.name());
+        freshClue.setUpdateTime(now);
+        freshClue.setUpdateUser(systemUser);
+        clueMapper.update(freshClue);
+        batchCopyCluePlanAndRecord(freshClue.getId(), persisted.getId(), null, transformCsAssociateDTO.getContactId());
+        refreshCsFollowTime(freshClue, customerMapper.selectByPrimaryKey(persisted.getId()));
+        List<String> notifyUsers = StringUtils.isNotBlank(freshClue.getOwner()) ? List.of(freshClue.getOwner()) : Collections.emptyList();
+        commonNoticeSendService.sendNotice(NotificationConstants.Module.CLUE,
+                NotificationConstants.Event.CLUE_CONVERT_CUSTOMER, freshClue.getName(), systemUser,
+                orgId, notifyUsers, true);
+    }
+
 
     @OperationLog(module = LogModule.CLUE_INDEX, type = LogType.DELETE, resourceId = "{#id}")
     public void delete(String id, String userId, String orgId) {
@@ -636,7 +777,7 @@ public class ClueService {
                 continue;
             }
             // 日志
-            LogDTO logDTO = new LogDTO(orgId, clue.getId(), currentUser, LogType.MOVE_TO_CUSTOMER_POOL, LogModule.CLUE_INDEX, clue.getName());
+            LogDTO logDTO = new LogDTO(orgId, clue.getId(), currentUser, LogType.MOVE_TO_CLUE_POOL, LogModule.CLUE_INDEX, clue.getName());
             String detail = Translator.getWithArgs("clue.to.pool", clue.getName(), cluePool.getName());
             logDTO.setDetail(detail);
             logs.add(logDTO);
@@ -944,7 +1085,7 @@ public class ClueService {
         ModuleFormConfigDTO customerFormConfig = moduleFormService.getBusinessFormConfig(FormKey.CUSTOMER.getKey(), orgId);
         FormLinkFill<Customer> customerLinkFillDTO;
         try {
-            customerLinkFillDTO = moduleFormService.fillFormLinkValue(new Customer(), get(clue.getId()),
+            customerLinkFillDTO = moduleFormService.fillFormLinkValue(new Customer(), get(clue),
                     customerFormConfig, orgId, FormKey.CLUE.getKey(), LinkScenarioKey.CLUE_TO_CUSTOMER.name());
         } catch (Exception e) {
             log.error("Attempt to fill customer form error: {}", e.getMessage());
@@ -958,6 +1099,7 @@ public class ClueService {
         addRequest.setModuleFields(customerLinkFillDTO.getFields());
         addRequest.setFollower(clue.getFollower());
         addRequest.setFollowTime(clue.getFollowTime());
+        addRequest.setMobile(clue.getPhone());
         return customerService.add(addRequest, currentUser, orgId);
     }
 
@@ -975,7 +1117,7 @@ public class ClueService {
         ModuleFormConfigDTO opportunityFormConfig = moduleFormService.getBusinessFormConfig(FormKey.OPPORTUNITY.getKey(), orgId);
         FormLinkFill<Opportunity> opportunityLinkFillDTO;
         try {
-            opportunityLinkFillDTO = moduleFormService.fillFormLinkValue(new Opportunity(), get(clue.getId()),
+            opportunityLinkFillDTO = moduleFormService.fillFormLinkValue(new Opportunity(), get(clue),
                     opportunityFormConfig, orgId, FormKey.CLUE.getKey(), LinkScenarioKey.CLUE_TO_OPPORTUNITY.name());
         } catch (Exception e) {
             log.error("Attempt to fill opportunity form error: {}", e.getMessage());
@@ -1013,7 +1155,7 @@ public class ClueService {
 		ModuleFormConfigDTO contactFormConfig = moduleFormService.getBusinessFormConfig(FormKey.CONTACT.getKey(), orgId);
 		FormLinkFill<CustomerContactAddRequest> fillDTO = null;
 		try {
-			fillDTO = moduleFormService.fillFormLinkValue(new CustomerContactAddRequest(), get(clue.getId()),
+			fillDTO = moduleFormService.fillFormLinkValue(new CustomerContactAddRequest(), get(clue),
 					contactFormConfig, orgId, FormKey.CLUE.getKey(), LinkScenarioKey.CLUE_TO_CONTACT.name());
 		} catch (Exception e) {
 			log.error("Attempt to fill contact form error: {}", e.getMessage());
@@ -1037,7 +1179,9 @@ public class ClueService {
     public TransformCsAssociateDTO transformCsAssociate(Clue clue, Customer transformCs, String currentUser, String orgId) {
         TransformCsAssociateDTO transformDTO = new TransformCsAssociateDTO();
         // 如果当前线索负责人不是关联客户的负责人，且不是客户协作人, 则添加协作关系
-        if (!Strings.CS.equals(transformCs.getOwner(), clue.getOwner()) && !customerCollaborationService.hasCollaboration(clue.getOwner(), transformCs.getId())) {
+        if (StringUtils.isNotBlank(clue.getOwner())
+                && !Strings.CS.equals(transformCs.getOwner(), clue.getOwner())
+                && !customerCollaborationService.hasCollaboration(clue.getOwner(), transformCs.getId())) {
             CustomerCollaborationAddRequest collaborationAddRequest = new CustomerCollaborationAddRequest();
             collaborationAddRequest.setCustomerId(transformCs.getId());
             collaborationAddRequest.setCollaborationType("COLLABORATION");
@@ -1054,7 +1198,7 @@ public class ClueService {
 		if (unique) {
 			request.setCustomerId(transformCs.getId());
 			if (StringUtils.isEmpty(request.getOwner())) {
-				request.setOwner(clue.getOwner());
+				request.setOwner(StringUtils.isNotBlank(clue.getOwner()) ? clue.getOwner() : InternalUser.ADMIN.getValue());
 			}
 			CustomerContact contact = customerContactService.add(request, currentUser, orgId);
 			transformDTO.setContactId(contact.getId());

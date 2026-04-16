@@ -22,6 +22,8 @@ public class CluePoolDTO extends CluePool {
     private CluePoolPickRuleDTO pickRule;
     @Schema(description = "回收规则")
     private CluePoolRecycleRuleDTO recycleRule;
+    @Schema(description = "分发规则")
+    private CluePoolDistributeRuleDTO distributeRule;
     @Schema(description = "字段配置")
     private List<CluePoolFieldConfigDTO> fieldConfigs;
 

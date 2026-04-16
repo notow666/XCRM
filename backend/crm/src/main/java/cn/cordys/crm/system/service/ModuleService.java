@@ -246,18 +246,13 @@ public class ModuleService {
     public void initModule(String organizationId) {
         // init module data
         List<Module> modules = new ArrayList<>();
-        AtomicLong pos = new AtomicLong(1L);
         Arrays.stream(ModuleKey.values()).forEach(moduleConstant -> {
             Module module = new Module();
             module.setId(IDGenerator.nextStr());
             module.setModuleKey(moduleConstant.getKey());
             module.setOrganizationId(organizationId);
-            if(moduleConstant.equals(ModuleKey.PRODUCT)){
-                module.setEnable(false);
-            }else{
-                module.setEnable(true);
-            }
-            module.setPos(pos.getAndIncrement());
+            module.setEnable(moduleConstant.isEnable());
+            module.setPos(moduleConstant.getPos());
             module.setCreateUser(InternalUser.ADMIN.getValue());
             module.setCreateTime(System.currentTimeMillis());
             module.setUpdateUser(InternalUser.ADMIN.getValue());

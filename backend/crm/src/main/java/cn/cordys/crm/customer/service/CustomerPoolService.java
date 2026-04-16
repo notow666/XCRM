@@ -140,6 +140,14 @@ public class CustomerPoolService {
         return pools;
     }
 
+    public List<CustomerPoolDTO> listByEnable(String organizationId) {
+        List<CustomerPoolDTO> pools = extCustomerPoolMapper.listByEnable(organizationId);
+        if (CollectionUtils.isEmpty(pools)) {
+            return new ArrayList<>();
+        }
+        return pools;
+    }
+
     private void delOldTime(CustomerPoolRecycleRuleDTO recycleRule) {
         recycleRule.getConditions().forEach(condition -> {
             if (Strings.CS.equals(condition.getOperator(), RecycleConditionOperator.DYNAMICS.name())) {

@@ -52,7 +52,7 @@
   import { CrmDataTableColumn } from '@/components/pure/crm-table/type';
   import useTable from '@/components/pure/crm-table/useTable';
   import CrmOperationButton from '@/components/business/crm-operation-button/index.vue';
-  import AddOrEditPoolDrawer from '../addOrEditPoolDrawer.vue';
+  import AddOrEditPoolDrawer from '../addOrEditCluePoolDrawer.vue';
 
   import { deleteModuleCluePool, getCluePoolPage, noPickCluePool, switchCluePoolStatus } from '@/api/modules';
   import useModal from '@/hooks/useModal';

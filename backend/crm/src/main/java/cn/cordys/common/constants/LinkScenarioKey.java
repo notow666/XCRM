@@ -1,5 +1,7 @@
 package cn.cordys.common.constants;
 
+import java.util.Map;
+
 /**
  * 联动场景
  *
@@ -46,5 +48,18 @@ public enum LinkScenarioKey {
     /**
      * 合同转订单
      */
-    CONTRACT_TO_ORDER,
+    CONTRACT_TO_ORDER;
+
+    public static Map<String, String> clue2Customer() {
+        return Map.of(
+                "customerName", "clueName",
+                "customerMobile", "clueContactPhone",
+                "customerSource", "clueSource",
+                "customerLevel", "clueLevel",
+                "customerTag", "clueTag",
+                "customerCompany", "clueCompany",
+                "customerArea", "clueArea",
+                "customerOwner", "clueOwner"
+        );
+    }
 }

@@ -35,4 +35,10 @@ public class ModuleField extends BaseModel {
 
     @Schema(description = "排序")
     private Long pos;
+
+    /**
+     * 初始化的字段不可删除
+     */
+    @Schema(description = "是否可删除")
+    private Boolean deletable;
 }

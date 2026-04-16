@@ -233,16 +233,16 @@
         key: 'exportChecked',
         permission: ['CLUE_MANAGEMENT_POOL:EXPORT'],
       },
-      {
-        label: t('common.batchClaim'),
-        key: 'batchClaim',
-        permission: ['CLUE_MANAGEMENT_POOL:PICK'],
-      },
-      {
-        label: t('common.batchDistribute'),
-        key: 'batchDistribute',
-        permission: ['CLUE_MANAGEMENT_POOL:ASSIGN'],
-      },
+      // {
+      //   label: t('common.batchClaim'),
+      //   key: 'batchClaim',
+      //   permission: ['CLUE_MANAGEMENT_POOL:PICK'],
+      // },
+      // {
+      //   label: t('common.batchDistribute'),
+      //   key: 'batchDistribute',
+      //   permission: ['CLUE_MANAGEMENT_POOL:ASSIGN'],
+      // },
       {
         label: t('common.batchEdit'),
         key: 'batchEdit',
@@ -478,29 +478,29 @@
               CrmOperationButton,
               {
                 groupList: [
-                  {
-                    label: t('common.claim'),
-                    key: 'claim',
-                    permission: ['CLUE_MANAGEMENT_POOL:PICK'],
-                    popConfirmProps: {
-                      loading: claimLoading.value,
-                      title: t('clue.claimTip', { name: characterLimit(row.name) }),
-                      positiveText: t('common.claim'),
-                      iconType: 'primary',
-                    },
-                  },
-                  {
-                    label: t('common.distribute'),
-                    key: 'distribute',
-                    permission: ['CLUE_MANAGEMENT_POOL:ASSIGN'],
-                    popConfirmProps: {
-                      loading: distributeLoading.value,
-                      title: t('common.distribute'),
-                      positiveText: t('common.confirm'),
-                      iconType: 'primary',
-                    },
-                    popSlotContent: 'distributePopContent',
-                  },
+                  // {
+                  //   label: t('common.claim'),
+                  //   key: 'claim',
+                  //   permission: ['CLUE_MANAGEMENT_POOL:PICK'],
+                  //   popConfirmProps: {
+                  //     loading: claimLoading.value,
+                  //     title: t('clue.claimTip', { name: characterLimit(row.name) }),
+                  //     positiveText: t('common.claim'),
+                  //     iconType: 'primary',
+                  //   },
+                  // },
+                  // {
+                  //   label: t('common.distribute'),
+                  //   key: 'distribute',
+                  //   permission: ['CLUE_MANAGEMENT_POOL:ASSIGN'],
+                  //   popConfirmProps: {
+                  //     loading: distributeLoading.value,
+                  //     title: t('common.distribute'),
+                  //     positiveText: t('common.confirm'),
+                  //     iconType: 'primary',
+                  //   },
+                  //   popSlotContent: 'distributePopContent',
+                  // },
                   {
                     label: t('common.delete'),
                     key: 'delete',

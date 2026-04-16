@@ -11,6 +11,7 @@ import cn.cordys.crm.base.BaseTest;
 import cn.cordys.crm.clue.domain.CluePool;
 import cn.cordys.crm.clue.dto.CluePoolDTO;
 import cn.cordys.crm.clue.dto.CluePoolPickRuleDTO;
+import cn.cordys.crm.clue.dto.CluePoolDistributeRuleDTO;
 import cn.cordys.crm.clue.dto.CluePoolRecycleRuleDTO;
 import cn.cordys.crm.clue.dto.request.CluePoolAddRequest;
 import cn.cordys.crm.clue.dto.request.CluePoolUpdateRequest;
@@ -60,6 +61,8 @@ public class CluePoolControllerTests extends BaseTest {
         condition.setValue("cc");
         CluePoolRecycleRuleDTO recycleRule = CluePoolRecycleRuleDTO.builder().conditions(List.of(condition)).build();
         request.setRecycleRule(recycleRule);
+        request.setDistribute(false);
+        request.setDistributeRule(CluePoolDistributeRuleDTO.builder().customerPoolId("").operator("AND").conditions(List.of()).build());
         request.setHiddenFieldIds(Set.of(BusinessModuleField.CLUE_NAME.getKey()));
         this.requestPostWithOk("/lead-pool/add", request);
     }
@@ -90,6 +93,8 @@ public class CluePoolControllerTests extends BaseTest {
         request.setPickRule(pickRule);
         CluePoolRecycleRuleDTO recycleRule = CluePoolRecycleRuleDTO.builder().build();
         request.setRecycleRule(recycleRule);
+        request.setDistribute(false);
+        request.setDistributeRule(CluePoolDistributeRuleDTO.builder().customerPoolId("").operator("AND").conditions(List.of()).build());
         request.setHiddenFieldIds(Set.of(BusinessModuleField.CUSTOMER_OWNER.getKey()));
         this.requestPostWithOk("/lead-pool/update", request);
     }
@@ -124,6 +129,7 @@ public class CluePoolControllerTests extends BaseTest {
         cluePool.setOrganizationId(DEFAULT_ORGANIZATION_ID);
         cluePool.setEnable(true);
         cluePool.setAuto(true);
+        cluePool.setDistribute(false);
         return cluePool;
     }
 }

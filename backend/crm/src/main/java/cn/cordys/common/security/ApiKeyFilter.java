@@ -1,6 +1,10 @@
 package cn.cordys.common.security;
 
 import cn.cordys.security.SessionConstants;
+import cn.cordys.security.SessionUser;
+import cn.cordys.security.SessionUtils;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,6 +14,12 @@ import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.web.filter.authc.AnonymousFilter;
 import org.apache.shiro.web.util.WebUtils;
+import org.slf4j.MDC;
+
+import java.io.IOException;
+
+import static cn.cordys.common.constants.MdcConstants.USER_ID_KEY;
+import static cn.cordys.common.constants.MdcConstants.USER_NAME_KEY;
 
 /**
  * 自定义过滤器，用于处理 Web 应用中的 API 密钥认证。
@@ -35,7 +45,8 @@ public class ApiKeyFilter extends AnonymousFilter {
         HttpServletRequest httpRequest = WebUtils.toHttp(request);
 
         // 如果不是 API 密钥请求且用户未认证，允许请求继续
-        if (!ApiKeyHandler.isApiKeyCall(httpRequest) && !SecurityUtils.getSubject().isAuthenticated()) {
+        Boolean apiKeyCall = ApiKeyHandler.isApiKeyCall(httpRequest);
+        if (!apiKeyCall && !SecurityUtils.getSubject().isAuthenticated()) {
             return true;
         }
 
@@ -51,6 +62,13 @@ public class ApiKeyFilter extends AnonymousFilter {
         // 如果仍未认证，设置响应头为无效状态
         if (!SecurityUtils.getSubject().isAuthenticated()) {
             ((HttpServletResponse) response).setHeader(SessionConstants.AUTHENTICATION_STATUS, "invalid");
+        }
+        else{
+            SessionUser sessionUser = SessionUtils.getUser();
+            if(sessionUser != null) {
+                MDC.put(USER_ID_KEY, sessionUser.getId());
+                MDC.put(USER_NAME_KEY, sessionUser.getName());
+            }
         }
 
         return true;
@@ -71,5 +89,10 @@ public class ApiKeyFilter extends AnonymousFilter {
         if (ApiKeyHandler.isApiKeyCall(httpRequest) && SecurityUtils.getSubject().isAuthenticated()) {
             SecurityUtils.getSubject().logout();
         }
+    }
+
+    @Override
+    public void doFilterInternal(ServletRequest request, ServletResponse response, FilterChain chain) throws ServletException, IOException {
+        super.doFilterInternal(request, response, chain);
     }
 }

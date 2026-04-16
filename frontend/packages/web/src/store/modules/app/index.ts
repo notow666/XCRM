@@ -30,6 +30,11 @@ import { getThemeOverrides } from '@/utils/themeOverrides';
 import type { AppState, PageConfig, PageConfigKeys, Style, Theme } from './types';
 import type { RouteRecordRaw } from 'vue-router';
 
+const isCanceledError = (error: unknown) => {
+  const e = error as { name?: string; code?: string };
+  return e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED';
+};
+
 const defaultThemeConfig = {
   style: 'default' as Style,
   customStyle: '#f9fbfb',
@@ -247,8 +252,10 @@ const useAppStore = defineStore('app', {
         //   this.moduleConfigList = this.moduleConfigList.filter((e) => e.moduleKey !== ModuleConfigEnum.DASHBOARD);
         // }
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.log(error);
+        if (!isCanceledError(error)) {
+          // eslint-disable-next-line no-console
+          console.log(error);
+        }
       }
     },
     // 初始化顶部导航栏
@@ -256,8 +263,10 @@ const useAppStore = defineStore('app', {
       try {
         this.navTopConfigList = await getModuleTopNavList();
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.log(error);
+        if (!isCanceledError(error)) {
+          // eslint-disable-next-line no-console
+          console.log(error);
+        }
       }
     },
     /**

@@ -55,6 +55,7 @@ public class PoolClueController {
     @Operation(summary = "线索列表")
     @RequiresPermissions(value = {PermissionConstants.CLUE_MANAGEMENT_POOL_READ})
     public PagerWithOption<List<ClueListResponse>> list(@Validated @RequestBody CluePageRequest request) {
+        request.setViewId("abc");
         ConditionFilterUtils.parseCondition(request);
         return clueService.list(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), null, false);
     }

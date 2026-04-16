@@ -8,15 +8,24 @@ import cn.cordys.aspectj.dto.LogDTO;
 import cn.cordys.common.constants.BusinessModuleField;
 import cn.cordys.common.constants.FormKey;
 import cn.cordys.common.constants.InternalUser;
+import cn.cordys.common.dto.condition.CombineSearch;
+import cn.cordys.common.dto.condition.FilterCondition;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.TimeUtils;
 import cn.cordys.common.util.Translator;
 import cn.cordys.crm.clue.constants.ClueStatus;
-import cn.cordys.crm.clue.domain.*;
+import cn.cordys.crm.clue.domain.Clue;
+import cn.cordys.crm.clue.domain.ClueOwner;
+import cn.cordys.crm.clue.domain.CluePool;
+import cn.cordys.crm.clue.domain.CluePoolDistributeRule;
+import cn.cordys.crm.clue.domain.CluePoolHiddenField;
+import cn.cordys.crm.clue.domain.CluePoolPickRule;
+import cn.cordys.crm.clue.domain.CluePoolRecycleRule;
 import cn.cordys.crm.clue.dto.CluePoolDTO;
 import cn.cordys.crm.clue.dto.CluePoolPickRuleDTO;
+import cn.cordys.crm.clue.dto.CluePoolDistributeRuleDTO;
 import cn.cordys.crm.clue.dto.CluePoolRecycleRuleDTO;
 import cn.cordys.crm.clue.dto.request.PoolCluePickRequest;
 import cn.cordys.crm.clue.mapper.ExtClueCapacityMapper;
@@ -36,6 +45,7 @@ import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.springframework.stereotype.Service;
 
@@ -65,6 +75,8 @@ public class PoolClueService {
     private BaseMapper<CluePoolPickRule> pickRuleMapper;
     @Resource
     private BaseMapper<CluePoolRecycleRule> recycleRuleMapper;
+    @Resource
+    private BaseMapper<CluePoolDistributeRule> distributeRuleMapper;
     @Resource
     private ExtClueCapacityMapper extClueCapacityMapper;
     @Resource
@@ -121,6 +133,12 @@ public class PoolClueService {
         Map<String, CluePoolRecycleRule> recycleRuleMap = recycleRules.stream()
                 .collect(Collectors.toMap(CluePoolRecycleRule::getPoolId, recycleRule -> recycleRule));
 
+        LambdaQueryWrapper<CluePoolDistributeRule> distributeRuleWrapper = new LambdaQueryWrapper<>();
+        distributeRuleWrapper.in(CluePoolDistributeRule::getCluePoolId, poolIds);
+        List<CluePoolDistributeRule> distributeRules = distributeRuleMapper.selectListByLambda(distributeRuleWrapper);
+        Map<String, CluePoolDistributeRule> distributeRuleMap = distributeRules.stream()
+                .collect(Collectors.toMap(CluePoolDistributeRule::getCluePoolId, rule -> rule));
+
         Map<String, List<CluePoolHiddenField>> hiddenFieldMap = cluePoolService.getCluePoolHiddenFieldsByPoolIds(poolIds)
                 .stream()
                 .collect(Collectors.groupingBy(CluePoolHiddenField::getPoolId));
@@ -141,12 +159,50 @@ public class PoolClueService {
                 CluePoolPickRuleDTO pickRule = new CluePoolPickRuleDTO();
                 BeanUtils.copyBean(pickRule, pickRuleMap.get(pool.getId()));
                 CluePoolRecycleRuleDTO recycleRule = new CluePoolRecycleRuleDTO();
+                recycleRule.setOperator(CombineSearch.SearchMode.AND.name());
+                recycleRule.setConditions(new ArrayList<>());
                 CluePoolRecycleRule cluePoolRecycleRule = recycleRuleMap.get(pool.getId());
-                BeanUtils.copyBean(recycleRule, cluePoolRecycleRule);
-                recycleRule.setConditions(JSON.parseArray(cluePoolRecycleRule.getCondition(), RuleConditionDTO.class));
+                if (cluePoolRecycleRule != null) {
+                    BeanUtils.copyBean(recycleRule, cluePoolRecycleRule);
+                    if (StringUtils.isNotBlank(cluePoolRecycleRule.getCondition())) {
+                        recycleRule.setConditions(JSON.parseArray(cluePoolRecycleRule.getCondition(), RuleConditionDTO.class));
+                    }
+                }
+
+                CluePoolDistributeRuleDTO distributeRuleDto = new CluePoolDistributeRuleDTO();
+                CombineSearch distributeCombineSearch = new CombineSearch();
+                distributeCombineSearch.setSearchMode(CombineSearch.SearchMode.AND.name());
+                distributeCombineSearch.setConditions(new ArrayList<>());
+                distributeRuleDto.setCombineSearch(distributeCombineSearch);
+                CluePoolDistributeRule distRule = distributeRuleMap.get(pool.getId());
+                if (distRule != null) {
+                    distributeRuleDto.setCustomerPoolId(distRule.getCustomerPoolId());
+                    if (StringUtils.isNotBlank(distRule.getCondition())) {
+                        String rawCondition = distRule.getCondition().trim();
+                        if (rawCondition.startsWith("[")) {
+                            // backward compatibility for old list JSON
+                            List<RuleConditionDTO> oldConditions = JSON.parseArray(rawCondition, RuleConditionDTO.class);
+                            CombineSearch oldCombineSearch = new CombineSearch();
+                            oldCombineSearch.setSearchMode(StringUtils.defaultIfBlank(distRule.getOperator(), CombineSearch.SearchMode.AND.name()));
+                            oldCombineSearch.setConditions(oldConditions.stream().map(item -> {
+                                FilterCondition fc = new FilterCondition();
+                                fc.setName(item.getColumn());
+                                fc.setOperator(item.getOperator());
+                                fc.setValue(item.getValue());
+                                fc.setType("TIME_RANGE_PICKER");
+                                fc.setMultipleValue(false);
+                                return fc;
+                            }).toList());
+                            distributeRuleDto.setCombineSearch(oldCombineSearch);
+                        } else {
+                            distributeRuleDto.setCombineSearch(JSON.parseObject(rawCondition, CombineSearch.class));
+                        }
+                    }
+                }
 
                 poolDTO.setPickRule(pickRule);
                 poolDTO.setRecycleRule(recycleRule);
+                poolDTO.setDistributeRule(distributeRuleDto);
                 poolDTO.setEditable(ownerIds.contains(currentUser));
 
                 Set<String> hiddenFieldIds;
@@ -206,9 +262,10 @@ public class PoolClueService {
     @OperationLog(module = LogModule.CLUE_POOL_INDEX, type = LogType.DELETE, resourceId = "{#id}")
     public void delete(String id) {
         Clue clue = clueMapper.selectByPrimaryKey(id);
-        LambdaQueryWrapper<Clue> clueWrapper = new LambdaQueryWrapper<>();
-        clueWrapper.eq(Clue::getId, id);
-        clueMapper.deleteByLambda(clueWrapper);
+        // 删除客户
+        clueMapper.deleteByPrimaryKey(id);
+        // 删除客户模块字段
+        clueFieldService.deleteByResourceId(id);
 
         // 设置操作对象
         OperationLogContext.setResourceName(clue.getName());
@@ -254,9 +311,10 @@ public class PoolClueService {
      */
     public void batchDelete(List<String> ids, String userId, String orgId) {
         List<Clue> clues = clueMapper.selectByIds(ids);
-        LambdaQueryWrapper<Clue> clueWrapper = new LambdaQueryWrapper<>();
-        clueWrapper.in(Clue::getId, ids);
-        clueMapper.deleteByLambda(clueWrapper);
+        // 删除客户
+        clueMapper.deleteByIds(ids);
+        // 删除客户模块字段
+        clueFieldService.deleteByResourceIds(ids);
 
         List<LogDTO> logs = clues.stream()
                 .map(clue ->

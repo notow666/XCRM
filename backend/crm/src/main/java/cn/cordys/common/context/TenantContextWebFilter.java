@@ -1,5 +1,6 @@
 package cn.cordys.common.context;
 
+import cn.cordys.common.constants.CommonConstants;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.context.TenantContext;
 import cn.cordys.common.response.handler.ResultHolder;
@@ -23,8 +24,6 @@ import java.io.IOException;
 import static cn.cordys.common.constants.MdcConstants.*;
 
 public class TenantContextWebFilter extends OncePerRequestFilter {
-
-    private static final String TENANT_ID_HEADER = "X-Tenant-ID";
 
     private final TenantMetaService tenantMetaService;
 
@@ -59,7 +58,7 @@ public class TenantContextWebFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain chain)
             throws ServletException, IOException {
-        String tenantId = request.getHeader(TENANT_ID_HEADER);
+        String tenantId = request.getHeader(CommonConstants.TENANT_ID_HEADER);
         if (StringUtils.isBlank(tenantId)) {
             tenantId = request.getParameter(TENANT_ID_KEY);
         }
@@ -87,12 +86,6 @@ public class TenantContextWebFilter extends OncePerRequestFilter {
 
             MDC.put(REQUEST_URI_KEY, request.getRequestURI());
             MDC.put(REQUEST_METHOD_KEY, request.getMethod());
-
-            SessionUser sessionUser = SessionUtils.getUser();
-            if(sessionUser != null) {
-                MDC.put(USER_ID_KEY, sessionUser.getId());
-                MDC.put(USER_NAME_KEY, sessionUser.getName());
-            }
         }
 
         try {

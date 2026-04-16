@@ -80,6 +80,7 @@ export interface FormCreateField {
   prefixType?: 'custom' | 'formula';
   rules: FormCreateFieldRule[];
   mobile?: boolean; // 是否在移动端显示
+  deletable?: true; // 是否可删除
   // 数字输入属性
   max?: number;
   min?: number;

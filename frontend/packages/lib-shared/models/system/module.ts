@@ -103,6 +103,21 @@ export interface CluePoolRecycleRuleParams {
   conditions: ModuleConditionsItem[]; // 规则条件集合
 }
 
+// 线索池分发到公海规则
+export interface CluePoolDistributeRuleParams {
+  customerPoolId: string; // 目标公海池ID
+  combineSearch: {
+    searchMode?: 'AND' | 'OR';
+    conditions?: {
+      name?: string;
+      operator?: string;
+      value?: any;
+      multipleValue: boolean;
+      type?: string;
+    }[];
+  };
+}
+
 // 编辑线索池请求参数
 export interface CluePoolParams {
   id?: string; // ID
@@ -111,8 +126,10 @@ export interface CluePoolParams {
   ownerIds: string[]; // 管理员ID集合
   enable: boolean; // 启用/禁用
   auto: boolean; // 自动回收
+  distribute: boolean; // 自动分发到公海（仅线索池）
   pickRule: CluePoolPickRuleParams; // 领取规则
   recycleRule: CluePoolRecycleRuleParams; // 回收规则
+  distributeRule?: CluePoolDistributeRuleParams; // 分发规则（仅线索池）
   hiddenFieldIds: string[]; // 隐藏的表格字段
 }
 
@@ -136,10 +153,12 @@ export interface CluePoolItem {
   ownerId: string;
   enable: boolean;
   auto: boolean;
+  distribute?: boolean;
   members: SelectedUsersItem[];
   owners: SelectedUsersItem[];
   pickRule: CluePoolPickRuleParams; // 领取规则
   recycleRule: CluePoolRecycleRuleParams; // 回收规则
+  distributeRule?: CluePoolDistributeRuleParams; // 分发规则
   fieldConfigs: {
     editable: boolean;
     enable: boolean;

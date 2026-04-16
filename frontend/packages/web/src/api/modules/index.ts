@@ -651,6 +651,7 @@ export const {
   updateReasonEnable,
   downloadAttachment,
   getCustomerPoolPage,
+  getCustomerPoolListByEnable,
   getFormDesignConfig,
   getFieldDeptUerTree,
   getFieldContactList,

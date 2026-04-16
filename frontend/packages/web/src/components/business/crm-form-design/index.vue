@@ -40,6 +40,7 @@
   const list = defineModel<FormCreateField[]>('fieldList', {
     required: true,
   });
+
   const formConfig = defineModel<FormConfig>('formConfig', {
     required: true,
   });
