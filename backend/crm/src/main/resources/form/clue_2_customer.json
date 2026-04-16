@@ -1,0 +1,45 @@
+{
+  "key": "CLUE_TO_CUSTOMER",
+  "linkFields": [
+    {
+      "current": "customerName",
+      "link": "clueName",
+      "enable": true
+    },
+    {
+      "current": "customerMobile",
+      "link": "clueContactPhone",
+      "enable": true
+    },
+    {
+      "current": "customerSource",
+      "link": "clueSource",
+      "enable": true
+    },
+    {
+      "current": "customerLevel",
+      "link": "clueLevel",
+      "enable": true
+    },
+    {
+      "current": "customerTag",
+      "link": "clueTag",
+      "enable": true
+    },
+    {
+      "current": "customerCompany",
+      "link": "clueCompany",
+      "enable": true
+    },
+    {
+      "current": "customerArea",
+      "link": "clueArea",
+      "enable": true
+    },
+    {
+      "current": "customerOwner",
+      "link": "clueOwner",
+      "enable": true
+    }
+  ]
+}
