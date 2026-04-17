@@ -87,8 +87,9 @@
       checkResponse.value = res.data;
       importModal.value = false;
       checkResultModal.value = true;
-    } catch (_error) {
-      Message.error(t('poolImportButton.preCheckFailed'));
+    } catch (error: any) {
+      const errorMsg = error || t('poolImportButton.preCheckFailed');
+      Message.error(errorMsg);
     }
   }
 

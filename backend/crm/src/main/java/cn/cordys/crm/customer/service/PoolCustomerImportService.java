@@ -116,8 +116,9 @@ public class PoolCustomerImportService {
     
     private String getFieldInternalKeyByName(String fieldName, List<BaseField> fields) {
         return fields.stream()
-                .filter(field -> fieldName.equals(field.getName()))
+                .filter(field -> fieldName != null && fieldName.equals(field.getName()))
                 .map(BaseField::getInternalKey)
+                .filter(Objects::nonNull)
                 .findFirst()
                 .orElse(null);
     }

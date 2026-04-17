@@ -102,6 +102,8 @@ public class PoolCustomerService {
     private ExtCustomerStageConfigMapper extCustomerStageConfigMapper;
     @Resource
     private FollowUpPlanService followUpPlanService;
+    @Resource
+    private CustomerOwnerHistoryService customerOwnerHistoryService;
 
     /**
      * 获取当前用户公海选项
@@ -545,6 +547,9 @@ public class PoolCustomerService {
             customer.setStageStatus(CustomerStageService.STATUS_NEW);
         }
         extCustomerMapper.updateIncludeNullById(customer);
+
+        // 清空负责人历史记录
+        customerOwnerHistoryService.deleteByCustomerIds(List.of(customerId));
 
         // 客户从公海进入私海时不再自动创建跟进计划（需求：2026-04-10）
         // followUpPlanService.createInitialStageFollowPlanForCustomer(customerId, ownerId, currentOrgId);
