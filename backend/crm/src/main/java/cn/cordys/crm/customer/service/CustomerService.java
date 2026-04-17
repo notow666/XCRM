@@ -464,6 +464,47 @@ public class CustomerService {
         return customer;
     }
 
+    public Customer moveToPool(CustomerAddRequest request, String userId, String orgId, String targetPoolId) {
+        Customer customer = BeanUtils.copyBean(new Customer(), request);
+        if (StringUtils.isBlank(request.getOwner())) {
+            customer.setOwner(userId);
+        }
+
+        long now = System.currentTimeMillis();
+        customer.setId(IDGenerator.nextStr());
+        customer.setCreateTime(now);
+        customer.setUpdateTime(now);
+        customer.setUpdateUser(userId);
+        customer.setCreateUser(userId);
+        customer.setOrganizationId(orgId);
+        customer.setPoolId(targetPoolId);
+        customer.setInSharedPool(true);
+        customer.setOwner(null);
+        customer.setCollectionTime(null);
+
+        // 设置客户阶段为第一个阶段，状态为NEW（待跟进）
+        List<StageConfigResponse> stageConfigList = extCustomerStageConfigMapper.getStageConfigList(orgId);
+        if (CollectionUtils.isNotEmpty(stageConfigList)) {
+            customer.setStage(stageConfigList.getFirst().getId());
+            customer.setStageStatus("NEW");
+        }
+
+        //保存自定义字段
+        customerFieldService.saveModuleField(customer, orgId, userId, request.getModuleFields(), false);
+
+        customerMapper.insert(customer);
+
+        baseService.handleAddLog(customer, request.getModuleFields());
+
+        // 通知
+        CustomerPool targetPool = customerPoolMapper.selectByPrimaryKey(targetPoolId);
+        List<String> ownerIds = userExtendService.getScopeOwnerIds(JSON.parseArray(targetPool.getOwnerId(), String.class), orgId);
+        commonNoticeSendService.sendNotice(NotificationConstants.Module.CUSTOMER,
+                NotificationConstants.Event.CUSTOMER_ADD, customer.getName(), userId,
+                orgId, ownerIds, true);
+        return customer;
+    }
+
     /**
      * 创建默认联系人
      *

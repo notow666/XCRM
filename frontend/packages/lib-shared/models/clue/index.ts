@@ -82,6 +82,12 @@ export interface BatchAssignClueParams {
   assignUserId: string;
 }
 
+// 批量分发线索池线索到公海池
+export interface BatchDistributeCluePoolParams {
+  batchIds: (string | number)[];
+  customerPoolId: string;
+}
+
 export interface ConvertClueParams {
   clueId: string;
   oppCreated: boolean;

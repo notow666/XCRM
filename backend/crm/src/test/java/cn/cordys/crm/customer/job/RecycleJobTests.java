@@ -1,7 +1,6 @@
 package cn.cordys.crm.customer.job;
 
 import cn.cordys.crm.base.BaseTest;
-import cn.cordys.crm.system.job.listener.CluePoolDistributeListener;
 import cn.cordys.crm.system.job.listener.CluePoolRecycleListener;
 import cn.cordys.crm.system.job.listener.CustomerPoolRecycleListener;
 import jakarta.annotation.Resource;
@@ -24,9 +23,6 @@ public class RecycleJobTests extends BaseTest {
 
     @Resource
     private CluePoolRecycleListener cluePoolRecycleListener;
-
-    @Resource
-    private CluePoolDistributeListener cluePoolDistributeListener;
 
     @Test
     @Order(1)
@@ -52,15 +48,5 @@ public class RecycleJobTests extends BaseTest {
         cluePoolRecycleListener.recycle();
     }
 
-    @Test
-    @Order(3)
-    @Sql(scripts = {"/dml/init_clue_distribute_test.sql"},
-            config = @SqlConfig(encoding = "utf-8", transactionMode = SqlConfig.TransactionMode.ISOLATED),
-            executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = {"/dml/cleanup_clue_distribute_test.sql"},
-            config = @SqlConfig(encoding = "utf-8", transactionMode = SqlConfig.TransactionMode.ISOLATED),
-            executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    public void testCluePoolDistribute() {
-        cluePoolDistributeListener.distribute();
-    }
+    // 线索池分发暂不走定时任务，相关监听器与测试先停用。
 }

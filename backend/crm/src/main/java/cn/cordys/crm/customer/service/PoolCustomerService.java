@@ -19,6 +19,7 @@ import cn.cordys.crm.customer.domain.*;
 import cn.cordys.crm.customer.dto.CustomerPoolDTO;
 import cn.cordys.crm.customer.dto.CustomerPoolPickRuleDTO;
 import cn.cordys.crm.customer.dto.CustomerPoolRecycleRuleDTO;
+import cn.cordys.crm.customer.dto.MobileConflictDTO;
 import cn.cordys.crm.customer.dto.request.CustomerChartAnalysisDbRequest;
 import cn.cordys.crm.customer.dto.request.PoolCustomerChartAnalysisRequest;
 import cn.cordys.crm.customer.dto.request.PoolCustomerPickRequest;
@@ -44,6 +45,7 @@ import cn.cordys.crm.system.service.UserExtendService;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
@@ -57,6 +59,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Slf4j
 @Service
 public class PoolCustomerService {
 
@@ -327,6 +330,51 @@ public class PoolCustomerService {
 
         logService.add(new LogDTO(currentOrgId, customer.getId(), currentUser, LogType.UPDATE, LogModule.CUSTOMER_POOL,
                 Translator.getWithArgs("pool_transfer_log", customer.getName(), targetPool.getName())));
+    }
+
+    public boolean preCheck4ClueMoveToPool(String phone, String targetPoolId, String currentOrgId) {
+        CustomerPool targetPool = poolMapper.selectByPrimaryKey(targetPoolId);
+        if (targetPool == null || !Boolean.TRUE.equals(targetPool.getEnable())) {
+            log.warn("线索池自动分发公海池预检查失败：{}", Translator.get("customer_pool_not_exist"));
+            return false;
+        }
+
+        List<MobileConflictDTO> conflicts = extCustomerMapper.getMobileConflicts(currentOrgId, targetPoolId, List.of(phone));
+        boolean match = CollectionUtils.isEmpty(conflicts) ||
+                conflicts.stream()
+                        .noneMatch(m -> phone.equals(m.getMobile()) && !"NONE".equals(m.getConflictType()));
+        if(!match) {
+            log.warn("线索池自动分发公海池预检查失败：{}", Translator.get("phone.exist"));
+        }
+        return match;
+    }
+
+    /**
+     * 批量预检查线索手机号，返回可分发手机号集合。
+     */
+    public Set<String> batchPreCheckClueMoveToPool(List<String> phones, String targetPoolId, String currentOrgId) {
+        if (CollectionUtils.isEmpty(phones)) {
+            return Set.of();
+        }
+        List<String> validPhones = phones.stream().filter(StringUtils::isNotBlank).distinct().toList();
+        if (CollectionUtils.isEmpty(validPhones)) {
+            return Set.of();
+        }
+
+        CustomerPool targetPool = poolMapper.selectByPrimaryKey(targetPoolId);
+        if (targetPool == null || !Boolean.TRUE.equals(targetPool.getEnable())) {
+            log.warn("线索池批量分发公海池预检查失败：{}", Translator.get("customer_pool_not_exist"));
+            return Set.of();
+        }
+
+        List<MobileConflictDTO> conflicts = extCustomerMapper.getMobileConflicts(currentOrgId, targetPoolId, validPhones);
+        Set<String> conflictPhones = conflicts.stream()
+                .filter(m -> !"NONE".equals(m.getConflictType()))
+                .map(MobileConflictDTO::getMobile)
+                .collect(Collectors.toSet());
+        Set<String> allowedPhones = new HashSet<>(validPhones);
+        allowedPhones.removeAll(conflictPhones);
+        return allowedPhones;
     }
 
     /**

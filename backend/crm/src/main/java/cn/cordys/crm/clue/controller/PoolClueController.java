@@ -15,9 +15,11 @@ import cn.cordys.crm.clue.dto.response.ClueGetResponse;
 import cn.cordys.crm.clue.dto.response.ClueListResponse;
 import cn.cordys.crm.clue.service.CluePoolExportService;
 import cn.cordys.crm.clue.service.ClueService;
+import cn.cordys.crm.clue.service.PoolClueBatchDistributeService;
 import cn.cordys.crm.clue.service.PoolClueService;
 import cn.cordys.crm.customer.dto.request.PoolClueChartAnalysisRequest;
 import cn.cordys.crm.system.dto.request.PoolBatchAssignRequest;
+import cn.cordys.crm.system.dto.request.PoolBatchDistributeRequest;
 import cn.cordys.crm.system.dto.request.PoolBatchPickRequest;
 import cn.cordys.crm.system.dto.request.ResourceBatchEditRequest;
 import cn.cordys.security.SessionUtils;
@@ -39,6 +41,8 @@ public class PoolClueController {
 
     @Resource
     private PoolClueService poolClueService;
+    @Resource
+    private PoolClueBatchDistributeService poolClueBatchDistributeService;
     @Resource
     private ClueService clueService;
     @Resource
@@ -100,6 +104,13 @@ public class PoolClueController {
     @RequiresPermissions(value = {PermissionConstants.CLUE_MANAGEMENT_POOL_ASSIGN})
     public void batchAssign(@Validated @RequestBody PoolBatchAssignRequest request) {
         poolClueService.batchAssign(request, request.getAssignUserId(), OrganizationContext.getOrganizationId(), SessionUtils.getUserId());
+    }
+
+    @PostMapping("/batch-distribute")
+    @Operation(summary = "批量分发线索到公海池")
+    @RequiresPermissions(value = {PermissionConstants.CLUE_MANAGEMENT_POOL_ASSIGN})
+    public void batchDistribute(@Validated @RequestBody PoolBatchDistributeRequest request) {
+        poolClueBatchDistributeService.batchDistribute(request, OrganizationContext.getOrganizationId());
     }
 
     @PostMapping("/batch-update")

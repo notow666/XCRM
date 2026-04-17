@@ -29,6 +29,11 @@ pnpm-error.log*
 # macOS
 .DS_Store
 
+.cursor
+graphify-out
+.graphify_detect.json
+.graphify_python
+
 # IntelliJ IDEA
 .idea/*
 !.idea/icon.png

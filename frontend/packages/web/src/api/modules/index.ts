@@ -266,6 +266,7 @@ export const {
   addClueFollowRecord,
   getClueFollowRecord,
   batchDeleteCluePool,
+  batchDistributeCluePool,
   batchUpdateCluePool,
   getLeadPoolViewList,
   reTransitionCustomer,

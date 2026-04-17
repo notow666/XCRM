@@ -46,6 +46,7 @@ export const GetCluePoolListUrl = '/pool/lead/page'; // 分页查询线索池线
 export const BatchPickClueUrl = '/pool/lead/batch-pick'; // 批量领取线索
 export const BatchDeleteCluePoolUrl = '/pool/lead/batch-delete'; // 批量删除线索池线索
 export const BatchAssignClueUrl = '/pool/lead/batch-assign'; // 批量分配线索
+export const BatchDistributeCluePoolUrl = '/pool/lead/batch-distribute'; // 批量分发线索到公海池
 export const AssignClueUrl = '/pool/lead/assign'; // 分配线索
 export const GetPoolOptionsUrl = '/pool/lead/options'; // 获取当前用户线索池选项
 export const DeleteCluePoolUrl = '/pool/lead/delete'; // 删除线索池线索

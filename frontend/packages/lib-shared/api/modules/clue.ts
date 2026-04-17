@@ -7,6 +7,7 @@ import {
   AddPoolLeadViewUrl,
   AssignClueUrl,
   BatchAssignClueUrl,
+  BatchDistributeCluePoolUrl,
   BatchDeleteCluePoolUrl,
   BatchDeleteClueUrl,
   BatchPickClueUrl,
@@ -75,6 +76,7 @@ import {
 import type {
   AssignClueParams,
   BatchAssignClueParams,
+  BatchDistributeCluePoolParams,
   BatchPickClueParams,
   ClueDetail,
   ClueListItem,
@@ -280,6 +282,11 @@ export default function useProductApi(CDR: CordysAxios) {
   // 批量分配线索池线索
   function batchAssignClue(data: BatchAssignClueParams) {
     return CDR.post({ url: BatchAssignClueUrl, data });
+  }
+
+  // 批量分发线索池线索到公海池
+  function batchDistributeCluePool(data: BatchDistributeCluePoolParams) {
+    return CDR.post({ url: BatchDistributeCluePoolUrl, data });
   }
 
   // 批量更新线索池线索
@@ -488,6 +495,7 @@ export default function useProductApi(CDR: CordysAxios) {
     batchPickClue,
     batchDeleteCluePool,
     batchAssignClue,
+    batchDistributeCluePool,
     assignClue,
     getPoolOptions,
     deleteCluePool,

@@ -112,6 +112,24 @@
     :form-key="FormDesignKeyEnum.CLUE_POOL"
     @refresh="handleRefresh"
   />
+  <CrmModal
+    v-model:show="showBatchDistributeModal"
+    size="medium"
+    :title="t('common.batchDistribute')"
+    :ok-loading="batchDistributeLoading"
+    :ok-button-props="{ disabled: !batchDistributeCustomerPoolId }"
+    @confirm="handleConfirmBatchDistribute"
+    @cancel="handleCancelBatchDistribute"
+  >
+    <n-select
+      v-model:value="batchDistributeCustomerPoolId"
+      :options="batchDistributeCustomerPoolOptions"
+      :loading="batchDistributePoolLoading"
+      :placeholder="t('common.pleaseSelect')"
+      filterable
+      clearable
+    />
+  </CrmModal>
 </template>
 
 <script setup lang="ts">
@@ -131,6 +149,7 @@
   import CrmAdvanceFilter from '@/components/pure/crm-advance-filter/index.vue';
   import { FilterFormItem, FilterResult } from '@/components/pure/crm-advance-filter/type';
   import CrmIcon from '@/components/pure/crm-icon-font/index.vue';
+  import CrmModal from '@/components/pure/crm-modal/index.vue';
   import { ActionsItem } from '@/components/pure/crm-more-action/type';
   import CrmNameTooltip from '@/components/pure/crm-name-tooltip/index.vue';
   import CrmTable from '@/components/pure/crm-table/index.vue';
@@ -150,8 +169,10 @@
     assignClue,
     batchAssignClue,
     batchDeleteCluePool,
+    batchDistributeCluePool,
     batchPickClue,
     deleteCluePool,
+    getCustomerPoolListByEnable,
     getPoolOptions,
     pickClue,
   } from '@/api/modules';
@@ -243,6 +264,11 @@
       //   key: 'batchDistribute',
       //   permission: ['CLUE_MANAGEMENT_POOL:ASSIGN'],
       // },
+      {
+        label: t('common.batchDistribute'),
+        key: 'batchDistribute',
+        permission: ['CLUE_MANAGEMENT_POOL:ASSIGN'],
+      },
       {
         label: t('common.batchEdit'),
         key: 'batchEdit',
@@ -416,13 +442,69 @@
     showEditModal.value = true;
   }
 
+  const showBatchDistributeModal = ref(false);
+  const batchDistributeLoading = ref(false);
+  const batchDistributePoolLoading = ref(false);
+  const batchDistributeCustomerPoolId = ref<string | null>(null);
+  const batchDistributeCustomerPoolOptions = ref<{ label: string; value: string }[]>([]);
+
+  async function loadBatchDistributePoolOptions() {
+    try {
+      batchDistributePoolLoading.value = true;
+      const res = await getCustomerPoolListByEnable();
+      const list: any[] = res ?? [];
+      batchDistributeCustomerPoolOptions.value = list
+        .filter((item) => item?.enable)
+        .map((item) => ({ label: item.name, value: item.id }));
+    } catch (error) {
+      batchDistributeCustomerPoolOptions.value = [];
+      // eslint-disable-next-line no-console
+      console.error(error);
+    } finally {
+      batchDistributePoolLoading.value = false;
+    }
+  }
+
+  async function openBatchDistributeModal() {
+    batchDistributeCustomerPoolId.value = null;
+    showBatchDistributeModal.value = true;
+    await loadBatchDistributePoolOptions();
+  }
+
+  function handleCancelBatchDistribute() {
+    showBatchDistributeModal.value = false;
+    batchDistributeCustomerPoolId.value = null;
+  }
+
+  async function handleConfirmBatchDistribute() {
+    if (!batchDistributeCustomerPoolId.value) {
+      Message.warning(t('common.pleaseSelect'));
+      return;
+    }
+    try {
+      batchDistributeLoading.value = true;
+      await batchDistributeCluePool({
+        batchIds: checkedRowKeys.value,
+        customerPoolId: batchDistributeCustomerPoolId.value,
+      });
+      Message.success(t('common.distributeSuccess'));
+      handleRefresh();
+      handleCancelBatchDistribute();
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(error);
+    } finally {
+      batchDistributeLoading.value = false;
+    }
+  }
+
   function handleBatchAction(item: ActionsItem) {
     switch (item.key) {
       case 'batchClaim':
         handleBatchClaim();
         break;
       case 'batchDistribute':
-        showDistributeModal.value = true;
+        openBatchDistributeModal();
         break;
       case 'batchDelete':
         handleBatchDelete();

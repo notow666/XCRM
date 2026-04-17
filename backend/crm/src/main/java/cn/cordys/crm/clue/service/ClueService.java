@@ -57,6 +57,7 @@ import cn.cordys.crm.product.service.ProductService;
 import cn.cordys.crm.system.constants.DictModule;
 import cn.cordys.crm.system.constants.NotificationConstants;
 import cn.cordys.crm.system.constants.SheetKey;
+import cn.cordys.crm.system.domain.Attachment;
 import cn.cordys.crm.system.domain.Dict;
 import cn.cordys.crm.system.domain.ModuleField;
 import cn.cordys.crm.system.domain.ModuleForm;
@@ -319,13 +320,13 @@ public class ClueService {
      * ⚠️反射调用; 勿修改入参, 返回, 方法名!
      *
      * @param id 线索ID
-     *
      * @return 线索详情
      */
-    public ClueGetResponse get(String id){
+    public ClueGetResponse get(String id) {
         Clue clue = clueMapper.selectByPrimaryKey(id);
         return get(clue);
     }
+
     public ClueGetResponse get(Clue clue) {
         if (clue == null) {
             return null;
@@ -401,6 +402,165 @@ public class ClueService {
         return clueGetResponse;
     }
 
+//    public List<ClueGetResponse> get(List<Clue> clues) {
+//        if (CollectionUtils.isEmpty(clues)) {
+//            return new ArrayList<>();
+//        }
+//
+//        // 批量转换基础对象
+//        List<ClueGetResponse> clueGetResponses = new ArrayList<>();
+//        Map<String, Clue> clueMap = new HashMap<>();
+//        for (Clue clue : clues) {
+//            if (clue == null) {
+//                continue;
+//            }
+//            ClueGetResponse clueGetResponse = BeanUtils.copyBean(new ClueGetResponse(), clue);
+//            clueGetResponse = baseService.setCreateUpdateOwnerUserName(clueGetResponse);
+//            clueGetResponses.add(clueGetResponse);
+//            clueMap.put(clue.getId(), clue);
+//        }
+//
+//        if (CollectionUtils.isEmpty(clueGetResponses)) {
+//            return new ArrayList<>();
+//        }
+//
+//        // 批量获取所有线索的模块字段
+//        List<String> clueIds = clues.stream()
+//                .filter(Objects::nonNull)
+//                .map(Clue::getId)
+//                .collect(Collectors.toList());
+//        List<BaseModuleFieldValue> allClueFields = clueFieldService.getModuleFieldValuesByResourceIds(clueIds);
+//
+//        // 按线索ID分组
+//        Map<String, List<BaseModuleFieldValue>> clueFieldsMap = allClueFields.stream()
+//                .collect(Collectors.groupingBy(BaseModuleFieldValue::getResourceId));
+//
+//        // 获取组织ID（假设同一个批次属于同一组织，否则需要按组织分别处理）
+//        String organizationId = clues.stream()
+//                .filter(Objects::nonNull)
+//                .findFirst()
+//                .map(Clue::getOrganizationId)
+//                .orElse(null);
+//
+//        // 获取表单配置（同一组织共用）
+//        ModuleFormConfigDTO customerFormConfig = getFormConfig(organizationId);
+//
+//        // 批量获取所有自定义字段选项数据
+//        Map<String, List<OptionDTO>> optionMap = moduleFormService.getOptionMap(customerFormConfig, allClueFields);
+//
+//        // 批量获取所有负责人选项
+//        Map<String, List<OptionDTO>> ownerOptionsMap = new HashMap<>();
+//        for (ClueGetResponse response : clueGetResponses) {
+//            List<OptionDTO> ownerFieldOption = moduleFormService.getBusinessFieldOption(response,
+//                    ClueGetResponse::getOwner, ClueGetResponse::getOwnerName);
+//            ownerOptionsMap.put(response.getId(), ownerFieldOption);
+//        }
+//
+//        // 批量获取意向产品选项（同一组织共用）
+//        List<OptionDTO> productOption = extProductMapper.getOptions(organizationId);
+//
+//        // 批量获取线索池原因配置（同一组织共用）
+//        DictConfigDTO dictConf = dictService.getDictConf(DictModule.CLUE_POOL_RS.name(), organizationId);
+//        List<Dict> dictList = dictConf.getDictList();
+//        Map<String, String> dictMap = dictList.stream().collect(Collectors.toMap(Dict::getId, Dict::getName));
+//
+//        // 收集所有有负责人的用户ID
+//        List<String> ownerUserIds = clueGetResponses.stream()
+//                .filter(response -> response.getOwner() != null)
+//                .map(ClueGetResponse::getOwner)
+//                .collect(Collectors.toList());
+//
+//        // 批量获取负责人线索池信息
+//        Map<String, CluePool> ownersDefaultPoolMap = new HashMap<>();
+//        if (CollectionUtils.isNotEmpty(ownerUserIds)) {
+//            ownersDefaultPoolMap = cluePoolService.getOwnersDefaultPoolMap(ownerUserIds, organizationId);
+//        }
+//
+//        // 批量获取回收规则
+//        List<String> poolIds = ownersDefaultPoolMap.values().stream()
+//                .map(CluePool::getId)
+//                .distinct()
+//                .collect(Collectors.toList());
+//        Map<String, CluePoolRecycleRule> recycleRuleMap = new HashMap<>();
+//        if (CollectionUtils.isNotEmpty(poolIds)) {
+//            LambdaQueryWrapper<CluePoolRecycleRule> recycleRuleWrapper = new LambdaQueryWrapper<>();
+//            recycleRuleWrapper.in(CluePoolRecycleRule::getPoolId, poolIds);
+//            List<CluePoolRecycleRule> recycleRules = recycleRuleMapper.selectListByLambda(recycleRuleWrapper);
+//            recycleRuleMap = recycleRules.stream().collect(Collectors.toMap(CluePoolRecycleRule::getPoolId, rule -> rule));
+//        }
+//
+//        // 批量获取用户部门信息
+//        Map<String, UserDeptDTO> userDeptMap = new HashMap<>();
+//        if (CollectionUtils.isNotEmpty(ownerUserIds)) {
+//            userDeptMap = baseService.getUserDeptMapByUserIds(ownerUserIds, organizationId);
+//        }
+//
+//        // 收集所有跟进人ID
+//        List<String> followerUserIds = clueGetResponses.stream()
+//                .filter(response -> response.getFollower() != null)
+//                .map(ClueGetResponse::getFollower)
+//                .collect(Collectors.toList());
+//
+//        // 批量获取跟进人名称
+//        Map<String, String> followerNameMap = new HashMap<>();
+//        if (CollectionUtils.isNotEmpty(followerUserIds)) {
+//            followerNameMap = baseService.getUserNameMap(followerUserIds);
+//        }
+//
+//        // 批量获取附件信息
+//        Map<String, Map<String, List<Attachment>>> attachmentMap = moduleFormService.getAttachmentMapBatch(customerFormConfig, allClueFields);
+//
+//        // 为每个响应对象设置属性
+//        for (ClueGetResponse clueGetResponse : clueGetResponses) {
+//            String clueId = clueGetResponse.getId();
+//            Clue originalClue = clueMap.get(clueId);
+//
+//            // 设置模块字段
+//            List<BaseModuleFieldValue> clueFields = clueFieldsMap.getOrDefault(clueId, new ArrayList<>());
+//            clueGetResponse.setModuleFields(clueFields);
+//
+//            // 复制optionMap（需要深拷贝或重新构建）
+//            Map<String, List<OptionDTO>> responseOptionMap = new HashMap<>(optionMap);
+//            responseOptionMap.put(BusinessModuleField.CLUE_OWNER.getBusinessKey(), ownerOptionsMap.get(clueId));
+//            responseOptionMap.put(BusinessModuleField.OPPORTUNITY_PRODUCTS.getBusinessKey(), productOption);
+//            clueGetResponse.setOptionMap(responseOptionMap);
+//
+//            // 设置线索池原因
+//            if (StringUtils.isNotBlank(clueGetResponse.getReasonId())) {
+//                clueGetResponse.setReasonName(dictMap.get(clueGetResponse.getReasonId()));
+//            }
+//
+//            // 设置负责人相关
+//            if (clueGetResponse.getOwner() != null) {
+//                // 设置回收公海
+//                CluePool reservePool = ownersDefaultPoolMap.get(clueGetResponse.getOwner());
+//                clueGetResponse.setRecyclePoolName(reservePool != null ? reservePool.getName() : null);
+//
+//                // 计算剩余归属天数
+//                clueGetResponse.setReservedDays(cluePoolService.calcReservedDay(reservePool,
+//                        reservePool != null ? recycleRuleMap.get(reservePool.getId()) : null,
+//                        clueGetResponse.getCollectionTime(), clueGetResponse.getCreateTime()));
+//
+//                // 设置部门信息
+//                UserDeptDTO userDeptDTO = userDeptMap.get(clueGetResponse.getOwner());
+//                if (userDeptDTO != null) {
+//                    clueGetResponse.setDepartmentId(userDeptDTO.getDeptId());
+//                    clueGetResponse.setDepartmentName(userDeptDTO.getDeptName());
+//                }
+//            }
+//
+//            // 设置跟进人名称
+//            if (clueGetResponse.getFollower() != null) {
+//                clueGetResponse.setFollowerName(followerNameMap.get(clueGetResponse.getFollower()));
+//            }
+//
+//            // 设置附件信息
+//            clueGetResponse.setAttachmentMap(attachmentMap.getOrDefault(clueId, new HashMap<>()));
+//        }
+//
+//        return clueGetResponses;
+//    }
+
     @OperationLog(module = LogModule.CLUE_INDEX, type = LogType.ADD, resourceName = "{#request.name}")
     public Clue add(ClueAddRequest request, String userId, String orgId) {
         productService.checkProductList(request.getProducts());
@@ -442,68 +602,62 @@ public class ClueService {
                         f.setFieldId(name2Id.get(f.getFieldId()));
                     });
 
-            if(cluePool.getDistribute()) {
+            Clue clue = add(request, userId, orgId);
+
+            if (cluePool.getDistribute()) {
                 // 自动分发
                 CluePoolDistributeRule cluePoolDistributeRule = new CluePoolDistributeRule();
                 cluePoolDistributeRule.setCluePoolId(cluePool.getId());
                 CluePoolDistributeRule rule = cluePoolDistributeRuleMapper.selectOne(cluePoolDistributeRule);
 
-                Clue clue = BeanUtils.copyBean(new Clue(), request);
-                clue.setOwner(userId);
-                clue.setOrganizationId(orgId);
-                clueFieldService.saveModuleField(clue, orgId, userId, request.getModuleFields(), false);
-
-                boolean matched = rule.matchDistributeCondition(clue);
-                if(matched) {
-                    // 自动分发到公海池
-
+                // 自动分发到公海池
+                boolean matched = rule != null && rule.matchDistributeCondition(clue, request.getModuleFields());
+                if (matched) {
+                    // 公海池预检
+                    boolean valid = poolCustomerService.preCheck4ClueMoveToPool(clue.getPhone(), rule.getCustomerPoolId(), orgId);
+                    if (valid) {
+                        if (autoDistributeToCustomerPool(clue, rule.getCustomerPoolId(), orgId)) {
+                            silenceDelete(clue.getId());
+                        }
+                    }
                 }
             }
-
-        } catch (GenericException e){
-            log.error("三方推送线索异常：线索池不存在；request ===> [{}]", JSON.toJSONString(request));
-            return;
+        } catch (GenericException e) {
+            log.error("三方推送线索异常：{}；request ===> [{}]", e.getMessage(), JSON.toJSONString(request));
         }
+    }
 
+    private Clue add(CluePushRequest request, String userId, String orgId) {
         long currented = System.currentTimeMillis();
+        Clue clue = BeanUtils.copyBean(new Clue(), request);
+        clue.setOwner(userId);
+        clue.setOrganizationId(orgId);
+        clue.setCreateTime(currented);
+        clue.setUpdateTime(currented);
+        clue.setStage(ClueStatus.NEW.name());
+        clue.setInSharedPool(true);
+        clue.setPoolId(request.getPoolId());
+        clue.setProducts(null);
+        clue.setCollectionTime(null);
+        clue.setUpdateUser(userId);
+        clue.setCreateUser(userId);
+
         Clue query = new Clue();
         query.setPhone(request.getPhone());
-        Clue clue = clueMapper.selectOne(query);
-        if(clue != null) {
-            clue.setName(request.getName());
-            clue.setOwner(userId);
-            clue.setUpdateTime(currented);
-            clue.setUpdateUser(userId);
-            clue.setOrganizationId(orgId);
-            clue.setStage(ClueStatus.NEW.name());
-            clue.setInSharedPool(true);
-            clue.setPoolId(request.getPoolId());
-            clue.setProducts(null);
-
+        Clue db = clueMapper.selectOne(query);
+        if (db != null) {
+            clue.setId(db.getId());
             // 更新模块字段
             updateModuleField(clue, request.getModuleFields(), orgId, userId);
             clueMapper.update(clue);
-        }
-        else{
-            clue = BeanUtils.copyBean(new Clue(), request);
-            clue.setOwner(userId);
-            clue.setCreateTime(currented);
-            clue.setUpdateTime(currented);
-            clue.setCollectionTime(currented);
-            clue.setUpdateUser(userId);
-            clue.setCreateUser(userId);
-            clue.setOrganizationId(orgId);
+        } else {
             clue.setId(IDGenerator.nextStr());
-            clue.setStage(ClueStatus.NEW.name());
-            clue.setInSharedPool(true);
-            clue.setPoolId(request.getPoolId());
-            clue.setProducts(null);
-
             //保存自定义字段
             clueFieldService.saveModuleField(clue, orgId, userId, request.getModuleFields(), false);
             clueMapper.insert(clue);
         }
         baseService.handleAddLog(clue, request.getModuleFields());
+        return clue;
     }
 
     @OperationLog(module = LogModule.CLUE_INDEX, type = LogType.UPDATE, resourceId = "{#request.id}")
@@ -597,76 +751,22 @@ public class ClueService {
         clue.setUpdateUser(userId);
         clueMapper.update(clue);
 
-        // 同步添加联系人
-        LambdaQueryWrapper<CustomerContact> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(CustomerContact::getPhone, clue.getPhone());
-        List<CustomerContact> contacts = customerContactMapper.selectListByLambda(wrapper);
-        if (CollectionUtils.isEmpty(contacts)) {
-            CustomerContact contact = new CustomerContact();
-            contact.setId(IDGenerator.nextStr());
-            contact.setCustomerId(customer.getId());
-            contact.setOwner(customer.getOwner());
-            contact.setName(clue.getContact());
-            contact.setPhone(clue.getPhone());
-            contact.setEnable(true);
-            contact.setOrganizationId(orgId);
-            contact.setCreateUser(userId);
-            contact.setCreateTime(System.currentTimeMillis());
-            contact.setUpdateUser(userId);
-            contact.setUpdateTime(System.currentTimeMillis());
-            customerContactMapper.insert(contact);
-        }
-
         commonNoticeSendService.sendNotice(NotificationConstants.Module.CLUE,
                 NotificationConstants.Event.CLUE_CONVERT_CUSTOMER, clue.getName(), userId,
                 orgId, List.of(clue.getOwner()), true);
     }
 
     /**
-     * 系统自动将线索池内线索转客户并移入指定公海（定时任务）
+     * 系统自动将线索池内线索转客户并移入指定公海
      */
-    public void autoDistributeToCustomerPool(Clue clue, String customerPoolId, String orgId) {
-        String systemUser = InternalUser.ADMIN.getValue();
-        CustomerPool targetPool = customerPoolMapper.selectByPrimaryKey(customerPoolId);
-        if (targetPool == null || !Boolean.TRUE.equals(targetPool.getEnable())
-                || !Strings.CS.equals(targetPool.getOrganizationId(), orgId)) {
-            throw new GenericException(Translator.get("customer_pool_not_exist"));
+    public boolean autoDistributeToCustomerPool(Clue clue, String customerPoolId, String orgId) {
+        try {
+            Customer customer = generateCustomerByLinkForm(clue, clue.getOwner(), orgId, customerPoolId);
+            return true;
+        } catch (Exception e) {
+            log.error("系统自动将线索池内线索转客户并移入指定公海失败：{}", e.getMessage());
+            return false;
         }
-        Clue freshClue = clueMapper.selectByPrimaryKey(clue.getId());
-        if (freshClue == null) {
-            return;
-        }
-        if (StringUtils.isNotBlank(clue.getTransitionId())
-                && Strings.CS.equals(FormKey.CUSTOMER.name(), clue.getTransitionType())) {
-            return;
-        }
-        Customer customer = generateCustomerByLinkForm(freshClue, systemUser, orgId);
-        if (StringUtils.isNotBlank(customer.getOwner())) {
-            customerContactService.updateContactOwner(customer.getId(), "-", customer.getOwner(), orgId);
-        }
-        long now = System.currentTimeMillis();
-        customer.setPoolId(customerPoolId);
-        customer.setInSharedPool(true);
-        customer.setOwner(null);
-        customer.setCollectionTime(null);
-        customer.setReasonId("system");
-        customer.setUpdateUser(systemUser);
-        customer.setUpdateTime(now);
-        extCustomerMapper.moveToPool(customer);
-
-        Customer persisted = customerMapper.selectByPrimaryKey(customer.getId());
-        TransformCsAssociateDTO transformCsAssociateDTO = transformCsAssociate(freshClue, persisted, systemUser, orgId);
-        freshClue.setTransitionId(persisted.getId());
-        freshClue.setTransitionType(FormKey.CUSTOMER.name());
-        freshClue.setUpdateTime(now);
-        freshClue.setUpdateUser(systemUser);
-        clueMapper.update(freshClue);
-        batchCopyCluePlanAndRecord(freshClue.getId(), persisted.getId(), null, transformCsAssociateDTO.getContactId());
-        refreshCsFollowTime(freshClue, customerMapper.selectByPrimaryKey(persisted.getId()));
-        List<String> notifyUsers = StringUtils.isNotBlank(freshClue.getOwner()) ? List.of(freshClue.getOwner()) : Collections.emptyList();
-        commonNoticeSendService.sendNotice(NotificationConstants.Module.CLUE,
-                NotificationConstants.Event.CLUE_CONVERT_CUSTOMER, freshClue.getName(), systemUser,
-                orgId, notifyUsers, true);
     }
 
 
@@ -693,6 +793,21 @@ public class ClueService {
                 NotificationConstants.Event.CLUE_DELETED, clue.getName(), userId,
                 orgId, List.of(clue.getOwner()), true);
 
+    }
+
+    public void silenceDelete(String id) {
+        // 删除客户
+        clueMapper.deleteByPrimaryKey(id);
+        // 删除客户模块字段
+        clueFieldService.deleteByResourceId(id);
+    }
+
+    public void silenceBatchDelete(List<String> ids) {
+        if (CollectionUtils.isEmpty(ids)) {
+            return;
+        }
+        clueMapper.deleteByIds(ids);
+        clueFieldService.deleteByResourceIds(ids);
     }
 
     public void batchTransfer(ClueBatchTransferRequest request, String userId, String orgId) {
@@ -887,8 +1002,8 @@ public class ClueService {
 
         // 转移线索的计划&记录
         batchCopyCluePlanAndRecord(clue.getId(), transitionCs.getId(), null, transformCsAssociateDTO.getContactId());
-		// 刷新转换过程中同名客户的最新跟进时间
-		refreshCsFollowTime(clue, transitionCs);
+        // 刷新转换过程中同名客户的最新跟进时间
+        refreshCsFollowTime(clue, transitionCs);
 
         // 只通知线索负责人
         Map<String, Object> paramMap = new HashMap<>(8);
@@ -930,8 +1045,8 @@ public class ClueService {
             // 根据表单联动来创建客户
             transformCustomer = generateCustomerByLinkForm(clue, currentUser, orgId);
         }
-		// 刷新转换过程中同名客户的最新跟进时间
-		refreshCsFollowTime(clue, transformCustomer);
+        // 刷新转换过程中同名客户的最新跟进时间
+        refreshCsFollowTime(clue, transformCustomer);
 
         TransformCsAssociateDTO transformCsAssociateDTO = transformCsAssociate(clue, transformCustomer, currentUser, orgId);
         clue.setTransitionId(transformCustomer.getId());
@@ -1058,7 +1173,6 @@ public class ClueService {
      * 同名客户选择器
      *
      * @param customers 客户列表
-     *
      * @return 客户
      */
     public Customer selectorCs(List<Customer> customers, String clueOwner) {
@@ -1077,7 +1191,6 @@ public class ClueService {
      * @param clue        线索
      * @param currentUser 当前用户
      * @param orgId       组织ID
-     *
      * @return 客户
      */
     public Customer generateCustomerByLinkForm(Clue clue, String currentUser, String orgId) {
@@ -1103,6 +1216,29 @@ public class ClueService {
         return customerService.add(addRequest, currentUser, orgId);
     }
 
+    public Customer generateCustomerByLinkForm(Clue clue, String currentUser, String orgId, String customerPoolId) {
+        CustomerAddRequest addRequest = new CustomerAddRequest();
+        ModuleFormConfigDTO customerFormConfig = moduleFormService.getBusinessFormConfig(FormKey.CUSTOMER.getKey(), orgId);
+        FormLinkFill<Customer> customerLinkFillDTO;
+        try {
+            customerLinkFillDTO = moduleFormService.fillFormLinkValue(new Customer(), get(clue),
+                    customerFormConfig, orgId, FormKey.CLUE.getKey(), LinkScenarioKey.CLUE_TO_CUSTOMER.name());
+        } catch (Exception e) {
+            log.error("Attempt to fill customer form error: {}", e.getMessage());
+            throw new GenericException(Translator.get("transform.customer.error"));
+        }
+        // 部分内置字段未配置联动, 取线索值即可
+        addRequest.setName(customerLinkFillDTO.getEntity() == null || StringUtils.isEmpty(customerLinkFillDTO.getEntity().getName()) ?
+                clue.getName() : customerLinkFillDTO.getEntity().getName());
+        addRequest.setOwner(customerLinkFillDTO.getEntity() == null || StringUtils.isEmpty(customerLinkFillDTO.getEntity().getOwner()) ?
+                clue.getOwner() : customerLinkFillDTO.getEntity().getOwner());
+        addRequest.setModuleFields(customerLinkFillDTO.getFields());
+        addRequest.setFollower(clue.getFollower());
+        addRequest.setFollowTime(clue.getFollowTime());
+        addRequest.setMobile(clue.getPhone());
+        return customerService.moveToPool(addRequest, currentUser, orgId, customerPoolId);
+    }
+
     /**
      * 通过表单联动来创建商机
      *
@@ -1110,7 +1246,6 @@ public class ClueService {
      * @param contactId   联系人ID
      * @param currentUser 当前用户
      * @param orgId       组织ID
-     *
      * @return 商机
      */
     public Opportunity generateOpportunityByLinkForm(Clue clue, String contactId, Customer transformCustomer, String currentUser, String orgId) {
@@ -1145,28 +1280,29 @@ public class ClueService {
         return opportunityService.add(addRequest, currentUser, orgId);
     }
 
-	/**
-	 * 通过表单联动来构建客户联系人创建对象
-	 * @param clue 线索
-	 * @param orgId 组织ID
-	 * @return 客户联系人创建对象
-	 */
-	public CustomerContactAddRequest buildContactRequestByLinkForm(Clue clue, String orgId) {
-		ModuleFormConfigDTO contactFormConfig = moduleFormService.getBusinessFormConfig(FormKey.CONTACT.getKey(), orgId);
-		FormLinkFill<CustomerContactAddRequest> fillDTO = null;
-		try {
-			fillDTO = moduleFormService.fillFormLinkValue(new CustomerContactAddRequest(), get(clue),
-					contactFormConfig, orgId, FormKey.CLUE.getKey(), LinkScenarioKey.CLUE_TO_CONTACT.name());
-		} catch (Exception e) {
-			log.error("Attempt to fill contact form error: {}", e.getMessage());
-		}
-		if (fillDTO == null || fillDTO.getEntity() == null) {
-			return new CustomerContactAddRequest();
-		}
-		CustomerContactAddRequest request = fillDTO.getEntity();
-		request.setModuleFields(fillDTO.getFields());
-		return request;
-	}
+    /**
+     * 通过表单联动来构建客户联系人创建对象
+     *
+     * @param clue  线索
+     * @param orgId 组织ID
+     * @return 客户联系人创建对象
+     */
+    public CustomerContactAddRequest buildContactRequestByLinkForm(Clue clue, String orgId) {
+        ModuleFormConfigDTO contactFormConfig = moduleFormService.getBusinessFormConfig(FormKey.CONTACT.getKey(), orgId);
+        FormLinkFill<CustomerContactAddRequest> fillDTO = null;
+        try {
+            fillDTO = moduleFormService.fillFormLinkValue(new CustomerContactAddRequest(), get(clue),
+                    contactFormConfig, orgId, FormKey.CLUE.getKey(), LinkScenarioKey.CLUE_TO_CONTACT.name());
+        } catch (Exception e) {
+            log.error("Attempt to fill contact form error: {}", e.getMessage());
+        }
+        if (fillDTO == null || fillDTO.getEntity() == null) {
+            return new CustomerContactAddRequest();
+        }
+        CustomerContactAddRequest request = fillDTO.getEntity();
+        request.setModuleFields(fillDTO.getFields());
+        return request;
+    }
 
     /**
      * 转换客户处理
@@ -1190,19 +1326,19 @@ public class ClueService {
         }
 
         // 线索联系人 => 客户联系人
-		CustomerContactAddRequest request = buildContactRequestByLinkForm(clue, orgId);
-		if (StringUtils.isEmpty(request.getName())) {
-			return transformDTO;
-		}
-		boolean unique = customerContactService.checkCustomerContactUnique(request.getName(), request.getPhone(), transformCs.getId(), orgId);
-		if (unique) {
-			request.setCustomerId(transformCs.getId());
-			if (StringUtils.isEmpty(request.getOwner())) {
-				request.setOwner(StringUtils.isNotBlank(clue.getOwner()) ? clue.getOwner() : InternalUser.ADMIN.getValue());
-			}
-			CustomerContact contact = customerContactService.add(request, currentUser, orgId);
-			transformDTO.setContactId(contact.getId());
-		}
+        CustomerContactAddRequest request = buildContactRequestByLinkForm(clue, orgId);
+        if (StringUtils.isEmpty(request.getName())) {
+            return transformDTO;
+        }
+        boolean unique = customerContactService.checkCustomerContactUnique(request.getName(), request.getPhone(), transformCs.getId(), orgId);
+        if (unique) {
+            request.setCustomerId(transformCs.getId());
+            if (StringUtils.isEmpty(request.getOwner())) {
+                request.setOwner(StringUtils.isNotBlank(clue.getOwner()) ? clue.getOwner() : InternalUser.ADMIN.getValue());
+            }
+            CustomerContact contact = customerContactService.add(request, currentUser, orgId);
+            transformDTO.setContactId(contact.getId());
+        }
 
         return transformDTO;
     }
@@ -1225,7 +1361,6 @@ public class ClueService {
      *
      * @param file       导入文件
      * @param currentOrg 当前组织
-     *
      * @return 导入检查信息
      */
     public ImportResponse importPreCheck(MultipartFile file, String currentOrg) {
@@ -1241,7 +1376,6 @@ public class ClueService {
      * @param file        导入文件
      * @param currentOrg  当前组织
      * @param currentUser 当前用户
-     *
      * @return 导入返回信息
      */
     public ImportResponse realImport(MultipartFile file, String currentOrg, String currentUser) {
@@ -1277,7 +1411,6 @@ public class ClueService {
      *
      * @param file       文件
      * @param currentOrg 当前组织
-     *
      * @return 检查信息
      */
     private ImportResponse checkImportExcel(MultipartFile file, String currentOrg) {
@@ -1293,7 +1426,7 @@ public class ClueService {
         }
     }
 
-	@SuppressWarnings("unchecked")
+    @SuppressWarnings("unchecked")
     public void batchUpdate(ResourceBatchEditRequest request, String userId, String organizationId) {
         BaseField field = clueFieldService.getAndCheckField(request.getFieldId(), organizationId);
         if (Strings.CS.equals(field.getBusinessKey(), BusinessModuleField.CLUE_OWNER.getBusinessKey())) {
@@ -1350,19 +1483,19 @@ public class ClueService {
                 records.add(clueRecord);
                 ClueFollowDTO clueFollowDTO = clueFollowMap.get(customerId);
                 if (clueFollowDTO == null) {
-					clueFollowMap.put(customerId, ClueFollowDTO.builder().follower(clueRecord.getOwner())
+                    clueFollowMap.put(customerId, ClueFollowDTO.builder().follower(clueRecord.getOwner())
                             .followerTime(clueRecord.getFollowTime()).build());
                 } else {
-					Long recordTime = clueRecord.getFollowTime();
-					if (recordTime == null) {
-						return;
-					}
-					Long followerTime = clueFollowDTO.getFollowerTime();
-					if (followerTime == null || recordTime > followerTime) {
-						clueFollowDTO.setFollower(clueRecord.getOwner());
-						clueFollowDTO.setFollowerTime(recordTime);
-						clueFollowMap.put(customerId, clueFollowDTO);
-					}
+                    Long recordTime = clueRecord.getFollowTime();
+                    if (recordTime == null) {
+                        return;
+                    }
+                    Long followerTime = clueFollowDTO.getFollowerTime();
+                    if (followerTime == null || recordTime > followerTime) {
+                        clueFollowDTO.setFollower(clueRecord.getOwner());
+                        clueFollowDTO.setFollowerTime(recordTime);
+                        clueFollowMap.put(customerId, clueFollowDTO);
+                    }
                 }
             }
         });
@@ -1398,23 +1531,24 @@ public class ClueService {
         });
     }
 
-	/**
-	 * 刷新客户的最新跟进时间
-	 * @param clue 线索信息
-	 * @param transitionCs 转移的客户信息
-	 */
-	private void refreshCsFollowTime(Clue clue, Customer transitionCs) {
-		Long clueFollowTime = clue.getFollowTime();
-		Long customerFollowTime = transitionCs.getFollowTime();
-		if (clueFollowTime == null) {
-			return;
-		}
-		if (customerFollowTime == null || customerFollowTime < clueFollowTime) {
-			Customer updateCustomer = new Customer();
-			updateCustomer.setId(transitionCs.getId());
-			updateCustomer.setFollower(clue.getFollower());
-			updateCustomer.setFollowTime(clueFollowTime);
-			customerMapper.updateById(updateCustomer);
-		}
-	}
+    /**
+     * 刷新客户的最新跟进时间
+     *
+     * @param clue         线索信息
+     * @param transitionCs 转移的客户信息
+     */
+    private void refreshCsFollowTime(Clue clue, Customer transitionCs) {
+        Long clueFollowTime = clue.getFollowTime();
+        Long customerFollowTime = transitionCs.getFollowTime();
+        if (clueFollowTime == null) {
+            return;
+        }
+        if (customerFollowTime == null || customerFollowTime < clueFollowTime) {
+            Customer updateCustomer = new Customer();
+            updateCustomer.setId(transitionCs.getId());
+            updateCustomer.setFollower(clue.getFollower());
+            updateCustomer.setFollowTime(clueFollowTime);
+            customerMapper.updateById(updateCustomer);
+        }
+    }
 }

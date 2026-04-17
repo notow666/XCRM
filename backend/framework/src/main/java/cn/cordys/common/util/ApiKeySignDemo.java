@@ -10,8 +10,8 @@ import java.util.UUID;
 public class ApiKeySignDemo {
 
     // 你提供的 AK/SK
-    private static final String ACCESS_KEY = "sNXZqWqfPCNbCawK";
-    private static final String SECRET_KEY = "99b1b4274ff0e74c7b9a5d11c31503bc";
+    private static final String ACCESS_KEY = "EuqwwzsgzYyWpFSv";
+    private static final String SECRET_KEY = "feac1ac4a45b87088fe4511809771e6b";
 
     // 与后端 CodingUtils 保持一致：GCM tag length = 128
     private static final int GCM_TAG_LENGTH = 128;

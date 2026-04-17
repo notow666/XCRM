@@ -365,14 +365,21 @@
   function filterFormToResult(formModel: FilterForm): FilterResult {
     return {
       searchMode: formModel.searchMode,
-      conditions: (formModel.list || []).map((item: any) => ({
-        name: item.dataIndex ?? '',
-        operator: item.operator,
-        value: item.value,
-        multipleValue: multipleValueTypeList.includes(item.type),
-        type: item.type,
-      })),
+      conditions: (formModel.list || [])
+        .filter((item: any) => item.dataIndex)
+        .map((item: any) => ({
+          name: item.dataIndex ?? '',
+          operator: item.operator,
+          value: item.value,
+          multipleValue: multipleValueTypeList.includes(item.type),
+          type: item.type,
+        })),
     };
+  }
+
+  /** 无有效筛选行时视为「全部满足」，不跑 FilterContent 校验 */
+  function isDistributeRuleEmpty(): boolean {
+    return filterFormToResult(distributeFormViewModel.value as FilterForm).conditions.length === 0;
   }
 
   function cancelHandler() {
@@ -467,7 +474,8 @@
         if (
           props.type === ModuleConfigEnum.CLUE_MANAGEMENT &&
           form.value.distribute &&
-          distributeFilterContentRef.value
+          distributeFilterContentRef.value &&
+          !isDistributeRuleEmpty()
         ) {
           distributeFilterContentRef.value.formRef?.validate((distErrors) => {
             if (!distErrors) {
