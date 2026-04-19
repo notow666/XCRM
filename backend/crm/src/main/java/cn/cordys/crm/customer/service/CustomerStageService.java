@@ -293,6 +293,25 @@ public class CustomerStageService {
     }
 
     /**
+     * 获取回款阶段ID
+     * 通过name精确匹配"stage_payment"
+     *
+     * @param orgId 组织ID
+     * @return 回款阶段ID
+     */
+    public String getPaymentStageId(String orgId) {
+        List<StageConfigResponse> stageList = getStageConfigListForSelect(orgId);
+        if (CollectionUtils.isNotEmpty(stageList)) {
+            return stageList.stream()
+                    .filter(s -> STAGE_TYPE_END.equals(s.getType()) && s.getName() != null && s.getName().contains("无效客户"))
+                    .map(StageConfigResponse::getId)
+                    .findFirst()
+                    .orElse(null);
+        }
+        return null;
+    }
+
+    /**
      * 根据ID获取阶段配置
      *
      * @param id 阶段配置ID

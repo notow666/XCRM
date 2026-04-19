@@ -6,6 +6,7 @@ import {
   AddCustomerPoolUrl,
   addOpportunityRuleUrl,
   AddReasonUrl,
+  BatchUserCapacityUrl,
   CheckRepeatUrl,
   DeleteAttachmentUrl,
   DeleteClueCapacityUrl,
@@ -75,7 +76,7 @@ import {
   GetAdvancedSwitchUrl,
   GetFieldRefDetailListUrl,
   GetFieldOrderListUrl,
-} from '@lib/shared/api/requrls/system/module';
+ } from '@lib/shared/api/requrls/system/module';
 import { QuotationItem } from '@lib/shared/models/opportunity';
 import { ModuleConfigEnum, ReasonTypeEnum } from '@lib/shared/enums/moduleEnum';
 import type { ClueListItem } from '@lib/shared/models/clue';
@@ -98,6 +99,7 @@ import type {
   ModuleSortParams,
   OpportunityItem,
   OpportunityParams,
+  UserCapacityItem,
   ReasonConfig,
   ReasonItem,
   ReasonParams,
@@ -221,6 +223,13 @@ export default function useProductApi(CDR: CordysAxios) {
     return CDR.post({
       url: type === ModuleConfigEnum.CLUE_MANAGEMENT ? AddClueCapacityUrl : AddCustomerCapacityUrl,
       data,
+    });
+  }
+
+  // 批量获取用户库容信息（用于公海批量分发时显示剩余库容）
+  function batchUserCapacity(userIds: string[]) {
+    return CDR.get<UserCapacityItem[]>({
+      url: `${BatchUserCapacityUrl}?userIds=${userIds.join(',')}`,
     });
   }
 
@@ -442,6 +451,7 @@ export default function useProductApi(CDR: CordysAxios) {
     updateCapacity,
     addCapacity,
     deleteCapacity,
+    batchUserCapacity,
     getCustomerPoolPage,
     getCustomerPoolListByEnable,
     addCustomerPool,

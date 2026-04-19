@@ -98,8 +98,8 @@ public class PoolCustomerController {
     @PostMapping("/batch-assign")
     @Operation(summary = "批量分配客户")
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_POOL_ASSIGN})
-    public void batchAssign(@Validated @RequestBody PoolBatchAssignRequest request) {
-        poolCustomerService.batchAssign(request, request.getAssignUserId(), OrganizationContext.getOrganizationId(), SessionUtils.getUserId());
+    public int batchAssign(@Validated @RequestBody PoolBatchAssignRequest request) {
+        return poolCustomerService.batchAssign(request, request.getAssignUserId(), OrganizationContext.getOrganizationId(), SessionUtils.getUserId());
     }
 
     @PostMapping("/batch-delete")

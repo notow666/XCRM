@@ -89,7 +89,9 @@
     :source-ids="checkedRowKeys"
     :title="t('common.batchDistribute')"
     :positive-text="t('common.distribute')"
-    @confirm="handleBatchAssign"
+    :show-capacity="true"
+    :save-api="handleBatchAssignApi"
+    @load-list="handleDistributeSuccess"
   />
   <CrmTableExportModal
     v-model:show="showExportModal"
@@ -287,18 +289,36 @@
   const distributeFormRef = ref<InstanceType<typeof TransferForm>>();
   const distributeForm = ref<any>({
     owner: null,
+    owners: [],
   });
   const showDistributeModal = ref<boolean>(false);
-  async function handleBatchAssign(owner: string | null) {
+  function handleBatchAssignApi(params: any) {
+    const batchIds = params.batchIds || checkedRowKeys.value;
+    return batchAssignOpenSeaCustomer({
+      ...batchTableQueryParams.value,
+      batchIds: batchIds as string[],
+      assignUserId: params.assignUserId || params.owner || '',
+      assignUserIds: params.assignUserIds || [],
+    });
+  }
+  function handleDistributeSuccess() {
+    checkedRowKeys.value = [];
+    tableRefreshId.value += 1;
+  }
+  async function handleBatchAssign(owners: string[]) {
     try {
       distributeLoading.value = true;
-      await batchAssignOpenSeaCustomer({
+      const res = await batchAssignOpenSeaCustomer({
         ...batchTableQueryParams.value,
         batchIds: checkedRowKeys.value,
-        assignUserId: owner || '',
+        assignUserIds: owners,
       });
       checkedRowKeys.value = [];
-      Message.success(t('common.distributeSuccess'));
+      if (typeof res === 'number' && res > 0) {
+        Message.warning(t('module.customer.capacityOver', { count: res }));
+      } else {
+        Message.success(t('common.distributeSuccess'));
+      }
       showDistributeModal.value = false;
       tableRefreshId.value += 1;
     } catch (error) {

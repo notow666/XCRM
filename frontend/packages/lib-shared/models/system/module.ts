@@ -187,6 +187,15 @@ export interface CapacityItem {
   filters?: { column: 'string'; operator: 'string'; value: 'string' }[];
 }
 
+// 用户库容信息（用于公海批量分发显示剩余库容）
+export interface UserCapacityItem {
+  userId: string;
+  userName: string;
+  capacity?: number;
+  ownedCount?: number;
+  remainingCapacity?: number;
+}
+
 // 表单设计保存参数
 export type FormFooterDirection = 'flex-row' | 'flex-row-reverse' | 'justify-center';
 export interface FormActionButton {

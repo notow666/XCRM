@@ -679,6 +679,7 @@ export const {
   getFieldDisplayList,
   getFieldBusinessTitleList,
   getDatasourceRefDetailList,
+  batchUserCapacity,
 } = moduleApi;
 
 export const {

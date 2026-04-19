@@ -562,7 +562,7 @@ export default function useProductApi(CDR: CordysAxios) {
 
   // 批量分配公海客户
   function batchAssignOpenSeaCustomer(data: BatchAssignOpenSeaCustomerParams) {
-    return CDR.post({ url: BatchAssignOpenSeaCustomerUrl, data });
+    return CDR.post<number>({ url: BatchAssignOpenSeaCustomerUrl, data });
   }
 
   // 分配公海客户

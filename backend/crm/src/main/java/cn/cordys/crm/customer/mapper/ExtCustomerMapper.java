@@ -110,6 +110,15 @@ public interface ExtCustomerMapper {
     int countByStage(@Param("stageId") String stageId, @Param("orgId") String orgId);
 
     /**
+     * 统计指定用户下属于特定阶段的客户数量（用于库容计算排除）
+     *
+     * @param ownerId     用户ID
+     * @param stageIds    阶段ID列表
+     * @return 客户数量
+     */
+    int countByOwnerAndStages(@Param("ownerId") String ownerId, @Param("stageIds") List<String> stageIds);
+
+    /**
      * 合并查询手机号冲突信息（客户池冲突 + 其他公海池冲突）
      * 替代原来的 getPrivatePoolMobiles 和 getOtherPoolMobiles 两次查询
      *

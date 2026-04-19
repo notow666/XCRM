@@ -8,6 +8,7 @@
     }"
     filterable
     clearable
+    :multiple="props.multiple"
     max-tag-count="responsive"
     :options="sortedOptions"
     :placeholder="props.placeholder || t('common.pleaseSelect')"
@@ -39,12 +40,14 @@
     fetchApi?: (params: Record<string, any>) => Promise<Record<string, any>[]>;
     params?: Record<string, any>;
     disabledIds?: string[];
+    multiple?: boolean;
   }
 
   const props = withDefaults(defineProps<CrmUserSelectProps>(), {
     mode: 'static',
     labelField: 'label',
     valueField: 'value',
+    multiple: false,
   });
 
   const emit = defineEmits<{

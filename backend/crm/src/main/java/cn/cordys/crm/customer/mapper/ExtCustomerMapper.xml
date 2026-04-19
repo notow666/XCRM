@@ -855,6 +855,17 @@
         and organization_id = #{orgId}
     </select>
 
+    <!-- 统计指定用户下属于特定阶段的客户数量（用于库容计算排除"回款"和"无效客户"阶段） -->
+    <select id="countByOwnerAndStages" resultType="java.lang.Integer">
+        select count(1) from customer
+        where owner = #{ownerId}
+        and in_shared_pool = false
+        and stage in
+        <foreach collection="stageIds" item="stageId" open="(" separator="," close=")">
+            #{stageId}
+        </foreach>
+    </select>
+
     <!-- 合并查询手机号冲突信息（客户池冲突 + 其他公海池冲突），一次查询替代原来两次查询 -->
     <select id="getMobileConflicts" resultType="cn.cordys.crm.customer.dto.MobileConflictDTO">
         SELECT DISTINCT 
