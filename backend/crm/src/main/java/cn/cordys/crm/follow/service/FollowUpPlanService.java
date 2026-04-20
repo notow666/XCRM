@@ -24,6 +24,7 @@ import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.Translator;
 import cn.cordys.crm.customer.domain.Customer;
 import cn.cordys.crm.customer.service.CustomerStageService;
+import cn.cordys.crm.follow.constants.FollowUpPlanCompletionStatus;
 import cn.cordys.crm.follow.constants.FollowUpPlanStatusType;
 import cn.cordys.crm.follow.constants.FollowUpPlanType;
 import cn.cordys.crm.follow.domain.FollowUpPlan;
@@ -89,6 +90,9 @@ public class FollowUpPlanService extends BaseFollowUpService {
      * @return
      */
     public FollowUpPlan add(FollowUpPlanAddRequest request, String userId, String orgId) {
+        // 先完成该客户最新未完成的计划
+        completeOldPlanIfExists(request.getCustomerId(), orgId);
+
         FollowUpPlan followUpPlan = BeanUtils.copyBean(new FollowUpPlan(), request);
         followUpPlan.setCreateTime(System.currentTimeMillis());
         followUpPlan.setUpdateTime(System.currentTimeMillis());
@@ -97,6 +101,7 @@ public class FollowUpPlanService extends BaseFollowUpService {
         followUpPlan.setId(IDGenerator.nextStr());
         followUpPlan.setOrganizationId(orgId);
         followUpPlan.setStatus(FollowUpPlanStatusType.PREPARED.name());
+        followUpPlan.setCompletionStatus(FollowUpPlanCompletionStatus.UNCOMPLETED.name());
         followUpPlan.setConverted(false);
         if (StringUtils.isBlank(request.getOwner())) {
             followUpPlan.setOwner(userId);
@@ -114,6 +119,24 @@ public class FollowUpPlanService extends BaseFollowUpService {
         handleCustomerStageTransition(request, orgId);
 
         return followUpPlan;
+    }
+
+    private void completeOldPlanIfExists(String customerId, String orgId) {
+        if (StringUtils.isBlank(customerId)) {
+            return;
+        }
+        LambdaQueryWrapper<FollowUpPlan> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(FollowUpPlan::getCustomerId, customerId)
+                .eq(FollowUpPlan::getType, FollowUpPlanType.CUSTOMER.name())
+                .eq(FollowUpPlan::getCompletionStatus, "UNCOMPLETED")
+                .orderByDesc(FollowUpPlan::getCreateTime);
+        List<FollowUpPlan> oldPlans = followUpPlanMapper.selectListByLambda(queryWrapper);
+        if (CollectionUtils.isNotEmpty(oldPlans)) {
+            FollowUpPlan oldPlan = oldPlans.get(0);
+            oldPlan.setCompletionStatus(FollowUpPlanCompletionStatus.COMPLETED.name());
+            oldPlan.setCompletionTime(System.currentTimeMillis());
+            followUpPlanMapper.update(oldPlan);
+        }
     }
 
     /**
@@ -302,6 +325,13 @@ public class FollowUpPlanService extends BaseFollowUpService {
         List<String> customerIds = list.stream().map(FollowUpPlanListResponse::getCustomerId).toList();
         Map<String, String> customerMap = baseService.getCustomerMap(customerIds);
 
+        List<String> customerOwnerIds = list.stream()
+                .map(FollowUpPlanListResponse::getCustomerOwner)
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .toList();
+        Map<String, String> customerOwnerNameMap = baseService.getUserNameMap(customerOwnerIds);
+
         List<String> opportunityIds = list.stream().map(FollowUpPlanListResponse::getOpportunityId).toList();
         Map<String, String> opportunityMap = baseService.getOpportunityMap(opportunityIds);
 
@@ -317,6 +347,7 @@ public class FollowUpPlanService extends BaseFollowUpService {
             planResponse.setOwnerName(userNameMap.get(planResponse.getOwner()));
             planResponse.setContactName(contactMap.get(planResponse.getContactId()));
             planResponse.setCustomerName(customerMap.get(planResponse.getCustomerId()));
+            planResponse.setCustomerOwnerName(customerOwnerNameMap.get(planResponse.getCustomerOwner()));
             planResponse.setProcessorName(userNameMap.get(planResponse.getProcessor()));
             planResponse.setOpportunityName(opportunityMap.get(planResponse.getOpportunityId()));
             planResponse.setClueName(clueMap.get(planResponse.getClueId()));

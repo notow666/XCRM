@@ -986,7 +986,7 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
       [FormDesignKeyEnum.FOLLOW_PLAN_CUSTOMER, FormDesignKeyEnum.FOLLOW_RECORD_CUSTOMER].includes(
         props.formKey.value
       ) &&
-      props.sourceId?.value
+      (props.sourceId?.value || props.otherSaveParams?.value?.customerId)
     ) {
       if (field.businessKey === 'type') {
         return {
@@ -995,20 +995,28 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
         };
       }
       if (field.businessKey === 'customerId') {
+        const customerId = props.sourceId?.value || props.otherSaveParams?.value?.customerId;
+        const customerName = sourceName.value || props.initialSourceName?.value || props.otherSaveParams?.value?.customerName;
         specialInitialOptions.value = [
           {
-            id: props.sourceId?.value,
-            name: sourceName.value || props.initialSourceName?.value,
+            id: customerId,
+            name: customerName,
           },
         ];
         return {
-          defaultValue: initFieldValue(field, props.sourceId?.value || ''),
+          defaultValue: initFieldValue(field, customerId || ''),
           initialOptions: specialInitialOptions.value,
         };
       }
       if (field.businessKey === 'nextStage' && props.otherSaveParams?.value?.nextStageName) {
         return {
           defaultValue: props.otherSaveParams.value.nextStageName,
+        };
+      }
+      if (field.businessKey === 'owner' && props.otherSaveParams?.value?.owner) {
+        return {
+          defaultValue: props.otherSaveParams.value.owner,
+          initialOptions: [{ id: props.otherSaveParams.value.owner, name: props.otherSaveParams.value.ownerName || '' }],
         };
       }
       if (field.businessKey === 'processor' && props.otherSaveParams?.value?.owner) {

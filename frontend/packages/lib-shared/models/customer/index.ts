@@ -140,6 +140,14 @@ export interface CustomerFollowPlanListItem extends CustomerFollowRecordListItem
   processor?: string;
   /** 预计处理人员名称 */
   processorName?: string;
+  /** 客户负责人 */
+  customerOwner?: string;
+  /** 客户负责人名称 */
+  customerOwnerName?: string;
+  /** 完成状态 */
+  completionStatus?: string;
+  /** 完成时间 */
+  completionTime?: number;
 }
 
 export interface SaveCustomerContractParams {

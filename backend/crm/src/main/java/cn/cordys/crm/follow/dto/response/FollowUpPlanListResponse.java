@@ -18,6 +18,12 @@ public class FollowUpPlanListResponse {
     @Schema(description = "客户名称")
     private String customerName;
 
+    @Schema(description = "客户负责人")
+    private String customerOwner;
+
+    @Schema(description = "客户负责人名称")
+    private String customerOwnerName;
+
     @Schema(description = "商机id")
     private String opportunityId;
 
@@ -119,4 +125,10 @@ public class FollowUpPlanListResponse {
 
     @Schema(description = "预计处理人员名称")
     private String processorName;
+
+    @Schema(description = "完成状态")
+    private String completionStatus;
+
+    @Schema(description = "完成时间")
+    private Long completionTime;
 }

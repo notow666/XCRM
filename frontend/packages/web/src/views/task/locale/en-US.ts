@@ -8,7 +8,11 @@ export default {
   'task.column.stage': 'Stage',
   'task.column.planTime': 'Planned start',
   'task.column.status': 'Status',
+  'task.column.completionStatus': 'Completion Status',
+  'task.column.completionTime': 'Completion Time',
   'task.column.owner': 'Owner',
   'task.complete': 'Complete',
   'task.completeConfirm': 'Mark this follow-up plan as completed?',
+  'task.completionStatus.uncompleted': 'Incomplete',
+  'task.completionStatus.completed': 'Completed',
 };

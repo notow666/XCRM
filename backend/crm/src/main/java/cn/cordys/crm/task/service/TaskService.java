@@ -52,6 +52,7 @@ public class TaskService {
         request.setMyPlan(true);
         request.setTaskModuleQuery(true);
         request.setStatus("ALL");
+        request.setCompletionStatus("UNCOMPLETED");
 
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         List<String> resourceTypeList = Collections.singletonList(NotificationConstants.Module.CUSTOMER);

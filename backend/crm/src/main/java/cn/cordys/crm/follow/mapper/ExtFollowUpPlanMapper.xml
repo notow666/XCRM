@@ -25,7 +25,10 @@
         fup.next_stage_name,
         fup.next_stage_status,
         fup.processor,
-        if (fup.type = 'CLUE', c.pool_id, cu.pool_id) as poolId
+        fup.completion_status as completionStatus,
+        fup.completion_time as completionTime,
+        if (fup.type = 'CLUE', c.pool_id, cu.pool_id) as poolId,
+        cu.owner as customerOwner
         FROM
         follow_up_plan fup
         LEFT JOIN clue c ON c.id = fup.clue_id
@@ -52,7 +55,7 @@
             AND fup.content like concat('%', #{request.keyword},'%')
         </if>
         <if test="request.myPlan">
-            AND fup.owner = #{userId}
+            AND fup.processor = #{userId}
         </if>
         <if test="request.taskModuleQuery != null and request.taskModuleQuery">
             AND fup.type = 'CUSTOMER'
@@ -60,6 +63,10 @@
             AND cu.id is not null
             AND cu.in_shared_pool is false
             AND fup.status in ('PREPARED','UNDERWAY')
+            AND fup.next_stage not in ('stage_payment', 'stage_fail')
+            <if test="request.completionStatus != null and request.completionStatus != ''">
+                AND (fup.completion_status = #{request.completionStatus} OR fup.completion_status IS NULL)
+            </if>
         </if>
         <if test="request.status != null and request.status != '' and request.status != 'ALL' and (request.taskModuleQuery == null or request.taskModuleQuery == false)">
             AND fup.status = #{request.status}

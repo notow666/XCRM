@@ -8,7 +8,11 @@ export default {
   'task.column.stage': '当前阶段',
   'task.column.planTime': '预计开始',
   'task.column.status': '状态',
+  'task.column.completionStatus': '完成状态',
+  'task.column.completionTime': '完成时间',
   'task.column.owner': '负责人',
   'task.complete': '完成',
   'task.completeConfirm': '确认将该跟进计划标记为已完成？',
+  'task.completionStatus.uncompleted': '未完成',
+  'task.completionStatus.completed': '已完成',
 };

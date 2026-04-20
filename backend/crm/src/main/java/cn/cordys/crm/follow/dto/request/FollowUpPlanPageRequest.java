@@ -18,4 +18,7 @@ public class FollowUpPlanPageRequest extends BasePageRequest {
 
     @Schema(description = "任务模块列表：仅客户私海、未完成跟进计划")
     private Boolean taskModuleQuery;
+
+    @Schema(description = "完成状态: UNCOMPLETED/COMPLETED")
+    private String completionStatus;
 }

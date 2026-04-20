@@ -14,6 +14,16 @@
         />
       </div>
     </CrmCard>
+    <CrmFormCreateDrawer
+      v-model:visible="planFormDrawerVisible"
+      :form-key="FormDesignKeyEnum.FOLLOW_PLAN_CUSTOMER"
+      :source-id="selectedPlan?.customerId"
+      :initial-source-name="selectedPlan?.customerName"
+      :need-init-detail="false"
+      :link-form-key="FormDesignKeyEnum.CUSTOMER"
+      :other-save-params="planFormSaveParams"
+      @saved="handlePlanSaved"
+    />
   </div>
 </template>
 
@@ -23,12 +33,14 @@
   import dayjs from 'dayjs';
 
   import { CustomerFollowPlanStatusEnum } from '@lib/shared/enums/customerEnum';
+  import { FormDesignKeyEnum } from '@lib/shared/enums/formDesignEnum';
   import { useI18n } from '@lib/shared/hooks/useI18n';
   import type { CustomerFollowPlanListItem } from '@lib/shared/models/customer';
 
   import CrmCard from '@/components/pure/crm-card/index.vue';
+  import CrmFormCreateDrawer from '@/components/business/crm-form-create-drawer/index.vue';
 
-  import { completeTaskFollowPlan, getTaskFollowPlanPage } from '@/api/modules';
+  import { getCustomerNextStage, getTaskFollowPlanPage } from '@/api/modules';
   import useModal from '@/hooks/useModal';
   import useOpenNewPage from '@/hooks/useOpenNewPage';
   import { hasAnyPermission } from '@/utils/permission';
@@ -48,6 +60,10 @@
   const pageSize = ref(30);
   const total = ref(0);
 
+  const planFormDrawerVisible = ref(false);
+  const selectedPlan = ref<CustomerFollowPlanListItem | null>(null);
+  const planFormSaveParams = ref<Record<string, any>>({ converted: false });
+
   const pagination = computed<PaginationProps>(() => ({
     page: page.value,
     pageSize: pageSize.value,
@@ -64,6 +80,14 @@
       CANCELLED: t('task.status.cancelled'),
     };
     return map[s] ?? s;
+  }
+
+  function completionStatusLabel(s?: string) {
+    const map: Record<string, string> = {
+      UNCOMPLETED: t('task.completionStatus.uncompleted'),
+      COMPLETED: t('task.completionStatus.completed'),
+    };
+    return map[s ?? ''] ?? '-';
   }
 
   function formatTime(ts?: number) {
@@ -101,19 +125,35 @@
     loadList();
   }
 
-  function handleComplete(row: CustomerFollowPlanListItem) {
-    openModal({
-      type: 'warning',
-      title: t('common.tip'),
-      content: t('task.completeConfirm'),
-      positiveText: t('common.confirm'),
-      negativeText: t('common.cancel'),
-      onPositiveClick: async () => {
-        await completeTaskFollowPlan({ id: row.id });
-        Message.success(t('common.operationSuccess'));
-        await loadList();
-      },
-    });
+  async function handleComplete(row: CustomerFollowPlanListItem) {
+    selectedPlan.value = row;
+    const { customerId, customerName } = row;
+
+    const params: Record<string, any> = { converted: false, type: 'CUSTOMER' };
+    try {
+      const res = await getCustomerNextStage(customerId);
+      if (res) {
+        params.nextStage = res.nextStageId || '';
+        params._nextStage = res.nextStageId || '';
+        params.nextStageName = res.nextStageName || '';
+        params.owner = res.owner || '';
+        params.ownerName = res.ownerName || '';
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('获取客户下一阶段信息失败', error);
+    }
+
+    planFormSaveParams.value = params;
+    planFormDrawerVisible.value = true;
+  }
+
+  async function handlePlanSaved() {
+    Message.success(t('common.operationSuccess'));
+    planFormSaveParams.value = { converted: false };
+    planFormDrawerVisible.value = false;
+    selectedPlan.value = null;
+    await loadList();
   }
 
   const columns = computed<DataTableColumns<CustomerFollowPlanListItem>>(() => [
@@ -155,16 +195,24 @@
       },
     },
     {
-      title: t('task.column.status'),
-      key: 'status',
+      title: t('task.column.completionStatus'),
+      key: 'completionStatus',
       width: 100,
       render(row) {
-        return statusLabel(row.status);
+        return completionStatusLabel(row.completionStatus);
+      },
+    },
+    {
+      title: t('task.column.completionTime'),
+      key: 'completionTime',
+      width: 170,
+      render(row) {
+        return formatTime(row.completionTime);
       },
     },
     {
       title: t('task.column.owner'),
-      key: 'ownerName',
+      key: 'customerOwnerName',
       width: 120,
       ellipsis: { tooltip: true },
     },

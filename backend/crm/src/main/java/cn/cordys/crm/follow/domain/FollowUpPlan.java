@@ -63,4 +63,10 @@ public class FollowUpPlan extends BaseModel {
 
     @Schema(description = "阶段状态")
     private String nextStageStatus;
+
+    @Schema(description = "完成状态")
+    private String completionStatus;
+
+    @Schema(description = "完成时间")
+    private Long completionTime;
 }
