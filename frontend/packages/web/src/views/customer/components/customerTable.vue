@@ -233,6 +233,12 @@
   const planFormSaveParams = ref<Record<string, any>>({ converted: false });
 
   const stageConfig = ref<Awaited<ReturnType<typeof getCustomerStageConfig>>>();
+  const excludeStageIds = computed<string[]>(() => {
+    if (!stageConfig.value?.stageConfigList) return [];
+    return stageConfig.value.stageConfigList
+      .filter((s) => s.type === 'END' && (s.name?.includes('回款') || s.name?.includes('无效')))
+      .map((s) => s.id);
+  });
   async function initStageConfig() {
     try {
       stageConfig.value = await getCustomerStageConfig();
@@ -552,7 +558,11 @@
               : h(
                   CrmOperationButton,
                   {
-                    groupList: operationGroupList.value,
+                    groupList: operationGroupList.value.filter(
+                      (item) =>
+                        item.key !== 'followUp' ||
+                        !excludeStageIds.value.includes(row.stage)
+                    ),
                     moreList: [
                       ...(activeTab.value !== CustomerSearchTypeEnum.CUSTOMER_COLLABORATION
                         ? [
@@ -798,7 +808,7 @@
   }
 
   function handleFormCreateSaved(res: any) {
-    if (needInitDetail.value || activeFormKey.value === FormDesignKeyEnum.FOLLOW_RECORD_CUSTOMER) {
+    if (needInitDetail.value) {
       searchData(undefined, res.id);
     } else {
       searchData();
