@@ -291,6 +291,7 @@
     owner: null,
     owners: [],
   });
+  const distributeFormKey = ref(0);
   const showDistributeModal = ref<boolean>(false);
   function handleBatchAssignApi(params: any) {
     const batchIds = params.batchIds || checkedRowKeys.value;
@@ -571,14 +572,17 @@
                 onSelect: (key: string) => handleActionSelect(row, key),
                 onCancel: () => {
                   distributeForm.value.owner = null;
+                  distributeFormKey.value += 1;
                 },
               },
               {
                 distributePopContent: () => {
                   return h(TransferForm, {
+                    key: distributeFormKey.value,
                     class: 'w-[320px] mt-[16px]',
                     form: distributeForm.value,
                     ref: distributeFormRef,
+                    'show-capacity': true,
                   });
                 },
               }

@@ -59,7 +59,7 @@
 </template>
 
 <script lang="ts" setup>
-  import { computed, onMounted, ref } from 'vue';
+  import { computed, ref, watch } from 'vue';
   import { DataTableRowKey, NCheckbox, NSpin, useMessage } from 'naive-ui';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
@@ -153,8 +153,10 @@
     }
   }
 
-  onMounted(() => {
-    loadUserCapacity();
+  watch(showModal, (val) => {
+    if (val && props.showCapacity) {
+      loadUserCapacity();
+    }
   });
 
   function confirmHandler() {

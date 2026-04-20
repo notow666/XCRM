@@ -84,21 +84,6 @@
   const userCapacityList = ref<UserCapacityItem[]>([]);
   const loadingUserList = ref(false);
 
-  function toggleUser(userId: string) {
-    if (props.showCapacity) {
-      const owners = [...(form.value.owners || [])];
-      const index = owners.indexOf(userId);
-      if (index > -1) {
-        owners.splice(index, 1);
-      } else {
-        owners.push(userId);
-      }
-      const newForm = { ...form.value, owners };
-      form.value = newForm;
-      emit('update:form', newForm);
-    }
-  }
-
   async function loadUserCapacity() {
     if (!props.showCapacity) return;
     try {
@@ -131,7 +116,24 @@
     loadUserCapacity();
   });
 
-  defineExpose({});
+  function toggleUser(userId: string) {
+    if (props.showCapacity) {
+      const owners = [...(form.value.owners || [])];
+      const index = owners.indexOf(userId);
+      if (index > -1) {
+        owners.splice(index, 1);
+      } else {
+        owners.push(userId);
+      }
+      const newForm = { ...form.value, owners };
+      form.value = newForm;
+      emit('update:form', newForm);
+    }
+  }
+
+  defineExpose({
+    loadUserCapacity,
+  });
 </script>
 
 <style lang="less" scoped></style>

@@ -303,7 +303,7 @@ public class CustomerStageService {
         List<StageConfigResponse> stageList = getStageConfigListForSelect(orgId);
         if (CollectionUtils.isNotEmpty(stageList)) {
             return stageList.stream()
-                    .filter(s -> STAGE_TYPE_END.equals(s.getType()) && s.getName() != null && s.getName().contains("无效客户"))
+                    .filter(s -> STAGE_TYPE_END.equals(s.getType()) && s.getName() != null && s.getName().contains("回款"))
                     .map(StageConfigResponse::getId)
                     .findFirst()
                     .orElse(null);
