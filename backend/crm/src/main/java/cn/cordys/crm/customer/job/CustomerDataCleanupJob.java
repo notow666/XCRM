@@ -42,7 +42,7 @@ public class CustomerDataCleanupJob {
 
     private final Map<String, String> tenantCronCache = new ConcurrentHashMap<>();
 
-    @QuartzScheduled(cron = "0 */1 * * * ?")
+    @QuartzScheduled(cron = "0 */5 * * * ?")
     public void execute() {
         tenantTaskExecutor.runForEachEnabledTenant("CustomerDataCleanupJob.execute", tenantId -> {
             try {
