@@ -143,6 +143,12 @@ public class OrganizationUserController {
         return organizationUserService.getUserOptions(OrganizationContext.getOrganizationId());
     }
 
+    @GetMapping(value = "/option/auth")
+    @Operation(summary = "获取当前用户权限内的用户下拉option")
+    public List<OptionDTO> getAuthUserList() {
+        return organizationUserService.getAuthUserOptions(SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
     @GetMapping(value = "/role/option")
     @Operation(summary = "获取用户角色下拉option")
     @RequiresPermissions(PermissionConstants.SYS_ORGANIZATION_READ)

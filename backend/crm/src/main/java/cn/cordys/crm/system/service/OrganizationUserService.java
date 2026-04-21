@@ -7,11 +7,14 @@ import cn.cordys.aspectj.context.OperationLogContext;
 import cn.cordys.aspectj.dto.LogContextInfo;
 import cn.cordys.aspectj.dto.LogDTO;
 import cn.cordys.common.constants.InternalUser;
+import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.dto.BaseTreeNode;
+import cn.cordys.common.dto.DeptDataPermissionDTO;
 import cn.cordys.common.dto.DeptUserTreeNode;
 import cn.cordys.common.dto.OptionDTO;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.permission.PermissionCache;
+import cn.cordys.common.service.DataScopeService;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.CodingUtils;
@@ -111,6 +114,8 @@ public class OrganizationUserService {
     private PermissionCache permissionCache;
     @Resource
     private ExtNotificationMapper extNotificationMapper;
+    @Resource
+    private DataScopeService dataScopeService;
 
 
     /**
@@ -854,6 +859,51 @@ public class OrganizationUserService {
      * @return 用户选项列表
      */
     public List<OptionDTO> getUserOptions(String orgId) {
+        List<String> allDpIds = getSortDepartmentIds(orgId);
+        String defaultOrder = CollectionUtils.isEmpty(allDpIds) ? StringUtils.EMPTY : buildOrderByFieldClause(allDpIds);
+        return extUserMapper.selectUserOptionByOrgId(orgId, defaultOrder);
+    }
+
+    /**
+     * 获取当前用户权限内的系统用户options
+     *
+     * @param userId 当前用户ID
+     * @param orgId  组织ID
+     *
+     * @return 用户选项列表
+     */
+    public List<OptionDTO> getAuthUserOptions(String userId, String orgId) {
+        if (Strings.CS.equals(userId, InternalUser.ADMIN.getValue())) {
+            return getUserOptions(orgId);
+        }
+        // 注：此处使用CUSTOMER_MANAGEMENT_READ作为基础权限标识，因为转移功能主要应用于客户模块
+        // 如需支持其他模块（线索、商机等），可后续扩展为动态传入权限标识
+        DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(userId, orgId, PermissionConstants.CUSTOMER_MANAGEMENT_READ);
+        if (deptDataPermission.getAll()) {
+            // 全部数据权限：返回组织内所有用户
+            List<String> allDpIds = getSortDepartmentIds(orgId);
+            String defaultOrder = CollectionUtils.isEmpty(allDpIds) ? StringUtils.EMPTY : buildOrderByFieldClause(allDpIds);
+            return extUserMapper.selectUserOptionByOrgId(orgId, defaultOrder);
+        }
+        if (deptDataPermission.getSelf()) {
+            // 仅本人数据权限：只返回当前用户自己
+            List<OptionDTO> result = new ArrayList<>();
+            List<String> allDpIds = getSortDepartmentIds(orgId);
+            String defaultOrder = CollectionUtils.isEmpty(allDpIds) ? StringUtils.EMPTY : buildOrderByFieldClause(allDpIds);
+            List<OptionDTO> allUsers = extUserMapper.selectUserOptionByOrgId(orgId, defaultOrder);
+            for (OptionDTO user : allUsers) {
+                if (Strings.CS.equals(user.getId(), userId)) {
+                    result.add(user);
+                    break;
+                }
+            }
+            return result;
+        }
+        if (CollectionUtils.isNotEmpty(deptDataPermission.getDeptIds())) {
+            // 部门数据权限：返回指定部门下的用户
+            return extUserMapper.selectUserOptionByDeptIdsAndOrgId(new ArrayList<>(deptDataPermission.getDeptIds()), orgId);
+        }
+        // 默认返回组织内所有用户
         List<String> allDpIds = getSortDepartmentIds(orgId);
         String defaultOrder = CollectionUtils.isEmpty(allDpIds) ? StringUtils.EMPTY : buildOrderByFieldClause(allDpIds);
         return extUserMapper.selectUserOptionByOrgId(orgId, defaultOrder);

@@ -180,6 +180,20 @@
         is_commander DESC, sou.create_time DESC, su.name DESC
     </select>
 
+    <select id="selectUserOptionByDeptIdsAndOrgId" resultType="cn.cordys.common.dto.OptionDTO">
+        SELECT su.id, su.name
+        FROM sys_user su
+        INNER JOIN sys_organization_user sou on su.id = sou.user_id
+        LEFT JOIN
+        ( SELECT distinct user_id, 1 AS is_commander FROM sys_department_commander ) uc ON su.id = uc.user_id
+        WHERE sou.organization_id = #{orgId}
+        AND sou.department_id IN
+        <foreach collection="deptIds" item="deptId" open="(" separator="," close=")">
+            #{deptId}
+        </foreach>
+        ORDER BY sou.enable DESC, is_commander DESC, sou.create_time DESC, su.name DESC
+    </select>
+
     <select id="getUserDeptByUserIds" resultType="cn.cordys.common.dto.UserDeptDTO">
         select sou.user_id, sd.id as deptId, sd.`name` as deptName
         from sys_organization_user sou

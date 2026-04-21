@@ -697,6 +697,7 @@ export const {
   getUserDetail,
   batchEditUser,
   getUserOptions,
+  getAuthUserOptions,
   getRoleOptions,
   sortDepartment,
   deleteUserCheck,

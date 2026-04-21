@@ -18,6 +18,7 @@ import {
   getUserDetailUrl,
   getUserListUrl,
   getUserOptionsUrl,
+  getAuthUserOptionsUrl,
   importUserPreCheckUrl,
   importUserUrl,
   renameDepartmentUrl,
@@ -137,6 +138,11 @@ export default function useProductApi(CDR: CordysAxios) {
     return CDR.get({ url: getUserOptionsUrl });
   }
 
+  // 用户(员工)-获取当前用户权限内的用户下拉
+  function getAuthUserOptions() {
+    return CDR.get({ url: getAuthUserOptionsUrl });
+  }
+
   // 用户(员工)-获取角色下拉
   function getRoleOptions() {
     return CDR.get({ url: getRoleOptionsUrl });
@@ -186,6 +192,7 @@ export default function useProductApi(CDR: CordysAxios) {
     batchEditUser,
     importUserPreCheck,
     getUserOptions,
+    getAuthUserOptions,
     getRoleOptions,
     importUsers,
     deleteUser,

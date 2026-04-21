@@ -15,7 +15,7 @@
         value-field="id"
         label-field="name"
         mode="remote"
-        :fetch-api="getUserOptions"
+        :fetch-api="getAuthUserOptions"
         max-tag-count="responsive"
       />
     </div>
@@ -69,7 +69,7 @@
   import CrmModal from '@/components/pure/crm-modal/index.vue';
   import CrmUserSelect from '@/components/business/crm-user-select/index.vue';
 
-  import { batchUserCapacity, getUserOptions } from '@/api/modules';
+  import { batchUserCapacity, getAuthUserOptions } from '@/api/modules';
 
   const { t } = useI18n();
   const Message = useMessage();
@@ -129,7 +129,7 @@
     if (!props.showCapacity) return;
     try {
       loadingUserList.value = true;
-      const res = await getUserOptions({ keyword: '', pageSize: 100 });
+      const res = await getAuthUserOptions();
       if (res && res.length > 0) {
         const userIds = res.map((u: any) => u.value || u.id);
         const capacityRes = await batchUserCapacity(userIds);
