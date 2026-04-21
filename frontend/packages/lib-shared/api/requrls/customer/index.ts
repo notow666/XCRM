@@ -164,3 +164,7 @@ export const GetCustomerFollowWayListUrl = '/customer/follow-way/list';
 export const AddCustomerFollowWayUrl = '/customer/follow-way';
 export const UpdateCustomerFollowWayUrl = '/customer/follow-way';
 export const DeleteCustomerFollowWayUrl = '/customer/follow-way';
+
+export const GetCustomerDataCleanupUrl = '/customer/dataCleanup/get';
+export const SaveCustomerDataCleanupUrl = '/customer/dataCleanup/save';
+export const DeleteCustomerDataCleanupUrl = '/customer/dataCleanup/delete';

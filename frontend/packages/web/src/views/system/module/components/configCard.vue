@@ -83,6 +83,7 @@
     :title="t('module.customerFailReasonConfig')"
     type="failReason"
   />
+  <CustomerDataCleanupDrawer v-model:visible="customerDataCleanupVisible" />
   <stateFlowDrawer v-model:visible="orderStateFlowVisible" :type="FormDesignKeyEnum.ORDER" />
   <ContractFormFormDrawer v-model:visible="contractFormVisible" />
   <OrderFormFormDrawer v-model:visible="orderFormVisible" />
@@ -106,6 +107,7 @@
   import CrmMoreAction from '@/components/pure/crm-more-action/index.vue';
   import type { ActionsItem } from '@/components/pure/crm-more-action/type';
   import CustomerConfigDrawer from '@/components/business/crm-customer-config-drawer/index.vue';
+  import CustomerDataCleanupDrawer from '@/components/business/crm-customer-data-cleanup-drawer/index.vue';
   import stateFlowDrawer from '@/components/business/crm-status-config-drawer/index.vue';
   import approvalSwitch, { approvalConfigType } from './approvalSwitch.vue';
   import businessTitleValidate from './businessTitleValidate.vue';
@@ -419,6 +421,10 @@
           key: 'customerFailReasonConfig',
         },
         {
+          label: t('module.customerDataCleanup'),
+          key: 'customerDataCleanup',
+        },
+        {
           label: t('common.more'),
           slotName: 'more',
         },
@@ -622,6 +628,7 @@
   const customerStepSetVisible = ref(false);
   const customerFollowWayConfigVisible = ref(false);
   const customerFailReasonConfigVisible = ref(false);
+  const customerDataCleanupVisible = ref(false);
   const orderFormVisible = ref(false);
   const orderStateFlowVisible = ref(false);
 
@@ -651,6 +658,8 @@
           customerFollowWayConfigVisible.value = true;
         } else if (key === 'customerFailReasonConfig') {
           customerFailReasonConfigVisible.value = true;
+        } else if (key === 'customerDataCleanup') {
+          customerDataCleanupVisible.value = true;
         }
         break;
       case ModuleConfigEnum.CONTRACT:

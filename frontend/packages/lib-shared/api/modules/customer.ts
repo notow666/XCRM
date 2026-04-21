@@ -145,6 +145,9 @@ import {
   AddCustomerFollowWayUrl,
   UpdateCustomerFollowWayUrl,
   DeleteCustomerFollowWayUrl,
+  GetCustomerDataCleanupUrl,
+  SaveCustomerDataCleanupUrl,
+  DeleteCustomerDataCleanupUrl,
   TransferPoolCustomerUrl,
   BatchTransferPoolCustomerUrl,
 } from '@lib/shared/api/requrls/customer';
@@ -304,6 +307,27 @@ export default function useProductApi(CDR: CordysAxios) {
   // 删除客户跟进方式
   function deleteCustomerFollowWay(id: string) {
     return CDR.delete({ url: `${DeleteCustomerFollowWayUrl}/${id}` });
+  }
+
+  // 获取客户数据清理配置
+  function getCustomerDataCleanup(): Promise<{ fieldIds: string[]; days: number } | null> {
+    return CDR.get<any>({ url: GetCustomerDataCleanupUrl }).then((res) => {
+      if (!res) return null;
+      return {
+        fieldIds: res.fieldIds ? JSON.parse(res.fieldIds) : [],
+        days: res.days,
+      };
+    });
+  }
+
+  // 保存客户数据清理配置
+  function saveCustomerDataCleanup(data: { fieldIds: string[]; days: number }) {
+    return CDR.post({ url: SaveCustomerDataCleanupUrl, data });
+  }
+
+  // 删除客户数据清理配置
+  function deleteCustomerDataCleanup() {
+    return CDR.delete({ url: DeleteCustomerDataCleanupUrl });
   }
 
   // 添加客户
@@ -1107,6 +1131,9 @@ export default function useProductApi(CDR: CordysAxios) {
     addCustomerFollowWay,
     updateCustomerFollowWay,
     deleteCustomerFollowWay,
+    getCustomerDataCleanup,
+    saveCustomerDataCleanup,
+    deleteCustomerDataCleanup,
     preCheckImportPoolCustomer,
     importPoolCustomer,
     downloadPoolCustomerTemplate,

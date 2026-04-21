@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cordys.crm.customer.mapper.ExtCustomerDataCleanupMapper">
+
+    <select id="selectCleanupFieldInfoList" resultType="cn.cordys.crm.customer.mapper.ExtCustomerDataCleanupMapper$CleanupFieldInfo">
+        SELECT f.id, f.resource_id AS resourceId, f.field_id AS fieldId, m.name AS fieldName
+        FROM customer_field AS f
+        LEFT JOIN sys_module_field AS m ON f.field_id = m.id
+        WHERE f.resource_id IN
+        <foreach collection="customerIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND f.field_id IN
+        <foreach collection="fieldIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <delete id="clearFieldValueByResourceAndFieldIds">
+        DELETE FROM customer_field
+        WHERE resource_id IN
+        <foreach collection="customerIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND field_id IN
+        <foreach collection="fieldIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <delete id="clearFieldBlobValueByResourceAndFieldIds">
+        DELETE FROM customer_field_blob
+        WHERE resource_id IN
+        <foreach collection="customerIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND field_id IN
+        <foreach collection="fieldIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>
