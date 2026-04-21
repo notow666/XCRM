@@ -308,12 +308,12 @@
         tab: t('crmFollowRecord.followRecord'),
         enable: true,
       },
-      {
-        name: 'contact',
-        tab: t('opportunity.contactInfo'),
-        enable: true,
-        permission: ['CUSTOMER_MANAGEMENT_CONTACT:READ'],
-      },
+      // {
+      //   name: 'contact',
+      //   tab: t('opportunity.contactInfo'),
+      //   enable: true,
+      //   permission: ['CUSTOMER_MANAGEMENT_CONTACT:READ'],
+      // },
       {
         name: 'followPlan',
         tab: t('common.plan'),
@@ -324,22 +324,22 @@
         tab: t('common.headRecord'),
         enable: true,
       },
-      {
-        name: 'relation',
-        tab: t('customer.relation'),
-        enable: true,
-      },
-      {
-        name: 'opportunityInfo',
-        tab: t('customer.opportunityInfo'),
-        enable: true,
-        permission: ['OPPORTUNITY_MANAGEMENT:READ'],
-      },
-      {
-        name: 'collaborator',
-        tab: t('customer.collaborator'),
-        enable: true,
-      },
+      // {
+      //   name: 'relation',
+      //   tab: t('customer.relation'),
+      //   enable: true,
+      // },
+      // {
+      //   name: 'opportunityInfo',
+      //   tab: t('customer.opportunityInfo'),
+      //   enable: true,
+      //   permission: ['OPPORTUNITY_MANAGEMENT:READ'],
+      // },
+      // {
+      //   name: 'collaborator',
+      //   tab: t('customer.collaborator'),
+      //   enable: true,
+      // },
       {
         name: 'contract',
         tab: t('module.contract'),
@@ -364,12 +364,12 @@
         enable: true,
         permission: ['CONTRACT_INVOICE:READ'],
       },
-      {
-        name: 'order',
-        tab: t('module.order'),
-        enable: true,
-        permission: ['ORDER:READ'],
-      },
+      // {
+      //   name: 'order',
+      //   tab: t('module.order'),
+      //   enable: true,
+      //   permission: ['ORDER:READ'],
+      // },
     ];
     if (collaborationType.value) {
       return fullList.filter((item) => item.name !== 'collaborator');

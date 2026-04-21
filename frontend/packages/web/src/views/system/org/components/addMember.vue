@@ -291,7 +291,7 @@
       { required: true, message: t('common.notNull', { value: `${t('org.userName')}` }), trigger: ['input', 'blur'] },
     ],
     phone: [{ required: true, validator: validateUserPhone, trigger: ['input', 'blur'] }],
-    email: [{ required: true, validator: validateUserEmail, trigger: ['input', 'blur'] }],
+    email: [{ required: false, validator: validateUserEmail, trigger: ['input', 'blur'] }],
     departmentId: [{ required: true, message: t('common.pleaseSelect'), trigger: ['input', 'blur'] }],
   };
 

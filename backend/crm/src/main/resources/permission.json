@@ -529,6 +529,26 @@
     ]
   },
   {
+    "id": "TASK_MANAGEMENT",
+    "name": "permission.task_management.name",
+    "children": [
+      {
+        "id": "TASK",
+        "name": "permission.task.name",
+        "permissions": [
+          {
+            "id": "TASK:READ",
+            "name": "permission.task.read.name"
+          },
+          {
+            "id": "TASK:COMPLETE",
+            "name": "permission.task.complete.name"
+          }
+        ]
+      }
+    ]
+  },
+  {
     "id": "CONTRACT_MANAGEMENT",
     "name": "permission.contract_management.name",
     "license": false,

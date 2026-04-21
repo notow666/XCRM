@@ -78,8 +78,8 @@
   <TransferModal
     v-model:show="showDistributeModal"
     :source-ids="checkedRowKeys"
-    :title="t('common.batchDistribute')"
-    :positive-text="t('common.distribute')"
+    :title="t('common.batchDistribution')"
+    :positive-text="t('common.distribution')"
     @confirm="handleBatchAssign"
   />
   <CluePoolOverviewDrawer
@@ -115,7 +115,7 @@
   <CrmModal
     v-model:show="showBatchDistributeModal"
     size="medium"
-    :title="t('common.batchDistribute')"
+    :title="t('common.batchDistribution')"
     :ok-loading="batchDistributeLoading"
     :ok-button-props="{ disabled: !batchDistributeCustomerPoolId }"
     @confirm="handleConfirmBatchDistribute"
@@ -265,8 +265,8 @@
       //   permission: ['CLUE_MANAGEMENT_POOL:ASSIGN'],
       // },
       {
-        label: t('common.batchDistribute'),
-        key: 'batchDistribute',
+        label: t('common.batchDistribution'),
+        key: 'batchDistribution',
         permission: ['CLUE_MANAGEMENT_POOL:ASSIGN'],
       },
       {

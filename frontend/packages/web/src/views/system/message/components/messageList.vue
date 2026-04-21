@@ -241,31 +241,31 @@
         });
       },
     },
-    {
-      title: () => {
-        return h(SwitchPopConfirm, {
-          titleColumnText: t('system.message.emailReminder'),
-          value: enableEmailMessage.value,
-          loading: enableSystemLoading.value,
-          disabled: !hasAnyPermission(['SYSTEM_NOTICE:UPDATE']),
-          onChange: (cancel?: () => void) => toggleGlobalMessage('email', cancel),
-        });
-      },
-      key: 'emailReminder',
-      width: 200,
-      ellipsis: {
-        tooltip: true,
-      },
-      render: (row) => {
-        return h(SwitchPopConfirm, {
-          value: row.emailEnable as boolean,
-          loading: enableSystemLoading.value,
-          disabled: !hasAnyPermission(['SYSTEM_NOTICE:UPDATE']),
-          onChange: (cancel?: () => void) =>
-            handleToggleSystemMessage(row as unknown as MessageConfigItem, 'email', cancel),
-        });
-      },
-    },
+    // {
+    //   title: () => {
+    //     return h(SwitchPopConfirm, {
+    //       titleColumnText: t('system.message.emailReminder'),
+    //       value: enableEmailMessage.value,
+    //       loading: enableSystemLoading.value,
+    //       disabled: !hasAnyPermission(['SYSTEM_NOTICE:UPDATE']),
+    //       onChange: (cancel?: () => void) => toggleGlobalMessage('email', cancel),
+    //     });
+    //   },
+    //   key: 'emailReminder',
+    //   width: 200,
+    //   ellipsis: {
+    //     tooltip: true,
+    //   },
+    //   render: (row) => {
+    //     return h(SwitchPopConfirm, {
+    //       value: row.emailEnable as boolean,
+    //       loading: enableSystemLoading.value,
+    //       disabled: !hasAnyPermission(['SYSTEM_NOTICE:UPDATE']),
+    //       onChange: (cancel?: () => void) =>
+    //         handleToggleSystemMessage(row as unknown as MessageConfigItem, 'email', cancel),
+    //     });
+    //   },
+    // },
     ...(isEnableNoticeConfig.value
       ? [
           {

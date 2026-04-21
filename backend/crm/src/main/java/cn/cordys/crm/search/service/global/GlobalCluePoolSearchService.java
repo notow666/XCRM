@@ -87,7 +87,8 @@ public class GlobalCluePoolSearchService extends BaseSearchService<BasePageReque
                         !Strings.CI.equals(userSearchConfig.getBusinessKey(), BusinessModuleField.CLUE_CONTACT_PHONE.getBusinessKey())) {
                     fieldIdSet.add(userSearchConfig.getFieldId());
                 }
-                if (StringUtils.isNotBlank(userSearchConfig.getBusinessKey()) && !Strings.CI.equals(userSearchConfig.getBusinessKey(), BusinessModuleField.CLUE_NAME.getBusinessKey()) &&
+                if (StringUtils.isNotBlank(userSearchConfig.getBusinessKey()) &&
+                        !Strings.CI.equals(userSearchConfig.getBusinessKey(), BusinessModuleField.CLUE_NAME.getBusinessKey()) &&
                         !Strings.CI.equals(userSearchConfig.getBusinessKey(), BusinessModuleField.CLUE_PRODUCTS.getBusinessKey()) &&
                         !Strings.CI.equals(userSearchConfig.getBusinessKey(), BusinessModuleField.CLUE_CONTACT_PHONE.getBusinessKey())) {
                     internalKeyMap.put(userSearchConfig.getFieldId(), userSearchConfig.getBusinessKey());
@@ -96,7 +97,7 @@ public class GlobalCluePoolSearchService extends BaseSearchService<BasePageReque
             }
         } else {
             //设置默认查询属性
-            FilterCondition nameCondition = getFilterCondition("name", keyword, FilterCondition.CombineConditionOperator.CONTAINS.toString(), FieldType.INPUT.toString());
+            FilterCondition nameCondition = getFilterCondition(BusinessModuleField.CLUE_NAME.getBusinessKey(), keyword, FilterCondition.CombineConditionOperator.CONTAINS.toString(), FieldType.INPUT.toString());
             conditions.add(nameCondition);
             StringUtils.deleteWhitespace(keyword);
             List<String> phoneList = new ArrayList<>();
@@ -104,7 +105,7 @@ public class GlobalCluePoolSearchService extends BaseSearchService<BasePageReque
             for (String value : SearchPhoneEnum.VALUES) {
                 phoneList.add(value + keyword);
             }
-            FilterCondition phoneCondition = getFilterCondition("phone", phoneList, FilterCondition.CombineConditionOperator.IN.toString(), FieldType.DATA_SOURCE.toString());
+            FilterCondition phoneCondition = getFilterCondition(BusinessModuleField.CLUE_CONTACT_PHONE.getBusinessKey(), phoneList, FilterCondition.CombineConditionOperator.IN.toString(), FieldType.DATA_SOURCE.toString());
             conditions.add(phoneCondition);
         }
         if (CollectionUtils.isEmpty(conditions)) {
@@ -131,7 +132,7 @@ public class GlobalCluePoolSearchService extends BaseSearchService<BasePageReque
                 .collect(Collectors.toList());
         Map<String, List<BaseModuleFieldValue>> clueFiledMap = clueFieldService.getResourceFieldMap(clueIds, true);
 
-        Map<String, String> productNameMap = getProductNameMap(orgId);
+//        Map<String, String> productNameMap = getProductNameMap(orgId);
 
         Map<String, String> userPoolMap = getUserCluePool(orgId, userId);
         //处理内置字段的选项
@@ -168,9 +169,9 @@ public class GlobalCluePoolSearchService extends BaseSearchService<BasePageReque
                 moduleFields.addAll(baseModuleFieldValues);
                 globalClueResponse.setModuleFields(moduleFields);
             }
-            //固定展示列脱敏设置
-            List<String> productNames = getProductNames(globalClueResponse.getProducts(), productNameMap);
-            globalClueResponse.setProducts(productNames);
+//            //固定展示列脱敏设置
+//            List<String> productNames = getProductNames(globalClueResponse.getProducts(), productNameMap);
+//            globalClueResponse.setProducts(productNames);
 
             if (CollectionUtils.isNotEmpty(globalClueResponse.getModuleFields())) {
                 globalClueResponse.getModuleFields().stream().forEach(moduleField -> {
@@ -184,15 +185,13 @@ public class GlobalCluePoolSearchService extends BaseSearchService<BasePageReque
             }
 
             searchFieldMaskConfigMap.forEach((fieldId, searchFieldMaskConfig) -> {
-                if (Strings.CI.equals(searchFieldMaskConfig.getBusinessKey(), "name") && !hasPermission) {
+                if (Strings.CI.equals(searchFieldMaskConfig.getBusinessKey(), BusinessModuleField.CLUE_NAME.getBusinessKey())) {
                     globalClueResponse.setName((String) getInputFieldValue(globalClueResponse.getName(), globalClueResponse.getName().length()));
                 }
-                if (Strings.CI.equals(searchFieldMaskConfig.getBusinessKey(), "products") && !hasPermission) {
-                    List<String> maskProductNames = productNames.stream().map(t -> (String) getInputFieldValue(t, t.length())).toList();
-                    globalClueResponse.setProducts(maskProductNames);
+                if (Strings.CI.equals(searchFieldMaskConfig.getBusinessKey(), BusinessModuleField.CLUE_CONTACT_PHONE.getBusinessKey())) {
+                    globalClueResponse.setPhone((String) getPhoneFieldValue(globalClueResponse.getPhone(), globalClueResponse.getPhone().length()));
                 }
             });
-
 
             globalClueResponse.setHasPermission(hasPermission);
         });

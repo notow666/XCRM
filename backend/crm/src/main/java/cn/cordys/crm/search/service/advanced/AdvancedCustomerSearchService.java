@@ -107,7 +107,8 @@ public class AdvancedCustomerSearchService extends BaseSearchService<CustomerPag
         // 查询用户权限
         List<String> permissions = extUserRoleMapper.selectPermissionsByUserId(userId);
         // 获取商机和线索的重复数量映射
-        Map<String, String> opportunityCounts = getOpportunityCounts(permissions, isAdmin, customers, enabledModules);
+//        Map<String, String> opportunityCounts = getOpportunityCounts(permissions, isAdmin, customers, enabledModules);
+        Map<String, String> opportunityCounts = Collections.emptyMap();
         Map<String, String> clueCounts = getClueCounts(permissions, isAdmin, customers, enabledModules);
 
         // 检查相关模块是否启用
@@ -176,7 +177,7 @@ public class AdvancedCustomerSearchService extends BaseSearchService<CustomerPag
                         customer.setRecyclePoolName(null);
                         customer.setReasonName(null);
                     } else {
-                        customer.setOpportunityCount(parseCount(opportunityCounts.get(customer.getId())));
+                        customer.setOpportunityCount(parseCount(opportunityCounts.getOrDefault(customer.getId(), "0")));
                         customer.setClueCount(parseCount(clueCounts.get(customer.getName())));
                         // 获取自定义字段
                         List<BaseModuleFieldValue> customerFields = caseCustomFiledMap.get(customer.getId());

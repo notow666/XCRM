@@ -17,12 +17,12 @@ export interface ScopedOptions {
 }
 
 export const scopedOptions = [
-  {
-    label: t('crmFormDesign.clue'),
-    value: FormDesignKeyEnum.SEARCH_ADVANCED_CLUE,
-    moduleKey: ModuleConfigEnum.CLUE_MANAGEMENT,
-    permission: ['CLUE_MANAGEMENT:READ'],
-  },
+  // {
+  //   label: t('crmFormDesign.clue'),
+  //   value: FormDesignKeyEnum.SEARCH_ADVANCED_CLUE,
+  //   moduleKey: ModuleConfigEnum.CLUE_MANAGEMENT,
+  //   permission: ['CLUE_MANAGEMENT:READ'],
+  // },
   {
     label: t('module.cluePool'),
     value: FormDesignKeyEnum.SEARCH_ADVANCED_CLUE_POOL,
@@ -41,19 +41,18 @@ export const scopedOptions = [
     moduleKey: ModuleConfigEnum.CUSTOMER_MANAGEMENT,
     permission: ['CUSTOMER_MANAGEMENT_POOL:READ'],
   },
-  {
-    label: t('module.businessManagement'),
-    value: FormDesignKeyEnum.SEARCH_ADVANCED_OPPORTUNITY,
-    moduleKey: ModuleConfigEnum.BUSINESS_MANAGEMENT,
-    permission: ['OPPORTUNITY_MANAGEMENT:READ'],
-  },
-
-  {
-    label: t('crmFormDesign.contact'),
-    value: FormDesignKeyEnum.SEARCH_ADVANCED_CONTACT,
-    moduleKey: ModuleConfigEnum.CUSTOMER_MANAGEMENT,
-    permission: ['CUSTOMER_MANAGEMENT_CONTACT:READ'],
-  },
+  // {
+  //   label: t('module.businessManagement'),
+  //   value: FormDesignKeyEnum.SEARCH_ADVANCED_OPPORTUNITY,
+  //   moduleKey: ModuleConfigEnum.BUSINESS_MANAGEMENT,
+  //   permission: ['OPPORTUNITY_MANAGEMENT:READ'],
+  // },
+  // {
+  //   label: t('crmFormDesign.contact'),
+  //   value: FormDesignKeyEnum.SEARCH_ADVANCED_CONTACT,
+  //   moduleKey: ModuleConfigEnum.CUSTOMER_MANAGEMENT,
+  //   permission: ['CUSTOMER_MANAGEMENT_CONTACT:READ'],
+  // },
 ];
 
 export const lastScopedOptions = computed<ScopedOptions[]>(() =>

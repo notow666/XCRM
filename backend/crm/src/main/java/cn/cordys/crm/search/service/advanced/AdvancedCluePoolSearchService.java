@@ -230,8 +230,8 @@ public class AdvancedCluePoolSearchService extends BaseSearchService<BasePageReq
         optionMap.put(BusinessModuleField.CLUE_OWNER.getBusinessKey(), ownerFieldOption);
 
         // 意向产品选项
-        List<OptionDTO> productOption = extProductMapper.getOptions(orgId);
-        optionMap.put(BusinessModuleField.OPPORTUNITY_PRODUCTS.getBusinessKey(), productOption);
+//        List<OptionDTO> productOption = extProductMapper.getOptions(orgId);
+//        optionMap.put(BusinessModuleField.OPPORTUNITY_PRODUCTS.getBusinessKey(), productOption);
         return optionMap;
     }
 }

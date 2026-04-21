@@ -78,64 +78,64 @@
             :precision="0"
           />
         </n-form-item>
-        <n-form-item path="pickRule.limitPreOwner" :label="t('module.clue.ownerCollection')">
-          <n-radio-group v-model:value="form.pickRule.limitPreOwner" name="radiogroup">
-            <n-space>
-              <n-radio :value="false">
-                {{ t('module.clue.noLimit') }}
-              </n-radio>
-              <n-radio :value="true">
-                {{ t('module.clue.limit') }}
-              </n-radio>
-            </n-space>
-          </n-radio-group>
-        </n-form-item>
-        <n-form-item
-          v-if="form.pickRule.limitPreOwner"
-          path="pickRule.pickIntervalDays"
-          :label="t('module.clue.formerOwner')"
-        >
-          <CrmInputNumber
-            v-model:value="form.pickRule.pickIntervalDays"
-            class="crm-reminder-advance-input"
-            :placeholder="t('common.pleaseInput')"
-            min="1"
-            max="10000"
-            :precision="0"
-          />
-          <div class="flex flex-nowrap"> {{ t('module.clue.receiveDay') }}</div>
-        </n-form-item>
-        <n-form-item path="pickRule.limitNew">
-          <template #label>
-            <div class="flex items-center gap-[8px]">
-              {{ t('module.clue.newDataPick') }}
-              <n-tooltip trigger="hover" placement="right">
-                <template #trigger>
-                  <CrmIcon
-                    type="iconicon_help_circle"
-                    :size="16"
-                    class="cursor-pointer text-[var(--text-n4)] hover:text-[var(--primary-1)]"
-                  />
-                </template>
-                {{
-                  props.type === ModuleConfigEnum.CLUE_MANAGEMENT
-                    ? t('module.clue.newPoolDataTip')
-                    : t('module.clue.newOpenSeaDataTip')
-                }}
-              </n-tooltip>
-            </div>
-          </template>
-          <n-radio-group v-model:value="form.pickRule.limitNew" name="radiogroup">
-            <n-space>
-              <n-radio :value="false">
-                {{ t('module.clue.noLimit') }}
-              </n-radio>
-              <n-radio :value="true">
-                {{ t('module.clue.limit') }}
-              </n-radio>
-            </n-space>
-          </n-radio-group>
-        </n-form-item>
+<!--        <n-form-item path="pickRule.limitPreOwner" :label="t('module.clue.ownerCollection')">-->
+<!--          <n-radio-group v-model:value="form.pickRule.limitPreOwner" name="radiogroup">-->
+<!--            <n-space>-->
+<!--              <n-radio :value="false">-->
+<!--                {{ t('module.clue.noLimit') }}-->
+<!--              </n-radio>-->
+<!--              <n-radio :value="true">-->
+<!--                {{ t('module.clue.limit') }}-->
+<!--              </n-radio>-->
+<!--            </n-space>-->
+<!--          </n-radio-group>-->
+<!--        </n-form-item>-->
+<!--        <n-form-item-->
+<!--          v-if="form.pickRule.limitPreOwner"-->
+<!--          path="pickRule.pickIntervalDays"-->
+<!--          :label="t('module.clue.formerOwner')"-->
+<!--        >-->
+<!--          <CrmInputNumber-->
+<!--            v-model:value="form.pickRule.pickIntervalDays"-->
+<!--            class="crm-reminder-advance-input"-->
+<!--            :placeholder="t('common.pleaseInput')"-->
+<!--            min="1"-->
+<!--            max="10000"-->
+<!--            :precision="0"-->
+<!--          />-->
+<!--          <div class="flex flex-nowrap"> {{ t('module.clue.receiveDay') }}</div>-->
+<!--        </n-form-item>-->
+<!--        <n-form-item path="pickRule.limitNew">-->
+<!--          <template #label>-->
+<!--            <div class="flex items-center gap-[8px]">-->
+<!--              {{ t('module.clue.newDataPick') }}-->
+<!--              <n-tooltip trigger="hover" placement="right">-->
+<!--                <template #trigger>-->
+<!--                  <CrmIcon-->
+<!--                    type="iconicon_help_circle"-->
+<!--                    :size="16"-->
+<!--                    class="cursor-pointer text-[var(&#45;&#45;text-n4)] hover:text-[var(&#45;&#45;primary-1)]"-->
+<!--                  />-->
+<!--                </template>-->
+<!--                {{-->
+<!--                  props.type === ModuleConfigEnum.CLUE_MANAGEMENT-->
+<!--                    ? t('module.clue.newPoolDataTip')-->
+<!--                    : t('module.clue.newOpenSeaDataTip')-->
+<!--                }}-->
+<!--              </n-tooltip>-->
+<!--            </div>-->
+<!--          </template>-->
+<!--          <n-radio-group v-model:value="form.pickRule.limitNew" name="radiogroup">-->
+<!--            <n-space>-->
+<!--              <n-radio :value="false">-->
+<!--                {{ t('module.clue.noLimit') }}-->
+<!--              </n-radio>-->
+<!--              <n-radio :value="true">-->
+<!--                {{ t('module.clue.limit') }}-->
+<!--              </n-radio>-->
+<!--            </n-space>-->
+<!--          </n-radio-group>-->
+<!--        </n-form-item>-->
         <n-form-item v-if="form.pickRule.limitNew" path="pickRule.newPickInterval" :label="t('module.clue.newData')">
           <CrmInputNumber
             v-model:value="form.pickRule.newPickInterval"

@@ -83,14 +83,15 @@ public class GlobalCustomerSearchService extends BaseSearchService<BasePageReque
                 if (StringUtils.isBlank(userSearchConfig.getBusinessKey())) {
                     fieldIdSet.add(userSearchConfig.getFieldId());
                 } else if (!Strings.CI.equals(userSearchConfig.getBusinessKey(), BusinessModuleField.CUSTOMER_NAME.getBusinessKey()) &&
-                        !Strings.CI.equals(userSearchConfig.getBusinessKey(), BusinessModuleField.CUSTOMER_OWNER.getBusinessKey())) {
+                        !Strings.CI.equals(userSearchConfig.getBusinessKey(), BusinessModuleField.CUSTOMER_OWNER.getBusinessKey()) &&
+                        !Strings.CI.equals(userSearchConfig.getBusinessKey(), BusinessModuleField.CUSTOMER_MOBILE.getBusinessKey())) {
                     fieldIdSet.add(userSearchConfig.getFieldId());
                 }
                 buildOtherFilterCondition(orgId, userSearchConfig, keyword, conditions);
             }
         } else {
             //设置默认查询属性
-            FilterCondition nameCondition = getFilterCondition("name", keyword, FilterCondition.CombineConditionOperator.CONTAINS.toString(), FieldType.INPUT.toString());
+            FilterCondition nameCondition = getFilterCondition(BusinessModuleField.CUSTOMER_NAME.getBusinessKey(), keyword, FilterCondition.CombineConditionOperator.CONTAINS.toString(), FieldType.INPUT.toString());
             conditions.add(nameCondition);
         }
         if (CollectionUtils.isEmpty(conditions)) {
@@ -142,14 +143,14 @@ public class GlobalCustomerSearchService extends BaseSearchService<BasePageReque
             if (userDeptDTO != null) {
                 customerResponse.setDepartmentName(userDeptDTO.getDeptName());
             }
-            //固定展示列脱敏设置
-            if (!hasPermission) {
-                searchFieldMaskConfigMap.forEach((fieldId, searchFieldMaskConfig) -> {
-                    if (Strings.CI.equals(searchFieldMaskConfig.getBusinessKey(), "name")) {
-                        customerResponse.setName((String) getInputFieldValue(customerResponse.getName(), customerResponse.getName().length()));
-                    }
-                });
-            }
+            searchFieldMaskConfigMap.forEach((fieldId, searchFieldMaskConfig) -> {
+                if (Strings.CI.equals(searchFieldMaskConfig.getBusinessKey(), BusinessModuleField.CUSTOMER_NAME.getBusinessKey())) {
+                    customerResponse.setName((String) getInputFieldValue(customerResponse.getName(), customerResponse.getName().length()));
+                }
+                if (Strings.CI.equals(searchFieldMaskConfig.getBusinessKey(), BusinessModuleField.CUSTOMER_MOBILE.getBusinessKey())) {
+                    customerResponse.setMobile((String) getPhoneFieldValue(customerResponse.getMobile(), customerResponse.getMobile().length()));
+                }
+            });
             customerResponse.setHasPermission(hasPermission);
         });
         return list;

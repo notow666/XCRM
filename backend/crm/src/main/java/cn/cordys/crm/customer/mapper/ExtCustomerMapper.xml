@@ -668,7 +668,7 @@
         </include>
     </select>
     <select id="globalPoolSearchList" resultType="cn.cordys.crm.search.response.global.GlobalCustomerPoolResponse">
-        select c.id, c.`name`, c.pool_id, cp.name as poolName, c.follow_time
+        select c.id, c.`name`, c.`mobile`, c.pool_id, cp.name as poolName, c.follow_time
         from customer c inner join customer_pool cp on c.pool_id = cp.id
         <include refid="fieldConditionJoin">
             <property name="conditions" value="request.combineSearch.conditions"/>

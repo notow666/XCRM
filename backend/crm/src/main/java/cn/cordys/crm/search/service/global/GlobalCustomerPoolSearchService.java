@@ -60,7 +60,10 @@ public class GlobalCustomerPoolSearchService extends BaseSearchService<BasePageR
         }
         //查询当前用户搜索配置
         List<UserSearchConfig> userSearchConfigs = getUserSearchConfigs(userId, orgId);
-        List<String> phoneTypeFieldIds = userSearchConfigs.stream().filter(config -> Strings.CI.equals(config.getType(), FieldType.PHONE.name())).map(UserSearchConfig::getFieldId).toList();
+        Set<String> phoneTypeFieldIds = userSearchConfigs.stream()
+                .filter(t -> Strings.CI.equals(t.getModuleType(), SearchModuleEnum.SEARCH_ADVANCED_PUBLIC))
+                .filter(config -> Strings.CI.equals(config.getType(), FieldType.PHONE.name()))
+                .map(UserSearchConfig::getFieldId).collect(Collectors.toSet());
         //记住当前一共有多少字段，避免固定展示列与自由选择列字段重复
         Set<String> fieldIdSet = new HashSet<>();
         List<FilterCondition> conditions = new ArrayList<>();
@@ -69,7 +72,8 @@ public class GlobalCustomerPoolSearchService extends BaseSearchService<BasePageR
         // 2.用户有配置，使用用户配置的查询条件;
         // 3.用户当前模块没配置，直接返回;
         if (CollectionUtils.isNotEmpty(userSearchConfigs)) {
-            List<UserSearchConfig> customerPoolSearchConfigs = userSearchConfigs.stream().filter(t -> Strings.CI.equals(t.getModuleType(), SearchModuleEnum.SEARCH_ADVANCED_PUBLIC)).toList();
+            List<UserSearchConfig> customerPoolSearchConfigs = userSearchConfigs.stream()
+                    .filter(t -> Strings.CI.equals(t.getModuleType(), SearchModuleEnum.SEARCH_ADVANCED_PUBLIC)).toList();
             if (CollectionUtils.isEmpty(customerPoolSearchConfigs)) {
                 Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
                 return PageUtils.setPageInfo(page, List.of());
@@ -78,14 +82,15 @@ public class GlobalCustomerPoolSearchService extends BaseSearchService<BasePageR
                 //如果和固定展示列名重复不加入fieldIdSet
                 if (StringUtils.isBlank(userSearchConfig.getBusinessKey())) {
                     fieldIdSet.add(userSearchConfig.getFieldId());
-                } else if (!Strings.CI.equals(userSearchConfig.getBusinessKey(), BusinessModuleField.CUSTOMER_NAME.getBusinessKey())) {
+                } else if (!Strings.CI.equals(userSearchConfig.getBusinessKey(), BusinessModuleField.CUSTOMER_NAME.getBusinessKey()) &&
+                            !Strings.CI.equals(userSearchConfig.getBusinessKey(), BusinessModuleField.CUSTOMER_MOBILE.getBusinessKey())) {
                     fieldIdSet.add(userSearchConfig.getFieldId());
                 }
                 buildOtherFilterCondition(orgId, userSearchConfig, keyword, conditions);
             }
         } else {
             //设置默认查询属性
-            FilterCondition nameCondition = getFilterCondition("name", keyword, FilterCondition.CombineConditionOperator.CONTAINS.toString(), FieldType.INPUT.toString());
+            FilterCondition nameCondition = getFilterCondition(BusinessModuleField.CUSTOMER_NAME.getBusinessKey(), keyword, FilterCondition.CombineConditionOperator.CONTAINS.toString(), FieldType.INPUT.toString());
             conditions.add(nameCondition);
         }
         if (CollectionUtils.isEmpty(conditions)) {
@@ -107,7 +112,7 @@ public class GlobalCustomerPoolSearchService extends BaseSearchService<BasePageR
     }
 
 
-    public List<GlobalCustomerPoolResponse> buildListData(List<GlobalCustomerPoolResponse> list, String orgId, String userId, List<SearchFieldMaskConfig> searchFieldMaskConfigs, Set<String> fieldIdSet, List<String> phoneTypeFieldIds) {
+    public List<GlobalCustomerPoolResponse> buildListData(List<GlobalCustomerPoolResponse> list, String orgId, String userId, List<SearchFieldMaskConfig> searchFieldMaskConfigs, Set<String> fieldIdSet, Set<String> phoneTypeFieldIds) {
         List<String> customerIds = list.stream().map(GlobalCustomerPoolResponse::getId)
                 .collect(Collectors.toList());
         Map<String, List<BaseModuleFieldValue>> customerFiledMap = customerFieldService.getResourceFieldMap(customerIds, true);
@@ -126,16 +131,17 @@ public class GlobalCustomerPoolSearchService extends BaseSearchService<BasePageR
                 customerPoolResponse.setModuleFields(returnCustomerFields);
             }
             //固定展示列脱敏设置
-            if (!hasPermission) {
-                searchFieldMaskConfigMap.forEach((fieldId, searchFieldMaskConfig) -> {
-                    if (Strings.CI.equals(searchFieldMaskConfig.getBusinessKey(), "name")) {
-                        customerPoolResponse.setName((String) getInputFieldValue(customerPoolResponse.getName(), customerPoolResponse.getName().length()));
-                    }
-                });
-            }
+            searchFieldMaskConfigMap.forEach((fieldId, searchFieldMaskConfig) -> {
+                if (Strings.CI.equals(searchFieldMaskConfig.getBusinessKey(), BusinessModuleField.CUSTOMER_NAME.getBusinessKey())) {
+                    customerPoolResponse.setName((String) getInputFieldValue(customerPoolResponse.getName(), customerPoolResponse.getName().length()));
+                }
+                if (Strings.CI.equals(searchFieldMaskConfig.getBusinessKey(), BusinessModuleField.CUSTOMER_MOBILE.getBusinessKey())) {
+                    customerPoolResponse.setMobile((String) getPhoneFieldValue(customerPoolResponse.getMobile(), customerPoolResponse.getMobile().length()));
+                }
+            });
 
             if (CollectionUtils.isNotEmpty(customerPoolResponse.getModuleFields())) {
-                customerPoolResponse.getModuleFields().stream().forEach(moduleField -> {
+                customerPoolResponse.getModuleFields().forEach(moduleField -> {
                     if (phoneTypeFieldIds.contains(moduleField.getFieldId()) && StringUtils.isNotBlank(moduleField.getFieldValue().toString())) {
                         moduleField.setFieldValue((getPhoneFieldValue(moduleField.getFieldValue(), moduleField.getFieldValue().toString().length())));
                     }

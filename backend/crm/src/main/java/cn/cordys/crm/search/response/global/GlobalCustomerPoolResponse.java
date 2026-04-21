@@ -28,4 +28,7 @@ public class GlobalCustomerPoolResponse {
 
     @Schema(description = "最新跟进日期")
     private Long followTime;
+
+    @Schema(description = "手机号码")
+    private String mobile;
 }

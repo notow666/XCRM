@@ -33,6 +33,15 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    host: true,  // 允许通过局域网 IP 和公网域名访问
+    allowedHosts: [
+      '174230h78v.51mypc.cn',  // 添加你的花生壳域名
+      '.51mypc.cn',              // 或者添加泛域名，允许所有花生壳子域名
+      '174s2u3078.oicp.vip',
+    ],
+    port: 5173  // 保持你的端口
+  },
   resolve: {
     alias: [
       {

@@ -44,7 +44,9 @@ public class TenantProvisioningService {
     private static final Logger managementLog = LoggerFactory.getLogger("MANAGEMENT_CENTER_LOG");
 
     private static final Set<String> RESERVED_TENANT_CODES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-            "default", "master", "system", "mysql", "information_schema", "performance_schema", "sys", "admin"
+            "default", "master", "system", "mysql",
+            "information_schema", "performance_schema",
+            "sys", "admin", "management"
     )));
 
     @Resource

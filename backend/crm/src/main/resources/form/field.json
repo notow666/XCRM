@@ -919,7 +919,7 @@
       "mobile": true
     },
     {
-      "name": "手机号",
+      "name": "手机号码",
       "internalKey": "contactPhone",
       "type": "PHONE",
       "showLabel": true,
@@ -1110,7 +1110,7 @@
       "mobile": true
     },
     {
-      "name": "节点",
+      "name": "阶段",
       "internalKey": "planNextStage",
       "type": "INPUT",
       "showLabel": true,

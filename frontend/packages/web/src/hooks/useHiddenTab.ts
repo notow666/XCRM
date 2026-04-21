@@ -100,10 +100,10 @@ export default function useHiddenTab(type?: TabType) {
       name: CustomerSearchTypeEnum.DEPARTMENT,
       tab: t('customer.deptCustomer'),
     },
-    {
-      name: CustomerSearchTypeEnum.CUSTOMER_COLLABORATION,
-      tab: t('customer.cooperationCustomer'),
-    },
+    // {
+    //   name: CustomerSearchTypeEnum.CUSTOMER_COLLABORATION,
+    //   tab: t('customer.cooperationCustomer'),
+    // },
   ];
 
   const allOpportunityTabList: TabPaneProps[] = [
