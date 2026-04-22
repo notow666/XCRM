@@ -278,6 +278,10 @@ export interface DefaultSearchSetFormModel {
   sortSetting: string[];
 }
 
+export interface GlobalPhoneMaskConfig {
+  enabled: boolean;
+}
+
 export interface CheckRepeatParams {
   id: string;
   value: string;

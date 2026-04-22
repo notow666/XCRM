@@ -74,7 +74,20 @@
       </div>
       <div class="right-box">
         <CrmCard :content-height="null" no-content-padding hide-footer>
-          <div class="p-[24px]">
+          <div class="module-config-header">
+            <div class="font-medium text-[var(--text-n1)]">{{ t('menu.settings.moduleSetting') }}</div>
+            <div class="module-config-header-action">
+              <span class="text-[var(--text-n3)]">{{ t('module.globalPhoneMask') }}</span>
+              <n-switch
+                :value="globalPhoneMaskEnabled"
+                size="small"
+                :rubber-band="false"
+                :disabled="!hasAnyPermission(['MODULE_SETTING:UPDATE'])"
+                @update:value="setGlobalPhoneMaskSwitch"
+              />
+            </div>
+          </div>
+          <div class="px-[24px] pb-[24px]">
             <ConfigCard :list="moduleNavList" @load-module-list="initModuleNavList()" />
           </div>
         </CrmCard>
@@ -103,7 +116,14 @@
   import followRecordDrawer from './components/customManagement/followRecordDrawer.vue';
   import desensitizationModal from './components/desensitizationModal.vue';
 
-  import { getAdvancedSwitch, moduleNavListSort, setDisplayAdvanced, setTopNavListSort } from '@/api/modules';
+  import {
+    editGlobalPhoneMaskConfig,
+    getAdvancedSwitch,
+    getGlobalPhoneMaskConfig,
+    moduleNavListSort,
+    setDisplayAdvanced,
+    setTopNavListSort,
+  } from '@/api/modules';
   import useAppStore from '@/store/modules/app';
   import { ActionItem } from '@/store/modules/app/types';
   import useLicenseStore from '@/store/modules/setting/license';
@@ -274,6 +294,27 @@
     }
   }
 
+  const globalPhoneMaskEnabled = ref(false);
+  async function initGlobalPhoneMaskConfig() {
+    try {
+      const res = await getGlobalPhoneMaskConfig();
+      globalPhoneMaskEnabled.value = !!res.enabled;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+    }
+  }
+  async function setGlobalPhoneMaskSwitch(value: boolean) {
+    try {
+      await editGlobalPhoneMaskConfig(value);
+      globalPhoneMaskEnabled.value = value;
+      Message.success(t('common.operationSuccess'));
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+    }
+  }
+
   const searchMoreOptions = computed<ActionsItem[]>(() => [
     {
       key: 'desensitizationSet',
@@ -344,6 +385,7 @@
   onMounted(() => {
     enable.value = appStore.getMenuIconStatus;
     getEnableAdvanced();
+    initGlobalPhoneMaskConfig();
   });
 
   watch(
@@ -352,6 +394,7 @@
       if (val) {
         initModuleNavList();
         initNavTopList();
+        initGlobalPhoneMaskConfig();
       }
     },
     {
@@ -390,6 +433,14 @@
       background: var(--text-n10);
       @apply flex-1;
     }
+  }
+  .module-config-header {
+    padding: 24px 24px 16px;
+    @apply flex items-center justify-between;
+  }
+  .module-config-header-action {
+    gap: 8px;
+    @apply flex items-center;
   }
 </style>
 

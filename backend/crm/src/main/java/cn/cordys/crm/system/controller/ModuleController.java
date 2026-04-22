@@ -6,8 +6,11 @@ import cn.cordys.common.dto.OptionDTO;
 import cn.cordys.common.dto.RoleUserTreeNode;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.crm.system.dto.ModuleDTO;
+import cn.cordys.crm.system.dto.request.GlobalPhoneMaskConfigRequest;
 import cn.cordys.crm.system.dto.request.ModuleRequest;
 import cn.cordys.crm.system.dto.request.ModuleSortRequest;
+import cn.cordys.crm.system.dto.response.GlobalPhoneMaskConfigResponse;
+import cn.cordys.crm.system.service.GlobalPhoneMaskConfigService;
 import cn.cordys.crm.system.service.ModuleService;
 import cn.cordys.security.SessionUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,6 +29,8 @@ public class ModuleController {
 
     @Resource
     private ModuleService moduleService;
+    @Resource
+    private GlobalPhoneMaskConfigService globalPhoneMaskConfigService;
 
     @PostMapping("/list")
     @Operation(summary = "获取模块设置列表")
@@ -79,4 +84,18 @@ public class ModuleController {
 	public void switchAdvanced() {
 		moduleService.switchAdvanced(SessionUtils.getUserId());
 	}
+
+    @GetMapping("/global-phone-mask/settings")
+    @Operation(summary = "获取全局手机号脱敏开关")
+    @RequiresPermissions(PermissionConstants.MODULE_SETTING_READ)
+    public GlobalPhoneMaskConfigResponse getGlobalPhoneMaskConfig() {
+        return globalPhoneMaskConfigService.getConfig(OrganizationContext.getOrganizationId());
+    }
+
+    @PostMapping("/global-phone-mask/edit")
+    @Operation(summary = "编辑全局手机号脱敏开关")
+    @RequiresPermissions(PermissionConstants.MODULE_SETTING_UPDATE)
+    public void editGlobalPhoneMaskConfig(@Validated @RequestBody GlobalPhoneMaskConfigRequest request) {
+        globalPhoneMaskConfigService.save(request.getEnabled(), OrganizationContext.getOrganizationId(), SessionUtils.getUserId());
+    }
 }

@@ -9,6 +9,7 @@ import cn.cordys.common.dto.condition.FilterCondition;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.common.pager.PagerWithOption;
 import cn.cordys.common.util.JSON;
+import cn.cordys.common.util.PhoneMaskUtil;
 
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.crm.clue.domain.CluePool;
@@ -363,12 +364,7 @@ public abstract class BaseSearchService<T extends BasePageRequest, R> {
     }
 
     public Object getPhoneFieldValue(Object fieldValue, int length) {
-        if (length > 6) {
-            fieldValue = ((String) fieldValue).substring(0, length - 6) + "******";
-        } else {
-            fieldValue = "******";
-        }
-        return fieldValue;
+        return PhoneMaskUtil.maskPhone((String) fieldValue);
     }
 
     public Object getInputFieldValue(Object fieldValue, int length) {

@@ -116,6 +116,7 @@ export default {
   'module.configReasonTooltip': 'It can be enabled after configuration',
   'module.topNavigationConfig': 'Top Navigation Settings',
   'module.desensitizationSet': 'Desensitization set',
+  'module.globalPhoneMask': 'Global phone mask',
   'module.agent': 'Agent',
   'module.contract': 'Contract',
   'module.order': 'Order',

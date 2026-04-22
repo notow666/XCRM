@@ -26,6 +26,7 @@ import cn.cordys.common.service.DataScopeService;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.JSON;
+import cn.cordys.common.util.PhoneMaskUtil;
 import cn.cordys.common.util.Translator;
 import cn.cordys.common.utils.ConditionFilterUtils;
 import cn.cordys.crm.clue.constants.ClueStatus;
@@ -78,6 +79,7 @@ import cn.cordys.crm.system.excel.listener.CustomFieldImportEventListener;
 import cn.cordys.crm.system.mapper.ExtUserMapper;
 import cn.cordys.crm.system.notice.CommonNoticeSendService;
 import cn.cordys.crm.system.service.DictService;
+import cn.cordys.crm.system.service.GlobalPhoneMaskConfigService;
 import cn.cordys.crm.system.service.LogService;
 import cn.cordys.crm.system.service.ModuleFormCacheService;
 import cn.cordys.crm.system.service.ModuleFormService;
@@ -190,6 +192,8 @@ public class ClueService {
     private BaseMapper<FollowUpPlanFieldBlob> followUpPlanFieldBlobMapper;
     @Resource
     private BaseMapper<CluePoolDistributeRule> cluePoolDistributeRuleMapper;
+    @Resource
+    private GlobalPhoneMaskConfigService globalPhoneMaskConfigService;
 
     public PagerWithOption<List<ClueListResponse>> list(CluePageRequest request, String userId, String orgId,
                                                         DeptDataPermissionDTO deptDataPermission, Boolean source) {
@@ -229,6 +233,7 @@ public class ClueService {
         if (CollectionUtils.isEmpty(list)) {
             return list;
         }
+        boolean phoneMaskEnabled = globalPhoneMaskConfigService.isEnabled(orgId);
         List<String> clueIds = list.stream().map(ClueListResponse::getId)
                 .collect(Collectors.toList());
 
@@ -301,6 +306,9 @@ public class ClueService {
             clueListResponse.setOwnerName(userNameMap.get(clueListResponse.getOwner()));
             if (StringUtils.isNotBlank(clueListResponse.getReasonId())) {
                 clueListResponse.setReasonName(dictMap.get(clueListResponse.getReasonId()));
+            }
+            if (phoneMaskEnabled) {
+                clueListResponse.setPhone(PhoneMaskUtil.maskPhone(clueListResponse.getPhone()));
             }
         });
 
@@ -397,6 +405,9 @@ public class ClueService {
         }
 
         // 附件信息
+        if (globalPhoneMaskConfigService.isEnabled(clue.getOrganizationId())) {
+            clueGetResponse.setPhone(PhoneMaskUtil.maskPhone(clueGetResponse.getPhone()));
+        }
         clueGetResponse.setAttachmentMap(moduleFormService.getAttachmentMap(customerFormConfig, clueFields));
 
         return clueGetResponse;

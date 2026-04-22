@@ -121,6 +121,7 @@ export default {
   'module.configReasonTooltip': '配置后可开启',
   'module.topNavigationConfig': '顶部导航配置',
   'module.desensitizationSet': '脱敏设置',
+  'module.globalPhoneMask': '全局手机号脱敏',
   'module.agent': '智能体',
   'module.contract': '合同',
   'module.order': '订单',

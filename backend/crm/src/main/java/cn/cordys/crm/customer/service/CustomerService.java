@@ -25,6 +25,7 @@ import cn.cordys.common.service.DataScopeService;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.JSON;
+import cn.cordys.common.util.PhoneMaskUtil;
 
 import cn.cordys.common.util.Translator;
 import cn.cordys.common.utils.ConditionFilterUtils;
@@ -170,6 +171,8 @@ public class CustomerService {
 
     @Resource
     private CustomerFailReasonService customerFailReasonService;
+    @Resource
+    private GlobalPhoneMaskConfigService globalPhoneMaskConfigService;
 
     public PagerWithOption<List<CustomerListResponse>> list(CustomerPageRequest request, String userId, String orgId, DeptDataPermissionDTO deptDataPermission) {
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
@@ -223,6 +226,7 @@ public class CustomerService {
         if (CollectionUtils.isEmpty(list)) {
             return list;
         }
+        boolean phoneMaskEnabled = globalPhoneMaskConfigService.isEnabled(orgId);
         List<String> customerIds = list.stream().map(CustomerListResponse::getId)
                 .collect(Collectors.toList());
 
@@ -301,6 +305,9 @@ public class CustomerService {
             if (StringUtils.isNotBlank(customerListResponse.getReasonId())) {
                 String reasonName = baseService.getAndCheckOptionName(dictMap.get(customerListResponse.getReasonId()));
                 customerListResponse.setReasonName(reasonName);
+            }
+            if (phoneMaskEnabled) {
+                customerListResponse.setMobile(PhoneMaskUtil.maskPhone(customerListResponse.getMobile()));
             }
         });
 
@@ -425,6 +432,9 @@ public class CustomerService {
         }
 
         // 附件信息
+        if (globalPhoneMaskConfigService.isEnabled(customer.getOrganizationId())) {
+            customerGetResponse.setMobile(PhoneMaskUtil.maskPhone(customerGetResponse.getMobile()));
+        }
         customerGetResponse.setAttachmentMap(moduleFormService.getAttachmentMap(customerFormConfig, customerFields));
 
         // 填充阶段名称和状态

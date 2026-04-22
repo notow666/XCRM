@@ -647,6 +647,8 @@ export const {
   setTopNavListSort,
   setDisplayAdvanced,
   getAdvancedSwitch,
+  getGlobalPhoneMaskConfig,
+  editGlobalPhoneMaskConfig,
   previewAttachment,
   addOpportunityRule,
   updateCustomerPool,

@@ -74,6 +74,8 @@ import {
   GetFieldBusinessTitleListUrl,
   SetDisplayAdvancedUrl,
   GetAdvancedSwitchUrl,
+  GetGlobalPhoneMaskSwitchUrl,
+  SetGlobalPhoneMaskSwitchUrl,
   GetFieldRefDetailListUrl,
   GetFieldOrderListUrl,
  } from '@lib/shared/api/requrls/system/module';
@@ -93,6 +95,7 @@ import type {
   DefaultSearchSetFormModel,
   FormDesignConfigDetailParams,
   FormDesignDataSourceTableQueryParams,
+  GlobalPhoneMaskConfig,
   GetRefDataSourceFieldParams,
   ModuleNavBaseInfoItem,
   ModuleNavTopItem,
@@ -429,6 +432,14 @@ export default function useProductApi(CDR: CordysAxios) {
     return CDR.get({ url: GetAdvancedSwitchUrl });
   }
 
+  function getGlobalPhoneMaskConfig() {
+    return CDR.get<GlobalPhoneMaskConfig>({ url: GetGlobalPhoneMaskSwitchUrl });
+  }
+
+  function editGlobalPhoneMaskConfig(enabled: boolean) {
+    return CDR.post({ url: SetGlobalPhoneMaskSwitchUrl, data: { enabled } });
+  }
+
   return {
     getFieldDisplayList,
     getModuleNavConfigList,
@@ -491,6 +502,8 @@ export default function useProductApi(CDR: CordysAxios) {
     setTopNavListSort,
     setDisplayAdvanced,
     getAdvancedSwitch,
+    getGlobalPhoneMaskConfig,
+    editGlobalPhoneMaskConfig,
     uploadTempAttachment,
     previewAttachment,
     deleteAttachment,
