@@ -560,7 +560,7 @@
     containerClass: `.crm-open-sea-table-${props.formKey}`,
     operationColumn: props.readonly
       ? undefined
-        : {
+      : {
           key: 'operation',
           width: currentLocale.value === 'en-US' ? 280 : 220,
           fixed: 'right',
@@ -578,11 +578,13 @@
               {
                 distributePopContent: () => {
                   return h(TransferForm, {
-                    key: distributeFormKey.value,
-                    class: 'w-[320px] mt-[16px]',
-                    form: distributeForm.value,
-                    ref: distributeFormRef,
+                    'key': distributeFormKey.value,
+                    'class': 'w-[320px] mt-[16px]',
+                    'form': distributeForm.value,
+                    'onUpdate:form': (val: any) => { distributeForm.value = val; },
+                    'ref': distributeFormRef,
                     'show-capacity': true,
+                    'single': true,
                   });
                 },
               }

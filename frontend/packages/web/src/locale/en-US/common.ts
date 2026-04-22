@@ -342,4 +342,5 @@ export default {
   'common.unApprovedSuccess': 'Approval not passed',
   'common.skipped': 'Skipped',
   'common.backToTop': 'Back to top',
+  'common.importTaskCreate': 'Import task created successfully',
 };

@@ -12,7 +12,11 @@
     @saved="() => (refreshKey += 1)"
   >
     <template #distributePopContent>
-      <TransferForm ref="distributeFormRef" v-model:form="distributeForm" />
+      <TransferForm
+        ref="distributeFormRef"
+        v-model:form="distributeForm"
+        :single="true"
+      />
     </template>
     <template #left>
       <div class="h-full overflow-hidden">
@@ -167,7 +171,7 @@
 
   const distributeFormRef = ref<InstanceType<typeof TransferForm>>();
   const distributeForm = ref<any>({
-    head: null,
+    owner: null,
   });
 
   // 删除

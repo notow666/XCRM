@@ -93,7 +93,7 @@ export function useStatusTextConfig(): Record<StatusBizType, StatusTextConfig> {
       columnTitles: [t('module.customerStepSetColumn')],
       rollbackTitle: '',
       switches: [],
-      stageHasDataTip: t('module.businessManage.stageHasData'),
+      stageHasDataTip: t('customer.stageHasData'),
     },
   };
 }

@@ -98,7 +98,7 @@
     try {
       importLoading.value = true;
       await importPoolCustomer(currentFile.value, currentPoolId.value);
-      Message.success(t('common.exportTaskCreate'));
+      Message.success(t('common.importTaskCreate'));
       emit('importSuccess');
       checkResultModal.value = false;
       importModal.value = false;

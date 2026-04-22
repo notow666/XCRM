@@ -2,14 +2,50 @@
   <div class="min-w-[350px]">
     <div v-if="!showCapacity">
       <CrmUserSelect
-        v-model:value="form.owner"
+        :value="form.owner"
         :placeholder="t('opportunity.selectReceiverPlaceholder')"
         value-field="id"
         label-field="name"
         mode="remote"
         :fetch-api="getAuthUserOptions"
         max-tag-count="responsive"
+        @update:value="updateOwner"
       />
+    </div>
+    <div v-else-if="single" class="w-full">
+      <NSpin :show="loadingUserList">
+        <div class="max-h-[200px] space-y-1 overflow-y-auto rounded border p-2">
+          <div
+            v-for="item in userCapacityList"
+            :key="item.userId"
+            class="flex cursor-pointer items-center justify-between rounded p-2"
+            :class="[
+              (item.remainingCapacity ?? Infinity) <= 0 ? '!cursor-not-allowed opacity-50' : '',
+              form.owner === item.userId ? 'bg-blue-100 ring-1 ring-blue-300' : 'hover:bg-gray-50',
+            ]"
+            @click="(item.remainingCapacity ?? Infinity) > 0 && selectSingleUser(item.userId)"
+          >
+            <div class="flex items-center">
+              <NRadio
+                :checked="form.owner === item.userId"
+                :disabled="(item.remainingCapacity ?? Infinity) <= 0"
+              />
+              <span class="ml-2 text-sm font-medium">{{ item.userName }}</span>
+            </div>
+            <span
+              v-if="item.capacity"
+              class="text-xs"
+              :class="(item.remainingCapacity ?? Infinity) > 0 ? 'text-gray-500' : 'text-red-500'"
+              >{{ t('module.capacitySet.remaining') }}: {{ item.remainingCapacity ?? '-' }}
+              {{ t('module.capacitySet.count') }}</span
+            >
+            <span v-else class="text-xs text-gray-400">{{ t('module.capacitySet.notConfigured') }}</span>
+          </div>
+          <div v-if="userCapacityList.length === 0 && !loadingUserList" class="py-4 text-center text-gray-400">
+            {{ t('common.noData') }}
+          </div>
+        </div>
+      </NSpin>
     </div>
     <div v-else class="w-full">
       <NSpin :show="loadingUserList">
@@ -52,7 +88,7 @@
 
 <script lang="ts" setup>
   import { onMounted, ref } from 'vue';
-  import { NCheckbox, NSpin } from 'naive-ui';
+  import { NCheckbox, NRadio, NSpin } from 'naive-ui';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
   import type { TransferParams } from '@lib/shared/models/customer/index';
@@ -61,22 +97,18 @@
   import CrmUserSelect from '@/components/business/crm-user-select/index.vue';
 
   import { batchUserCapacity, getAuthUserOptions } from '@/api/modules';
-  import { defaultTransferForm } from '@/config/opportunity';
 
   const { t } = useI18n();
 
   const props = defineProps<{
     showCapacity?: boolean;
+    single?: boolean;
   }>();
 
-  const emit = defineEmits<{
-    (e: 'update:form', value: TransferParams): void;
-  }>();
-
-  const form = defineModel<TransferParams>({
+  const form = defineModel<TransferParams>('form', {
     required: true,
     default: {
-      ...defaultTransferForm,
+      owner: null,
       owners: [],
     },
   });
@@ -116,8 +148,14 @@
     loadUserCapacity();
   });
 
+  function selectSingleUser(userId: string) {
+    if (props.single) {
+      form.value = { ...form.value, owner: userId };
+    }
+  }
+
   function toggleUser(userId: string) {
-    if (props.showCapacity) {
+    if (props.showCapacity && !props.single) {
       const owners = [...(form.value.owners || [])];
       const index = owners.indexOf(userId);
       if (index > -1) {
@@ -125,10 +163,12 @@
       } else {
         owners.push(userId);
       }
-      const newForm = { ...form.value, owners };
-      form.value = newForm;
-      emit('update:form', newForm);
+      form.value = { ...form.value, owners };
     }
+  }
+
+  function updateOwner(value: string | null) {
+    form.value = { ...form.value, owner: value };
   }
 
   defineExpose({

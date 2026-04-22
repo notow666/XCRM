@@ -79,10 +79,17 @@
     </template>
   </CrmTable>
 
-  <TransferModal
+  <CrmTransferCustomerModal
     v-model:show="showTransferModal"
     :source-ids="checkedRowKeys"
     :save-api="batchTransferCustomer"
+    @load-list="searchData"
+  />
+  <CrmTransferCustomerModal
+    v-model:show="showSingleTransferModal"
+    :source-ids="checkedRowKeys"
+    :save-api="batchTransferCustomer"
+    :title="t('common.transfer')"
     @load-list="searchData"
   />
   <customerOverviewDrawer
@@ -147,7 +154,7 @@
 
   import { CustomerSearchTypeEnum } from '@lib/shared/enums/customerEnum';
   import { FieldTypeEnum, FormDesignKeyEnum, FormLinkScenarioEnum } from '@lib/shared/enums/formDesignEnum';
-  import { ModuleConfigEnum, ReasonTypeEnum } from '@lib/shared/enums/moduleEnum';
+  import { ReasonTypeEnum } from '@lib/shared/enums/moduleEnum';
   import { useI18n } from '@lib/shared/hooks/useI18n';
   import useLocale from '@lib/shared/locale/useLocale';
   import { characterLimit } from '@lib/shared/method';
@@ -158,7 +165,6 @@
   import CrmIcon from '@/components/pure/crm-icon-font/index.vue';
   import type { ActionsItem } from '@/components/pure/crm-more-action/type';
   import CrmNameTooltip from '@/components/pure/crm-name-tooltip/index.vue';
-  import { CrmPopConfirmIconType } from '@/components/pure/crm-pop-confirm/index.vue';
   import CrmTable from '@/components/pure/crm-table/index.vue';
   import { BatchActionConfig } from '@/components/pure/crm-table/type';
   import CrmTableButton from '@/components/pure/crm-table-button/index.vue';
@@ -169,8 +175,7 @@
   import CrmOperationButton from '@/components/business/crm-operation-button/index.vue';
   import CrmSelectPoolModal from '@/components/business/crm-select-pool-modal/index.vue';
   import CrmTableExportModal from '@/components/business/crm-table-export-modal/index.vue';
-  import TransferModal from '@/components/business/crm-transfer-modal/index.vue';
-  import TransferForm from '@/components/business/crm-transfer-modal/transferForm.vue';
+  import CrmTransferCustomerModal from '@/components/business/crm-transfer-customer-modal/index.vue';
   import CrmViewSelect from '@/components/business/crm-view-select/index.vue';
   import customerOverviewDrawer from './customerOverviewDrawer.vue';
   import mergeAccountModal from './mergeAccountModal.vue';
@@ -181,7 +186,6 @@
     deleteCustomer,
     getCustomerNextStage,
     getCustomerStageConfig,
-    updateCustomer,
   } from '@/api/modules';
   import { baseFilterConfigList } from '@/config/clue';
   import useFormCreateApi from '@/hooks/useFormCreateApi';
@@ -418,30 +422,13 @@
     });
   }
 
-  // 转移
-  const transferFormRef = ref<InstanceType<typeof TransferForm>>();
-  const transferLoading = ref(false);
-  const transferForm = ref<any>({
-    owner: null,
-  });
+  // 单个转移弹窗
+  const showSingleTransferModal = ref(false);
 
-  async function transferCustomer() {
-    try {
-      transferLoading.value = true;
-      await updateCustomer({
-        id: activeSourceId.value,
-        owner: transferForm.value.owner,
-      });
-
-      Message.success(t('common.transferSuccess'));
-      transferForm.value.owner = null;
-      tableRefreshId.value += 1;
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
-    } finally {
-      transferLoading.value = false;
-    }
+  async function handleSingleTransfer(row: any) {
+    activeSourceId.value = row.id;
+    checkedRowKeys.value = [row.id];
+    showSingleTransferModal.value = true;
   }
 
   const {
@@ -477,9 +464,8 @@
         await initFormDetail(false, true);
         formCreateDrawerVisible.value = true;
         break;
-      case 'pop-transfer':
-        activeSourceId.value = row.id;
-        transferCustomer();
+      case 'transfer':
+        handleSingleTransfer(row);
         break;
       case 'delete':
         handleDelete(row);
@@ -509,14 +495,6 @@
             {
               label: t('common.transfer'),
               key: 'transfer',
-              popConfirmProps: {
-                loading: transferLoading.value,
-                title: t('common.transfer'),
-                positiveText: t('common.confirm'),
-                iconType: 'primary' as CrmPopConfirmIconType,
-              },
-              popSlotName: 'transferPopTitle',
-              popSlotContent: 'transferPopContent',
               permission: ['CUSTOMER_MANAGEMENT:TRANSFER'],
             },
             {
@@ -555,47 +533,29 @@
             ['convertedToCustomer', 'convertedToOpportunity'].includes(activeTab.value) ||
             row.collaborationType === 'READ_ONLY'
               ? '-'
-              : h(
-                  CrmOperationButton,
-                  {
-                    groupList: operationGroupList.value.filter(
-                      (item) =>
-                        item.key !== 'followUp' ||
-                        !excludeStageIds.value.includes(row.stage)
-                    ),
-                    moreList: [
-                      ...(activeTab.value !== CustomerSearchTypeEnum.CUSTOMER_COLLABORATION
-                        ? [
-                            {
-                              label: t('customer.moveToOpenSea'),
-                              key: 'moveToOpenSea',
-                              permission: ['CUSTOMER_MANAGEMENT:RECYCLE'],
-                            },
-                            {
-                              label: t('common.delete'),
-                              key: 'delete',
-                              danger: true,
-                              permission: ['CUSTOMER_MANAGEMENT:DELETE'],
-                            },
-                          ]
-                        : []),
-                    ],
-                    onSelect: (key: string) => handleActionSelect(row, key),
-                    onCancel: () => {
-                      transferForm.value.owner = null;
-                    },
-                  },
-                  {
-                    transferPopContent: () => {
-                      return h(TransferForm, {
-                        class: 'w-[320px] mt-[16px]',
-                        form: transferForm.value,
-                        ref: transferFormRef,
-                        moduleType: ModuleConfigEnum.CLUE_MANAGEMENT,
-                      });
-                    },
-                  }
-                ),
+              : h(CrmOperationButton, {
+                  groupList: operationGroupList.value.filter(
+                    (item) => item.key !== 'followUp' || !excludeStageIds.value.includes(row.stage)
+                  ),
+                  moreList: [
+                    ...(activeTab.value !== CustomerSearchTypeEnum.CUSTOMER_COLLABORATION
+                      ? [
+                          {
+                            label: t('customer.moveToOpenSea'),
+                            key: 'moveToOpenSea',
+                            permission: ['CUSTOMER_MANAGEMENT:RECYCLE'],
+                          },
+                          {
+                            label: t('common.delete'),
+                            key: 'delete',
+                            danger: true,
+                            permission: ['CUSTOMER_MANAGEMENT:DELETE'],
+                          },
+                        ]
+                      : []),
+                  ],
+                  onSelect: (key: string) => handleActionSelect(row, key),
+                }),
         },
     specialRender: {
       name: (row: any) => {

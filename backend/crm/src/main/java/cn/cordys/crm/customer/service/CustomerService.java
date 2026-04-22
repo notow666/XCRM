@@ -641,19 +641,62 @@ public class CustomerService {
                 orgId, List.of(originCustomer.getOwner()), true);
     }
 
-    public void batchTransfer(CustomerBatchTransferRequest request, String userId, String orgId) {
+    public int batchTransfer(CustomerBatchTransferRequest request, String userId, String orgId) {
         List<Customer> originCustomers = customerMapper.selectByIds(request.getIds());
         List<String> owners = getOwners(originCustomers);
         long processCount = originCustomers.stream().filter(customer -> !Strings.CS.equals(customer.getOwner(), request.getOwner())).count();
-        poolCustomerService.validateCapacity((int) processCount, request.getOwner(), orgId);
+
+        // 计算实际可转移数量
+        CustomerCapacity customerCapacity = poolCustomerService.getUserCapacity(request.getOwner(), orgId);
+        int remainingCapacity = Integer.MAX_VALUE;
+        if (customerCapacity != null && customerCapacity.getCapacity() != null) {
+            List<String> excludeStageIds = new ArrayList<>();
+            String paymentStageId = customerStageService.getPaymentStageId(orgId);
+            String failStageId = customerStageService.getFailStageId(orgId);
+            if (StringUtils.isNotEmpty(paymentStageId)) {
+                excludeStageIds.add(paymentStageId);
+            }
+            if (StringUtils.isNotEmpty(failStageId)) {
+                excludeStageIds.add(failStageId);
+            }
+            int excludeCount = 0;
+            if (CollectionUtils.isNotEmpty(excludeStageIds)) {
+                excludeCount = extCustomerMapper.countByOwnerAndStages(request.getOwner(), excludeStageIds);
+            }
+            LambdaQueryWrapper<Customer> customerWrapper = new LambdaQueryWrapper<>();
+            customerWrapper.eq(Customer::getOwner, request.getOwner()).eq(Customer::getInSharedPool, false);
+            int ownCount = customerMapper.selectListByLambda(customerWrapper).size();
+            remainingCapacity = Math.max(0, customerCapacity.getCapacity() - (ownCount - excludeCount));
+        }
+
+        int actualTransferCount = (int) Math.min(processCount, remainingCapacity);
+        if (actualTransferCount <= 0) {
+            throw new GenericException(Translator.getWithArgs("customer.capacity.over", remainingCapacity));
+        }
 
         dataScopeService.checkDataPermission(userId, orgId, owners, PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE);
+
+        // 如果实际转移数量小于请求数量，截断列表
+        List<String> transferIds = request.getIds();
+        if (actualTransferCount < processCount) {
+            transferIds = originCustomers.stream()
+                    .filter(customer -> !Strings.CS.equals(customer.getOwner(), request.getOwner()))
+                    .limit(actualTransferCount)
+                    .map(Customer::getId)
+                    .collect(Collectors.toList());
+        }
+
+        CustomerBatchTransferRequest transferRequest = new CustomerBatchTransferRequest();
+        transferRequest.setIds(transferIds);
+        transferRequest.setOwner(request.getOwner());
+
         // 添加责任人历史
-        customerOwnerHistoryService.batchAdd(request, userId);
-        extCustomerMapper.batchTransfer(request, userId);
+        customerOwnerHistoryService.batchAdd(transferRequest, userId);
+        extCustomerMapper.batchTransfer(transferRequest, userId);
 
         // 记录日志
-        List<LogDTO> logs = originCustomers.stream()
+        List<Customer> transferredCustomers = customerMapper.selectByIds(transferIds);
+        List<LogDTO> logs = transferredCustomers.stream()
                 .map(customer -> {
                     Customer originCustomer = new Customer();
                     originCustomer.setOwner(customer.getOwner());
@@ -666,8 +709,9 @@ public class CustomerService {
                 }).toList();
 
         logService.batchAdd(logs);
+        sendTransferNotice(transferredCustomers, request.getOwner(), userId, orgId);
 
-        sendTransferNotice(originCustomers, request.getOwner(), userId, orgId);
+        return (int) processCount - actualTransferCount;
     }
 
     private void sendTransferNotice(List<Customer> originCustomers, String toUser, String userId, String orgId) {
@@ -858,17 +902,42 @@ public class CustomerService {
         return StringUtils.EMPTY;
     }
 
+    private static final String OWNER_FIELD_KEY = "customerOwner";
+
     /**
      * 下载导入的模板
      *
      * @param response 响应
      */
     public void downloadImportTpl(HttpServletResponse response, String currentOrg) {
+        List<List<String>> headList = moduleFormService.getCustomImportHeadsNoRef(FormKey.CUSTOMER.getKey(), currentOrg);
+        List<BaseField> allFields = moduleFormService.getAllCustomImportFields(FormKey.CUSTOMER.getKey(), currentOrg);
+        List<BaseField> filteredFields = filterOwnerField(allFields);
+        
+        List<List<String>> filteredHeadList = headList.stream()
+                .filter(head -> !OWNER_FIELD_KEY.equals(getFieldInternalKeyByName(head.get(0), allFields)))
+                .collect(Collectors.toList());
+        
         new EasyExcelExporter()
-                .exportMultiSheetTplWithSharedHandler(response, moduleFormService.getCustomImportHeadsNoRef(FormKey.CUSTOMER.getKey(), currentOrg),
+                .exportMultiSheetTplWithSharedHandler(response, filteredHeadList,
                         Translator.get("customer.import_tpl.name"), Translator.get(SheetKey.DATA), Translator.get(SheetKey.COMMENT),
-                        new CustomTemplateWriteHandler(moduleFormService.getAllCustomImportFields(FormKey.CUSTOMER.getKey(), currentOrg)),
+                        new CustomTemplateWriteHandler(filteredFields),
                         new CustomHeadColWidthStyleStrategy());
+    }
+
+    private String getFieldInternalKeyByName(String fieldName, List<BaseField> fields) {
+        return fields.stream()
+                .filter(field -> fieldName != null && fieldName.equals(field.getName()))
+                .map(BaseField::getInternalKey)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private List<BaseField> filterOwnerField(List<BaseField> fields) {
+        return fields.stream()
+                .filter(field -> !OWNER_FIELD_KEY.equals(field.getInternalKey()))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -898,6 +967,7 @@ public class CustomerService {
     public ImportResponse realImport(MultipartFile file, String currentOrg, String currentUser) {
         try {
             List<BaseField> fields = moduleFormService.getAllFields(FormKey.CUSTOMER.getKey(), currentOrg);
+            List<BaseField> filteredFields = filterOwnerField(fields);
             // 获取默认阶段ID
             String defaultStageId = customerStageService.getDefaultStageId(currentOrg);
             CustomImportAfterDoConsumer<Customer, BaseResourceSubField> afterDo = (customers, customerFields, customerFieldBlobs) -> {
@@ -906,6 +976,7 @@ public class CustomerService {
                 customers.forEach(customer -> {
                     customer.setCollectionTime(customer.getCreateTime());
                     customer.setInSharedPool(false);
+                    customer.setOwner(currentUser);
                     // 设置默认阶段
                     if (StringUtils.isBlank(customer.getStage()) && StringUtils.isNotBlank(defaultStageId)) {
                         customer.setStage(defaultStageId);
@@ -939,7 +1010,7 @@ public class CustomerService {
                 // record logs
                 logService.batchAdd(logs);
             };
-            CustomFieldImportEventListener<Customer> eventListener = new CustomFieldImportEventListener<>(fields, Customer.class, currentOrg, currentUser,
+            CustomFieldImportEventListener<Customer> eventListener = new CustomFieldImportEventListener<>(filteredFields, Customer.class, currentOrg, currentUser,
                     "customer_field", afterDo, 2000, null, null);
             FastExcelFactory.read(file.getInputStream(), eventListener).headRowNumber(1).ignoreEmptyRow(true).sheet().doRead();
             return ImportResponse.builder().errorMessages(eventListener.getErrList())
@@ -961,7 +1032,8 @@ public class CustomerService {
     private ImportResponse checkImportExcel(MultipartFile file, String currentOrg) {
         try {
             List<BaseField> fields = moduleFormService.getAllCustomImportFields(FormKey.CUSTOMER.getKey(), currentOrg);
-            CustomFieldCheckEventListener eventListener = new CustomFieldCheckEventListener(fields, "customer", "customer_field", currentOrg);
+            List<BaseField> filteredFields = filterOwnerField(fields);
+            CustomFieldCheckEventListener eventListener = new CustomFieldCheckEventListener(filteredFields, "customer", "customer_field", currentOrg);
             FastExcelFactory.read(file.getInputStream(), eventListener).headRowNumber(1).ignoreEmptyRow(true).sheet().doRead();
             return ImportResponse.builder().errorMessages(eventListener.getErrList())
                     .successCount(eventListener.getSuccess()).failCount(eventListener.getErrList().size()).build();

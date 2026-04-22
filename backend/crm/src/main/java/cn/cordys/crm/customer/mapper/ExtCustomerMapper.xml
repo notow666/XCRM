@@ -730,8 +730,9 @@
 
     <update id="updateIncludeNullById" parameterType="cn.cordys.crm.customer.domain.Customer">
         update customer set pool_id = #{customer.poolId}, in_shared_pool = #{customer.inSharedPool}, owner = #{customer.owner},
-                collection_time = #{customer.collectionTime}, stage = #{customer.stage}, stage_status = #{customer.stageStatus},
-                update_time = #{customer.updateTime}
+                collection_time = #{customer.collectionTime}, follower = #{customer.follower}, follow_time = #{customer.followTime},
+                reason_id = #{customer.reasonId}, stage = #{customer.stage}, stage_status = #{customer.stageStatus},
+                fail_reason = #{customer.failReason}, update_time = #{customer.updateTime}, update_user = #{customer.updateUser}
         where id = #{customer.id}
     </update>
 

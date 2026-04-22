@@ -275,54 +275,73 @@ public class PoolCustomerService {
      * @param currentOrgId 当前组织ID
      * @return 未分配的客户数量，0表示全部分配完成
      */
-    public int batchAssign(PoolBatchAssignRequest request, String assignUserId, String currentOrgId, String currentUser) {
-        List<String> assignUserIds = request.getAssignUserIds();
-        if (CollectionUtils.isEmpty(assignUserIds)) {
-            if (StringUtils.isNotEmpty(assignUserId)) {
-                assignUserIds = List.of(assignUserId);
-            } else {
-                return request.getBatchIds().size();
-            }
-        }
-        List<String> customerIds = new ArrayList<>(request.getBatchIds());
-        int totalCustomers = customerIds.size();
-        int assignedCount = 0;
-        for (String targetUserId : assignUserIds) {
-            if (customerIds.isEmpty()) {
-                break;
-            }
-            CustomerCapacity customerCapacity = getUserCapacity(targetUserId, currentOrgId);
-            int remainingCapacity = Integer.MAX_VALUE;
-            if (customerCapacity != null && customerCapacity.getCapacity() != null) {
-                List<String> excludeStageIds = new ArrayList<>();
-                String paymentStageId = customerStageService.getPaymentStageId(currentOrgId);
-                String failStageId = customerStageService.getFailStageId(currentOrgId);
-                if (StringUtils.isNotEmpty(paymentStageId)) {
-                    excludeStageIds.add(paymentStageId);
-                }
-                if (StringUtils.isNotEmpty(failStageId)) {
-                    excludeStageIds.add(failStageId);
-                }
-                LambdaQueryWrapper<Customer> customerWrapper = new LambdaQueryWrapper<>();
-                customerWrapper.eq(Customer::getOwner, targetUserId).eq(Customer::getInSharedPool, false);
-                int ownCount = customerMapper.selectListByLambda(customerWrapper).size();
-                int excludeCount = 0;
-                if (CollectionUtils.isNotEmpty(excludeStageIds)) {
-                    excludeCount = extCustomerMapper.countByOwnerAndStages(targetUserId, excludeStageIds);
-                }
-                remainingCapacity = customerCapacity.getCapacity() - (ownCount - excludeCount);
-            }
-            int canAssignCount = remainingCapacity > 0 ? Math.min(remainingCapacity, customerIds.size()) : 0;
-            if (canAssignCount == 0) {
-                continue;
-            }
-            List<String> toAssign = customerIds.subList(0, canAssignCount);
-            toAssign.forEach(id -> ownCustomer(id, targetUserId, null, currentUser, LogType.ASSIGN, currentOrgId, false));
-            assignedCount += canAssignCount;
-            customerIds = customerIds.subList(canAssignCount, customerIds.size());
-        }
-        return totalCustomers - assignedCount;
-    }
+     public int batchAssign(PoolBatchAssignRequest request, String assignUserId, String currentOrgId, String currentUser) {
+         List<String> assignUserIds = request.getAssignUserIds();
+         if (CollectionUtils.isEmpty(assignUserIds)) {
+             if (StringUtils.isNotEmpty(assignUserId)) {
+                 assignUserIds = List.of(assignUserId);
+             } else {
+                 return request.getBatchIds().size();
+             }
+         }
+
+         // 预计算每个用户的剩余库容
+         Map<String, Integer> userCapacitiesMap = new HashMap<>();
+         for (String targetUserId : assignUserIds) {
+             CustomerCapacity customerCapacity = getUserCapacity(targetUserId, currentOrgId);
+             int remainingCapacity = Integer.MAX_VALUE;
+             if (customerCapacity != null && customerCapacity.getCapacity() != null) {
+                 List<String> excludeStageIds = new ArrayList<>();
+                 String paymentStageId = customerStageService.getPaymentStageId(currentOrgId);
+                 String failStageId = customerStageService.getFailStageId(currentOrgId);
+                 if (StringUtils.isNotEmpty(paymentStageId)) {
+                     excludeStageIds.add(paymentStageId);
+                 }
+                 if (StringUtils.isNotEmpty(failStageId)) {
+                     excludeStageIds.add(failStageId);
+                 }
+                 int excludeCount = 0;
+                 if (CollectionUtils.isNotEmpty(excludeStageIds)) {
+                     excludeCount = extCustomerMapper.countByOwnerAndStages(targetUserId, excludeStageIds);
+                 }
+                 LambdaQueryWrapper<Customer> customerWrapper = new LambdaQueryWrapper<>();
+                 customerWrapper.eq(Customer::getOwner, targetUserId).eq(Customer::getInSharedPool, false);
+                 int ownCount = customerMapper.selectListByLambda(customerWrapper).size();
+                 remainingCapacity = Math.max(0, customerCapacity.getCapacity() - (ownCount - excludeCount));
+             }
+             userCapacitiesMap.put(targetUserId, remainingCapacity);
+         }
+
+         int totalCustomers = request.getBatchIds().size();
+         int assignedCount = 0;
+         int userIdx = 0;
+         int userCount = assignUserIds.size();
+
+         // 轮询分配
+         for (String customerId : request.getBatchIds()) {
+             int attempts = 0;
+             boolean success = false;
+             while (attempts < userCount) {
+                 String currentUserId = assignUserIds.get(userIdx);
+                 Integer capacity = userCapacitiesMap.get(currentUserId);
+                 if (capacity != null && capacity > 0) {
+                     ownCustomer(customerId, currentUserId, null, currentUser, LogType.ASSIGN, currentOrgId, false);
+                     userCapacitiesMap.put(currentUserId, capacity - 1);
+                     assignedCount++;
+                     success = true;
+                     userIdx = (userIdx + 1) % userCount;
+                     break;
+                 } else {
+                     userIdx = (userIdx + 1) % userCount;
+                     attempts++;
+                 }
+             }
+             if (!success) {
+                 // 所有选中用户库容均不足，该客户无法分配
+             }
+         }
+         return totalCustomers - assignedCount;
+     }
 
     /**
      * 批量删除客户
@@ -593,6 +612,9 @@ public class PoolCustomerService {
         customer.setInSharedPool(false);
         customer.setOwner(ownerId);
         customer.setCollectionTime(now);
+        customer.setReasonId(null);
+        customer.setFollower(null);
+        customer.setFollowTime(null);
         customer.setUpdateUser(ownerId);
         customer.setUpdateTime(now);
         List<StageConfigResponse> stageConfigList = extCustomerStageConfigMapper.getStageConfigList(currentOrgId);

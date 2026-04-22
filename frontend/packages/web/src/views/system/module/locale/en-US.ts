@@ -94,6 +94,7 @@ export default {
   'module.capacitySet.remaining': 'Remaining',
   'module.capacitySet.count': '',
   'module.capacitySet.notConfigured': 'Capacity not configured',
+  'module.capacitySetTip': 'Customers in "Payment" or "Invalid Customer" stages will not be counted towards capacity',
   'module.personal.info': 'Personal information',
   'module.personal.plan': 'My plan',
   'module.personal.myExport': 'My export',
@@ -135,6 +136,12 @@ export default {
   'module.tender': 'Tender',
   'module.contract.businessNameValidateConfig': 'Business Title Form Required Settings',
   'module.contract.invoiceFormSetting': 'Invoice Form Settings',
+  'module.dataCleanupDays': 'Cleanup days',
+  'module.dataCleanupFields': 'Cleanup fields',
+  'module.dataCleanupDaysRequired': 'Please enter cleanup days',
+  'module.dataCleanupFieldsRequired': 'Please select at least one cleanup field',
+  'module.dataCleanupTip':
+    'When the data storage time exceeds the set cleanup days, the checked field contents will be automatically cleaned. The system executes daily at 00:00-01:00, and cleaned data will not be counted',
   'module.invoice': 'Invoice Records',
   'module.poolImport': 'Pool Import',
 };

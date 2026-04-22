@@ -238,7 +238,7 @@
       "disabledProps": null,
       "resourceFieldId": null,
       "subTableFieldId": null,
-      "locationType": "detail"
+      "locationType": "CHINA_PC"
     },
     {
       "name": "负责人信息",

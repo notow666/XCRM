@@ -15,7 +15,6 @@ import cn.cordys.crm.system.constants.ExportConstants;
 import cn.cordys.crm.system.constants.SheetKey;
 import cn.cordys.crm.system.domain.ExportTask;
 import cn.cordys.crm.system.dto.field.base.BaseField;
-import cn.cordys.crm.system.dto.field.base.SubField;
 import cn.cordys.crm.system.excel.handler.CustomHeadColWidthStyleStrategy;
 import cn.cordys.crm.system.excel.handler.CustomTemplateWriteHandler;
 import cn.cordys.crm.system.excel.listener.CustomFieldCheckEventListener;
@@ -27,8 +26,6 @@ import cn.cordys.file.engine.DefaultRepositoryDir;
 import cn.cordys.mybatis.BaseMapper;
 import cn.idev.excel.EasyExcel;
 import cn.idev.excel.context.AnalysisContext;
-import cn.idev.excel.util.BooleanUtils;
-import cn.idev.excel.write.style.column.LongestMatchColumnWidthStyleStrategy;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
@@ -41,7 +38,9 @@ import org.apache.poi.ss.usermodel.Drawing;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -173,7 +172,7 @@ public class PoolCustomerImportService {
             String errorFileId = IDGenerator.nextStr();
             String errorFileName = Translator.get("pool.import.error.file.name");
             try {
-                writeErrorExcelStreaming(file, result, filteredFields, errorFileId, orgId);
+                writeErrorExcelStreaming(file, result, errorFileId, orgId);
                 response.setErrorFileId(errorFileId);
                 response.setErrorFileName(errorFileName);
                 log.info("[耗时] 步骤5-写入错误Excel: {} ms, 错误行数: {}", 
@@ -465,8 +464,8 @@ public class PoolCustomerImportService {
      * 使用EasyExcel流式写入错误Excel
      * 优化：重新生成Excel而非修改原文件，避免内存溢出
      */
-    private void writeErrorExcelStreaming(MultipartFile file, ErrorCheckResult result, 
-                                           List<BaseField> fields, String fileId, String orgId) throws IOException {
+    private void writeErrorExcelStreaming(MultipartFile file, ErrorCheckResult result,
+                                          String fileId, String orgId) throws IOException {
         String exportDirPath = DefaultRepositoryDir.getDefaultDir() + File.separator
                 + DefaultRepositoryDir.getExportDir(orgId) + File.separator + fileId;
         File dir = new File(exportDirPath);
@@ -476,37 +475,28 @@ public class PoolCustomerImportService {
         String fileName = Translator.get("pool.import.error.file.name") + ".xlsx";
         File outputFile = new File(dir, fileName);
 
-        List<List<String>> heads = buildImportHeads(fields);
-        
-        List<ErrorRowData> errorRowList = buildErrorRowDataList(file, result, heads.size());
-
-        try (OutputStream os = new FileOutputStream(outputFile)) {
-            EasyExcel.write(os)
-                    .head(heads)
-                    .registerWriteHandler(new LongestMatchColumnWidthStyleStrategy())
-                    .registerWriteHandler(new ErrorRowStyleHandler(result.getRowErrorTypeMap(), result.getRowErrorMsgMap()))
-                    .sheet(Translator.get(SheetKey.DATA))
-                    .doWrite(errorRowList);
+        try (InputStream inputStream = file.getInputStream();
+             Workbook workbook = WorkbookFactory.create(inputStream);
+             OutputStream os = new FileOutputStream(outputFile)) {
+            markErrorRows(workbook.getSheetAt(0), result, workbook);
+            workbook.write(os);
         }
     }
 
-    /**
-     * 从原Excel读取数据并标记错误行
-     */
-    private List<ErrorRowData> buildErrorRowDataList(MultipartFile file, ErrorCheckResult result, int columnCount) {
-        List<ErrorRowData> dataList = new ArrayList<>();
-        
-        try {
-            EasyExcel.read(file.getInputStream(), new ErrorDataListener(dataList, columnCount))
-                    .headRowNumber(1)
-                    .ignoreEmptyRow(true)
-                    .sheet()
-                    .doRead();
-        } catch (Exception e) {
-            log.error("read excel for error marking failed: {}", e.getMessage());
+    private void markErrorRows(Sheet sheet, ErrorCheckResult result, Workbook workbook) {
+        Row headerRow = sheet.getRow(0);
+        if (headerRow == null) {
+            throw new GenericException(Translator.get("file_cannot_be_null"));
         }
-        
-        return dataList;
+        int columnCount = headerRow.getLastCellNum();
+        ErrorRowStyleHandler styleHandler = new ErrorRowStyleHandler(result.getRowErrorMsgMap());
+        for (Map.Entry<Integer, String> entry : result.getRowErrorTypeMap().entrySet()) {
+            Row row = sheet.getRow(entry.getKey());
+            if (row == null) {
+                continue;
+            }
+            styleHandler.markRow(row, columnCount, entry.getValue(), workbook);
+        }
     }
 
     /**
@@ -573,95 +563,42 @@ public class PoolCustomerImportService {
 }
 
     /**
-     * 错误行数据（用于 EasyExcel 写入）
+     * 错误行样式处理器
      */
-    private static class ErrorRowData extends ArrayList<String> {
-    }
-
-    /**
-     * 错误数据读取监听器
-     */
-    private static class ErrorDataListener implements cn.idev.excel.read.listener.ReadListener<Map<Integer, String>> {
-        private final List<ErrorRowData> dataList;
-        private final int columnCount;
-
-        public ErrorDataListener(List<ErrorRowData> dataList, int columnCount) {
-            this.dataList = dataList;
-            this.columnCount = columnCount;
-        }
-
-        @Override
-        public void invoke(Map<Integer, String> data, AnalysisContext context) {
-            ErrorRowData rowData = new ErrorRowData();
-            for (int i = 0; i < columnCount; i++) {
-                rowData.add(data.getOrDefault(i, ""));
-            }
-            dataList.add(rowData);
-        }
-
-        @Override
-        public void doAfterAllAnalysed(AnalysisContext context) {
-        }
-    }
-
-    /**
-     * 错误行样式处理器（基于EasyExcel RowWriteHandler）
-     */
-    private static class ErrorRowStyleHandler implements cn.idev.excel.write.handler.RowWriteHandler {
-        private final Map<Integer, String> rowErrorTypeMap;
+    private static class ErrorRowStyleHandler {
         private final Map<Integer, String> rowErrorMsgMap;
         private final Map<String, CellStyle> styleCache = new HashMap<>();
 
-        public ErrorRowStyleHandler(Map<Integer, String> rowErrorTypeMap, Map<Integer, String> rowErrorMsgMap) {
-            this.rowErrorTypeMap = rowErrorTypeMap;
+        public ErrorRowStyleHandler(Map<Integer, String> rowErrorMsgMap) {
             this.rowErrorMsgMap = rowErrorMsgMap;
         }
 
-        @Override
-        public void afterRowDispose(cn.idev.excel.write.handler.context.RowWriteHandlerContext context) {
-            if (cn.idev.excel.util.BooleanUtils.isTrue(context.getHead())) {
-                return;
-            }
-            
-            Row row = context.getRow();
-            if (row == null) {
-                return;
-            }
-            
-            Integer relativeRowIndex = context.getRelativeRowIndex();
-            if (relativeRowIndex == null) {
-                return;
-            }
-            
-            Integer rowNum = relativeRowIndex + 1;
-            String errorType = rowErrorTypeMap.get(rowNum);
-            if (errorType == null) {
-                return;
-            }
-
-            Workbook workbook = context.getWriteSheetHolder().getSheet().getWorkbook();
-            CellStyle errorStyle = getOrCreateErrorStyle(workbook, errorType);
-
-            for (int i = 0; i < row.getLastCellNum(); i++) {
+        public void markRow(Row row, int columnCount, String errorType, Workbook workbook) {
+            for (int i = 0; i < columnCount; i++) {
                 Cell cell = row.getCell(i);
                 if (cell == null) {
                     cell = row.createCell(i);
                 }
-                cell.setCellStyle(errorStyle);
+                cell.setCellStyle(getOrCreateErrorStyle(workbook, cell.getCellStyle(), errorType));
             }
 
-            String errorMsg = rowErrorMsgMap.get(rowNum);
+            String errorMsg = rowErrorMsgMap.get(row.getRowNum());
             if (StringUtils.isNotBlank(errorMsg)) {
                 addComment(row, errorMsg, workbook);
             }
         }
 
-        private CellStyle getOrCreateErrorStyle(Workbook workbook, String errorType) {
-            return styleCache.computeIfAbsent(errorType, type -> createErrorStyle(workbook, type));
+        private CellStyle getOrCreateErrorStyle(Workbook workbook, CellStyle baseStyle, String errorType) {
+            short baseStyleIndex = baseStyle == null ? -1 : baseStyle.getIndex();
+            String cacheKey = baseStyleIndex + "_" + errorType;
+            return styleCache.computeIfAbsent(cacheKey, key -> createErrorStyle(workbook, baseStyle, errorType));
         }
 
-        private CellStyle createErrorStyle(Workbook workbook, String errorType) {
+        private CellStyle createErrorStyle(Workbook workbook, CellStyle baseStyle, String errorType) {
             CellStyle style = workbook.createCellStyle();
+            if (baseStyle != null) {
+                style.cloneStyleFrom(baseStyle);
+            }
             short colorIndex = getColorIndex(errorType);
             style.setFillForegroundColor(colorIndex);
             style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
@@ -685,12 +622,13 @@ public class PoolCustomerImportService {
         private void addComment(Row row, String errorMsg, Workbook workbook) {
             Cell firstCell = row.getCell(0);
             if (firstCell == null) {
-                return;
+                firstCell = row.createCell(0);
             }
             Drawing<?> drawing = row.getSheet().createDrawingPatriarch();
             CreationHelper factory = workbook.getCreationHelper();
             Comment comment = drawing.createCellComment(factory.createClientAnchor());
             comment.setString(factory.createRichTextString(errorMsg));
+            comment.setAuthor("XCRM");
             firstCell.setCellComment(comment);
         }
     }
@@ -769,25 +707,6 @@ public class PoolCustomerImportService {
         return fields.stream()
                 .filter(field -> !OWNER_FIELD_KEY.equals(field.getInternalKey()))
                 .collect(Collectors.toList());
-    }
-
-    private List<List<String>> buildImportHeads(List<BaseField> fields) {
-        List<List<String>> heads = new ArrayList<>();
-        for (BaseField field : fields) {
-            if (StringUtils.isEmpty(field.getResourceFieldId())) {
-                if (field instanceof SubField subField && CollectionUtils.isNotEmpty(subField.getSubFields())) {
-                    for (BaseField sub : subField.getSubFields()) {
-                        List<String> head = new ArrayList<>();
-                        head.add(field.getName());
-                        head.add(sub.getName());
-                        heads.add(head);
-                    }
-                } else {
-                    heads.add(new ArrayList<>(Collections.singletonList(field.getName())));
-                }
-            }
-        }
-        return heads;
     }
 
     /**

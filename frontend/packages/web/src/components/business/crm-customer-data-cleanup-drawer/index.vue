@@ -24,6 +24,9 @@
           :placeholder="t('module.dataCleanupDaysPlaceholder')"
           style="width: 200px"
         />
+        <div class="mt-[12px]" style="font-size: 12px; line-height: 20px; color: #e88080 !important">
+          {{ t('module.dataCleanupTip') }}
+        </div>
       </div>
       <div class="mb-[8px] text-[var(--text-n2)]">{{ t('module.dataCleanupFields') }}</div>
       <n-scrollbar style="max-height: 400px">
@@ -47,7 +50,7 @@
 <script setup lang="ts">
   /* eslint-disable simple-import-sort/imports */
   import { ref, watch } from 'vue';
-  import { NInputNumber, NCheckboxGroup, NCheckbox, NScrollbar, useMessage, NButton } from 'naive-ui';
+  import { NInputNumber, NCheckboxGroup, NCheckbox, NScrollbar, useMessage, NButton, NText } from 'naive-ui';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
 

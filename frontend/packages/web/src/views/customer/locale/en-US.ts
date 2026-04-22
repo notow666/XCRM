@@ -67,5 +67,6 @@ export default {
     "Selected accounts: chosen from list; Other accounts: visible accounts; Owner assignment: only selected accounts' owners can be chosen; other accounts' owners remain unchanged",
   'customer.selectedMergeAccountNumber': 'Selected {number} accounts',
   'customer.stage': 'Account Stage',
+  'customer.stageHasData': 'Current customer stage has customer data, deletion is prohibited!',
   'customer.failReason': 'Failure Reason',
 };

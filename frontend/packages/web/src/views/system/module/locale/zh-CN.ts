@@ -91,6 +91,7 @@ export default {
   'module.capacitySet.remaining': '剩余',
   'module.capacitySet.count': '个',
   'module.capacitySet.notConfigured': '未设置库容',
+  'module.capacitySetTip': '客户处于"回款"、"无效客户"的客户阶段时，不会计入到库容中',
   'module.personal.info': '个人信息',
   'module.personal.plan': '我的计划',
   'module.personal.myExport': '我的导出',
@@ -113,6 +114,8 @@ export default {
   'module.dataCleanupFields': '清理字段',
   'module.dataCleanupDaysRequired': '请输入清理天数',
   'module.dataCleanupFieldsRequired': '请选择至少一个清理字段',
+  'module.dataCleanupTip':
+    '当数据的入库时间，超过设置的清理天数，勾选字段内容将会被自动清理，系统每日凌晨12:00-1:00执行，被清理的数据将不会被统计',
   'module.approvalSwitch': '{name}审批',
   'module.invoiceApproval': '发票',
   'module.configReasonTooltip': '配置后可开启',
