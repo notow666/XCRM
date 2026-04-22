@@ -14,6 +14,11 @@
         />
       </div>
     </CrmCard>
+    <customerOverviewDrawer
+      v-model:show="showCustomerDrawer"
+      :source-id="activeCustomerId"
+      @saved="loadList"
+    />
     <CrmFormCreateDrawer
       v-model:visible="planFormDrawerVisible"
       :form-key="FormDesignKeyEnum.FOLLOW_PLAN_CUSTOMER"
@@ -39,26 +44,26 @@
 
   import CrmCard from '@/components/pure/crm-card/index.vue';
   import CrmFormCreateDrawer from '@/components/business/crm-form-create-drawer/index.vue';
+  import customerOverviewDrawer from '@/views/customer/components/customerOverviewDrawer.vue';
 
   import { getCustomerNextStage, getTaskFollowPlanPage } from '@/api/modules';
   import useModal from '@/hooks/useModal';
-  import useOpenNewPage from '@/hooks/useOpenNewPage';
   import { hasAnyPermission } from '@/utils/permission';
-
-  import { CustomerRouteEnum } from '@/enums/routeEnum';
 
   import type { DataTableColumns, PaginationProps } from 'naive-ui';
 
   const { t } = useI18n();
   const Message = useMessage();
   const { openModal } = useModal();
-  const { openNewPage } = useOpenNewPage();
 
   const loading = ref(false);
   const dataSource = ref<CustomerFollowPlanListItem[]>([]);
   const page = ref(1);
   const pageSize = ref(30);
   const total = ref(0);
+
+  const showCustomerDrawer = ref(false);
+  const activeCustomerId = ref('');
 
   const planFormDrawerVisible = ref(false);
   const selectedPlan = ref<CustomerFollowPlanListItem | null>(null);
@@ -125,6 +130,11 @@
     loadList();
   }
 
+  function handleCustomerClick(customerId: string) {
+    activeCustomerId.value = customerId;
+    showCustomerDrawer.value = true;
+  }
+
   async function handleComplete(row: CustomerFollowPlanListItem) {
     selectedPlan.value = row;
     const { customerId, customerName } = row;
@@ -168,10 +178,7 @@
           {
             text: true,
             type: 'primary',
-            onClick: () =>
-              openNewPage(CustomerRouteEnum.CUSTOMER_INDEX, {
-                id: row.customerId,
-              }),
+            onClick: () => handleCustomerClick(row.customerId),
           },
           { default: () => row.customerName ?? '-' }
         );

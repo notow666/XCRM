@@ -40,6 +40,7 @@ import cn.cordys.crm.customer.mapper.ExtCustomerStageConfigMapper;
 import cn.cordys.crm.customer.service.CustomerStageService;
 import cn.cordys.crm.follow.domain.FollowUpPlan;
 import cn.cordys.crm.follow.domain.FollowUpRecord;
+import cn.cordys.crm.follow.constants.FollowUpPlanType;
 import cn.cordys.crm.follow.mapper.ExtFollowUpPlanMapper;
 import cn.cordys.crm.follow.mapper.ExtFollowUpRecordMapper;
 import cn.cordys.crm.follow.service.FollowUpPlanService;
@@ -160,6 +161,8 @@ public class CustomerService {
     private ExtFollowUpRecordMapper extFollowUpRecordMapper;
     @Resource
     private ExtFollowUpPlanMapper extFollowUpPlanMapper;
+    @Resource
+    private BaseMapper<FollowUpPlan> followUpPlanMapper;
     @Resource
     private BaseMapper<CustomerCollaboration> customerCollaborationMapper;
     @Resource
@@ -311,15 +314,29 @@ public class CustomerService {
         }
         boolean hasPermission = dataScopeService.hasDataPermission(userId, orgId, getResponse.getOwner(), PermissionConstants.CUSTOMER_MANAGEMENT_READ);
         if (!hasPermission) {
-            List<CustomerCollaboration> collaborations = customerCollaborationService.selectByCustomerIdAndUserId(getResponse.getId(), userId);
+            //原逻辑为协作人
+            /*List<CustomerCollaboration> collaborations = customerCollaborationService.selectByCustomerIdAndUserId(getResponse.getId(), userId);
             if (CollectionUtils.isEmpty(collaborations)) {
                 throw new GenericException(CrmHttpResultCode.FORBIDDEN);
             } else {
                 getResponse.setCollaborationType(collaborations.getFirst().getCollaborationType());
+            }*/
+            if (!hasCustomerTaskPermission(getResponse.getId(), userId, orgId)) {
+                throw new GenericException(CrmHttpResultCode.FORBIDDEN);
             }
         }
 
         return getResponse;
+    }
+
+    private boolean hasCustomerTaskPermission(String customerId, String userId, String orgId) {
+        LambdaQueryWrapper<FollowUpPlan> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(FollowUpPlan::getCustomerId, customerId)
+                .eq(FollowUpPlan::getProcessor, userId)
+                .eq(FollowUpPlan::getOrganizationId, orgId)
+                .eq(FollowUpPlan::getType, FollowUpPlanType.CUSTOMER.name());
+        List<FollowUpPlan> plans = followUpPlanMapper.selectListByLambda(queryWrapper);
+        return CollectionUtils.isNotEmpty(plans);
     }
 
     /**
