@@ -35,7 +35,6 @@ public class UserExcelDataUs extends UserExcelData {
     @ColumnWidth(30)
     private String department;
 
-
     @ColumnWidth(50)
     @ExcelProperty("Position")
     private String position;
@@ -46,7 +45,6 @@ public class UserExcelDataUs extends UserExcelData {
     @ExcelProperty("Phone")
     private String phone;
 
-    @NotBlank(message = "{cannot_be_null}")
     @ColumnWidth(50)
     @ExcelProperty("Email")
     private String email;

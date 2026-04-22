@@ -7,6 +7,7 @@ import cn.cordys.aspectj.context.OperationLogContext;
 import cn.cordys.aspectj.dto.LogContextInfo;
 import cn.cordys.common.constants.InternalRole;
 import cn.cordys.common.constants.InternalUser;
+import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.constants.RoleDataScope;
 import cn.cordys.common.dto.RoleDataScopeDTO;
 import cn.cordys.common.exception.GenericException;
@@ -553,8 +554,20 @@ public class RoleService {
                 rolePermission.setRoleId(roleId);
                 rolePermission.setPermissionId(permissionId);
                 rolePermissionMapper.insert(rolePermission);
+
+                linkagePermission(rolePermission);
             }
         });
+    }
+
+    private void linkagePermission(RolePermission rolePermission) {
+        if(PermissionConstants.SYS_ORGANIZATION_READ.equals(rolePermission.getPermissionId())) {
+            RolePermission linkagePermission = new RolePermission();
+            linkagePermission.setId(IDGenerator.nextStr());
+            linkagePermission.setRoleId(rolePermission.getRoleId());
+            linkagePermission.setPermissionId(PermissionConstants.SYSTEM_SETTING_READ);
+            rolePermissionMapper.insert(linkagePermission);
+        }
     }
 
     public List<Role> getByIds(List<String> ids) {

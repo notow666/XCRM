@@ -46,7 +46,6 @@ public class UserExcelDataCn extends UserExcelData {
     @ExcelProperty("手机号")
     private String phone;
 
-    @NotBlank(message = "{cannot_be_null}")
     @ColumnWidth(50)
     @ExcelProperty("邮箱")
     private String email;

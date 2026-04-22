@@ -1,5 +1,6 @@
 package cn.cordys.crm.system.controller;
 
+import cn.cordys.common.constants.InternalRole;
 import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.dto.DeptUserTreeNode;
 import cn.cordys.common.dto.OptionDTO;
@@ -154,9 +155,10 @@ public class OrganizationUserController {
     @RequiresPermissions(PermissionConstants.SYS_ORGANIZATION_READ)
     public List<OptionDTO> getUserRoleList() {
         List<RoleListResponse> list = roleService.list(OrganizationContext.getOrganizationId());
-        return list.stream().map(role -> new OptionDTO(role.getId(), role.getName())).toList();
+        return list.stream()
+                .filter(role -> !InternalRole.ORG_ADMIN.getValue().equals(role.getId()))
+                .map(role -> new OptionDTO(role.getId(), role.getName())).toList();
     }
-
 
     @GetMapping("/sync-check")
     @Operation(summary = "用户(员工)-是否为第三方同步数据")

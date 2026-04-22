@@ -873,16 +873,17 @@
 
   const moreActions = computed(() => {
     return [
-      ...(hasAnyPermission(['SYS_ORGANIZATION:SYNC'])
-        ? [
-            {
-              label: t('org.formPlatformSync', { type: platFormName.value }),
-              key: 'sync',
-              render: renderSyncResult.value,
-              disabled: !isHasConfig.value || isSyncing.value,
-            },
-          ]
-        : []),
+        // 隐藏同步
+      // ...(hasAnyPermission(['SYS_ORGANIZATION:SYNC'])
+      //   ? [
+      //       {
+      //         label: t('org.formPlatformSync', { type: platFormName.value }),
+      //         key: 'sync',
+      //         render: renderSyncResult.value,
+      //         disabled: !isHasConfig.value || isSyncing.value,
+      //       },
+      //     ]
+      //   : []),
       {
         label: t('common.import'),
         key: 'import',

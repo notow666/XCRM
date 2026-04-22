@@ -83,9 +83,6 @@ public class UserTemplateWriteHandler implements RowWriteHandler, SheetWriteHand
                 if (UserImportFiled.PHONE.containsHead(entry.getKey())) {
                     setComment(fieldMap.get(entry.getKey()), Translator.get("required"));
                 }
-                if (UserImportFiled.EMAIL.containsHead(entry.getKey())) {
-                    setComment(fieldMap.get(entry.getKey()), Translator.get("required"));
-                }
                 if (UserImportFiled.EMPLOYEE_TYPE.containsHead(entry.getKey())) {
                     setComment(fieldMap.get(entry.getKey()), Translator.get("employee_type_comment"));
                 }
