@@ -263,6 +263,12 @@
       (item) => ![FieldTypeEnum.DIVIDER, FieldTypeEnum.TEXTAREA].includes(item.type) && item.businessKey !== 'owner'
     );
   });
+  const DEFAULT_HIDDEN_FIELD_BUSINESS_KEYS = ['createUser', 'createTime', 'updateUser', 'updateTime'];
+  function getDefaultHiddenFieldIds() {
+    return showInTableColumns.value
+      .filter((item) => DEFAULT_HIDDEN_FIELD_BUSINESS_KEYS.includes(item.businessKey || ''))
+      .map((item) => item.id);
+  }
   const rules: FormRules = {
     name: [
       {
@@ -405,7 +411,11 @@
       }
       if (isContinue) {
         form.value = cloneDeep(initForm);
+        form.value.hiddenFieldIds = getDefaultHiddenFieldIds();
         recycleFormItemModel.value = cloneDeep(defaultFormModel);
+        showFieldIds.value = showInTableColumns.value
+          .filter((item) => !form.value.hiddenFieldIds.includes(item.id))
+          .map((item) => item.id);
       } else {
         cancelHandler();
       }
@@ -472,6 +482,9 @@
       if (val) {
         tabName.value = 'baseInfo';
         await initFormConfig();
+        if (!props.row) {
+          form.value.hiddenFieldIds = getDefaultHiddenFieldIds();
+        }
         showFieldIds.value = showInTableColumns.value
           .filter((item) => !form.value.hiddenFieldIds.includes(item.id))
           .map((item) => item.id);

@@ -829,7 +829,7 @@
     }
   }
 
-  const platFormName = computed(() => platFormNameMap[appStore.activePlatformResource.syncResource]);
+  const platFormName = computed(() => platFormNameMap[appStore.activePlatformResource.syncResource] ?? '');
 
   // 同步二次确认
   function handleSyncConfirm() {

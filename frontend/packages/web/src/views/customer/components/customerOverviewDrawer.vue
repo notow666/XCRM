@@ -302,6 +302,7 @@
 
   const activeTab = ref('contact');
   const tabList = computed<TabContentItem[]>(() => {
+    // 客户详情隐藏无用标签
     const fullList = [
       {
         name: 'followRecord',
@@ -358,12 +359,12 @@
         enable: true,
         permission: ['CONTRACT_PAYMENT_RECORD:READ'],
       },
-      {
-        name: 'invoice',
-        tab: t('module.invoice'),
-        enable: true,
-        permission: ['CONTRACT_INVOICE:READ'],
-      },
+      // {
+      //   name: 'invoice',
+      //   tab: t('module.invoice'),
+      //   enable: true,
+      //   permission: ['CONTRACT_INVOICE:READ'],
+      // },
       // {
       //   name: 'order',
       //   tab: t('module.order'),

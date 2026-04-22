@@ -633,7 +633,10 @@
     return cluePoolSetting?.fieldConfigs.filter((item) => !item.enable).map((item) => item.fieldId) || [];
   });
   const filterColumns = computed(() => {
-    return propsRes.value.columns.filter((item) => !hiddenColumns.value.includes(item.fieldId as string));
+    const removedColumnKeys = new Set(['reasonId', 'follower', 'followTime']);
+    return propsRes.value.columns.filter(
+      (item) => !hiddenColumns.value.includes(item.fieldId as string) && !removedColumnKeys.has(String(item.key))
+    );
   });
 
   const exportParams = computed(() => {

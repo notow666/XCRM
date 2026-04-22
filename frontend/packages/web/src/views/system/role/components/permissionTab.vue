@@ -206,7 +206,6 @@
         transferData(res.permissions);
       } else if (props.isNew) {
         const res = await getPermissions();
-        console.log(res)
         dataPermission.value = 'ALL';
         departments.value = [];
         transferData(res, true);

@@ -24,6 +24,8 @@ public class Permission implements Serializable {
     private String name;
     @Schema(description = "是否启用该权限")
     private Boolean enable = false;
+    @Schema(description = "菜单是否显示")
+    private Boolean display = true;
     @Schema(description = "是否是企业权限")
     private Boolean license = false;
 }

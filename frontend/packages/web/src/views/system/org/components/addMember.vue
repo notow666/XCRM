@@ -268,7 +268,8 @@
 
   function validateUserEmail(rule: FormItemRule, value: string) {
     if (!value) {
-      return new Error(t('common.notNull', { value: `${t('org.userEmail')}` }));
+      // return new Error(t('common.notNull', { value: `${t('org.userEmail')}` }));
+      return true;
     }
     if (!validateEmail(value)) {
       return new Error(t('common.emailErrTip'));

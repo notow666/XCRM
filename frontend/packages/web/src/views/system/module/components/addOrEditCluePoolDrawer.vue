@@ -187,6 +187,12 @@
       (item) => ![FieldTypeEnum.DIVIDER, FieldTypeEnum.TEXTAREA].includes(item.type) && item.businessKey !== 'owner'
     );
   });
+  const DEFAULT_HIDDEN_FIELD_BUSINESS_KEYS = ['createUser', 'createTime', 'updateUser', 'updateTime'];
+  function getDefaultHiddenFieldIds() {
+    return showInTableColumns.value
+      .filter((item) => DEFAULT_HIDDEN_FIELD_BUSINESS_KEYS.includes(item.businessKey || ''))
+      .map((item) => item.id);
+  }
   const rules: FormRules = {
     name: [
       {
@@ -448,9 +454,13 @@
       }
       if (isContinue) {
         form.value = cloneDeep(initForm);
+        form.value.hiddenFieldIds = getDefaultHiddenFieldIds();
         recycleFormItemModel.value = cloneDeep(defaultFormModel);
         distributeFilterResult.value = { searchMode: 'AND', conditions: [] };
         distributeFormViewModel.value = cloneDeep(defaultDistributeFormModel);
+        showFieldIds.value = showInTableColumns.value
+          .filter((item) => !form.value.hiddenFieldIds.includes(item.id))
+          .map((item) => item.id);
       } else {
         cancelHandler();
       }
@@ -525,23 +535,9 @@
       }
       if (val.distribute) {
         const combineSearch = normalizeCombineSearch(val.distributeRule?.combineSearch);
-        const conditions = combineSearch?.conditions ?? [];
-        const mapped = conditionsToFilterItems(
-          conditions.map((item) => ({
-            column: item.name || '',
-            operator: (item.operator as string) || '',
-            value: item.value,
-            scope: ['Created'],
-          }))
-        );
         distributeFilterResult.value = {
           ...combineSearch,
-          conditions: combineSearch.conditions?.length
-            ? combineSearch.conditions
-            : filterFormToResult({
-                list: mapped.length ? mapped : cloneDeep(defaultFormModel.list),
-                searchMode: (combineSearch?.searchMode ?? defaultFormModel.searchMode) as AccordBelowType,
-              }).conditions,
+          conditions: combineSearch.conditions?.length ? combineSearch.conditions : [],
         };
         distributeFormViewModel.value = filterResultToFormModel(distributeFilterResult.value);
       } else {
@@ -568,6 +564,9 @@
         if (props.type === ModuleConfigEnum.CLUE_MANAGEMENT) {
           await loadCustomerPoolOptions();
         }
+        if (!props.row) {
+          form.value.hiddenFieldIds = getDefaultHiddenFieldIds();
+        }
         showFieldIds.value = showInTableColumns.value
           .filter((item) => !form.value.hiddenFieldIds.includes(item.id))
           .map((item) => item.id);
@@ -582,23 +581,9 @@
           }
           if (row.distribute) {
             const combineSearch = normalizeCombineSearch(row.distributeRule?.combineSearch);
-            const conditions = combineSearch?.conditions ?? [];
-            const mapped = conditionsToFilterItems(
-              conditions.map((item) => ({
-                column: item.name || '',
-                operator: (item.operator as string) || '',
-                value: item.value,
-                scope: ['Created'],
-              }))
-            );
             distributeFilterResult.value = {
               ...combineSearch,
-              conditions: combineSearch.conditions?.length
-                ? combineSearch.conditions
-                : filterFormToResult({
-                    list: mapped.length ? mapped : cloneDeep(defaultFormModel.list),
-                    searchMode: (combineSearch?.searchMode ?? defaultFormModel.searchMode) as AccordBelowType,
-                  }).conditions,
+              conditions: combineSearch.conditions?.length ? combineSearch.conditions : [],
             };
             distributeFormViewModel.value = filterResultToFormModel(distributeFilterResult.value);
           } else {

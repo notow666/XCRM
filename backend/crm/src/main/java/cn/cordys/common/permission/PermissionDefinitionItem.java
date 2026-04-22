@@ -2,6 +2,7 @@ package cn.cordys.common.permission;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +29,12 @@ public class PermissionDefinitionItem implements Cloneable{
     private Boolean display = true;
     @Schema(description = "子菜单")
     private List<PermissionDefinitionItem> children;
+
+    public List<Permission> getPermissions() {
+        return CollectionUtils.isEmpty(this.permissions)
+                ? this.permissions
+                : this.permissions.stream().filter(Permission::getDisplay).collect(Collectors.toList());
+    }
 
     public static List<PermissionDefinitionItem> filterTree(List<PermissionDefinitionItem> nodes, Predicate<PermissionDefinitionItem> predicate) {
         if (nodes == null || nodes.isEmpty()) {

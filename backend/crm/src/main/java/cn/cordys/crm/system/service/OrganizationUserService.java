@@ -297,7 +297,7 @@ public class OrganizationUserService {
      * @param phone
      */
     private void checkEmailAndPhone(String email, String phone, String id) {
-        if (extUserMapper.countByEmail(email, id) > 0) {
+        if (StringUtils.isNotBlank(email) && extUserMapper.countByEmail(email, id) > 0) {
             throw new GenericException(Translator.get("email.exist"));
         }
         if (extUserMapper.countByPhone(phone, id) > 0) {

@@ -25,11 +25,17 @@ export default function useTableStore() {
     await setItem(tableKey, tableColumnsMap);
   }
 
-  function columnsTransform(columns: CrmDataTableColumn[]) {
+  const DEFAULT_HIDDEN_COLUMN_KEYS: Partial<Record<TableKeyEnum, string[]>> = {
+    [TableKeyEnum.CUSTOMER]: ['createUser', 'createTime', 'updateUser', 'updateTime'],
+    [TableKeyEnum.CUSTOMER_OPEN_SEA]: ['createUser', 'createTime', 'updateUser', 'updateTime'],
+    [TableKeyEnum.CLUE_POOL]: ['createUser', 'createTime', 'updateUser', 'updateTime'],
+  };
+
+  function columnsTransform(columns: CrmDataTableColumn[], tableKey: TableKeyEnum) {
+    const hiddenColumnKeys = DEFAULT_HIDDEN_COLUMN_KEYS[tableKey] || [];
     columns.forEach((item) => {
       if (item.showInTable === undefined) {
-        // 默认在表格中展示
-        item.showInTable = true;
+        item.showInTable = !hiddenColumnKeys.includes(String(item.key));
       }
       if (item.key === SpecialColumnEnum.OPERATION) {
         item.title = t('common.operation');
@@ -85,14 +91,14 @@ export default function useTableStore() {
       const tableColumnsMap = await getTableColumnsMap(tableKey);
       if (!tableColumnsMap) {
         // 如果没有在indexDB里初始化
-        column = columnsTransform(column);
+        column = columnsTransform(column, tableKey);
         setTableColumnsMap(tableKey, {
           column,
           columnBackup: cloneDeep(column),
         });
       } else {
         // 初始化过了，但是可能有新变动，如列的顺序，列的显示隐藏，列的拖拽
-        column = columnsTransform(column);
+        column = columnsTransform(column, tableKey);
         const { columnBackup: oldColumn } = tableColumnsMap;
         // 比较页面上定义的 column 和 浏览器备份的column 是否相同
         const isEqual = isArraysEqualWithOrder(oldColumn, column);

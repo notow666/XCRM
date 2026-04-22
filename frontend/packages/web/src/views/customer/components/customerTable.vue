@@ -680,8 +680,10 @@
   });
   const { propsRes, propsEvent, tableQueryParams, loadList, setLoadListParams, setAdvanceFilter } = useTableRes;
   const tableColumns = computed(() => {
+    const removedColumnKeys = new Set(['recyclePoolName', 'reasonId', 'reservedDays']);
+    const baseColumns = propsRes.value.columns.filter((item: any) => !removedColumnKeys.has(String(item.key)));
     if (activeTab.value === CustomerSearchTypeEnum.CUSTOMER_COLLABORATION) {
-      return propsRes.value.columns
+      return baseColumns
         .filter((item: any) => item.type !== 'selection')
         .map((e) => {
           if (e.key === 'operation') {
@@ -693,7 +695,7 @@
           return e;
         });
     }
-    return propsRes.value.columns;
+    return baseColumns;
   });
 
   const exportParams = computed(() => {

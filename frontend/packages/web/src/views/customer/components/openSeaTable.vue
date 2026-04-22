@@ -612,7 +612,10 @@
   const { propsRes, propsEvent, tableQueryParams, loadList, setLoadListParams, setAdvanceFilter } = useTableRes;
   batchTableQueryParams.value = tableQueryParams.value;
   const filterColumns = computed(() => {
-    return propsRes.value.columns.filter((item) => !hiddenColumns.value.includes(item.key as string));
+    const removedColumnKeys = new Set(['follower', 'followTime']);
+    return propsRes.value.columns.filter(
+      (item) => !hiddenColumns.value.includes(item.key as string) && !removedColumnKeys.has(String(item.key))
+    );
   });
 
   const exportParams = computed(() => {

@@ -24,7 +24,8 @@
           },
           {
             "id": "SYS_ORGANIZATION:SYNC",
-            "name": "permission.organization.sync"
+            "name": "permission.organization.sync",
+            "display": false
           },
           {
             "id": "SYS_ORGANIZATION_USER:RESET_PASSWORD",
@@ -167,7 +168,8 @@
             "id": "CUSTOMER_MANAGEMENT:EXPORT"
           },
           {
-            "id": "CUSTOMER_MANAGEMENT:MERGE"
+            "id": "CUSTOMER_MANAGEMENT:MERGE",
+            "display": false
           }
         ]
       },
