@@ -39,6 +39,23 @@ export const specialBusinessKeyMap: Record<string, string> = {
   businessTitleId: 'businessTitleName',
 };
 
+function formatLocationDetailValue(item: FormCreateField, fieldValue?: string | null) {
+  const addressArr: string[] = fieldValue?.split('-')?.filter(Boolean) || [];
+  if (!addressArr.length) {
+    return '-';
+  }
+  const country = addressArr[0];
+  const rest = addressArr.filter((e, i) => i > 0).join('-');
+  let cityPath = getCityPath(country);
+  if (item.locationType === 'CHINA_PC') {
+    cityPath = cityPath
+      .split('/')
+      .filter((segment, index) => !(index === 0 && segment === '中国'))
+      .join('/');
+  }
+  return rest ? `${cityPath}-${rest}` : cityPath;
+}
+
 export function getRuleType(item: FormCreateField) {
   if (
     item.type === FieldTypeEnum.SELECT_MULTIPLE ||
@@ -169,14 +186,7 @@ export function parseModuleFieldValue(item: FormCreateField, fieldValue: string 
       value = t('common.optionNotExist');
     }
   } else if (item.type === FieldTypeEnum.LOCATION) {
-    const addressArr: string[] = (fieldValue as string)?.split('-')?.filter(Boolean) || [];
-    if (!addressArr.length) {
-      value = '-';
-    } else {
-      const country = addressArr[0];
-      const rest = addressArr.filter((e, i) => i > 0).join('-');
-      value = rest ? `${getCityPath(country)}-${rest}` : getCityPath(country);
-    }
+    value = formatLocationDetailValue(item, fieldValue as string);
   } else if (item.type === FieldTypeEnum.INDUSTRY) {
     value = fieldValue ? getIndustryPath(fieldValue as string) : '-';
   } else if (item.type === FieldTypeEnum.INPUT_NUMBER) {
@@ -319,16 +329,7 @@ export function transformData({
       fieldOptionMap[fieldId] = options || [];
       if (addressFieldIds.includes(fieldId)) {
         // 地址类型字段，解析代码替换成省市区
-        const addressArr: string[] = item[fieldId]?.split('-')?.filter(Boolean) || [];
-        let value = '';
-        if (!addressArr.length) {
-          value = '-';
-        } else {
-          const country = addressArr[0];
-          const rest = addressArr.filter((e, i) => i > 0).join('-');
-          value = rest ? `${getCityPath(country)}-${rest}` : getCityPath(country);
-        }
-        businessFieldAttr[fieldId] = value;
+        businessFieldAttr[fieldId] = formatLocationDetailValue(field, item[fieldId] as string);
       } else if (industryFieldIds.includes(fieldId)) {
         // 行业类型字段，解析代码替换成行业名称
         businessFieldAttr[fieldId] = item[fieldId] ? getIndustryPath(item[fieldId] as string) : '-';
@@ -389,16 +390,10 @@ export function transformData({
     fieldOptionMap[field.fieldId] = options || [];
     if (addressFieldIds.includes(field.fieldId)) {
       // 地址类型字段，解析代码替换成省市区
-      const addressArr: string[] = (field?.fieldValue as string)?.split('-')?.filter(Boolean) || [];
-      let value = '';
-      if (!addressArr.length) {
-        value = '-';
-      } else {
-        const country = addressArr[0];
-        const rest = addressArr.filter((e, i) => i > 0).join('-');
-        value = rest ? `${getCityPath(country)}-${rest}` : getCityPath(country);
-      }
-      customFieldAttr[field.fieldId] = value;
+      customFieldAttr[field.fieldId] = formatLocationDetailValue(
+        fields.find((f) => f.id === field.fieldId) as FormCreateField,
+        field.fieldValue as string
+      );
     } else if (industryFieldIds.includes(field.fieldId)) {
       // 行业类型字段，解析代码替换成行业名称
       customFieldAttr[field.fieldId] = field.fieldValue ? getIndustryPath(field.fieldValue as string) : '-';

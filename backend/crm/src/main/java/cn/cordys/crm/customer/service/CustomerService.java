@@ -568,6 +568,7 @@ public class CustomerService {
     @OperationLog(module = LogModule.CUSTOMER_INDEX, type = LogType.UPDATE, resourceId = "{#request.id}")
     public Customer update(CustomerUpdateRequest request, String userId, String orgId) {
         Customer originCustomer = customerMapper.selectByPrimaryKey(request.getId());
+        normalizeMaskedMobileForUpdate(request, originCustomer, orgId);
         if (!Strings.CS.equals(originCustomer.getOwner(), request.getOwner())) {
             poolCustomerService.validateCapacity(1, request.getOwner(), orgId);
         }
@@ -606,6 +607,19 @@ public class CustomerService {
         customer = customerMapper.selectByPrimaryKey(request.getId());
         baseService.handleUpdateLog(originCustomer, customer, originCustomerFields, request.getModuleFields(), originCustomer.getId(), originCustomer.getName());
         return customer;
+    }
+
+    /**
+     * 全局手机号脱敏开启时，详情页编辑可能会把当前脱敏值原样提交回来。
+     * 这种场景下需要恢复成数据库中的原始手机号，避免把脱敏结果写回数据库。
+     */
+    private void normalizeMaskedMobileForUpdate(CustomerUpdateRequest request, Customer originCustomer, String orgId) {
+        if (originCustomer == null || !globalPhoneMaskConfigService.isEnabled(orgId) || StringUtils.isBlank(request.getMobile())) {
+            return;
+        }
+        if (StringUtils.equals(request.getMobile(), PhoneMaskUtil.maskGlobalPhone(originCustomer.getMobile()))) {
+            request.setMobile(originCustomer.getMobile());
+        }
     }
 
     // 【已禁用】客户详情页面阶段跳转功能已禁用，此方法不再被调用

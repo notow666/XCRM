@@ -63,13 +63,17 @@ public class RegionUtils {
      * @return 映射结果
      */
     public static String mapping(String str, boolean nameToCode) {
+        return mapping(str, nameToCode, null);
+    }
+
+    public static String mapping(String str, boolean nameToCode, String locationType) {
         if (StringUtils.isBlank(str)) {
             return StringUtils.EMPTY;
         }
 
         Queue<String> queue = new LinkedList<>();
         CollectionUtils.addAll(queue, str.split(SPILT_STR));
-        List<RegionCode> regionCodes = getRegionCodes();
+        List<RegionCode> regionCodes = getMatchRegionCodes(locationType);
         StringBuilder result = new StringBuilder();
 
         RegionCode matched = findMatch(regionCodes, queue.peek(), nameToCode);
@@ -84,6 +88,18 @@ public class RegionUtils {
         queue.forEach(result::append);
 
         return result.toString();
+    }
+
+    private static List<RegionCode> getMatchRegionCodes(String locationType) {
+        List<RegionCode> regionCodes = getRegionCodes();
+        if (!Strings.CS.equals(locationType, LocationResolver.CHINA_PC)) {
+            return regionCodes;
+        }
+        RegionCode chinaRegion = findMatch(regionCodes, "中国", true);
+        if (chinaRegion != null && CollectionUtils.isNotEmpty(chinaRegion.getChildren())) {
+            return chinaRegion.getChildren();
+        }
+        return regionCodes;
     }
 
     /**
@@ -110,12 +126,24 @@ public class RegionUtils {
      * @return address
      */
     public static String codeToName(String codeStr) {
+        return codeToName(codeStr, null);
+    }
+
+    public static String codeToName(String codeStr, String locationType) {
         String code = getCode(codeStr);
         if (code == null) {
             return null;
         }
         List<RegionCode> regionCodes = getRegionCodes();
-        return getRegionFullName(code, regionCodes);
+        String regionFullName = getRegionFullName(code, regionCodes);
+        if (Strings.CS.equals(locationType, LocationResolver.CHINA_PC) && StringUtils.startsWith(regionFullName, "中国-")) {
+            regionFullName = StringUtils.substringAfter(regionFullName, "中国-");
+        }
+        String suffix = StringUtils.substringAfter(codeStr, SPILT_STR);
+        if (StringUtils.isBlank(suffix) || Strings.CS.equals(suffix, codeStr)) {
+            return regionFullName;
+        }
+        return regionFullName + SPILT_STR + suffix;
     }
 
     public static String getCode(String codeStr) {
