@@ -223,10 +223,14 @@ public class CustomerService {
     }
 
     public List<CustomerListResponse> buildListData(List<CustomerListResponse> list, String orgId) {
+        return buildListData(list, orgId, true);
+    }
+
+    public List<CustomerListResponse> buildListData(List<CustomerListResponse> list, String orgId, boolean applyGlobalPhoneMask) {
         if (CollectionUtils.isEmpty(list)) {
             return list;
         }
-        boolean phoneMaskEnabled = globalPhoneMaskConfigService.isEnabled(orgId);
+        boolean phoneMaskEnabled = applyGlobalPhoneMask && globalPhoneMaskConfigService.isEnabled(orgId);
         List<String> customerIds = list.stream().map(CustomerListResponse::getId)
                 .collect(Collectors.toList());
 
@@ -307,7 +311,7 @@ public class CustomerService {
                 customerListResponse.setReasonName(reasonName);
             }
             if (phoneMaskEnabled) {
-                customerListResponse.setMobile(PhoneMaskUtil.maskPhone(customerListResponse.getMobile()));
+                customerListResponse.setMobile(PhoneMaskUtil.maskGlobalPhone(customerListResponse.getMobile()));
             }
         });
 
@@ -433,7 +437,7 @@ public class CustomerService {
 
         // 附件信息
         if (globalPhoneMaskConfigService.isEnabled(customer.getOrganizationId())) {
-            customerGetResponse.setMobile(PhoneMaskUtil.maskPhone(customerGetResponse.getMobile()));
+            customerGetResponse.setMobile(PhoneMaskUtil.maskGlobalPhone(customerGetResponse.getMobile()));
         }
         customerGetResponse.setAttachmentMap(moduleFormService.getAttachmentMap(customerFormConfig, customerFields));
 

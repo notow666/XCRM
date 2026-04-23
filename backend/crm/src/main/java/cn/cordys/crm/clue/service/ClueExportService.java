@@ -190,7 +190,9 @@ public class ClueExportService extends BaseExportService {
             String taskId) throws InterruptedException {
 
         // 构建业务数据
-        List<ClueListResponse> dataList = clueService.buildListData(rawList, orgId);
+        // 导出需要保留原始手机号，这里不再复用列表页的全局手机号脱敏结果。
+        // List<ClueListResponse> dataList = clueService.buildListData(rawList, orgId);
+        List<ClueListResponse> dataList = clueService.buildListData(rawList, orgId, false);
 
         // 构建选项映射
         Map<String, List<OptionDTO>> optionMap = clueService.buildOptionMap(orgId, rawList, dataList);

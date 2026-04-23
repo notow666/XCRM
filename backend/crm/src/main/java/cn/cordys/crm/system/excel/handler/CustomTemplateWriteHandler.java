@@ -223,6 +223,8 @@ public class CustomTemplateWriteHandler implements RowWriteHandler, SheetWriteHa
             sb.append(Translator.get("format.preview")).append(": ").append(Translator.get("location.pc"));
         } else if (Strings.CS.equals(locationField.getLocationType(), LocationResolver.PCD)) {
             sb.append(Translator.get("format.preview")).append(": ").append(Translator.get("location.pcd"));
+        } else if (Strings.CS.equals(locationField.getLocationType(), "CHINA_PC")) {
+            sb.append(Translator.get("format.preview")).append(": ").append(Translator.get("location.china.pc.detail"));
         } else {
             sb.append(Translator.get("format.preview")).append(": ").append(Translator.get("location.pcd.detail"));
         }

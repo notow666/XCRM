@@ -26,6 +26,7 @@
           :form-key="FormDesignKeyEnum.CUSTOMER"
           :source-id="props.sourceId"
           :refresh-key="refreshKey"
+          :hidden-fields="customerHiddenLeftFields"
           class="p-[16px_24px]"
           :column="layout === 'vertical' ? 3 : undefined"
           :label-width="layout === 'vertical' ? 'auto' : undefined"
@@ -212,6 +213,8 @@
 
   const crmOverviewDrawerRef = ref<InstanceType<typeof CrmOverviewDrawer>>();
   const layout = computed(() => crmOverviewDrawerRef.value?.layout);
+  // 客户详情左侧暂时隐藏“回收公海”“剩余归属”，仅隐藏展示，不删除字段能力。
+  const customerHiddenLeftFields = ['recyclePoolName', 'reservedDays'];
 
   const refreshKey = ref(0);
   const stageConfig = ref<Awaited<ReturnType<typeof getCustomerStageConfig>>>();

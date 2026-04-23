@@ -178,7 +178,9 @@ public class CustomerExportService extends BaseExportService {
             String orgId, String taskId
     ) throws InterruptedException {
 
-        List<CustomerListResponse> dataList = customerService.buildListData(rawList, orgId);
+        // 导出需要保留原始手机号，这里不再复用列表页的全局手机号脱敏结果。
+        // List<CustomerListResponse> dataList = customerService.buildListData(rawList, orgId);
+        List<CustomerListResponse> dataList = customerService.buildListData(rawList, orgId, false);
         Map<String, BaseField> fieldConfigMap = getFieldConfigMap(FormKey.CUSTOMER.getKey(), orgId);
 
         List<List<Object>> result = new ArrayList<>(dataList.size());

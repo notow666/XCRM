@@ -230,10 +230,14 @@ public class ClueService {
     }
 
     public List<ClueListResponse> buildListData(List<ClueListResponse> list, String orgId) {
+        return buildListData(list, orgId, true);
+    }
+
+    public List<ClueListResponse> buildListData(List<ClueListResponse> list, String orgId, boolean applyGlobalPhoneMask) {
         if (CollectionUtils.isEmpty(list)) {
             return list;
         }
-        boolean phoneMaskEnabled = globalPhoneMaskConfigService.isEnabled(orgId);
+        boolean phoneMaskEnabled = applyGlobalPhoneMask && globalPhoneMaskConfigService.isEnabled(orgId);
         List<String> clueIds = list.stream().map(ClueListResponse::getId)
                 .collect(Collectors.toList());
 
@@ -308,7 +312,7 @@ public class ClueService {
                 clueListResponse.setReasonName(dictMap.get(clueListResponse.getReasonId()));
             }
             if (phoneMaskEnabled) {
-                clueListResponse.setPhone(PhoneMaskUtil.maskPhone(clueListResponse.getPhone()));
+                clueListResponse.setPhone(PhoneMaskUtil.maskGlobalPhone(clueListResponse.getPhone()));
             }
         });
 
@@ -406,7 +410,7 @@ public class ClueService {
 
         // 附件信息
         if (globalPhoneMaskConfigService.isEnabled(clue.getOrganizationId())) {
-            clueGetResponse.setPhone(PhoneMaskUtil.maskPhone(clueGetResponse.getPhone()));
+            clueGetResponse.setPhone(PhoneMaskUtil.maskGlobalPhone(clueGetResponse.getPhone()));
         }
         clueGetResponse.setAttachmentMap(moduleFormService.getAttachmentMap(customerFormConfig, clueFields));
 
