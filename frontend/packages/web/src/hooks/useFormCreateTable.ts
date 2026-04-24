@@ -239,14 +239,14 @@ export default async function useFormCreateTable(props: FormCreateTableProps) {
       sorter: true,
       render: (row: any) => (row.collectionTime ? dayjs(row.collectionTime).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
-    {
-      title: t('customer.recycleOpenSea'),
-      width: 120,
-      key: 'recyclePoolName',
-      ellipsis: {
-        tooltip: true,
-      },
-    },
+    // {
+    //   title: t('customer.recycleOpenSea'),
+    //   width: 120,
+    //   key: 'recyclePoolName',
+    //   ellipsis: {
+    //     tooltip: true,
+    //   },
+    // },
     {
       title: t('customer.recycleReason'),
       width: 120,
@@ -260,15 +260,15 @@ export default async function useFormCreateTable(props: FormCreateTableProps) {
       filter: true,
       render: (row: any) => row.reasonName || '-',
     },
-    {
-      title: t('customer.remainingVesting'),
-      width: 120,
-      key: 'reservedDays',
-      ellipsis: {
-        tooltip: true,
-      },
-      render: (row: any) => (row.reservedDays ? `${row.reservedDays}${t('common.dayUnit')}` : '-'),
-    },
+    // {
+    //   title: t('customer.remainingVesting'),
+    //   width: 120,
+    //   key: 'reservedDays',
+    //   ellipsis: {
+    //     tooltip: true,
+    //   },
+    //   render: (row: any) => (row.reservedDays ? `${row.reservedDays}${t('common.dayUnit')}` : '-'),
+    // },
     {
       title: t('customer.lastFollowUps'),
       width: 150,

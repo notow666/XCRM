@@ -63,6 +63,15 @@ public class NotificationConstants {
         //公海客户被分配
         @Schema(description = "message.high_seas_customer_distributed")
         String HIGH_SEAS_CUSTOMER_DISTRIBUTED = "HIGH_SEAS_CUSTOMER_DISTRIBUTED";
+        // 客户阶段更新
+        @Schema(description = "message.customer_stage_changed")
+        String CUSTOMER_STAGE_CHANGED = "CUSTOMER_STAGE_CHANGED";
+        // 客户成功跟进完成
+        @Schema(description = "message.customer_stage_completed")
+        String CUSTOMER_STAGE_COMPLETED = "CUSTOMER_STAGE_COMPLETED";
+        // 无效客户
+        @Schema(description = "message.customer_stage_failed")
+        String CUSTOMER_STAGE_FAILED = "CUSTOMER_STAGE_FAILED";
         //跟进计划到期
         @Schema(description = "message.customer_follow_up_plan_due")
         String CUSTOMER_FOLLOW_UP_PLAN_DUE = "CUSTOMER_FOLLOW_UP_PLAN_DUE";
@@ -185,6 +194,18 @@ public class NotificationConstants {
         //请注意！${customerName}已由公海分配给您，请及时跟进处理！
         @Schema(description = "message.high_seas_customer_distributed_text")
         String HIGH_SEAS_CUSTOMER_DISTRIBUTED_TEXT = "HIGH_SEAS_CUSTOMER_DISTRIBUTED_TEXT";
+
+        //请注意！${name}客户最新跟进计划将由您负责，请知悉！
+        @Schema(description = "message.customer_stage_changed_text")
+        String CUSTOMER_STAGE_CHANGED_TEXT = "CUSTOMER_STAGE_CHANGED_TEXT";
+
+        //请注意！您负责的${name}客户已成功跟进完成，请知悉！
+        @Schema(description = "message.customer_stage_completed_text")
+        String CUSTOMER_STAGE_COMPLETED_TEXT = "CUSTOMER_STAGE_COMPLETED_TEXT";
+
+        //请注意！您负责的${name}客户跟进失败（无效客户），请知悉！
+        @Schema(description = "message.customer_stage_failed_text")
+        String CUSTOMER_STAGE_FAILED_TEXT = "CUSTOMER_STAGE_FAILED_TEXT";
 
         //请注意！您创建的${customerName}跟进计划，已到预定时间，请及时跟进！
         @Schema(description = "message.customer_follow_up_plan_due_text")

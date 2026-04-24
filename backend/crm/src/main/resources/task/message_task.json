@@ -16,14 +16,16 @@
         "eventName": "",
         "emailEnable": false,
         "sysEnable": false,
-        "weComEnable": false
+        "weComEnable": false,
+        "display": false
       },
       {
         "event": "CUSTOMER_COLLABORATION_ADD",
         "eventName": "",
         "emailEnable": false,
         "sysEnable": false,
-        "weComEnable": false
+        "weComEnable": false,
+        "display": false
       },
       {
         "event": "CUSTOMER_TRANSFERRED_CUSTOMER",
@@ -61,6 +63,27 @@
         "weComEnable": false
       },
       {
+        "event": "CUSTOMER_STAGE_CHANGED",
+        "eventName": "",
+        "emailEnable": false,
+        "sysEnable": false,
+        "weComEnable": false
+      },
+      {
+        "event": "CUSTOMER_STAGE_COMPLETED",
+        "eventName": "",
+        "emailEnable": false,
+        "sysEnable": false,
+        "weComEnable": false
+      },
+      {
+        "event": "CUSTOMER_STAGE_FAILED",
+        "eventName": "",
+        "emailEnable": false,
+        "sysEnable": false,
+        "weComEnable": false
+      },
+      {
         "event": "CUSTOMER_FOLLOW_UP_PLAN_DUE",
         "eventName": "",
         "emailEnable": false,
@@ -79,14 +102,16 @@
         "eventName": "",
         "emailEnable": false,
         "sysEnable": false,
-        "weComEnable": false
+        "weComEnable": false,
+        "display": false
       },
       {
         "event": "CLUE_MOVED_POOL",
         "eventName": "",
         "emailEnable": false,
         "sysEnable": false,
-        "weComEnable": false
+        "weComEnable": false,
+        "display": false
       },
       {
         "event": "CLUE_CONVERT_CUSTOMER",
@@ -100,14 +125,16 @@
         "eventName": "",
         "emailEnable": false,
         "sysEnable": false,
-        "weComEnable": false
+        "weComEnable": false,
+        "display": false
       },
       {
         "event": "TRANSFER_CLUE",
         "eventName": "",
         "emailEnable": false,
         "sysEnable": false,
-        "weComEnable": false
+        "weComEnable": false,
+        "display": false
       },
       {
         "event": "CLUE_DELETED",
@@ -121,21 +148,24 @@
         "eventName": "",
         "emailEnable": false,
         "sysEnable": false,
-        "weComEnable": false
+        "weComEnable": false,
+        "display": false
       },
       {
         "event": "CLUE_IMPORT",
         "eventName": "",
         "emailEnable": false,
         "sysEnable": false,
-        "weComEnable": false
+        "weComEnable": false,
+        "display": false
       },
       {
         "event": "CLUE_FOLLOW_UP_PLAN_DUE",
         "eventName": "",
         "emailEnable": false,
         "sysEnable": false,
-        "weComEnable": false
+        "weComEnable": false,
+        "display": false
       }
     ]
   },
@@ -143,6 +173,7 @@
     "organizationId": "",
     "module": "OPPORTUNITY",
     "moduleName": "",
+    "display": false,
     "messageTaskDetailDTOList": [
       {
         "event": "BUSINESS_DELETED",

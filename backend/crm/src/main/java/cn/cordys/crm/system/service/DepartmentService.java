@@ -6,6 +6,7 @@ import cn.cordys.aspectj.constants.LogType;
 import cn.cordys.aspectj.context.OperationLogContext;
 import cn.cordys.aspectj.dto.LogContextInfo;
 import cn.cordys.aspectj.dto.LogDTO;
+import cn.cordys.common.constants.InternalUser;
 import cn.cordys.common.constants.ThirdConfigTypeConstants;
 import cn.cordys.common.dto.BaseTreeNode;
 import cn.cordys.common.dto.DeptUserTreeNode;
@@ -26,6 +27,8 @@ import cn.cordys.crm.system.dto.request.NodeMoveRequest;
 import cn.cordys.crm.system.mapper.ExtDepartmentMapper;
 import cn.cordys.crm.system.mapper.ExtOrganizationUserMapper;
 import cn.cordys.mybatis.BaseMapper;
+import cn.cordys.security.SessionUser;
+import cn.cordys.security.SessionUtils;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -70,6 +73,15 @@ public class DepartmentService extends MoveNodeService {
     public List<BaseTreeNode> getTree(String orgId) {
         List<BaseTreeNode> departmentList = extDepartmentMapper.selectTreeNode(orgId);
         return BaseTreeNode.buildTree(departmentList);
+    }
+
+    public List<BaseTreeNode> getMyTree(String orgId) {
+        List<BaseTreeNode> departmentList = extDepartmentMapper.selectTreeNode(orgId);
+        SessionUser user = SessionUtils.getUser();
+        if(user == null || InternalUser.ADMIN.getValue().equals(user.getId())){
+            return BaseTreeNode.buildTree(departmentList);
+        }
+        return BaseTreeNode.buildTree(departmentList, user.getDepartmentId());
     }
 
     /**

@@ -134,11 +134,11 @@
     { name: SystemResourceMessageTypeEnum.CUSTOMER, tab: t('menu.customer') },
     { name: SystemResourceMessageTypeEnum.CUSTOMER_POOL_IMPORT, tab: t('module.poolImport') },
     { name: SystemResourceMessageTypeEnum.CLUE, tab: t('menu.clue') },
-    { name: SystemResourceMessageTypeEnum.OPPORTUNITY, tab: t('menu.opportunity') },
+    // { name: SystemResourceMessageTypeEnum.OPPORTUNITY, tab: t('menu.opportunity') },
     { name: SystemResourceMessageTypeEnum.CONTRACT, tab: t('module.contract') },
-    { name: SystemResourceMessageTypeEnum.PRODUCT_PRICE, tab: t('module.productManagementPrice') },
-    { name: SystemResourceMessageTypeEnum.BUSINESS_TITLE, tab: t('module.businessTitle') },
-    { name: SystemResourceMessageTypeEnum.CONTRACT_INVOICE, tab: t('module.invoice') },
+    // { name: SystemResourceMessageTypeEnum.PRODUCT_PRICE, tab: t('module.productManagementPrice') },
+    // { name: SystemResourceMessageTypeEnum.BUSINESS_TITLE, tab: t('module.businessTitle') },
+    // { name: SystemResourceMessageTypeEnum.CONTRACT_INVOICE, tab: t('module.invoice') },
   ]);
 
   const exportStatus = ref('');

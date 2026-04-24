@@ -134,14 +134,14 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
       title: t('customer.collectionTime'),
       key: 'collectionTime',
     },
-    {
-      title: t('customer.recycleOpenSea'),
-      key: 'recyclePoolName',
-    },
-    {
-      title: t('customer.remainingVesting'),
-      key: 'reservedDays',
-    },
+    // {
+    //   title: t('customer.recycleOpenSea'),
+    //   key: 'recyclePoolName',
+    // },
+    // {
+    //   title: t('customer.remainingVesting'),
+    //   key: 'reservedDays',
+    // },
     {
       title: t('customer.lastFollowUps'),
       key: 'followerName',

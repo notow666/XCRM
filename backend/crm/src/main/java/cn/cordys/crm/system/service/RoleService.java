@@ -78,7 +78,10 @@ public class RoleService {
 
     public List<RoleListResponse> list(String orgId) {
         List<RoleListResponse> roleListResponseList = getRoleListResponses(orgId);
-        return baseService.setCreateAndUpdateUserName(roleListResponseList);
+        return baseService.setCreateAndUpdateUserName(roleListResponseList)
+                .stream()
+                .filter(role -> !InternalRole.ORG_ADMIN.getValue().equals(role.getId()))
+                .collect(Collectors.toList());
     }
 
     public List<RoleListResponse> getRoleListResponses(String orgId) {

@@ -473,7 +473,7 @@ public class CustomerService {
         List<StageConfigResponse> stageConfigList = extCustomerStageConfigMapper.getStageConfigList(orgId);
         if (CollectionUtils.isNotEmpty(stageConfigList)) {
             customer.setStage(stageConfigList.getFirst().getId());
-            customer.setStageStatus("NEW");
+            customer.setStageStatus(CustomerStageService.STATUS_NEW);
         }
 
         //保存自定义字段
@@ -517,7 +517,7 @@ public class CustomerService {
         List<StageConfigResponse> stageConfigList = extCustomerStageConfigMapper.getStageConfigList(orgId);
         if (CollectionUtils.isNotEmpty(stageConfigList)) {
             customer.setStage(stageConfigList.getFirst().getId());
-            customer.setStageStatus("NEW");
+            customer.setStageStatus(CustomerStageService.STATUS_NEW);
         }
 
         //保存自定义字段

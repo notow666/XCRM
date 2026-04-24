@@ -156,7 +156,6 @@ public class OrganizationUserController {
     public List<OptionDTO> getUserRoleList() {
         List<RoleListResponse> list = roleService.list(OrganizationContext.getOrganizationId());
         return list.stream()
-                .filter(role -> !InternalRole.ORG_ADMIN.getValue().equals(role.getId()))
                 .map(role -> new OptionDTO(role.getId(), role.getName())).toList();
     }
 

@@ -20,6 +20,9 @@ public class MessageTaskDTO implements Serializable {
     @Schema(description = "消息配置模块名称")
     public String moduleName;
 
+    @Schema(description = "隐藏、显示")
+    private Boolean display = true;
+
     @Schema(description = "消息配置功能展开内容")
     public List<MessageTaskDetailDTO> messageTaskDetailDTOList;
 

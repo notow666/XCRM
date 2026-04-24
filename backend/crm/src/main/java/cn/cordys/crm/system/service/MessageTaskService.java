@@ -284,13 +284,20 @@ public class MessageTaskService {
         if (CollectionUtils.isEmpty(messageTasks)) {
             return messageTaskDTOList;
         }
+        messageTaskDTOList = messageTaskDTOList.stream()
+                .filter(MessageTaskDTO::getDisplay)
+                .collect(Collectors.toList());
         //获取默认数据
         Map<String, String> moduleMap = MessageTemplateUtils.getModuleMap();
         Map<String, String> eventMap = MessageTemplateUtils.getEventMap();
         Map<String, MessageTask> messageMap = messageTasks.stream().collect(Collectors.toMap(MessageTask::getEvent, t -> t));
         for (MessageTaskDTO messageTaskDTO : messageTaskDTOList) {
             messageTaskDTO.setModuleName(moduleMap.get(messageTaskDTO.getModule()));
-            for (MessageTaskDetailDTO messageTaskDetailDTO : messageTaskDTO.getMessageTaskDetailDTOList()) {
+            List<MessageTaskDetailDTO> collect = messageTaskDTO.getMessageTaskDetailDTOList()
+                    .stream()
+                    .filter(MessageTaskDetailDTO::getDisplay)
+                    .toList();
+            for (MessageTaskDetailDTO messageTaskDetailDTO : collect) {
                 messageTaskDetailDTO.setEventName(eventMap.get(messageTaskDetailDTO.getEvent()));
                 MessageTask messageTask = messageMap.get(messageTaskDetailDTO.event);
                 if (messageTask != null) {
@@ -301,7 +308,7 @@ public class MessageTaskService {
                     messageTaskDetailDTO.setLarkEnable(messageTask.getLarkEnable());
                 }
             }
-
+            messageTaskDTO.setMessageTaskDetailDTOList(collect);
         }
         return messageTaskDTOList;
     }
