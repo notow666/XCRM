@@ -98,6 +98,8 @@ import java.util.stream.Stream;
 @Slf4j
 public class CustomerService {
 
+    private static final int BATCH_DELETE_BY_CONDITION_SIZE = 500;
+
     @Resource
     private BaseMapper<Customer> customerMapper;
     @Resource
@@ -793,6 +795,19 @@ public class CustomerService {
                         NotificationConstants.Event.CUSTOMER_DELETED, customer.getName(), userId,
                         orgId, List.of(customer.getOwner()), true)
         );
+    }
+
+    public int batchDeleteByCondition(CustomerPageRequest request, String userId, String orgId, DeptDataPermissionDTO deptDataPermission) {
+        int deletedCount = 0;
+        while (true) {
+            PageHelper.startPage(1, BATCH_DELETE_BY_CONDITION_SIZE, false);
+            List<String> deleteIds = extCustomerMapper.listIds(request, orgId, userId, deptDataPermission);
+            if (CollectionUtils.isEmpty(deleteIds)) {
+                return deletedCount;
+            }
+            batchDelete(deleteIds, userId, orgId);
+            deletedCount += deleteIds.size();
+        }
     }
 
     public void deleteCustomerResource(List<String> ids) {

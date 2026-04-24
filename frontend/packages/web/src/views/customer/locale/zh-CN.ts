@@ -64,4 +64,7 @@ export default {
   'customer.stage': '客户阶段',
   'customer.stageHasData': '当前客户阶段存在客户数据，禁止删除！',
   'customer.failReason': '失败原因',
+  'customer.deleteByCondition': '按筛选删除',
+  'customer.batchDeleteByConditionTitleTip': '确认删除当前筛选结果中的 {number} 个客户吗？',
+  'customer.batchDeleteByConditionEmptyTip': '当前筛选结果为空，无法删除',
 };

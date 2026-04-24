@@ -158,6 +158,16 @@ public class CustomerController {
         customerService.batchDelete(ids, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
+    @PostMapping("/batch/delete-by-condition")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_DELETE)
+    @Operation(summary = "按筛选条件批量删除客户")
+    public int batchDeleteByCondition(@Validated @RequestBody CustomerPageRequest request) {
+        ConditionFilterUtils.parseCondition(request);
+        DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(SessionUtils.getUserId(),
+                OrganizationContext.getOrganizationId(), request.getViewId(), PermissionConstants.CUSTOMER_MANAGEMENT_READ);
+        return customerService.batchDeleteByCondition(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), deptDataPermission);
+    }
+
     @PostMapping("/batch/to-pool")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_RECYCLE)
     @Operation(summary = "批量移入公海")

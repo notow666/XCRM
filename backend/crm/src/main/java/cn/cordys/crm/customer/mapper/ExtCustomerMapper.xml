@@ -118,6 +118,105 @@
         </include>
     </select>
 
+    <select id="listIds" resultType="java.lang.String">
+        select distinct c.id
+        from customer c
+
+        <include refid="fieldConditionJoin">
+            <property name="conditions" value="request.filters"/>
+            <property name="tablePrefix" value="filter"/>
+        </include>
+        <include refid="fieldConditionJoin">
+            <property name="conditions" value="request.combineSearch.conditions"/>
+            <property name="tablePrefix" value="combine"/>
+        </include>
+        <include refid="fieldConditionJoin">
+            <property name="conditions" value="request.viewCombineSearch.conditions"/>
+            <property name="tablePrefix" value="viewCombine"/>
+        </include>
+        <include refid="fieldSortJoin">
+            <property name="sort" value="request.sort"/>
+        </include>
+
+        <if test="dataPermission != null and dataPermission.deptIds.size() > 0">
+            join sys_organization_user sou on c.owner = sou.user_id
+            and (
+                sou.department_id in
+                <foreach collection="dataPermission.deptIds" item="deptId" open="(" close=")" separator=",">
+                    #{deptId}
+                </foreach>
+                <if test="dataPermission.viewId == 'ALL'">
+                    or sou.user_id = #{userId}
+                </if>
+            )
+        </if>
+
+        <if test="dataPermission != null and dataPermission.visible">
+            join customer_collaboration cc on c.id = cc.customer_id
+            and cc.user_id = #{userId}
+        </if>
+
+        <if test="request.transition and !request.transitionDataPermission.all">
+            join (
+                select c.id from customer c
+                left join customer_collaboration cc on c.id = cc.customer_id
+                left join sys_organization_user sou on c.owner = sou.user_id
+                where cc.user_id = #{userId}
+                <if test="request.transitionDataPermission != null and request.transitionDataPermission.deptIds.size() > 0">
+                    or sou.department_id in
+                    <foreach collection="request.transitionDataPermission.deptIds" item="deptId" open="(" close=")" separator=",">
+                        #{deptId}
+                    </foreach>
+                </if>
+                <if test="request.transitionDataPermission != null and request.transitionDataPermission.self">
+                    or c.owner = #{userId}
+                </if>
+                <if test="request.transitionPoolIds != null and request.transitionPoolIds.size()> 0">
+                    or (
+                    c.in_shared_pool is true and c.pool_id in
+                    <foreach collection="request.transitionPoolIds" item="poolId" open="(" close=")" separator=",">
+                        #{poolId}
+                    </foreach>
+                    )
+                </if>
+                group by c.id
+            ) t on c.id = t.id
+        </if>
+
+        where c.organization_id = #{orgId}
+
+        <if test="request.poolId == null and !request.transition">
+            and c.in_shared_pool is false
+        </if>
+
+        <if test="request.poolId != null and !request.transition">
+            and c.in_shared_pool is true and c.pool_id = #{request.poolId}
+        </if>
+
+        <if test="dataPermission != null and dataPermission.self">
+            and c.owner = #{userId}
+        </if>
+
+        <if test="request.keyword != null and request.keyword != ''">
+            and c.name like concat('%', #{request.keyword},'%')
+        </if>
+
+        <include refid="filters">
+            <property name="filters" value="request.filters"/>
+        </include>
+
+        <include refid="combine">
+            <property name="combineSearch" value="request.combineSearch"/>
+        </include>
+        <include refid="viewCombine">
+            <property name="combineSearch" value="request.viewCombineSearch"/>
+        </include>
+
+        <include refid="sort">
+            <property name="sort" value="request.sort"/>
+        </include>
+    </select>
+
     <select id="chart" resultType="cn.cordys.common.dto.chart.ChartResult">
         select
         <include refid="cn.cordys.common.mapper.CommonMapper.chartSelect">

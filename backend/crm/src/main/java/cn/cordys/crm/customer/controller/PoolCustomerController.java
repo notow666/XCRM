@@ -109,6 +109,14 @@ public class PoolCustomerController {
         poolCustomerService.batchDelete(request.getBatchIds(), SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
+    @PostMapping("/batch-delete-by-condition")
+    @Operation(summary = "按筛选条件批量删除公海客户")
+    @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_POOL_DELETE})
+    public int batchDeleteByCondition(@Validated @RequestBody CustomerPageRequest request) {
+        ConditionFilterUtils.parseCondition(request);
+        return poolCustomerService.batchDeleteByCondition(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
     @PostMapping("/transfer")
     @Operation(summary = "转移客户到指定公海池")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_POOL_TRANSFER)

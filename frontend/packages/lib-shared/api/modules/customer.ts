@@ -14,7 +14,9 @@ import {
   BatchAssignOpenSeaCustomerUrl,
   BatchDeleteCustomerCollaborationUrl,
   BatchDeleteCustomerUrl,
+  BatchDeleteCustomerByConditionUrl,
   BatchDeleteOpenSeaCustomerUrl,
+  BatchDeleteOpenSeaCustomerByConditionUrl,
   BatchMoveCustomerUrl,
   BatchPickOpenSeaCustomerUrl,
   BatchTransferCustomerUrl,
@@ -365,6 +367,11 @@ export default function useProductApi(CDR: CordysAxios) {
     return CDR.post({ url: BatchDeleteCustomerUrl, data: batchIds });
   }
 
+  // 按筛选条件批量删除客户
+  function batchDeleteCustomerByCondition(data: CustomerTableParams) {
+    return CDR.post<number>({ url: BatchDeleteCustomerByConditionUrl, data });
+  }
+
   // 批量转移客户
   function batchTransferCustomer(data: TransferParams) {
     return CDR.post({ url: BatchTransferCustomerUrl, data });
@@ -582,6 +589,11 @@ export default function useProductApi(CDR: CordysAxios) {
   // 批量删除公海客户
   function batchDeleteOpenSeaCustomer(data: BatchOperationOpenSeaCustomerParams) {
     return CDR.post({ url: BatchDeleteOpenSeaCustomerUrl, data });
+  }
+
+  // 按筛选条件批量删除公海客户
+  function batchDeleteOpenSeaCustomerByCondition(data: OpenSeaCustomerTableParams) {
+    return CDR.post<number>({ url: BatchDeleteOpenSeaCustomerByConditionUrl, data });
   }
 
   // 批量分配公海客户
@@ -1002,6 +1014,7 @@ export default function useProductApi(CDR: CordysAxios) {
     getGlobalCustomerContactList,
     getGlobalModuleCount,
     batchDeleteCustomer,
+    batchDeleteCustomerByCondition,
     batchTransferCustomer,
     batchMoveCustomer,
     addCustomerFollowRecord,
@@ -1038,6 +1051,7 @@ export default function useProductApi(CDR: CordysAxios) {
     pickOpenSeaCustomer,
     batchPickOpenSeaCustomer,
     batchDeleteOpenSeaCustomer,
+    batchDeleteOpenSeaCustomerByCondition,
     batchAssignOpenSeaCustomer,
     assignOpenSeaCustomer,
     getOpenSeaOptions,

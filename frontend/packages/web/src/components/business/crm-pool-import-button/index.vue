@@ -9,7 +9,12 @@
     {{ t('common.import') }}
   </n-button>
 
-  <PoolImportModal v-model:show="importModal" @validate="validateTemplate" @download-template="downloadTemplate" />
+  <PoolImportModal
+    v-model:show="importModal"
+    :validating="validateLoading"
+    @validate="validateTemplate"
+    @download-template="downloadTemplate"
+  />
 
   <PoolCheckResult
     v-model:show="checkResultModal"
@@ -49,6 +54,7 @@
 
   const importModal = ref(false);
   const checkResultModal = ref(false);
+  const validateLoading = ref(false);
   const importLoading = ref(false);
   const currentFile = ref<File | null>(null);
   const currentPoolId = ref('');
@@ -82,6 +88,7 @@
   async function validateTemplate(file: File, poolId: string) {
     currentFile.value = file;
     currentPoolId.value = poolId;
+    validateLoading.value = true;
     try {
       const res = await preCheckImportPoolCustomer(file, poolId);
       checkResponse.value = res.data;
@@ -90,6 +97,8 @@
     } catch (error: any) {
       const errorMsg = error || t('poolImportButton.preCheckFailed');
       Message.error(errorMsg);
+    } finally {
+      validateLoading.value = false;
     }
   }
 

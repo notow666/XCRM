@@ -3,9 +3,9 @@
     v-model:show="showModal"
     size="medium"
     :title="t('poolImportButton.title')"
-    :ok-loading="validating"
+    :ok-loading="props.validating"
     :positive-text="t('crmImportButton.validateTemplate')"
-    :ok-button-props="{ disabled: !selectedPoolId || fileList.length < 1 }"
+    :ok-button-props="{ disabled: props.validating || !selectedPoolId || fileList.length < 1 }"
     @cancel="cancel"
     @confirm="validate"
   >
@@ -31,6 +31,7 @@
           value-field="id"
           label-field="name"
           :placeholder="t('poolImportButton.selectPoolPlaceholder')"
+          :disabled="props.validating"
           class="w-full"
         />
       </div>
@@ -43,7 +44,7 @@
         size-unit="MB"
         directory-dnd
         :file-type-tip="t('crmImportButton.onlyAllowFileTypeTip')"
-        :disabled="validating"
+        :disabled="props.validating"
       />
     </div>
   </CrmModal>
@@ -73,6 +74,15 @@
     (e: 'validate', file: File, poolId: string): void;
   }>();
 
+  const props = withDefaults(
+    defineProps<{
+      validating?: boolean;
+    }>(),
+    {
+      validating: false,
+    }
+  );
+
   const showModal = defineModel<boolean>('show', {
     required: true,
     default: false,
@@ -81,7 +91,6 @@
   const selectedPoolId = ref('');
   const poolOptions = ref<Array<{ id: string; name: string }>>([]);
   const fileList = ref<CrmFileItem[]>([]);
-  const validating = ref(false);
 
   async function loadPoolOptions() {
     try {
@@ -128,16 +137,13 @@
       return;
     }
     const file = fileList.value[0].file as File;
-    validating.value = true;
     try {
       await file.arrayBuffer();
     } catch {
       Message.warning(t('crmImportButton.fileChange'));
-      validating.value = false;
       return;
     }
     emit('validate', file, selectedPoolId.value);
-    validating.value = false;
   }
 </script>
 

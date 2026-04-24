@@ -21,6 +21,7 @@ import cn.cordys.crm.customer.dto.CustomerPoolPickRuleDTO;
 import cn.cordys.crm.customer.dto.CustomerPoolRecycleRuleDTO;
 import cn.cordys.crm.customer.dto.MobileConflictDTO;
 import cn.cordys.crm.customer.dto.request.CustomerChartAnalysisDbRequest;
+import cn.cordys.crm.customer.dto.request.CustomerPageRequest;
 import cn.cordys.crm.customer.dto.request.PoolCustomerChartAnalysisRequest;
 import cn.cordys.crm.customer.dto.request.PoolCustomerPickRequest;
 import cn.cordys.crm.customer.mapper.ExtCustomerCapacityMapper;
@@ -44,6 +45,7 @@ import cn.cordys.crm.system.service.ModuleFormCacheService;
 import cn.cordys.crm.system.service.UserExtendService;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
+import com.github.pagehelper.PageHelper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
@@ -64,6 +66,7 @@ import java.util.stream.Stream;
 public class PoolCustomerService {
 
     public static final long DAY_MILLIS = 24 * 60 * 60 * 1000;
+    private static final int BATCH_DELETE_BY_CONDITION_SIZE = 500;
     @Resource
     private BaseMapper<Customer> customerMapper;
     @Resource
@@ -360,6 +363,19 @@ public class PoolCustomerService {
                 )
                 .toList();
         logService.batchAdd(logs);
+    }
+
+    public int batchDeleteByCondition(CustomerPageRequest request, String userId, String orgId) {
+        int deletedCount = 0;
+        while (true) {
+            PageHelper.startPage(1, BATCH_DELETE_BY_CONDITION_SIZE, false);
+            List<String> deleteIds = extCustomerMapper.listIds(request, orgId, userId, null);
+            if (CollectionUtils.isEmpty(deleteIds)) {
+                return deletedCount;
+            }
+            batchDelete(deleteIds, userId, orgId);
+            deletedCount += deleteIds.size();
+        }
     }
 
     /**

@@ -39,6 +39,15 @@
         >
           {{ t('common.exportAll') }}
         </n-button>
+        <n-button
+          v-if="hasAnyPermission(['CUSTOMER_MANAGEMENT_POOL:DELETE']) && !props.readonly"
+          type="error"
+          ghost
+          :disabled="(propsRes.crmPagination?.itemCount || 0) === 0"
+          @click="handleDeleteByCondition"
+        >
+          {{ t('customer.deleteByCondition') }}
+        </n-button>
         <CrmPoolImportButton @import-success="searchData" />
       </div>
     </template>
@@ -152,6 +161,7 @@
     assignOpenSeaCustomer,
     batchAssignOpenSeaCustomer,
     batchDeleteOpenSeaCustomer,
+    batchDeleteOpenSeaCustomerByCondition,
     batchPickOpenSeaCustomer,
     deleteOpenSeaCustomer,
     getOpenSeaOptions,
@@ -344,6 +354,37 @@
             ...batchTableQueryParams.value,
             batchIds: checkedRowKeys.value,
             poolId: openSea.value,
+          });
+          checkedRowKeys.value = [];
+          tableRefreshId.value += 1;
+          Message.success(t('common.deleteSuccess'));
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error(error);
+        }
+      },
+    });
+  }
+
+  function handleDeleteByCondition() {
+    // eslint-disable-next-line no-use-before-define
+    const total = propsRes.value.crmPagination?.itemCount || 0;
+    if (!total) {
+      Message.warning(t('customer.batchDeleteByConditionEmptyTip'));
+      return;
+    }
+    openModal({
+      type: 'error',
+      title: t('customer.batchDeleteByConditionTitleTip', { number: total }),
+      content: t('customer.batchDeleteContentTip'),
+      positiveText: t('common.confirmDelete'),
+      negativeText: t('common.cancel'),
+      onPositiveClick: async () => {
+        try {
+          await batchDeleteOpenSeaCustomerByCondition({
+            // eslint-disable-next-line no-use-before-define
+            ...tableQueryParams.value,
+            poolId: openSea.value as string,
           });
           checkedRowKeys.value = [];
           tableRefreshId.value += 1;
@@ -581,7 +622,9 @@
                     'key': distributeFormKey.value,
                     'class': 'w-[320px] mt-[16px]',
                     'form': distributeForm.value,
-                    'onUpdate:form': (val: any) => { distributeForm.value = val; },
+                    'onUpdate:form': (val: any) => {
+                      distributeForm.value = val;
+                    },
                     'ref': distributeFormRef,
                     'show-capacity': true,
                     'single': true,

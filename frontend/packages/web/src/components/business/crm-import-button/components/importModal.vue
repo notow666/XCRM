@@ -5,7 +5,7 @@
     :title="`${t('common.import')}${props.title}` || t('crmImportButton.formExcelImport')"
     :ok-loading="props.confirmLoading"
     :positive-text="t('crmImportButton.validateTemplate')"
-    :ok-button-props="{ disabled: fileList.length < 1 }"
+    :ok-button-props="{ disabled: props.confirmLoading || fileList.length < 1 }"
     @cancel="cancel"
     @confirm="validate"
   >
@@ -30,7 +30,7 @@
         size-unit="MB"
         directory-dnd
         :file-type-tip="t('crmImportButton.onlyAllowFileTypeTip')"
-        :disabled="validateLoading"
+        :disabled="props.confirmLoading"
       />
     </div>
   </CrmModal>
@@ -103,11 +103,6 @@
       console.log(error);
     }
   }
-  /**
-   * 校验模板
-   */
-  const validateLoading = ref<boolean>(false);
-
   function validate() {
     emit('validate', fileList.value);
   }

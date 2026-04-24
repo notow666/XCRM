@@ -11,7 +11,8 @@ export default {
   'customer.moveToSeaOrPool': 'Move to Sea/Pool',
   'customer.batchMoveTitleTip': 'Confirm to move {number} accounts to high seas?',
   'customer.moveCustomerToOpenSeaTitleTip': 'Confirm moving {name} account to open pool?',
-  'customer.batchMoveContentTip': 'After moving, the account will have no owner, and follow-up records and plans will be cleared. Please proceed with caution!',
+  'customer.batchMoveContentTip':
+    'After moving, the account will have no owner, and follow-up records and plans will be cleared. Please proceed with caution!',
   'customer.confirmMove': 'Confirm move',
   'customer.moveToOpenSeaFailedContent1': 'Please check the open sea configuration,',
   'customer.moveToOpenSeaFailedContent2': 'Go to configure',
@@ -69,4 +70,7 @@ export default {
   'customer.stage': 'Account Stage',
   'customer.stageHasData': 'Current customer stage has customer data, deletion is prohibited!',
   'customer.failReason': 'Failure Reason',
+  'customer.deleteByCondition': 'Delete by Filter',
+  'customer.batchDeleteByConditionTitleTip': 'Delete {number} accounts in the current filter result?',
+  'customer.batchDeleteByConditionEmptyTip': 'The current filter result is empty',
 };
