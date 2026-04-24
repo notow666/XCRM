@@ -39,8 +39,10 @@ import cn.cordys.crm.follow.dto.response.FollowUpRecordDetailResponse;
 import cn.cordys.crm.follow.dto.response.FollowUpRecordListResponse;
 import cn.cordys.crm.follow.mapper.ExtFollowUpRecordMapper;
 import cn.cordys.crm.opportunity.domain.Opportunity;
+import cn.cordys.crm.system.constants.NotificationConstants;
 import cn.cordys.crm.system.dto.response.ModuleFormConfigDTO;
 import cn.cordys.crm.system.dto.response.UserResponse;
+import cn.cordys.crm.system.notice.CommonNoticeSendService;
 import cn.cordys.crm.system.service.ModuleFormCacheService;
 import cn.cordys.crm.system.service.ModuleFormService;
 import cn.cordys.mybatis.BaseMapper;
@@ -56,6 +58,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -94,6 +97,8 @@ public class FollowUpRecordService extends BaseFollowUpService {
     private CustomerFailReasonService customerFailReasonService;
     @Resource
     private cn.cordys.crm.system.service.ModuleFieldService moduleFieldService;
+    @Resource
+    private CommonNoticeSendService commonNoticeSendService;
 
     /**
      * 添加跟进记录
@@ -137,8 +142,34 @@ public class FollowUpRecordService extends BaseFollowUpService {
         handleFollowTimeAndFollower(request.getCustomerId(), request.getOpportunityId(), request.getClueId(), request.getFollowTime(), request.getOwner());
 
         handleCustomerStageStatus(request, orgId);
+        sendCustomerFollowResultNotice(followUpRecord, orgId);
 
         return followUpRecord;
+    }
+
+    private void sendCustomerFollowResultNotice(FollowUpRecord followUpRecord, String orgId) {
+        if (StringUtils.isBlank(followUpRecord.getCustomerId())) {
+            return;
+        }
+        String followResult = followUpRecord.getFollowResult();
+        if (!CustomerStageService.STATUS_COMPLETED.equals(followResult)
+                && !CustomerStageService.STATUS_FAILED.equals(followResult)) {
+            return;
+        }
+
+        Customer customer = customerMapper.selectByPrimaryKey(followUpRecord.getCustomerId());
+        if (customer == null || StringUtils.isBlank(customer.getOwner()) || StringUtils.isBlank(customer.getName())) {
+            return;
+        }
+
+        String event = CustomerStageService.STATUS_COMPLETED.equals(followResult)
+                ? NotificationConstants.Event.CUSTOMER_STAGE_COMPLETED
+                : NotificationConstants.Event.CUSTOMER_STAGE_FAILED;
+
+        Map<String, Object> paramMap = new HashMap<>(2);
+        paramMap.put("name", customer.getName());
+        commonNoticeSendService.sendNotice(NotificationConstants.Module.CUSTOMER,
+                event, paramMap, followUpRecord.getCreateUser(), orgId, List.of(customer.getOwner()), false);
     }
 
 

@@ -33,8 +33,10 @@ import cn.cordys.crm.follow.dto.request.*;
 import cn.cordys.crm.follow.dto.response.FollowUpPlanDetailResponse;
 import cn.cordys.crm.follow.dto.response.FollowUpPlanListResponse;
 import cn.cordys.crm.follow.mapper.ExtFollowUpPlanMapper;
+import cn.cordys.crm.system.constants.NotificationConstants;
 import cn.cordys.crm.system.dto.response.ModuleFormConfigDTO;
 import cn.cordys.crm.system.dto.response.UserResponse;
+import cn.cordys.crm.system.notice.CommonNoticeSendService;
 import cn.cordys.crm.system.service.ModuleFormCacheService;
 import cn.cordys.crm.system.service.ModuleFormService;
 import cn.cordys.mybatis.BaseMapper;
@@ -49,6 +51,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -79,6 +82,8 @@ public class FollowUpPlanService extends BaseFollowUpService {
 
     @Resource
     private CustomerStageService customerStageService;
+    @Resource
+    private CommonNoticeSendService commonNoticeSendService;
 
     /**
      * 新建跟进计划
@@ -117,8 +122,35 @@ public class FollowUpPlanService extends BaseFollowUpService {
         followUpPlanMapper.insert(followUpPlan);
 
         handleCustomerStageTransition(request, orgId);
+        sendCustomerPlanNotice(followUpPlan, orgId);
 
         return followUpPlan;
+    }
+
+    private void sendCustomerPlanNotice(FollowUpPlan followUpPlan, String orgId) {
+        if (!FollowUpPlanType.CUSTOMER.name().equals(followUpPlan.getType())) {
+            return;
+        }
+        if (StringUtils.isBlank(followUpPlan.getProcessor())) {
+            return;
+        }
+
+        String customerName = followUpPlan.getCustomerName();
+        if (StringUtils.isBlank(customerName) && StringUtils.isNotBlank(followUpPlan.getCustomerId())) {
+            Customer customer = customerMapper.selectByPrimaryKey(followUpPlan.getCustomerId());
+            if (customer != null) {
+                customerName = customer.getName();
+            }
+        }
+        if (StringUtils.isBlank(customerName)) {
+            return;
+        }
+
+        Map<String, Object> paramMap = new HashMap<>(2);
+        paramMap.put("name", customerName);
+        commonNoticeSendService.sendNotice(NotificationConstants.Module.CUSTOMER,
+                NotificationConstants.Event.CUSTOMER_STAGE_CHANGED,
+                paramMap, followUpPlan.getCreateUser(), orgId, List.of(followUpPlan.getProcessor()), false);
     }
 
     private void completeOldPlanIfExists(String customerId, String orgId) {
