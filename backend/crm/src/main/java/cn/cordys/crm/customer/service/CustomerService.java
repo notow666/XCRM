@@ -692,6 +692,9 @@ public class CustomerService {
         List<Customer> originCustomers = customerMapper.selectByIds(request.getIds());
         List<String> owners = getOwners(originCustomers);
         long processCount = originCustomers.stream().filter(customer -> !Strings.CS.equals(customer.getOwner(), request.getOwner())).count();
+        if (processCount <= 0) {
+            return 0;
+        }
 
         // 计算实际可转移数量
         CustomerCapacity customerCapacity = poolCustomerService.getUserCapacity(request.getOwner(), orgId);
