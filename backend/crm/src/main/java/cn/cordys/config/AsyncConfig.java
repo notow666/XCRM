@@ -14,8 +14,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.Map;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.*;
 
 @EnableAsync
 @Configuration
@@ -39,7 +38,7 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.setMaxPoolSize(MAX_POOL_SIZE);
         executor.setKeepAliveSeconds(KEEP_ALIVE_SECONDS);
         executor.setAllowCoreThreadTimeOut(true);
-        executor.setThreadNamePrefix("custom-async-task-");
+        executor.setThreadNamePrefix("main-async-task-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(AWAIT_TERMINATION_SECONDS);
@@ -58,6 +57,48 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.setTaskDecorator(new MdcTaskDecorator());
         executor.initialize();
         return executor;
+    }
+
+    @Bean("callbackMainTaskExecutor")
+    public ExecutorService callbackMainTaskExecutor(){
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(CORE_POOL_SIZE);
+        executor.setMaxPoolSize(MAX_POOL_SIZE);
+        executor.setKeepAliveSeconds(KEEP_ALIVE_SECONDS);
+        executor.setAllowCoreThreadTimeOut(true);
+        executor.setThreadNamePrefix("callback-main-async-task-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(AWAIT_TERMINATION_SECONDS);
+        return executor.getThreadPoolExecutor();
+    }
+
+    @Bean("callbackStreamTaskExecutor")
+    public ExecutorService callbackStreamTaskExecutor(){
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(CORE_POOL_SIZE);
+        executor.setMaxPoolSize(MAX_POOL_SIZE);
+        executor.setKeepAliveSeconds(KEEP_ALIVE_SECONDS);
+        executor.setAllowCoreThreadTimeOut(true);
+        executor.setThreadNamePrefix("callback-stream-async-task-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(AWAIT_TERMINATION_SECONDS);
+        return executor.getThreadPoolExecutor();
+    }
+
+    @Bean("callbackConsumerTaskExecutor")
+    public ExecutorService callbackConsumerTaskExecutor(){
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(CORE_POOL_SIZE);
+        executor.setMaxPoolSize(MAX_POOL_SIZE);
+        executor.setKeepAliveSeconds(KEEP_ALIVE_SECONDS);
+        executor.setAllowCoreThreadTimeOut(true);
+        executor.setThreadNamePrefix("callback-consumer-async-task-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(AWAIT_TERMINATION_SECONDS);
+        return executor.getThreadPoolExecutor();
     }
 
     /**

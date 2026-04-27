@@ -44,6 +44,11 @@ public class ApiKeyFilter extends AnonymousFilter {
     protected boolean onPreHandle(ServletRequest request, ServletResponse response, Object mappedValue) {
         HttpServletRequest httpRequest = WebUtils.toHttp(request);
 
+        String uri = httpRequest.getRequestURI();
+        if(uri != null && uri.contains("/anonymous/mmba/callback")){
+            return true;
+        }
+
         // 如果不是 API 密钥请求且用户未认证，允许请求继续
         Boolean apiKeyCall = ApiKeyHandler.isApiKeyCall(httpRequest);
         if (!apiKeyCall && !SecurityUtils.getSubject().isAuthenticated()) {

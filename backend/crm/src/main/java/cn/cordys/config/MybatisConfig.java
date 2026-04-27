@@ -44,8 +44,7 @@ public class MybatisConfig {
      * 供运行时动态注册租户数据源使用。
      */
     @Bean
-    public DynamicTenantRoutingDataSource tenantRoutingDataSource(
-            @Qualifier("dataSourceProperties") DataSourceProperties properties) {
+    public DynamicTenantRoutingDataSource tenantRoutingDataSource(@Qualifier("dataSourceProperties") DataSourceProperties properties) {
         DataSource defaultDataSource = buildDataSource(
                 properties.determineDriverClassName(),
                 properties.determineUrl(),

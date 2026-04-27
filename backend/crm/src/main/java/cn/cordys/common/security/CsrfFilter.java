@@ -39,6 +39,11 @@ public class CsrfFilter extends AnonymousFilter {
     protected boolean onPreHandle(ServletRequest request, ServletResponse response, Object mappedValue) {
         HttpServletRequest httpServletRequest = WebUtils.toHttp(request);
 
+        String uri = httpServletRequest.getRequestURI();
+        if(uri != null && uri.contains("/anonymous/mmba/callback")){
+            return true;
+        }
+
         // 如果用户未认证，返回认证无效状态
         if (!SecurityUtils.getSubject().isAuthenticated()) {
             ((HttpServletResponse) response).setHeader(SessionConstants.AUTHENTICATION_STATUS, SessionConstants.AUTHENTICATION_INVALID);

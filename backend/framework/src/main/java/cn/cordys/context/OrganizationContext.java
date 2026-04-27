@@ -34,12 +34,12 @@ public class OrganizationContext {
         SessionUser user = SessionUtils.getUser();
         if (user == null) {
             // 没有登入，则为API接口或者系统定时任务
-            String userId = MDC.get(MdcConstants.USER_ID_KEY);
-            if(StringUtils.isNotBlank(userId) && Strings.CS.equals(InternalUser.ADMIN.getValue(), userId)){
-                // 是管理员，则返回默认组织ID
-                return DEFAULT_ORGANIZATION_ID;
-            }
-            return orgId;
+//            String userId = MDC.get(MdcConstants.USER_ID_KEY);
+//            if(StringUtils.isNotBlank(userId) && Strings.CS.equals(InternalUser.ADMIN.getValue(), userId)){
+//                // 是管理员，则返回默认组织ID
+//                return DEFAULT_ORGANIZATION_ID;
+//            }
+            return DEFAULT_ORGANIZATION_ID;
         }
         boolean isAdmin = Strings.CS.equals(InternalUser.ADMIN.getValue(), user.getId());
         if (StringUtils.isBlank(orgId)) {

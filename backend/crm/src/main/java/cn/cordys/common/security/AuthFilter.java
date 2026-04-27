@@ -3,8 +3,10 @@ package cn.cordys.common.security;
 import cn.cordys.security.SessionUtils;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.shiro.web.filter.authc.FormAuthenticationFilter;
+import org.apache.shiro.web.util.WebUtils;
 
 /**
  * @Author: jianxing
@@ -26,6 +28,12 @@ public class AuthFilter extends FormAuthenticationFilter {
      */
     @Override
     protected boolean onAccessDenied(ServletRequest request, ServletResponse response) throws Exception {
+        HttpServletRequest httpRequest = WebUtils.toHttp(request);
+        String uri = httpRequest.getRequestURI();
+        if(uri != null && uri.contains("/anonymous/mmba/callback")){
+            return true;
+        }
+
         // 兼容 HeaderSession 场景：若 Session 中已存在用户信息，则视为已登录并放行。
         // 平台登录当前通过 SessionUtils.putUser 建立会话，不一定走 Subject.login。
         if (SessionUtils.getUser() != null) {

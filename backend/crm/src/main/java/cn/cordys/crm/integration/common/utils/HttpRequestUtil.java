@@ -1,5 +1,6 @@
 package cn.cordys.crm.integration.common.utils;
 
+import cn.cordys.common.exception.GenericException;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
@@ -53,6 +54,38 @@ public class HttpRequestUtil {
         // 发送请求并获取响应
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         return handleResponse(response);
+    }
+
+    public static String postString(String url, String companyCode, String body) throws IOException, InterruptedException {
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .POST(BodyPublishers.ofString(body, StandardCharsets.UTF_8)) // 设置请求方法为 POST 和请求体
+                .header("Content-Type", "application/json") // 默认设置 Content-Type 为 application/json
+                .header("Api-Info", companyCode);
+
+        HttpRequest request = requestBuilder.build();
+
+        // 发送请求并获取响应
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        return handleResponse(response);
+    }
+
+    public static byte[] postBinary(String url, String companyCode, String body) throws IOException, InterruptedException {
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .POST(BodyPublishers.ofString(body, StandardCharsets.UTF_8)) // 设置请求方法为 POST 和请求体
+                .header("Content-Type", "application/json") // 默认设置 Content-Type 为 application/json
+                .header("Api-Info", companyCode);
+
+        HttpRequest request = requestBuilder.build();
+
+        // 发送请求并获取响应
+        HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
+        int statusCode = response.statusCode();
+        if (statusCode >= 200 && statusCode < 300) {
+            return response.body();
+        }
+        return null;
     }
 
     // 处理 HTTP 响应

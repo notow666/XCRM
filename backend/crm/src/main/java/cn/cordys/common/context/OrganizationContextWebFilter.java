@@ -27,7 +27,7 @@ public class OrganizationContextWebFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) throws ServletException {
         String uri = request.getRequestURI();
         return uri != null && (uri.contains("/platform/")
-                || uri.contains("/system/version"));
+                || uri.contains("/system/version") || uri.contains("/anonymous/mmba/callback"));
     }
 
     @Override

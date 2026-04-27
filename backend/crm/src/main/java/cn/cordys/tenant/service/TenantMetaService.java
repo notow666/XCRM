@@ -8,7 +8,9 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -66,6 +68,29 @@ public class TenantMetaService {
             return masterJdbcTemplate.queryForList(sql, String.class).stream().collect(Collectors.toSet());
         } catch (DataAccessException e) {
             return java.util.Collections.emptySet();
+        }
+    }
+
+    public Map<String, String> listEnabledTenant() {
+        String sql = "SELECT id, org_id FROM tenant WHERE status = 'ACTIVE' and org_id is not null and org_id != ''";
+        try {
+            return masterJdbcTemplate.query(sql, (rs, rowNum) -> {
+                return rs;
+            }).stream().collect(Collectors.toMap(o -> {
+                try {
+                    return o.getString("org_id");
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            }, o -> {
+                try {
+                    return o.getString("id");
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            }));
+        } catch (Exception e) {
+            return java.util.Collections.emptyMap();
         }
     }
 
