@@ -6,6 +6,9 @@ import cn.cordys.mmba.dto.MmbaAuditRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+/**
+ * 指令类回调处理
+ */
 @Slf4j
 @Service
 public class CommandCallConsumer extends AbstractZZYConsumer {

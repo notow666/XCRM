@@ -1,6 +1,5 @@
 package cn.cordys.mmba.callback.consumer;
 
-import cn.cordys.common.util.AsyncUtils;
 import cn.cordys.common.util.JSON;
 import cn.cordys.context.TenantContext;
 import cn.cordys.mmba.callback.AbstractZZYConsumer;
@@ -10,8 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
+/**
+ * 审计类回调处理
+ */
 @Slf4j
 @Service
 public class AuditCallConsumer extends AbstractZZYConsumer {

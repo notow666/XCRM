@@ -42,7 +42,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
     private static final String CONSUMER_NAME = "processor_%s";
 
     // 实例唯一标识
-    private final String instanceId = IDGenerator.nextStr();
+    private final String instanceId = "rs1777278750238";
 
     private final AtomicInteger processingCount = new AtomicInteger(0);
     private final Object shutdownLock = new Object();
