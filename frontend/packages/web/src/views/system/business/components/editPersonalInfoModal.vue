@@ -92,7 +92,8 @@
       return true;
     }
     if (!value) {
-      return new Error(t('common.notNull', { value: `${t('org.userEmail')}` }));
+      // return new Error(t('common.notNull', { value: `${t('org.userEmail')}` }));
+      return true;
     }
     if (!validateEmail(value)) {
       return new Error(t('common.emailErrTip'));
@@ -102,7 +103,7 @@
 
   const rules: FormRules = {
     phone: [{ required: true, validator: validatePhoneLength, trigger: ['input', 'blur'] }],
-    email: [{ required: true, validator: validateEmailStyle, trigger: ['input', 'blur'] }],
+    email: [{ required: false, validator: validateEmailStyle, trigger: ['input', 'blur'] }],
   };
 
   const formRef = ref<FormInst | null>(null);

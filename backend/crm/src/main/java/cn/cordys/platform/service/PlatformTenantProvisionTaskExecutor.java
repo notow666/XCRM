@@ -14,7 +14,7 @@ public class PlatformTenantProvisionTaskExecutor {
 
     @Async("threadPoolTaskExecutor")
     public void executeProvisionTask(String taskId, String tenantCode, String tenantName, String operatorId,
-                                     List<String> initialUserIds) {
-        platformAdminService.executeProvisionTaskInternal(taskId, tenantCode, tenantName, operatorId, initialUserIds);
+                                     List<String> initialUserIds, String orgId) {
+        platformAdminService.executeProvisionTaskInternal(taskId, tenantCode, tenantName, operatorId, initialUserIds, orgId);
     }
 }

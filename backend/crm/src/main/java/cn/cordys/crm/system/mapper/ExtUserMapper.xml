@@ -52,6 +52,7 @@
                sou.employee_type,
                sou.work_city,
                sou.onboarding_date,
+               su.um,
                sd.`name` departmentName
         FROM sys_user su
                  INNER JOIN sys_organization_user sou ON su.id = sou.user_id

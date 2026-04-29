@@ -54,7 +54,8 @@
         sou.create_user,
         sou.update_user,
         sou.onboarding_date,
-        sou.position
+        sou.position,
+        su.um
         FROM
         sys_organization_user sou
         INNER JOIN sys_user su ON sou.user_id = su.id

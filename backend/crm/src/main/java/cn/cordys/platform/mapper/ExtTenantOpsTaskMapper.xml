@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cordys.platform.mapper.ExtTenantOpsTaskMapper">
+    <insert id="insertTask" parameterType="cn.cordys.platform.domain.TenantOpsTask">
+        INSERT INTO tenant_ops_task (id, tenant_id, task_type, status, detail, create_time, update_time, operator_id)
+        VALUES (#{id}, #{tenantId}, #{taskType}, #{status}, #{detail}, #{createTime}, #{updateTime}, #{operatorId})
+    </insert>
+
+    <select id="selectProvisionTaskById" resultType="cn.cordys.platform.dto.response.PlatformTenantProvisionTaskResponse">
+        SELECT id          AS taskId,
+               tenant_id   AS tenantId,
+               status,
+               detail,
+               operator_id AS operatorId,
+               create_time AS createTime,
+               update_time AS updateTime
+        FROM tenant_ops_task
+        WHERE id = #{taskId}
+          AND task_type = 'TENANT_PROVISION'
+        LIMIT 1
+    </select>
+
+    <select id="selectLatestRunningProvisionTask" resultType="cn.cordys.platform.dto.response.PlatformTenantProvisionTaskResponse">
+        SELECT id          AS taskId,
+               tenant_id   AS tenantId,
+               status,
+               detail,
+               operator_id AS operatorId,
+               create_time AS createTime,
+               update_time AS updateTime
+        FROM tenant_ops_task
+        WHERE tenant_id = #{tenantId}
+          AND task_type = 'TENANT_PROVISION'
+          AND status IN ('PENDING', 'RUNNING')
+        ORDER BY create_time DESC
+        LIMIT 1
+    </select>
+
+    <update id="updateTaskStatus">
+        UPDATE tenant_ops_task
+        SET status      = #{status},
+            detail      = #{detail},
+            update_time = #{updateTime}
+        WHERE id = #{taskId}
+    </update>
+</mapper>

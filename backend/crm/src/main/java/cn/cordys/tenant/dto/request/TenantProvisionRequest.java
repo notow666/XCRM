@@ -24,4 +24,8 @@ public class TenantProvisionRequest {
     @Schema(description = "除默认操作人外，额外绑定到该租户的用户 ID，与操作人去重")
     @Size(max = 50)
     private List<String> initialUserIds;
+
+    @Schema(description = "租户对应 mmba 平台部门 ID")
+    @Size(max = 32)
+    private String orgId;
 }

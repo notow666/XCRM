@@ -12,6 +12,7 @@ export default {
   'org.userName': 'Name',
   'org.gender': 'Gender',
   'org.userEmail': 'Email',
+  'org.um': 'MMBA Unique User Identifier',
   'org.department': 'Department',
   'org.directSuperior': 'Direct Superior',
   'org.role': 'Role',

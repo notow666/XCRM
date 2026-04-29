@@ -38,7 +38,21 @@
     <NSpace vertical>
       <NInput v-model:value="createForm.code" placeholder="code" />
       <NInput v-model:value="createForm.name" placeholder="name" />
+      <NInput v-model:value="createForm.orgId" placeholder="org_id（第三方部门ID，可选）" />
       <NInput v-model:value="createForm.initialUsers" placeholder="initialUserIds，逗号分隔（可选）" />
+    </NSpace>
+  </NModal>
+
+  <NModal
+    v-model:show="showOrgSync"
+    preset="dialog"
+    title="第三方部门同步"
+    positive-text="保存"
+    @positive-click="handleSaveOrgId"
+  >
+    <NSpace vertical>
+      <div class="text-sm text-[#999]">填写租户对应 mmba 平台部门ID（org_id）后保存</div>
+      <NInput v-model:value="orgSyncForm.orgId" placeholder="org_id" />
     </NSpace>
   </NModal>
 </template>
@@ -57,6 +71,7 @@
     type PlatformTenantItem,
     provisionPlatformTenant,
     rerunPlatformTenantMigrate,
+    updatePlatformTenantOrgId,
     updatePlatformTenantStatus,
   } from '@/api/modules';
 
@@ -75,7 +90,13 @@
   const createForm = reactive({
     code: '',
     name: '',
+    orgId: '',
     initialUsers: '',
+  });
+  const showOrgSync = ref(false);
+  const orgSyncForm = reactive({
+    tenantId: '',
+    orgId: '',
   });
 
   async function loadData() {
@@ -114,6 +135,7 @@
   function openCreate() {
     createForm.code = '';
     createForm.name = '';
+    createForm.orgId = '';
     createForm.initialUsers = '';
     showCreate.value = true;
   }
@@ -126,6 +148,7 @@
     const task = await provisionPlatformTenant({
       code: createForm.code,
       name: createForm.name,
+      orgId: createForm.orgId || undefined,
       initialUserIds,
     });
     message.success(`创建任务已提交，任务ID: ${task.taskId}`);
@@ -153,9 +176,28 @@
     message.success('迁移完成');
   }
 
+  function openOrgSync(row: PlatformTenantItem) {
+    orgSyncForm.tenantId = row.tenantId;
+    orgSyncForm.orgId = row.orgId || '';
+    showOrgSync.value = true;
+  }
+
+  async function handleSaveOrgId() {
+    const orgId = orgSyncForm.orgId.trim();
+    if (!orgId) {
+      message.warning('请先填写org_id');
+      return false;
+    }
+    await updatePlatformTenantOrgId(orgSyncForm.tenantId, orgId);
+    message.success('org_id已保存');
+    await loadData();
+    return true;
+  }
+
   const columns = computed(() => [
     { title: '租户名称', key: 'name' },
     { title: '唯一标识', key: 'tenantId' },
+    { title: 'org_id', key: 'orgId' },
     { title: 'dbName', key: 'dbName' },
     {
       title: 'status',
@@ -172,6 +214,7 @@
       key: 'action',
       render: (row: PlatformTenantItem) =>
         h('div', { class: 'flex gap-2' }, [
+          h(NButton, { size: 'small', onClick: () => openOrgSync(row) }, { default: () => '第三方部门同步' }),
           h(NButton, { size: 'small', onClick: () => showHealth(row) }, { default: () => '健康' }),
           // h(NButton, { size: 'small', onClick: () => rerunMigrate(row) }, { default: () => '重跑迁移' }),
           h(

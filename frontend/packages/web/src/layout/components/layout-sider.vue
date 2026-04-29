@@ -267,9 +267,6 @@
     if (isRequiredExportRoute(key as OpportunityRouteEnum | ClueRouteEnum | CustomerRouteEnum)) {
       initExportPop();
     }
-    if (!routeItem.name?.toString().includes('system')) {
-      expandedKeys.value = [];
-    }
   }
 
   const personalMenuShow = ref(false);
@@ -333,15 +330,23 @@
     }) as unknown as MenuOption[];
   });
 
+  function setExpandedKeysByRoute(_route: RouteLocationNormalizedGeneric) {
+    const parentRouteName = _route.matched[0]?.name as string | undefined;
+    // Keep parent menu expanded while browsing nested menu pages.
+    if (_route.matched.length > 1 && parentRouteName) {
+      expandedKeys.value = [parentRouteName];
+      return;
+    }
+    expandedKeys.value = [];
+  }
+
   function setMenuValue(_route: RouteLocationNormalizedGeneric) {
     if (_route.meta.isTopMenu || _route.meta.hideChildrenInMenu) {
       menuValue.value = _route.matched[0].name as (typeof AppRouteEnum)[keyof typeof AppRouteEnum];
     } else {
       menuValue.value = _route.name as (typeof AppRouteEnum)[keyof typeof AppRouteEnum];
-      if (_route.name?.toString().includes('system')) {
-        expandedKeys.value = [AppRouteEnum.SYSTEM];
-      }
     }
+    setExpandedKeysByRoute(_route);
   }
 
   onBeforeMount(() => {

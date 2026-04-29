@@ -3,54 +3,49 @@ package cn.cordys.platform.service;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.CodingUtils;
+import cn.cordys.platform.domain.PlatformUser;
+import cn.cordys.platform.mapper.ExtPlatformUserMapper;
 import cn.cordys.security.SessionUser;
 import cn.cordys.security.SessionUtils;
 import cn.cordys.security.UserDTO;
 import jakarta.annotation.Resource;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.SecurityUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
-import java.util.List;
+import java.util.Objects;
 
 @Service
 public class PlatformAuthService {
+
+    @Resource
+    private ExtPlatformUserMapper extPlatformUserMapper;
 
     @Resource
     @Qualifier("masterJdbcTemplate")
     private JdbcTemplate masterJdbcTemplate;
 
     public SessionUser login(String username, String password) {
-        String sql = "SELECT id, username, password_hash, status FROM platform_user WHERE username = ? LIMIT 1";
-        List<PlatformUserRow> rows = masterJdbcTemplate.query(sql, (rs, rowNum) -> {
-            PlatformUserRow row = new PlatformUserRow();
-            row.id = rs.getString("id");
-            row.username = rs.getString("username");
-            row.passwordHash = rs.getString("password_hash");
-            row.status = rs.getString("status");
-            return row;
-        }, username);
-        if (rows.isEmpty()) {
+        PlatformUser userRow = extPlatformUserMapper.selectByUsername(username);
+        if (userRow == null) {
             recordLogin(username, "FAILED", "user not exists");
             throw new GenericException("账号或密码错误");
         }
-        PlatformUserRow row = rows.get(0);
-        if (!StringUtils.equalsIgnoreCase("ACTIVE", row.status)) {
+        if (!"ACTIVE".equalsIgnoreCase(userRow.getStatus())) {
             recordLogin(username, "FAILED", "user disabled");
             throw new GenericException("账号已禁用");
         }
         String encryptedPwd = CodingUtils.md5(password);
-        if (!StringUtils.equals(row.passwordHash, encryptedPwd)) {
+        if (!Objects.equals(userRow.getPasswordHash(), encryptedPwd)) {
             recordLogin(username, "FAILED", "password error");
             throw new GenericException("账号或密码错误");
         }
 
         UserDTO user = new UserDTO();
-        user.setId(row.id);
-        user.setName(row.username);
+        user.setId(userRow.getId());
+        user.setName(userRow.getUsername());
         user.setSource("PLATFORM");
         user.setEnable(true);
         user.setTenantId("---");
@@ -70,7 +65,7 @@ public class PlatformAuthService {
 
     public SessionUser isLogin() {
         SessionUser user = SessionUtils.getUser();
-        if (user == null || !StringUtils.equalsIgnoreCase("PLATFORM", user.getSource())) {
+        if (user == null || !"PLATFORM".equalsIgnoreCase(user.getSource())) {
             return null;
         }
         return user;
@@ -81,10 +76,4 @@ public class PlatformAuthService {
                 IDGenerator.nextStr(), username, result, detail, System.currentTimeMillis());
     }
 
-    private static class PlatformUserRow {
-        private String id;
-        private String username;
-        private String passwordHash;
-        private String status;
-    }
 }

@@ -33,9 +33,6 @@
         <n-form-item require-mark-placement="left" label-placement="left" path="phone" :label="t('common.phoneNumber')">
           <n-input v-model:value="form.phone" type="text" :placeholder="t('common.pleaseInput')" />
         </n-form-item>
-        <n-form-item require-mark-placement="left" label-placement="left" path="email" :label="t('org.userEmail')">
-          <n-input v-model:value="form.email" type="text" :placeholder="t('common.pleaseInput')" />
-        </n-form-item>
         <n-form-item
           require-mark-placement="left"
           label-placement="left"
@@ -69,18 +66,23 @@
             </template> -->
           </n-tree-select>
         </n-form-item>
-        <n-form-item
-          require-mark-placement="left"
-          label-placement="left"
-          path="employeeId"
-          :label="t('org.employeeNumber')"
-        >
-          <n-input
-            v-model:value="form.employeeId"
-            type="text"
-            :placeholder="t('common.pleaseInput')"
-            :maxlength="255"
+        <n-form-item require-mark-placement="left" label-placement="left" path="roleIds" :label="t('org.role')">
+          <n-select
+            v-model:value="form.roleIds"
+            multiple
+            filterable
+            :placeholder="t('common.pleaseSelect')"
+            :options="roleOptions"
           />
+        </n-form-item>
+        <n-form-item
+            v-if="canEditUm"
+            require-mark-placement="left"
+            label-placement="left"
+            path="um"
+            :label="t('org.um')"
+        >
+          <n-input v-model:value="form.um" type="text" :placeholder="t('common.pleaseInput')" :maxlength="16" />
         </n-form-item>
         <CrmExpandButton v-model:expand="showForm">
           <n-form-item
@@ -124,19 +126,26 @@
           <n-form-item
             require-mark-placement="left"
             label-placement="left"
+            path="employeeId"
+            :label="t('org.employeeNumber')"
+          >
+            <n-input
+              v-model:value="form.employeeId"
+              type="text"
+              :placeholder="t('common.pleaseInput')"
+              :maxlength="255"
+            />
+          </n-form-item>
+          <n-form-item require-mark-placement="left" label-placement="left" path="email" :label="t('org.userEmail')">
+            <n-input v-model:value="form.email" type="text" :placeholder="t('common.pleaseInput')" />
+          </n-form-item>
+          <n-form-item
+            require-mark-placement="left"
+            label-placement="left"
             path="workCity"
             :label="t('org.workingCity')"
           >
             <CrmCitySelect v-model:value="form.workCity" />
-          </n-form-item>
-          <n-form-item require-mark-placement="left" label-placement="left" path="roleIds" :label="t('org.role')">
-            <n-select
-              v-model:value="form.roleIds"
-              multiple
-              filterable
-              :placeholder="t('common.pleaseSelect')"
-              :options="roleOptions"
-            />
           </n-form-item>
           <n-form-item
             require-mark-placement="left"
@@ -223,10 +232,13 @@
 
   import { addUser, getDepartmentTree, getRoleOptions, getUserDetail, getUserOptions, updateUser } from '@/api/modules';
   import useLicenseStore from '@/store/modules/setting/license';
+  import useUserStore from '@/store/modules/user';
 
   const Message = useMessage();
   const { t } = useI18n();
   const licenseStore = useLicenseStore();
+  const userStore = useUserStore();
+  const canEditUm = computed(() => userStore.isAdmin);
   // TODO license 先放开
   // const xPack = computed(() => licenseStore.hasLicense());
   const xPack = ref(true);
@@ -250,6 +262,7 @@
     gender: false,
     phone: '',
     email: '',
+    um: '',
     departmentId: '',
     employeeId: '',
     position: '',

@@ -88,7 +88,7 @@ public class TenantProvisioningService {
      * @param initialUserIds 可选，与操作人去重后插入
      */
     public synchronized TenantProvisionResponse provision(String tenantCode, String tenantName, String operatorId,
-                                                          List<String> initialUserIds) {
+                                                          List<String> initialUserIds, String orgId) {
         String tenantId = tenantCode.trim().toLowerCase(Locale.ROOT);
         managementLog.info(LogModule.MANAGEMENT_MARKER,"[MANAGEMENT_CENTER][TENANT_PROVISION_BEGIN] tenantId={}, operator={}", tenantId, operatorId);
         if (RESERVED_TENANT_CODES.contains(tenantId)) {
@@ -132,7 +132,7 @@ public class TenantProvisioningService {
 
             long now = System.currentTimeMillis();
             String configRowId = IDGenerator.nextStr();
-            tenantMetaService.insertTenant(tenantId, tenantId, tenantName, now, operatorId);
+            tenantMetaService.insertTenant(tenantId, tenantId, tenantName, orgId, now, operatorId);
             tenantMetaService.insertTenantDbConfig(configRowId, tenantId, dbName, tenantJdbcUrl, jdbcUser, jdbcPassword,
                     driver, now, operatorId);
 

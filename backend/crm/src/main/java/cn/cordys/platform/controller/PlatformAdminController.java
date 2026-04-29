@@ -4,6 +4,7 @@ import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.common.response.result.CrmHttpResultCode;
 import cn.cordys.platform.dto.request.PlatformAuditPageRequest;
+import cn.cordys.platform.dto.request.PlatformTenantOrgIdUpdateRequest;
 import cn.cordys.platform.dto.request.PlatformTenantPageRequest;
 import cn.cordys.platform.dto.response.PlatformAuditLogResponse;
 import cn.cordys.platform.dto.response.PlatformTenantHealthResponse;
@@ -62,14 +63,22 @@ public class PlatformAdminController {
         managementLog.info("[MANAGEMENT_CENTER][TENANT_PROVISION_REQUEST] operator={}, tenantCode={}",
                 operator, request.getCode());
         PlatformTenantProvisionTaskResponse task = platformAdminService.submitTenantProvisionTask(
-                request.getCode(), request.getName(), operator, request.getInitialUserIds()
+                request.getCode(), request.getName(), operator, request.getInitialUserIds(), request.getOrgId()
         );
         if ("PENDING".equals(task.getStatus())) {
             platformTenantProvisionTaskExecutor.executeProvisionTask(
-                    task.getTaskId(), task.getTenantId(), request.getName(), operator, request.getInitialUserIds()
+                    task.getTaskId(), task.getTenantId(), request.getName(), operator, request.getInitialUserIds(), request.getOrgId()
             );
         }
         return task;
+    }
+
+    @PostMapping("/tenant/{tenantId}/org-id")
+    @Operation(summary = "更新租户第三方部门ID")
+    public void updateTenantOrgId(@PathVariable("tenantId") String tenantId,
+                                  @Valid @RequestBody PlatformTenantOrgIdUpdateRequest request) {
+        String operator = assertPlatformAdmin();
+        platformAdminService.updateTenantOrgId(tenantId, request.getOrgId(), operator);
     }
 
     @GetMapping("/tenant/provision/task/{taskId}")

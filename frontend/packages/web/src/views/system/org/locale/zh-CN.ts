@@ -11,6 +11,7 @@ export default {
   'org.userName': '姓名',
   'org.gender': '性别',
   'org.userEmail': '邮箱',
+  'org.um': 'MMBA用户唯一标识',
   'org.department': '部门',
   'org.directSuperior': '直属上级',
   'org.role': '角色',

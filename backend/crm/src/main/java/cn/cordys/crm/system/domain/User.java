@@ -29,4 +29,7 @@ public class User extends BaseModel {
 
     @Schema(description = "当前组织ID")
     private String lastOrganizationId;
+
+    @Schema(description = "mmba用户唯一标识")
+    private String um = "";
 }

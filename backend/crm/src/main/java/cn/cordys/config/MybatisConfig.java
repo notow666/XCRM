@@ -6,14 +6,21 @@ import cn.cordys.mybatis.interceptor.MybatisInterceptor;
 import cn.cordys.quartz.anno.QuartzDataSource;
 import com.github.pagehelper.PageInterceptor;
 import com.zaxxer.hikari.HikariDataSource;
+import org.apache.ibatis.plugin.Interceptor;
+import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.annotation.MapperScan;
+import org.mybatis.spring.SqlSessionFactoryBean;
+import org.mybatis.spring.SqlSessionTemplate;
+import org.mybatis.spring.boot.autoconfigure.MybatisProperties;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.sql.DataSource;
@@ -34,7 +41,7 @@ import java.util.Properties;
  * @version 1.0
  */
 @Configuration
-@MapperScan(basePackages = {"cn.cordys.**.mapper"}, sqlSessionFactoryRef = "sqlSessionFactory")
+@MapperScan(basePackages = {"cn.cordys.crm.**.mapper", "cn.cordys.common.mapper"}, sqlSessionFactoryRef = "sqlSessionFactory")
 @EnableTransactionManagement
 public class MybatisConfig {
 
@@ -69,6 +76,43 @@ public class MybatisConfig {
     @Primary
     public DataSource dataSource(DynamicTenantRoutingDataSource tenantRoutingDataSource) {
         return tenantRoutingDataSource;
+    }
+
+    @Bean("sqlSessionFactory")
+    @Primary
+    public SqlSessionFactory sqlSessionFactory(@Qualifier("dataSource") DataSource dataSource,
+                                               ObjectProvider<Interceptor[]> interceptorsProvider,
+                                               MybatisProperties myBatisProperties) throws Exception {
+        SqlSessionFactoryBean factoryBean = new SqlSessionFactoryBean();
+        factoryBean.setDataSource(dataSource);
+        PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+        org.springframework.core.io.Resource[] crmMapperResources = resolver.getResources("classpath*:cn/cordys/crm/**/mapper/*.xml");
+        org.springframework.core.io.Resource[] commonMapperResources = resolver.getResources("classpath*:cn/cordys/common/mapper/*.xml");
+        org.springframework.core.io.Resource[] allMapperResources =
+                java.util.stream.Stream.concat(java.util.Arrays.stream(crmMapperResources), java.util.Arrays.stream(commonMapperResources))
+                        .toArray(org.springframework.core.io.Resource[]::new);
+        factoryBean.setMapperLocations(allMapperResources);
+        factoryBean.setPlugins(interceptorsProvider.getIfAvailable());
+
+        MybatisProperties.CoreConfiguration coreConfiguration = myBatisProperties.getConfiguration();
+        org.apache.ibatis.session.Configuration configuration = new org.apache.ibatis.session.Configuration();
+        configuration.setCacheEnabled(coreConfiguration.getCacheEnabled());
+        configuration.setLazyLoadingEnabled(coreConfiguration.getLazyLoadingEnabled());
+        configuration.setAggressiveLazyLoading(coreConfiguration.getAggressiveLazyLoading());
+        configuration.setUseColumnLabel(coreConfiguration.getUseColumnLabel());
+        configuration.setAutoMappingBehavior(coreConfiguration.getAutoMappingBehavior());
+        configuration.setDefaultStatementTimeout(coreConfiguration.getDefaultStatementTimeout());
+        configuration.setMapUnderscoreToCamelCase(coreConfiguration.getMapUnderscoreToCamelCase());
+        configuration.setLogImpl(coreConfiguration.getLogImpl());
+        factoryBean.setConfiguration(configuration);
+
+        return factoryBean.getObject();
+    }
+
+    @Bean("sqlSessionTemplate")
+    @Primary
+    public SqlSessionTemplate sqlSessionTemplate(@Qualifier("sqlSessionFactory") SqlSessionFactory sqlSessionFactory) {
+        return new SqlSessionTemplate(sqlSessionFactory);
     }
 
     /**

@@ -8,6 +8,7 @@ public class PlatformTenantItemResponse {
     private String code;
     private String name;
     private String status;
+    private String orgId;
     private String dbName;
     private String jdbcUrl;
     private Boolean enabled;

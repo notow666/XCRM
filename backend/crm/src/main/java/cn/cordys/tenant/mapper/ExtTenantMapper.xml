@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cordys.tenant.mapper.ExtTenantMapper">
+
+    <insert id="insertTenant">
+        INSERT INTO tenant (id, code, name, status, org_id, create_time, update_time, create_user, update_user)
+        VALUES (#{id}, #{code}, #{name}, #{status}, #{orgId}, #{createTime}, #{updateTime}, #{createUser}, #{updateUser})
+    </insert>
+
+    <delete id="deleteByTenantId">
+        DELETE FROM tenant
+        WHERE id = #{tenantId}
+    </delete>
+
+    <select id="countByTenantId" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM tenant
+        WHERE id = #{tenantId}
+    </select>
+
+    <select id="countByCode" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM tenant
+        WHERE code = #{code}
+    </select>
+
+    <select id="selectStatusByTenantId" resultType="java.lang.String">
+        SELECT status
+        FROM tenant
+        WHERE id = #{tenantId}
+        LIMIT 1
+    </select>
+
+    <select id="countByKeyword" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM tenant t
+                 LEFT JOIN tenant_db_config c ON c.tenant_id = t.id
+        WHERE (#{keyword} = '' OR t.id LIKE #{like} OR t.code LIKE #{like} OR t.name LIKE #{like})
+    </select>
+
+    <select id="pageByKeyword" resultType="cn.cordys.platform.dto.response.PlatformTenantItemResponse">
+        SELECT t.id          AS tenantId,
+               t.code,
+               t.name,
+               t.status,
+               t.org_id      AS orgId,
+               t.create_time AS createTime,
+               t.update_time AS updateTime,
+               c.db_name     AS dbName,
+               c.jdbc_url    AS jdbcUrl,
+               c.enabled
+        FROM tenant t
+                 LEFT JOIN tenant_db_config c ON c.tenant_id = t.id
+        WHERE (#{keyword} = '' OR t.id LIKE #{like} OR t.code LIKE #{like} OR t.name LIKE #{like})
+        ORDER BY t.create_time DESC
+            LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="selectDetailByTenantId" resultType="cn.cordys.platform.dto.response.PlatformTenantItemResponse">
+        SELECT t.id          AS tenantId,
+               t.code,
+               t.name,
+               t.status,
+               t.org_id      AS orgId,
+               t.create_time AS createTime,
+               t.update_time AS updateTime,
+               c.db_name     AS dbName,
+               c.jdbc_url    AS jdbcUrl,
+               c.enabled
+        FROM tenant t
+                 LEFT JOIN tenant_db_config c ON c.tenant_id = t.id
+        WHERE t.id = #{tenantId}
+        LIMIT 1
+    </select>
+
+    <update id="updateTenantStatus">
+        UPDATE tenant
+        SET status      = #{status},
+            update_time = #{updateTime},
+            update_user = #{updateUser}
+        WHERE id = #{tenantId}
+    </update>
+
+    <update id="updateTenantOrgId">
+        UPDATE tenant
+        SET org_id      = #{orgId},
+            update_time = #{updateTime},
+            update_user = #{updateUser}
+        WHERE id = #{tenantId}
+    </update>
+</mapper>

@@ -7,6 +7,7 @@ export interface PlatformTenantItem {
   code: string;
   name: string;
   status: string;
+  orgId?: string;
   dbName: string;
   jdbcUrl: string;
   enabled: boolean;
@@ -53,6 +54,7 @@ export interface PlatformLoginPayload {
 export interface TenantProvisionPayload {
   code: string;
   name: string;
+  orgId?: string;
   initialUserIds?: string[];
 }
 
@@ -87,6 +89,10 @@ export function getPlatformTenantProvisionTask(taskId: string) {
 
 export function updatePlatformTenantStatus(tenantId: string, enabled: boolean) {
   return CDR.post({ url: `/platform/admin/tenant/${tenantId}/status`, params: { enabled } });
+}
+
+export function updatePlatformTenantOrgId(tenantId: string, orgId: string) {
+  return CDR.post({ url: `/platform/admin/tenant/${tenantId}/org-id`, data: { orgId } });
 }
 
 export function getPlatformTenantHealth(tenantId: string) {

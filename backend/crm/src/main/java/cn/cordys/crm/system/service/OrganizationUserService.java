@@ -226,8 +226,7 @@ public class OrganizationUserService {
         //邮箱和手机号唯一性校验
         checkEmailAndPhone(request.getEmail(), request.getPhone(), id);
         //add user base
-        User user = addUserBaseData(request, operatorId, id);
-        user.setLastOrganizationId(organizationId);
+        User user = addUserBaseData(request, organizationId, operatorId, id);
         //add user info
         addUserInfo(request, organizationId, operatorId, user.getId());
         //add user role
@@ -314,7 +313,7 @@ public class OrganizationUserService {
      *
      * @return
      */
-    private User addUserBaseData(UserAddRequest request, String operatorId, String id) {
+    private User addUserBaseData(UserAddRequest request, String organizationId, String operatorId, String id) {
         User user = new User();
         BeanUtils.copyBean(user, request);
         user.setId(id);
@@ -324,6 +323,7 @@ public class OrganizationUserService {
         user.setUpdateTime(System.currentTimeMillis());
         user.setUpdateUser(operatorId);
         user.setLanguage(Locale.SIMPLIFIED_CHINESE.toString());
+        user.setLastOrganizationId(organizationId);
         userMapper.insert(user);
         return user;
     }

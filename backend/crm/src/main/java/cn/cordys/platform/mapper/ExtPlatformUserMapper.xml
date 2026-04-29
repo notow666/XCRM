@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cordys.platform.mapper.ExtPlatformUserMapper">
+
+    <select id="selectByUsername" resultType="cn.cordys.platform.domain.PlatformUser">
+        SELECT id,
+               username,
+               password_hash,
+               status,
+               create_time,
+               update_time,
+               create_user,
+               update_user
+        FROM platform_user
+        WHERE username = #{username}
+        LIMIT 1
+    </select>
+</mapper>

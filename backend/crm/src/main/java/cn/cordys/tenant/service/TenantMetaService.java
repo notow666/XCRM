@@ -1,14 +1,13 @@
 package cn.cordys.tenant.service;
 
 import cn.cordys.tenant.dto.TenantDbConfigDTO;
+import cn.cordys.tenant.domain.TenantDbConfig;
+import cn.cordys.tenant.mapper.ExtTenantDbConfigMapper;
+import cn.cordys.tenant.mapper.ExtTenantMapper;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.dao.DataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,129 +17,71 @@ import java.util.stream.Collectors;
 public class TenantMetaService {
 
     @Resource
-    @Qualifier("masterJdbcTemplate")
-    private JdbcTemplate masterJdbcTemplate;
+    private ExtTenantMapper extTenantMapper;
+
+    @Resource
+    private ExtTenantDbConfigMapper extTenantDbConfigMapper;
 
     public List<TenantDbConfigDTO> listEnabledTenantDbConfigs() {
-        String sql = "SELECT tenant_id, db_name, jdbc_url, db_username, db_password, db_driver_class_name, enabled " +
-                "FROM tenant_db_config WHERE enabled = 1";
-        try {
-            return masterJdbcTemplate.query(sql, (rs, rowNum) -> {
-                TenantDbConfigDTO item = new TenantDbConfigDTO();
-                item.setTenantId(rs.getString("tenant_id"));
-                item.setDbName(rs.getString("db_name"));
-                item.setJdbcUrl(rs.getString("jdbc_url"));
-                item.setDbUsername(rs.getString("db_username"));
-                item.setDbPassword(rs.getString("db_password"));
-                item.setDriverClassName(rs.getString("db_driver_class_name"));
-                item.setEnabled(rs.getBoolean("enabled"));
-                return item;
-            });
-        } catch (DataAccessException e) {
-            return java.util.Collections.emptyList();
-        }
+        return extTenantDbConfigMapper.listEnabledTenantDbConfigs()
+                .stream()
+                .map(this::toTenantDbConfigDTO)
+                .collect(Collectors.toList());
     }
 
     public TenantDbConfigDTO getTenantDbConfig(String tenantId) {
-        String sql = "SELECT tenant_id, db_name, jdbc_url, db_username, db_password, db_driver_class_name, enabled " +
-                "FROM tenant_db_config WHERE tenant_id = ? LIMIT 1";
-        try {
-            List<TenantDbConfigDTO> items = masterJdbcTemplate.query(sql, (rs, rowNum) -> {
-                TenantDbConfigDTO item = new TenantDbConfigDTO();
-                item.setTenantId(rs.getString("tenant_id"));
-                item.setDbName(rs.getString("db_name"));
-                item.setJdbcUrl(rs.getString("jdbc_url"));
-                item.setDbUsername(rs.getString("db_username"));
-                item.setDbPassword(rs.getString("db_password"));
-                item.setDriverClassName(rs.getString("db_driver_class_name"));
-                item.setEnabled(rs.getBoolean("enabled"));
-                return item;
-            }, tenantId);
-            return items.isEmpty() ? null : items.get(0);
-        } catch (DataAccessException e) {
+        TenantDbConfig config = extTenantDbConfigMapper.selectByTenantId(tenantId);
+        if (config == null) {
             return null;
         }
+        return toTenantDbConfigDTO(config);
     }
 
     public Set<String> listEnabledTenantIds() {
-        String sql = "SELECT tenant_id FROM tenant_db_config WHERE enabled = 1";
-        try {
-            return masterJdbcTemplate.queryForList(sql, String.class).stream().collect(Collectors.toSet());
-        } catch (DataAccessException e) {
-            return java.util.Collections.emptySet();
-        }
+        return extTenantDbConfigMapper.listEnabledTenantIds().stream().collect(Collectors.toSet());
     }
 
     public Map<String, String> listEnabledTenant() {
-        String sql = "SELECT id, org_id FROM tenant WHERE status = 'ACTIVE' and org_id is not null and org_id != ''";
-        try {
-            return masterJdbcTemplate.query(sql, (rs, rowNum) -> {
-                return rs;
-            }).stream().collect(Collectors.toMap(o -> {
-                try {
-                    return o.getString("org_id");
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-            }, o -> {
-                try {
-                    return o.getString("id");
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-            }));
-        } catch (Exception e) {
-            return java.util.Collections.emptyMap();
-        }
+        return extTenantDbConfigMapper.listEnabledTenantWithOrgId()
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> String.valueOf(row.get("org_id")),
+                        row -> String.valueOf(row.get("id"))
+                ));
     }
 
     public boolean existsTenantId(String tenantId) {
-        String sql = "SELECT COUNT(1) FROM tenant WHERE id = ?";
-        try {
-            Integer c = masterJdbcTemplate.queryForObject(sql, Integer.class, tenantId);
-            return c != null && c > 0;
-        } catch (DataAccessException e) {
-            return false;
-        }
+        Long count = extTenantMapper.countByTenantId(tenantId);
+        return count != null && count > 0;
     }
 
     public boolean existsTenantCode(String code) {
-        String sql = "SELECT COUNT(1) FROM tenant WHERE code = ?";
-        try {
-            Integer c = masterJdbcTemplate.queryForObject(sql, Integer.class, code);
-            return c != null && c > 0;
-        } catch (DataAccessException e) {
-            return false;
-        }
+        Long count = extTenantMapper.countByCode(code);
+        return count != null && count > 0;
     }
 
     /**
      * 租户是否可用（tenant.status=ACTIVE 且 tenant_db_config.enabled=1）。
      */
     public boolean isTenantEnabled(String tenantId) {
-        String sql = "SELECT COUNT(1) FROM tenant t INNER JOIN tenant_db_config c ON c.tenant_id = t.id " +
-                "WHERE t.id = ? AND t.status = 'ACTIVE' AND c.enabled = 1";
-        try {
-            Integer c = masterJdbcTemplate.queryForObject(sql, Integer.class, tenantId);
-            return c != null && c > 0;
-        } catch (DataAccessException e) {
-            return false;
-        }
+        String status = extTenantMapper.selectStatusByTenantId(tenantId);
+        TenantDbConfig config = extTenantDbConfigMapper.selectByTenantId(tenantId);
+        return status != null && config != null
+                && "ACTIVE".equalsIgnoreCase(status)
+                && Boolean.TRUE.equals(config.getEnabled());
     }
 
-    public void insertTenant(String id, String code, String name, long now, String operatorId) {
-        String sql = "INSERT INTO tenant (id, code, name, status, create_time, update_time, create_user, update_user) "
-                + "VALUES (?, ?, ?, 'ACTIVE', ?, ?, ?, ?)";
-        masterJdbcTemplate.update(sql, id, code, name, now, now, operatorId, operatorId);
+    public void insertTenant(String id, String code, String name, String orgId, long now, String operatorId) {
+        extTenantMapper.insertTenant(
+                id, code, name, "ACTIVE", StringUtils.trimToNull(orgId), now, now, operatorId, operatorId
+        );
     }
 
     public void insertTenantDbConfig(String id, String tenantId, String dbName, String jdbcUrl, String dbUsername,
                                      String dbPassword, String driverClassName, long now, String operatorId) {
-        String sql = "INSERT INTO tenant_db_config (id, tenant_id, db_name, jdbc_url, db_username, db_password, "
-                + "db_driver_class_name, enabled, create_time, update_time, create_user, update_user) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)";
-        masterJdbcTemplate.update(sql, id, tenantId, dbName, jdbcUrl, dbUsername, dbPassword, driverClassName,
-                now, now, operatorId, operatorId);
+        extTenantDbConfigMapper.insertTenantDbConfig(
+                id, tenantId, dbName, jdbcUrl, dbUsername, dbPassword, driverClassName, true, now, now, operatorId, operatorId
+        );
     }
 
     /**
@@ -150,8 +91,20 @@ public class TenantMetaService {
         if (StringUtils.isBlank(tenantId) || "default".equals(tenantId)) {
             return;
         }
-        masterJdbcTemplate.update("DELETE FROM tenant_db_config WHERE tenant_id = ?", tenantId);
-        masterJdbcTemplate.update("DELETE FROM tenant WHERE id = ?", tenantId);
+        extTenantDbConfigMapper.deleteByTenantId(tenantId);
+        extTenantMapper.deleteByTenantId(tenantId);
+    }
+
+    private TenantDbConfigDTO toTenantDbConfigDTO(TenantDbConfig config) {
+        TenantDbConfigDTO dto = new TenantDbConfigDTO();
+        dto.setTenantId(config.getTenantId());
+        dto.setDbName(config.getDbName());
+        dto.setJdbcUrl(config.getJdbcUrl());
+        dto.setDbUsername(config.getDbUsername());
+        dto.setDbPassword(config.getDbPassword());
+        dto.setDriverClassName(config.getDbDriverClassName());
+        dto.setEnabled(Boolean.TRUE.equals(config.getEnabled()));
+        return dto;
     }
 }
 
