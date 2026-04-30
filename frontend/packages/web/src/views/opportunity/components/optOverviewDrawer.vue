@@ -250,7 +250,7 @@
   // 转移
   const transferFormRef = ref<InstanceType<typeof TransferForm>>();
   function handleTransfer(done?: () => void) {
-    transferFormRef.value?.formRef?.validate(async (error) => {
+    transferFormRef.value?.formRef?.validate(async (error: any) => {
       if (!error) {
         try {
           transferLoading.value = true;

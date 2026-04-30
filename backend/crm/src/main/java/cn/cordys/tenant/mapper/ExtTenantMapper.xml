@@ -34,7 +34,6 @@
     <select id="countByKeyword" resultType="java.lang.Long">
         SELECT COUNT(1)
         FROM tenant t
-                 LEFT JOIN tenant_db_config c ON c.tenant_id = t.id
         WHERE (#{keyword} = '' OR t.id LIKE #{like} OR t.code LIKE #{like} OR t.name LIKE #{like})
     </select>
 
@@ -45,12 +44,8 @@
                t.status,
                t.org_id      AS orgId,
                t.create_time AS createTime,
-               t.update_time AS updateTime,
-               c.db_name     AS dbName,
-               c.jdbc_url    AS jdbcUrl,
-               c.enabled
+               t.update_time AS updateTime
         FROM tenant t
-                 LEFT JOIN tenant_db_config c ON c.tenant_id = t.id
         WHERE (#{keyword} = '' OR t.id LIKE #{like} OR t.code LIKE #{like} OR t.name LIKE #{like})
         ORDER BY t.create_time DESC
             LIMIT #{pageSize} OFFSET #{offset}
@@ -63,14 +58,24 @@
                t.status,
                t.org_id      AS orgId,
                t.create_time AS createTime,
-               t.update_time AS updateTime,
-               c.db_name     AS dbName,
-               c.jdbc_url    AS jdbcUrl,
-               c.enabled
+               t.update_time AS updateTime
         FROM tenant t
-                 LEFT JOIN tenant_db_config c ON c.tenant_id = t.id
         WHERE t.id = #{tenantId}
         LIMIT 1
+    </select>
+
+    <select id="listActiveTenantIds" resultType="java.lang.String">
+        SELECT id
+        FROM tenant
+        WHERE status = 'ACTIVE'
+    </select>
+
+    <select id="listEnabledTenantWithOrgId" resultType="map">
+        SELECT id, org_id
+        FROM tenant
+        WHERE status = 'ACTIVE'
+          AND org_id IS NOT NULL
+          AND org_id != ''
     </select>
 
     <update id="updateTenantStatus">

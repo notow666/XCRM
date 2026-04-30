@@ -32,8 +32,7 @@ public class MasterMybatisConfig {
         factoryBean.setMapperLocations(new org.springframework.core.io.Resource[]{
                 resolver.getResource("classpath:cn/cordys/platform/mapper/ExtPlatformUserMapper.xml"),
                 resolver.getResource("classpath:cn/cordys/platform/mapper/ExtTenantOpsTaskMapper.xml"),
-                resolver.getResource("classpath:cn/cordys/tenant/mapper/ExtTenantMapper.xml"),
-                resolver.getResource("classpath:cn/cordys/tenant/mapper/ExtTenantDbConfigMapper.xml")
+                resolver.getResource("classpath:cn/cordys/tenant/mapper/ExtTenantMapper.xml")
         });
         factoryBean.setPlugins(interceptorsProvider.getIfAvailable());
 

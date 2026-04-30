@@ -262,7 +262,7 @@
   }
 
   const formDrawerVisible = ref(false);
-  const otherFollowRecordSaveParams = ref({
+  const otherFollowRecordSaveParams = ref<Record<string, any>>({
     converted: false,
   });
   const realFollowSourceId = ref<string | undefined>('');
@@ -302,7 +302,9 @@
       contactId: data.contactId,
       type: data.resourceType,
       nextStage: nextStageId,
+      _nextStage: nextStageId,
       nextStageName,
+      owner: data.owner || '',
       ownerName,
     };
     realFollowSourceId.value = undefined;

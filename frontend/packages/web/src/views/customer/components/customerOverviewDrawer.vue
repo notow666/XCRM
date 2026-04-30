@@ -40,6 +40,7 @@
         v-model:stage="currentStatus"
         class="mb-[16px]"
         :stage-config-list="stageConfig?.stageConfigList || []"
+        :source-id="props.sourceId"
         readonly
         @load-detail="handleSaved"
       />

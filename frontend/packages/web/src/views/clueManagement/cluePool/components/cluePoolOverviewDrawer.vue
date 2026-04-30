@@ -150,7 +150,7 @@
     ...defaultTransferForm,
   });
   function handleDistribute() {
-    distributeFormRef.value?.formRef?.validate(async (error) => {
+    distributeFormRef.value?.formRef?.validate(async (error: any) => {
       if (!error) {
         try {
           distributeLoading.value = true;

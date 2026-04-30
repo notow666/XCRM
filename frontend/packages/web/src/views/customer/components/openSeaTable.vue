@@ -322,6 +322,7 @@
       const res = await batchAssignOpenSeaCustomer({
         ...batchTableQueryParams.value,
         batchIds: checkedRowKeys.value,
+        assignUserId: owners[0] || '',
         assignUserIds: owners,
       });
       checkedRowKeys.value = [];

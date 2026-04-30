@@ -38,7 +38,7 @@
     <NSpace vertical>
       <NInput v-model:value="createForm.code" placeholder="code" />
       <NInput v-model:value="createForm.name" placeholder="name" />
-      <NInput v-model:value="createForm.orgId" placeholder="org_id（第三方部门ID，可选）" />
+      <NInput v-model:value="createForm.orgId" placeholder="org_id（MMBA部门ID，可选）" />
       <NInput v-model:value="createForm.initialUsers" placeholder="initialUserIds，逗号分隔（可选）" />
     </NSpace>
   </NModal>
@@ -46,12 +46,12 @@
   <NModal
     v-model:show="showOrgSync"
     preset="dialog"
-    title="第三方部门同步"
+    title="MMBA部门同步"
     positive-text="保存"
     @positive-click="handleSaveOrgId"
   >
     <NSpace vertical>
-      <div class="text-sm text-[#999]">填写租户对应 mmba 平台部门ID（org_id）后保存</div>
+      <div class="text-sm text-[#999]">填写租户对应 MMBA 平台部门ID（org_id）后保存</div>
       <NInput v-model:value="orgSyncForm.orgId" placeholder="org_id" />
     </NSpace>
   </NModal>
@@ -214,7 +214,7 @@
       key: 'action',
       render: (row: PlatformTenantItem) =>
         h('div', { class: 'flex gap-2' }, [
-          h(NButton, { size: 'small', onClick: () => openOrgSync(row) }, { default: () => '第三方部门同步' }),
+          h(NButton, { size: 'small', onClick: () => openOrgSync(row) }, { default: () => 'MMBA部门同步' }),
           h(NButton, { size: 'small', onClick: () => showHealth(row) }, { default: () => '健康' }),
           // h(NButton, { size: 'small', onClick: () => rerunMigrate(row) }, { default: () => '重跑迁移' }),
           h(

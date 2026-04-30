@@ -74,7 +74,7 @@ public class PlatformAdminController {
     }
 
     @PostMapping("/tenant/{tenantId}/org-id")
-    @Operation(summary = "更新租户第三方部门ID")
+    @Operation(summary = "更新租户MMBA部门ID")
     public void updateTenantOrgId(@PathVariable("tenantId") String tenantId,
                                   @Valid @RequestBody PlatformTenantOrgIdUpdateRequest request) {
         String operator = assertPlatformAdmin();

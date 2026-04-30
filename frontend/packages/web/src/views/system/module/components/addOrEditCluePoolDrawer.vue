@@ -279,7 +279,7 @@
     customerPoolLoading.value = true;
     try {
       const res = await getCustomerPoolListByEnable();
-      const list: any[] = res ?? [];
+      const list = Array.isArray(res) ? res : [];
       customerPoolOptions.value = list.filter((p) => p.enable).map((p) => ({ label: p.name, value: p.id }));
     } catch (e) {
       // eslint-disable-next-line no-console
@@ -385,7 +385,7 @@
 
   /** 无有效筛选行时视为「全部满足」，不跑 FilterContent 校验 */
   function isDistributeRuleEmpty(): boolean {
-    return filterFormToResult(distributeFormViewModel.value as FilterForm).conditions.length === 0;
+    return (filterFormToResult(distributeFormViewModel.value as FilterForm).conditions?.length ?? 0) === 0;
   }
 
   function cancelHandler() {

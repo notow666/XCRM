@@ -1,18 +1,19 @@
-logger.sql.level=info
+logger.sql.level=error
 management.endpoints.enabled-by-default=false
 springdoc.api-docs.groups.enabled=true
 spring.freemarker.check-template-location=false
 spring.groovy.template.check-template-location=false
 
-# ?? all in one ?????????
+# 默认 all in one 配置，单机环境使用
 mysql.embedded.enabled=true
-spring.datasource.url=jdbc:mysql://127.0.0.1:3309/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
-spring.datasource.username=root
-spring.datasource.password=root
 
-spring.datasource.master.url=jdbc:mysql://127.0.0.1:3309/crm_master?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+spring.datasource.url=jdbc:mysql://1Panel-mysql-U67n:3306/crm_tenant_default?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
+spring.datasource.username=root
+spring.datasource.password=mysql_CfKpXz
+
+spring.datasource.master.url=jdbc:mysql://1Panel-mysql-U67n:3306/crm_master?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&sessionVariables=sql_mode=%27STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION%27
 spring.datasource.master.username=root
-spring.datasource.master.password=root
+spring.datasource.master.password=mysql_CfKpXz
 spring.datasource.master.hikari.maximum-pool-size=30
 spring.datasource.master.hikari.minimum-idle=5
 spring.datasource.master.hikari.idle-timeout=300000
@@ -24,18 +25,19 @@ spring.datasource.master.hikari.connection-test-query=SELECT 1
 spring.session.timeout=43200s
 
 redis.embedded.enabled=true
-spring.data.redis.host=127.0.0.1
-#spring.data.redis.password=
+spring.data.redis.host=1Panel-redis-V4pW
+spring.data.redis.password=redis_pZCFfp
 spring.data.redis.port=6379
-spring.data.redis.database=3
+spring.data.redis.database=1
 spring.session.redis.repository-type=indexed
 
-# ????????????? DROP ????????? DROP ???????????
+
+# 租户动态开通失败时是否尝试 DROP 新库（需库账号具备 DROP 权限；生产可按需关闭）
 cordys.tenant.provision.drop-database-on-failure=true
 
-# ???????,?????????
+# 启用白名单功能,不开启则不限制访问
 dashboard.whitelist.enabled=false
-# ?????????????IP???????,???????
+# 白名单开关开启后允许访问的IP地址或域名列表,多个用逗号分隔
 dashboard.whitelist.allowed=
 
 logback.root.level=INFO

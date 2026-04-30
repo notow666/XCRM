@@ -31,17 +31,17 @@ export default mergeConfig(
         '/pic': {
           target: process.env.VITE_DEV_DOMAIN,
           changeOrigin: true,
-          rewrite: (path: string) => path.replace(/^\/front\/pic/, ''),
+          rewrite: (path: string) => path.replace(/^\/pic/, ''),
         },
         '/attachment': {
           target: process.env.VITE_DEV_DOMAIN,
           changeOrigin: true,
-          rewrite: (path: string) => path.replace(/^\/front\/attachment/, ''),
+          rewrite: (path: string) => path.replace(/^\/attachment/, ''),
         },
         '/ui': {
           target: process.env.VITE_DEV_DOMAIN,
           changeOrigin: true,
-          rewrite: (path: string) => path.replace(/^\/front\/ui/, ''),
+          rewrite: (path: string) => path.replace(/^\/ui/, ''),
         },
       },
     },

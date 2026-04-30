@@ -3,7 +3,6 @@ package cn.cordys.tenant.service;
 import cn.cordys.aspectj.constants.LogModule;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.response.result.CrmHttpResultCode;
-import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.Translator;
 import cn.cordys.common.service.DataInitService;
 import cn.cordys.config.DynamicTenantRoutingDataSource;
@@ -97,7 +96,7 @@ public class TenantProvisioningService {
         if (tenantMetaService.existsTenantId(tenantId) || tenantMetaService.existsTenantCode(tenantId)) {
             // 幂等：若租户已存在且具备可用配置，直接返回现有结果；否则按重复创建报错
             TenantDbConfigDTO existingConfig = tenantMetaService.getTenantDbConfig(tenantId);
-            if (existingConfig != null && StringUtils.isNotBlank(existingConfig.getJdbcUrl())) {
+            if (existingConfig != null) {
                 if (!tenantRoutingDataSource.hasTenantDataSource(tenantId)) {
                     DataSource pool = buildPooledDataSource(existingConfig.getJdbcUrl(), existingConfig.getDriverClassName(),
                             existingConfig.getDbUsername(), existingConfig.getDbPassword(), tenantId);
@@ -114,7 +113,7 @@ public class TenantProvisioningService {
             throw new GenericException(CrmHttpResultCode.VALIDATE_FAILED, Translator.get("tenant.already.exists"));
         }
 
-        String dbName = "crm_tenant_" + tenantId.replace('-', '_');
+        String dbName = TenantJdbcResolver.tenantDatabaseName(tenantId);
         String templateUrl = dataSourceProperties.determineUrl();
         String driver = dataSourceProperties.determineDriverClassName();
         String jdbcUser = dataSourceProperties.determineUsername();
@@ -131,10 +130,7 @@ public class TenantProvisioningService {
             runTenantFlyway(tenantJdbcUrl, jdbcUser, jdbcPassword);
 
             long now = System.currentTimeMillis();
-            String configRowId = IDGenerator.nextStr();
             tenantMetaService.insertTenant(tenantId, tenantId, tenantName, orgId, now, operatorId);
-            tenantMetaService.insertTenantDbConfig(configRowId, tenantId, dbName, tenantJdbcUrl, jdbcUser, jdbcPassword,
-                    driver, now, operatorId);
 
             DataSource pool = buildPooledDataSource(tenantJdbcUrl, driver, jdbcUser, jdbcPassword, tenantId);
             tenantRoutingDataSource.registerTenantDataSource(tenantId, pool);
@@ -201,7 +197,7 @@ public class TenantProvisioningService {
         if (dbName == null || tenantId == null) {
             return false;
         }
-        return dbName.equals("crm_tenant_" + tenantId.replace('-', '_'));
+        return dbName.equals(TenantJdbcResolver.tenantDatabaseName(tenantId));
     }
 
     private void createDatabaseIfNotExists(String serverUrl, String driver, String user, String password, String dbName) {

@@ -315,11 +315,12 @@
 
   // 批量分配
   const showDistributeModal = ref<boolean>(false);
-  async function handleBatchAssign(owner: string | null) {
+  async function handleBatchAssign(owner: string | string[] | null) {
+    const assignUserId = Array.isArray(owner) ? owner[0] || '' : owner || '';
     try {
       await batchAssignClue({
         batchIds: checkedRowKeys.value,
-        assignUserId: owner || '',
+        assignUserId,
       });
       Message.success(t('common.distributeSuccess'));
       handleRefresh();
@@ -404,7 +405,7 @@
     ...defaultTransferForm,
   });
   function handleDistribute(id: string) {
-    distributeFormRef.value?.formRef?.validate(async (error) => {
+    distributeFormRef.value?.formRef?.validate(async (error: any) => {
       if (!error) {
         try {
           distributeLoading.value = true;
@@ -452,7 +453,7 @@
     try {
       batchDistributePoolLoading.value = true;
       const res = await getCustomerPoolListByEnable();
-      const list: any[] = res ?? [];
+      const list = Array.isArray(res) ? res : [];
       batchDistributeCustomerPoolOptions.value = list
         .filter((item) => item?.enable)
         .map((item) => ({ label: item.name, value: item.id }));

@@ -90,7 +90,7 @@
 
   const emit = defineEmits<{
     (e: 'loadList'): void;
-    (e: 'confirm', owner: string | null): void;
+    (e: 'confirm', owner: string | string[] | null): void;
   }>();
 
   const showModal = defineModel<boolean>('show', {
@@ -170,6 +170,7 @@
         props
           .saveApi({
             batchIds: props.sourceIds,
+            owner: ownerValues.value[0] || null,
             assignUserId: ownerValues.value[0] || '',
             assignUserIds: ownerValues.value,
           })
@@ -201,6 +202,7 @@
         props
           .saveApi({
             batchIds: props.sourceIds,
+            owner: ownerValue.value,
             assignUserId: ownerValue.value,
             assignUserIds: [ownerValue.value],
           })

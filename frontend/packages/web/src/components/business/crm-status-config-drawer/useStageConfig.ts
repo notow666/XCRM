@@ -98,7 +98,7 @@ export default function useStageConfig(type: StatusBizType): UseStatusConfigRetu
         // 固定节点不可编辑
         editing: false,
         // 固定节点或 END 类型不可拖拽
-        draggable: !item.isFixed && item.type !== 'END',
+        draggable: !((item as StageConfigItem & { isFixed?: boolean }).isFixed ?? false) && item.type !== 'END',
         ...(strategyConfig.value.normalizeItem?.(item) || {}),
       })),
     };

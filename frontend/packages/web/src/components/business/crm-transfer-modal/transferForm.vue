@@ -26,10 +26,7 @@
             @click="(item.remainingCapacity ?? Infinity) > 0 && selectSingleUser(item.userId)"
           >
             <div class="flex items-center">
-              <NRadio
-                :checked="form.owner === item.userId"
-                :disabled="(item.remainingCapacity ?? Infinity) <= 0"
-              />
+              <NRadio :checked="form.owner === item.userId" :disabled="(item.remainingCapacity ?? Infinity) <= 0" />
               <span class="ml-2 text-sm font-medium">{{ item.userName }}</span>
             </div>
             <span
@@ -97,6 +94,8 @@
   import CrmUserSelect from '@/components/business/crm-user-select/index.vue';
 
   import { batchUserCapacity, getAuthUserOptions } from '@/api/modules';
+
+  import type { FormValidationError } from 'naive-ui';
 
   const { t } = useI18n();
 
@@ -167,12 +166,15 @@
     }
   }
 
-  function updateOwner(value: string | null) {
-    form.value = { ...form.value, owner: value };
+  function updateOwner(value: string | number | (string | number)[] | null) {
+    form.value = { ...form.value, owner: typeof value === 'string' ? value : null };
   }
 
   defineExpose({
     loadUserCapacity,
+    formRef: {
+      validate: (cb: (errors?: FormValidationError[] | null) => void) => cb(null),
+    },
   });
 </script>
 

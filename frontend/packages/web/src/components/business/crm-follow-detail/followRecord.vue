@@ -2,7 +2,7 @@
   <div v-if="listData.length" class="crm-follow-record-list" :style="{ height: props.virtualScrollHeight }" @scroll="handleScroll">
     <div
       v-for="item in listData"
-      :key="item[props.keyField]"
+      :key="String(item[props.keyField as keyof FollowDetailItem] ?? item.id)"
       class="crm-follow-record-item"
     >
       <div class="crm-follow-time-line-track">
@@ -19,10 +19,10 @@
               :disabled="!props.getDisabledFun?.(item) || !!item.converted"
               @change="() => emit('change', item)"
             />-->
-            <CrmTag v-if="item.status && item.converted"> {{ t('common.hasConvertToRecord') }} </CrmTag>
+            <CrmTag v-if="isPlanItem(item) && item.status && item.converted"> {{ t('common.hasConvertToRecord') }} </CrmTag>
             <div class="text-[var(--text-n1)]">{{ getShowTime(item) }}</div>
             <div class="crm-follow-record-method">
-              {{ (props.type === 'followRecord' ? item.followMethod : item.method) ?? '-' }}
+              {{ getFollowMethod(item) ?? '-' }}
             </div>
           </div>
 
@@ -116,6 +116,14 @@
   function getShowTime(item: FollowDetailItem) {
     const time = 'estimatedTime' in item ? item.estimatedTime : item.followTime;
     return time ? dayjs(time).format('YYYY-MM-DD') : '-';
+  }
+
+  function isPlanItem(item: FollowDetailItem): item is CustomerFollowPlanListItem {
+    return props.type === 'followPlan';
+  }
+
+  function getFollowMethod(item: FollowDetailItem) {
+    return isPlanItem(item) ? item.method : item.followMethod;
   }
 
   function getStageName(item: FollowDetailItem) {

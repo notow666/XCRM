@@ -53,7 +53,7 @@ public class TenantDataSourceBootstrap implements ApplicationRunner, Ordered {
         log.info("TenantDataSourceBootstrap start (order={})", getOrder());
         List<TenantDbConfigDTO> configs = tenantMetaService.listEnabledTenantDbConfigs();
         if (configs == null || configs.isEmpty()) {
-            log.warn("TenantDataSourceBootstrap: no enabled tenant configs found in master (tenant_db_config.enabled=1)");
+            log.warn("TenantDataSourceBootstrap: no ACTIVE tenants found in master (tenant.status=ACTIVE)");
         }
         for (TenantDbConfigDTO config : configs) {
             String tenantId = config.getTenantId();

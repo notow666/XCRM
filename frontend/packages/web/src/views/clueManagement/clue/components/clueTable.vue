@@ -400,7 +400,7 @@
   });
 
   function handleTransfer(row: ClueListItem, done?: () => void) {
-    transferFormRef.value?.formRef?.validate(async (error) => {
+    transferFormRef.value?.formRef?.validate(async (error: any) => {
       if (!error) {
         try {
           transferLoading.value = true;

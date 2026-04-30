@@ -16,8 +16,8 @@ import cn.cordys.platform.dto.response.PlatformTenantProvisionTaskResponse;
 import cn.cordys.platform.mapper.ExtTenantOpsTaskMapper;
 import cn.cordys.tenant.dto.response.TenantProvisionResponse;
 import cn.cordys.tenant.dto.TenantDbConfigDTO;
-import cn.cordys.tenant.mapper.ExtTenantDbConfigMapper;
 import cn.cordys.tenant.mapper.ExtTenantMapper;
+import cn.cordys.tenant.service.TenantJdbcResolver;
 import cn.cordys.tenant.service.TenantProvisioningService;
 import cn.cordys.tenant.service.TenantMetaService;
 import com.zaxxer.hikari.HikariDataSource;
@@ -47,7 +47,7 @@ public class PlatformAdminService {
     private ExtTenantMapper extTenantMapper;
 
     @Resource
-    private ExtTenantDbConfigMapper extTenantDbConfigMapper;
+    private TenantJdbcResolver tenantJdbcResolver;
 
     @Resource
     private ExtTenantOpsTaskMapper extTenantOpsTaskMapper;
@@ -74,6 +74,11 @@ public class PlatformAdminService {
 
         Long total = extTenantMapper.countByKeyword(keyword, like);
         List<PlatformTenantItemResponse> list = extTenantMapper.pageByKeyword(keyword, like, pageSize, offset);
+        if (list != null) {
+            for (PlatformTenantItemResponse item : list) {
+                tenantJdbcResolver.enrichPlatformTenantItem(item);
+            }
+        }
         return new Pager<>(list, total == null ? 0L : total, pageSize, current);
     }
 
@@ -82,6 +87,7 @@ public class PlatformAdminService {
         if (detail == null) {
             throw new GenericException("租户不存在");
         }
+        tenantJdbcResolver.enrichPlatformTenantItem(detail);
         return detail;
     }
 
@@ -89,8 +95,7 @@ public class PlatformAdminService {
         long now = System.currentTimeMillis();
         String status = enabled ? "ACTIVE" : "FROZEN";
         int tenantUpdated = extTenantMapper.updateTenantStatus(tenantId, status, now, operatorId);
-        int configUpdated = extTenantDbConfigMapper.updateEnabledByTenantId(tenantId, enabled ? 1 : 0, now, operatorId);
-        if (tenantUpdated <= 0 || configUpdated <= 0) {
+        if (tenantUpdated <= 0) {
             throw new GenericException("租户不存在");
         }
         if (!enabled) {
@@ -197,7 +202,7 @@ public class PlatformAdminService {
 
     public PlatformTenantHealthResponse checkTenantHealth(String tenantId) {
         TenantDbConfigDTO config = tenantMetaService.getTenantDbConfig(tenantId);
-        boolean metadataExists = config != null;
+        boolean metadataExists = tenantMetaService.existsTenantId(tenantId);
         boolean datasourceRegistered = tenantRoutingDataSource.hasTenantDataSource(tenantId);
         boolean jdbcReachable = false;
         String migrationVersion = "";

@@ -24,7 +24,7 @@ public class MmbaAuditRequest implements Serializable {
     @Serial
     private static final long serialVersionUID = -8678428122164917085L;
 
-    private static final Logger logger = LoggerFactory.getLogger("TENANT_CENTER");
+    private static final Logger logger = LoggerFactory.getLogger(LogModule.PLATFORM_TENANT_CENTER);
 
     private int behaviorType;
     private String tenancyName;
@@ -55,7 +55,7 @@ public class MmbaAuditRequest implements Serializable {
         }
         mmbaAuditRequest.setData(_new);
         if(!CollectionUtils.isEmpty(invalid)){
-            logger.error(LogModule.TENANT_MARKER, "无效mmba审计数据(无TenantId) => [{}]", JSON.toJSONString(invalid));
+            logger.error(LogModule.TENANT_MARKER, "[TENANT_CENTER] 无效mmba审计数据(无TenantId) => [{}]", JSON.toJSONString(invalid));
         }
         return mmbaAuditRequest;
     }

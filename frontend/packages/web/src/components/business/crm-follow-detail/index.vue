@@ -37,8 +37,8 @@
               v-if="
                 showEditAndDelete(item) &&
                 props.activeType === 'followPlan' &&
-                [CustomerFollowPlanStatusEnum.COMPLETED].includes(item.status) &&
-                !item.converted
+                [CustomerFollowPlanStatusEnum.COMPLETED].includes((item as CustomerFollowPlanListItem).status) &&
+                !(item as CustomerFollowPlanListItem).converted
               "
               type="primary"
               class="text-btn-primary"
@@ -53,7 +53,7 @@
                 (props.activeType === 'followRecord' ||
                   (props.activeType === 'followPlan' &&
                     ![CustomerFollowPlanStatusEnum.CANCELLED, CustomerFollowPlanStatusEnum.CANCELLED].includes(
-                      item.status
+                      (item as CustomerFollowPlanListItem).status
                     )))
               "
               type="primary"

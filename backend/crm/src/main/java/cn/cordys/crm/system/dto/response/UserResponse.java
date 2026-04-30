@@ -63,6 +63,6 @@ public class UserResponse {
     @Schema(description = "入职时间")
     private Long onboardingDate;
 
-    @Schema(description = "mmba用户唯一标识")
+    @Schema(description = "MMBA用户唯一标识")
     private String um;
 }

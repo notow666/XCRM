@@ -105,7 +105,7 @@
     try {
       const res = await getTaskFollowPlanPage({
         sourceId: '',
-        status: CustomerFollowPlanStatusEnum.ALL,
+        status: CustomerFollowPlanStatusEnum.ALL as any,
         current: page.value,
         pageSize: pageSize.value,
       });

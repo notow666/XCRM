@@ -8,7 +8,7 @@ server.compression.mime-types=application/json,application/xml,text/html,text/xm
 server.compression.min-response-size=2048
 
 # Logging Settings
-logging.file.path=D:\\workSpace\\CordysCRM\\logs\\cordys-crm
+logging.file.path=/mnt/data/app/crm/log
 logging.config=classpath:logback-spring.xml
 
 # DataSource Configuration (HikariCP)
@@ -48,7 +48,7 @@ mybatis.configuration.use-column-label=true
 mybatis.configuration.auto-mapping-behavior=full
 mybatis.configuration.default-statement-timeout=25000
 mybatis.configuration.map-underscore-to-camel-case=true
-mybatis.configuration.log-impl=org.apache.ibatis.logging.slf4j.Slf4jImpl
+mybatis.configuration.log-impl=org.apache.ibatis.logging.nologging.NoLoggingImpl
 
 # Virtual Thread Settings (for Thread Management)
 spring.threads.virtual.enabled=true

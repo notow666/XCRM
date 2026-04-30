@@ -1,8 +1,6 @@
 package cn.cordys.tenant.service;
 
 import cn.cordys.tenant.dto.TenantDbConfigDTO;
-import cn.cordys.tenant.domain.TenantDbConfig;
-import cn.cordys.tenant.mapper.ExtTenantDbConfigMapper;
 import cn.cordys.tenant.mapper.ExtTenantMapper;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
@@ -20,29 +18,38 @@ public class TenantMetaService {
     private ExtTenantMapper extTenantMapper;
 
     @Resource
-    private ExtTenantDbConfigMapper extTenantDbConfigMapper;
+    private TenantJdbcResolver tenantJdbcResolver;
 
     public List<TenantDbConfigDTO> listEnabledTenantDbConfigs() {
-        return extTenantDbConfigMapper.listEnabledTenantDbConfigs()
+        return extTenantMapper.listActiveTenantIds()
                 .stream()
-                .map(this::toTenantDbConfigDTO)
+                .map(tenantId -> {
+                    TenantDbConfigDTO dto = tenantJdbcResolver.resolveConnection(tenantId);
+                    dto.setEnabled(true);
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 租户在主库存在时返回推导后的连接信息；enabled 与 tenant.status 一致。
+     */
     public TenantDbConfigDTO getTenantDbConfig(String tenantId) {
-        TenantDbConfig config = extTenantDbConfigMapper.selectByTenantId(tenantId);
-        if (config == null) {
+        String status = extTenantMapper.selectStatusByTenantId(tenantId);
+        if (status == null) {
             return null;
         }
-        return toTenantDbConfigDTO(config);
+        TenantDbConfigDTO dto = tenantJdbcResolver.resolveConnection(tenantId);
+        dto.setEnabled("ACTIVE".equalsIgnoreCase(status));
+        return dto;
     }
 
     public Set<String> listEnabledTenantIds() {
-        return extTenantDbConfigMapper.listEnabledTenantIds().stream().collect(Collectors.toSet());
+        return extTenantMapper.listActiveTenantIds().stream().collect(Collectors.toSet());
     }
 
     public Map<String, String> listEnabledTenant() {
-        return extTenantDbConfigMapper.listEnabledTenantWithOrgId()
+        return extTenantMapper.listEnabledTenantWithOrgId()
                 .stream()
                 .collect(Collectors.toMap(
                         row -> String.valueOf(row.get("org_id")),
@@ -61,26 +68,16 @@ public class TenantMetaService {
     }
 
     /**
-     * 租户是否可用（tenant.status=ACTIVE 且 tenant_db_config.enabled=1）。
+     * 租户是否可用（tenant.status=ACTIVE）。
      */
     public boolean isTenantEnabled(String tenantId) {
         String status = extTenantMapper.selectStatusByTenantId(tenantId);
-        TenantDbConfig config = extTenantDbConfigMapper.selectByTenantId(tenantId);
-        return status != null && config != null
-                && "ACTIVE".equalsIgnoreCase(status)
-                && Boolean.TRUE.equals(config.getEnabled());
+        return status != null && "ACTIVE".equalsIgnoreCase(status);
     }
 
     public void insertTenant(String id, String code, String name, String orgId, long now, String operatorId) {
         extTenantMapper.insertTenant(
                 id, code, name, "ACTIVE", StringUtils.trimToNull(orgId), now, now, operatorId, operatorId
-        );
-    }
-
-    public void insertTenantDbConfig(String id, String tenantId, String dbName, String jdbcUrl, String dbUsername,
-                                     String dbPassword, String driverClassName, long now, String operatorId) {
-        extTenantDbConfigMapper.insertTenantDbConfig(
-                id, tenantId, dbName, jdbcUrl, dbUsername, dbPassword, driverClassName, true, now, now, operatorId, operatorId
         );
     }
 
@@ -91,20 +88,6 @@ public class TenantMetaService {
         if (StringUtils.isBlank(tenantId) || "default".equals(tenantId)) {
             return;
         }
-        extTenantDbConfigMapper.deleteByTenantId(tenantId);
         extTenantMapper.deleteByTenantId(tenantId);
     }
-
-    private TenantDbConfigDTO toTenantDbConfigDTO(TenantDbConfig config) {
-        TenantDbConfigDTO dto = new TenantDbConfigDTO();
-        dto.setTenantId(config.getTenantId());
-        dto.setDbName(config.getDbName());
-        dto.setJdbcUrl(config.getJdbcUrl());
-        dto.setDbUsername(config.getDbUsername());
-        dto.setDbPassword(config.getDbPassword());
-        dto.setDriverClassName(config.getDbDriverClassName());
-        dto.setEnabled(Boolean.TRUE.equals(config.getEnabled()));
-        return dto;
-    }
 }
-

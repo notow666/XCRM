@@ -53,7 +53,7 @@ public class HikariCPUtils {
     public static void printHikariCPStatus() {
         HikariDataSource dataSource = CommonBeanFactory.getBean(HikariDataSource.class);
         if (dataSource == null) {
-            log.error("HikariDataSource not found");
+            log.warn("HikariDataSource not found");
             return;
         }
         log.info(getHikariCPStatus(dataSource));

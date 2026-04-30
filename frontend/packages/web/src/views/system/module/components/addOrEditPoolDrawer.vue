@@ -300,6 +300,7 @@
     userIds: [],
     enable: true,
     auto: false,
+    distribute: false,
     pickRule: {
       limitOnNumber: false,
       pickNumber: undefined,
@@ -452,6 +453,7 @@
         name: val.name,
         enable: val.enable,
         auto: val.auto,
+        distribute: val.distribute ?? false,
         pickRule: val.pickRule ?? cloneDeep(initForm).pickRule,
         recycleRule: val.recycleRule ?? cloneDeep(initForm).recycleRule,
         userIds: val.members,

@@ -95,6 +95,6 @@ public class UserDTO implements java.io.Serializable {
     @Schema(description = "是否是默认密码")
     private Boolean defaultPwd = false;
 
-    @Schema(description = "mmba用户唯一标识")
+    @Schema(description = "MMBA用户唯一标识")
     private String um;
 }
