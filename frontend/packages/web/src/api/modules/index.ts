@@ -12,6 +12,7 @@ import useProductApi from '@lib/shared/api/modules/product';
 import useSysApi from '@lib/shared/api/modules/sys';
 import useLicenseApi from '@lib/shared/api/modules/system/authorizedManagement';
 import useBusinessApi from '@lib/shared/api/modules/system/business';
+import useContentAuditApi from '@lib/shared/api/modules/system/contentAudit';
 import useLoginApi from '@lib/shared/api/modules/system/login';
 import useMessageApi from '@lib/shared/api/modules/system/message';
 import useModuleApi from '@lib/shared/api/modules/system/module';
@@ -41,6 +42,7 @@ const followApi = useFollowApi(CDR);
 const productApi = useProductApi(CDR);
 const messageApi = useMessageApi(CDR);
 const licenseApi = useLicenseApi(CDR);
+const contentAuditApi = useContentAuditApi(CDR);
 const customerApi = useCustomerApi(CDR);
 const businessApi = useBusinessApi(CDR);
 const dashboardApi = useDashboard(CDR);
@@ -295,6 +297,9 @@ export const {
 export const {
   addCustomer,
   getCustomer,
+  dialCustomerPhone,
+  sendCustomerSms,
+  addCustomerWxFriend,
   mergeAccount,
   importAccount,
   importContact,
@@ -414,6 +419,8 @@ export const {
   getAccountPaymentStatistic,
   getAccountPaymentRecord,
   getAccountPaymentRecordStatistic,
+  getAccountCallRecord,
+  previewAccountCallRecordAudio,
   getCustomerInvoiceList,
   getCustomerOrderList,
   getCustomerInvoiceStatistic,
@@ -578,6 +585,8 @@ export const {
   switchThirdParty,
   updateAuthStatus,
   updateConfigEmail,
+  getPersonalDevice,
+  getPersonalWechat,
   getPersonalFollow,
   updatePersonalInfo,
   updateUserPassword,
@@ -741,6 +750,8 @@ export const { login, signout, isLogin, getKey, getThirdCallback, getThirdOauthC
 export const { getSystemVersion, changeLocaleBackEnd } = sysApi;
 
 export const { getLicense, addLicense } = licenseApi;
+
+export const { getWechatAccountStatPage } = contentAuditApi;
 
 export const {
   dashboardAdd,

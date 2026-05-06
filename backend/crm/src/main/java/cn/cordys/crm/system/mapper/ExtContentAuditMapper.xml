@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.cordys.crm.system.mapper.ExtContentAuditMapper">
+
+    <select id="listWechatAccountStat" resultType="cn.cordys.crm.system.dto.response.WechatAccountStatListResponse">
+        select dm.id,
+               dm.um,
+               su.name as employeeName,
+               sd.name as departmentName,
+               md.device_name as deviceName,
+               md.device_status as deviceStatus,
+               dm.wx_header_pic as wxHeaderPic,
+               dm.wx_nick_name as wxNickName,
+               dm.wx_account as wxAccount,
+               dm.last_sync_time as lastSyncTime,
+               dm.update_time as updateTime
+        from mmba_device_mapping dm
+        left join sys_user su
+               on su.um = dm.um
+        left join sys_organization_user sou
+               on sou.organization_id = #{orgId}
+              and sou.user_id = su.id
+        left join sys_department sd
+               on sd.id = sou.department_id
+        left join mmba_device md
+               on md.id = (
+                   select d1.id
+                   from mmba_device d1
+                   where d1.um = dm.um
+                   order by case when d1.device_status = 1 then 0 else 1 end,
+                            d1.update_time desc
+                   limit 1
+               )
+        where sou.id is not null
+        order by ifnull(dm.last_sync_time, dm.update_time) desc,
+                 dm.update_time desc
+    </select>
+</mapper>

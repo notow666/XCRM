@@ -1,0 +1,15 @@
+export default {
+  'contentAudit.channelTitle': '审计类型',
+  'contentAudit.channel.wechat': '微信',
+  'contentAudit.tab.accountStat': '帐号统计',
+  'contentAudit.tab.pendingFriend': '未通过好友',
+  'contentAudit.tab.verifyMessage': '验证消息',
+  'contentAudit.tab.loginLogout': '登入登出',
+  'contentAudit.placeholder': '功能开发中',
+  'contentAudit.accountStat.employee': '员工',
+  'contentAudit.accountStat.department': '部门',
+  'contentAudit.accountStat.device': '设备',
+  'contentAudit.accountStat.wechatAccount': '微信帐号',
+  'contentAudit.accountStat.friend': '好友',
+  'contentAudit.accountStat.chatRecord': '聊天记录',
+};

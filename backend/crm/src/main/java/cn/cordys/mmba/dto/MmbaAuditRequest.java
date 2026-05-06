@@ -14,6 +14,7 @@ import org.springframework.util.CollectionUtils;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -29,6 +30,10 @@ public class MmbaAuditRequest implements Serializable {
     private int behaviorType;
     private String tenancyName;
     private List<ZzyData> data;
+
+    public MmbaAuditRequest withSingleData(ZzyData singleData) {
+        return new MmbaAuditRequest(behaviorType, tenancyName, Collections.singletonList(singleData));
+    }
 
     public static MmbaAuditRequest generate(JsonNode json, Map<String, String> tenant) {
         MmbaAuditRequest mmbaAuditRequest = JSON.parseObject(JSON.toJSONString(json), MmbaAuditRequest.class);

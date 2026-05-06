@@ -2,54 +2,131 @@ package cn.cordys.mmba;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 /**
- * 本对接版本处理的 MMBA 审计/回执行为类型（与文档章节对应）。
+ * MMBA 回调 behaviorType 常量。
+ * 这里同时维护当前系统支持的类型，以及每个类型应该进入审计分组还是结果分组。
  */
 public final class MmbaBehaviorTypes {
 
     private MmbaBehaviorTypes() {
     }
 
-    // 此接口由用户的服务提供，用于接收客户端审计上报的电话接打记录（reqId不为空时，reqId可用于对应API拨打电话接口请求参数中的reqId)
+    /**
+     * 通话记录审计。
+     */
     public static final int CALL_RECORD_AUDIT = 10;
-    // 此接口由用户的服务提供，用于接收emm客户端审计上报的通话记录删除信息
+
+    /**
+     * 通话记录删除审计。
+     * 当前项目不单独实现业务处理，但保留常量便于后续扩展。
+     */
     public static final int CALL_RECORD_DELETE_AUDIT = 11;
-    //此接口由用户的服务提供，用于接收通过api拨打电话失败的结果（拨打成功的结果通过审计接口获取)
+
+    /**
+     * 拨打电话失败回执。
+     */
     public static final int DIAL_FAIL_RECEIPT = 13;
 
+    /**
+     * 短/彩信记录审计。
+     */
+    public static final int SMS_RECORD_AUDIT = 20;
 
-    //此接口由用户的服务提供，用于接收emm客户端审计上报的微信聊天记录
+    /**
+     * 短信发送失败回执。
+     */
+    public static final int SMS_FAIL_RECEIPT = 22;
+
+    /**
+     * 微信聊天审计。
+     */
     public static final int WX_CHAT_AUDIT = 30;
-    //此接口由用户的服务提供，用于接收通过api添加微信好友是否成功的结果
-    public static final int ADD_WECHAT_FRIEND = 50;
-    //此接口由用户的服务提供，用于接收emm客户端审计上报的微信好友变更记录
+
+    /**
+     * 发送微信消息回执。
+     */
+    public static final int WX_MESSAGE_RECEIPT = 31;
+
+    /**
+     * 添加微信好友回执。
+     */
+    public static final int ADD_WECHAT_FRIEND_RECEIPT = 50;
+
+    /**
+     * 微信好友变更审计。
+     */
     public static final int WX_FRIEND_CHANGE_AUDIT = 60;
-    //此接口由用户的服务提供，用于接收emm客户端审计上报的微信好友列表
+
+    /**
+     * 微信好友列表审计。
+     */
     public static final int WX_FRIEND_LIST_AUDIT = 61;
-    //此接口由用户的服务提供，用于接收emm客户端审计上报的当前设备登陆的微信账号信息
+
+    /**
+     * 发送朋友圈回执。
+     */
+    public static final int WX_MOMENT_RECEIPT = 81;
+
+    /**
+     * 修改好友备注/描述回执。
+     */
+    public static final int WX_REMARK_RECEIPT = 91;
+
+    /**
+     * 微信账号审计。
+     */
     public static final int WX_ACCOUNT_AUDIT = 100;
-    //微信/QQ客户端登录或登出时，产生上报的登录登出数据
+
+    /**
+     * 设备信息审计。
+     */
+    public static final int DEVICE_INFO_AUDIT = 120;
+
+    /**
+     * 设备状态变化审计。
+     */
+    public static final int DEVICE_STATUS_AUDIT = 121;
+
+    /**
+     * 微信登录登出审计。
+     */
     public static final int WX_LOGIN_LOGOUT_AUDIT = 200;
 
+    /**
+     * 当前系统已支持的 behaviorType -> 分组 映射。
+     */
     public static final Map<Integer, String> SUPPORTED = init();
 
+    /**
+     * 判断当前 behaviorType 是否已在系统中注册。
+     */
     public static boolean isSupported(int behaviorType) {
         return SUPPORTED.containsKey(behaviorType);
     }
 
+    /**
+     * 初始化回调类型分组。
+     * 审计类进入 audit consumer 处理链，结果类进入 command consumer 处理链。
+     */
     private static Map<Integer, String> init() {
-        Map<Integer, String> i = new HashMap<>(11);
-        i.put(CALL_RECORD_AUDIT, "GROUP_BY_AUDIT");
-        i.put(CALL_RECORD_DELETE_AUDIT, "GROUP_BY_AUDIT");
-        i.put(DIAL_FAIL_RECEIPT, "GROUP_BY_COMMAND");
-        i.put(ADD_WECHAT_FRIEND, "GROUP_BY_COMMAND");
-        i.put(WX_CHAT_AUDIT, "GROUP_BY_AUDIT");
-        i.put(WX_FRIEND_CHANGE_AUDIT, "GROUP_BY_AUDIT");
-        i.put(WX_FRIEND_LIST_AUDIT, "GROUP_BY_AUDIT");
-        i.put(WX_ACCOUNT_AUDIT, "GROUP_BY_AUDIT");
-        i.put(WX_LOGIN_LOGOUT_AUDIT, "GROUP_BY_AUDIT");
-        return i;
+        Map<Integer, String> groups = new HashMap<>(16);
+        groups.put(CALL_RECORD_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
+        groups.put(CALL_RECORD_DELETE_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
+        groups.put(DIAL_FAIL_RECEIPT, MmbaConstants.GROUP_BY_COMMAND);
+        groups.put(SMS_RECORD_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
+        groups.put(SMS_FAIL_RECEIPT, MmbaConstants.GROUP_BY_COMMAND);
+        groups.put(WX_CHAT_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
+        groups.put(WX_MESSAGE_RECEIPT, MmbaConstants.GROUP_BY_COMMAND);
+        groups.put(ADD_WECHAT_FRIEND_RECEIPT, MmbaConstants.GROUP_BY_COMMAND);
+        groups.put(WX_FRIEND_CHANGE_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
+        groups.put(WX_FRIEND_LIST_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
+        groups.put(WX_MOMENT_RECEIPT, MmbaConstants.GROUP_BY_COMMAND);
+        groups.put(WX_REMARK_RECEIPT, MmbaConstants.GROUP_BY_COMMAND);
+        groups.put(WX_ACCOUNT_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
+        groups.put(DEVICE_INFO_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
+        groups.put(DEVICE_STATUS_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
+        groups.put(WX_LOGIN_LOGOUT_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
+        return groups;
     }
 }

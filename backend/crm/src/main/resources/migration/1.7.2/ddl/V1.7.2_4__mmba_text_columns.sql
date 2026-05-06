@@ -1,0 +1,1 @@
+-- no-op: mmba init SQL already contains the final text-column definitions for new environments.

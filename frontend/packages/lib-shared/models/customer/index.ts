@@ -395,6 +395,22 @@ export interface CustomerInvoiceStatistic {
   invoicedAmount: number;
 }
 
+export interface CustomerCallRecordTableParams extends TableQueryParams {
+  sourceId: string;
+}
+
+export interface CustomerCallRecordListItem {
+  id: string;
+  customerId: string;
+  employeeName: string;
+  beginTime: string;
+  endTime: string;
+  isConnected: number | null;
+  duration: number | null;
+  mediaFileId?: string;
+  mediaFileName?: string;
+}
+
 export interface CustomerInvoiceItem {
   id: string;
   createUser: string;

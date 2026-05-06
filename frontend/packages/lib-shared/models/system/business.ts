@@ -162,6 +162,20 @@ export interface SendEmailDTO {
   email: string;
 }
 
+export interface PersonalWechatItem {
+  wxNickName: string;
+  wxId: string;
+  wxAccount: string;
+  wxPhone: string;
+  mappingStatus: string;
+  updateTime: number | null;
+}
+
+export interface PersonalWechatResponse {
+  bound: boolean;
+  wechats: PersonalWechatItem[];
+}
+
 export interface RepeatClueParams extends TableQueryParams {
   name: string;
   id?: string;

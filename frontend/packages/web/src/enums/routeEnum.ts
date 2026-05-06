@@ -7,6 +7,7 @@ export enum SystemRouteEnum {
   SYSTEM_LICENSE = 'systemLicense',
   SYSTEM_LOG = 'systemLog',
   SYSTEM_MESSAGE = 'systemMessage',
+  SYSTEM_CONTENT_AUDIT = 'systemContentAudit',
 }
 
 export enum OpportunityRouteEnum {

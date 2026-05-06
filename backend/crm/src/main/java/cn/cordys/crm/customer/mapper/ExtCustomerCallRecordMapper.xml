@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.cordys.crm.customer.mapper.ExtCustomerCallRecordMapper">
+
+    <select id="list" resultType="cn.cordys.crm.customer.dto.response.CustomerCallRecordListResponse">
+        select cra.es_id as id,
+               cra.customer_id as customerId,
+               su.name as employeeName,
+               cra.begin_time as beginTime,
+               cra.end_time as endTime,
+               cra.is_connected as isConnected,
+               cra.duration,
+               mf.id as mediaFileId,
+               mf.file_name as mediaFileName
+        from mmba_call_record_audit cra
+        left join sys_user su on su.um = cra.um
+        left join mmba_media_file mf on mf.id = (
+            select m1.id
+            from mmba_media_file m1
+            where m1.audit_record_id = cra.es_id
+              and m1.behavior_type = 10
+              and m1.download_status = 'SUCCESS'
+            order by m1.update_time desc
+            limit 1
+        )
+        where cra.customer_id = #{request.sourceId}
+        order by cra.begin_timestamp desc, cra.timestamp desc, cra.es_id desc
+    </select>
+</mapper>

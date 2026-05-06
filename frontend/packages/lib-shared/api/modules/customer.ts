@@ -103,6 +103,9 @@ import {
   IsCustomerOpenSeaNoPickUrl,
   MergeAccountPageUrl,
   MergeAccountUrl,
+  MmbaPhoneDialUrl,
+  MmbaSmsSendUrl,
+  MmbaWxFriendAddUrl,
   MoveToCustomerUrl,
   PickOpenSeaCustomerUrl,
   PoolAccountBatchUpdateUrl,
@@ -124,10 +127,12 @@ import {
   UpdateCustomerViewUrl,
   GetAccountContractListUrl,
   GetAccountContractStatisticUrl,
+  GetAccountCallRecordListUrl,
   GetAccountPaymentListUrl,
   GetAccountPaymentStatisticUrl,
   GetAccountPaymentRecordStatisticUrl,
   GetAccountPaymentRecordListUrl,
+  PreviewAccountCallRecordAudioUrl,
   GetAccountInvoiceListUrl,
   GetAccountInvoiceStatisticUrl,
   GetAccountOrderListUrl,
@@ -163,10 +168,6 @@ import type {
   TableQueryParams,
 } from '@lib/shared/models/common';
 import type {
-  CustomerStageConfig,
-  UpdateCustomerStageParams,
-} from '@lib/shared/models/customer';
-import type {
   AddCustomerCollaborationParams,
   AddCustomerRelationItemParams,
   AssignOpenSeaCustomerParams,
@@ -175,6 +176,8 @@ import type {
   BatchOperationOpenSeaCustomerParams,
   BatchUpdatePoolAccountParams,
   CollaborationItem,
+  CustomerCallRecordListItem,
+  CustomerCallRecordTableParams,
   CustomerContractListItem,
   CustomerContractTableParams,
   CustomerDetail,
@@ -189,6 +192,7 @@ import type {
   CustomerOpenSeaListItem,
   CustomerOpportunityTableParams,
   CustomerOptionsItem,
+  CustomerStageConfig,
   CustomerTabHidden,
   CustomerTableParams,
   FollowDetailItem,
@@ -197,6 +201,7 @@ import type {
   OpenSeaCustomerTableParams,
   PickOpenSeaCustomerParams,
   PoolTableExportParams,
+  PoolCustomerImportCheckResponse,
   RelationItem,
   RelationListItem,
   SaveCustomerContractParams,
@@ -212,12 +217,12 @@ import type {
   UpdateCustomerOpenSeaParams,
   UpdateCustomerParams,
   UpdateCustomerRelationItemParams,
+  UpdateCustomerStageParams,
   UpdateFollowPlanStatusParams,
 } from '@lib/shared/models/customer';
 import type { OrderItem } from '@lib/shared/models/order';
 import type { CluePoolItem, FormDesignConfigDetailParams, OpportunityItem } from '@lib/shared/models/system/module';
-import { ValidateInfo } from '@lib/shared/models/system/org';
-import type { PoolCustomerImportCheckResponse } from '@lib/shared/models/customer';
+import type { ValidateInfo } from '@lib/shared/models/system/org';
 import type { ViewItem, ViewParams } from '@lib/shared/models/view';
 import type { ContractItem, PaymentPlanItem, PaymentRecordItem } from '@lib/shared/models/contract';
 
@@ -345,6 +350,25 @@ export default function useProductApi(CDR: CordysAxios) {
   // 获取客户列表
   function getCustomerList(data: CustomerTableParams) {
     return CDR.post<CommonList<CustomerListItem>>({ url: GetCustomerListUrl, data });
+  }
+
+  function dialCustomerPhone(data: { toPhone: string; cardSlotNum: number; bizExtInfo: { customerId: string } }) {
+    return CDR.post({ url: MmbaPhoneDialUrl, data });
+  }
+
+  function sendCustomerSms(data: { cardSlotNum: number; toPhone: string; msg: string; bizExtInfo: { customerId: string } }) {
+    return CDR.post({ url: MmbaSmsSendUrl, data });
+  }
+
+  function addCustomerWxFriend(data: {
+    vinfo: string;
+    friendPhone: string;
+    friendSearch: string;
+    umPhone: string;
+    umWxid: string;
+    bizExtInfo: { customerId: string };
+  }) {
+    return CDR.post({ url: MmbaWxFriendAddUrl, data });
   }
 
   // 获取客户表单配置
@@ -1001,10 +1025,27 @@ export default function useProductApi(CDR: CordysAxios) {
     return CDR.get({ url: `${GetAccountPaymentRecordStatisticUrl}/${id}` });
   }
 
+  function getAccountCallRecord(data: CustomerCallRecordTableParams) {
+    return CDR.post<CommonList<CustomerCallRecordListItem>>({ url: GetAccountCallRecordListUrl, data });
+  }
+
+  function previewAccountCallRecordAudio(mediaFileId: string) {
+    return CDR.get(
+      {
+        url: `${PreviewAccountCallRecordAudioUrl}/${mediaFileId}`,
+        responseType: 'blob',
+      },
+      { isTransformResponse: false, isReturnNativeResponse: true }
+    );
+  }
+
   return {
     addCustomer,
     updateCustomer,
     getCustomerList,
+    dialCustomerPhone,
+    sendCustomerSms,
+    addCustomerWxFriend,
     getCustomerContactTab,
     getCustomerFormConfig,
     getCustomer,
@@ -1126,6 +1167,8 @@ export default function useProductApi(CDR: CordysAxios) {
     getAccountPaymentStatistic,
     getAccountPaymentRecord,
     getAccountPaymentRecordStatistic,
+    getAccountCallRecord,
+    previewAccountCallRecordAudio,
     getCustomerInvoiceList,
     getCustomerOrderList,
     getCustomerInvoiceStatistic,

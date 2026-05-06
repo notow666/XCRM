@@ -34,6 +34,9 @@ export default function useTableStore() {
   function columnsTransform(columns: CrmDataTableColumn[], tableKey: TableKeyEnum) {
     const hiddenColumnKeys = DEFAULT_HIDDEN_COLUMN_KEYS[tableKey] || [];
     columns.forEach((item) => {
+      if (item.columnSelectorDisabled === true) {
+        item.showInTable = true;
+      }
       if (item.showInTable === undefined) {
         item.showInTable = !hiddenColumnKeys.includes(String(item.key));
       }
@@ -92,7 +95,7 @@ export default function useTableStore() {
       if (!tableColumnsMap) {
         // 如果没有在indexDB里初始化
         column = columnsTransform(column, tableKey);
-        setTableColumnsMap(tableKey, {
+        await setTableColumnsMap(tableKey, {
           column,
           columnBackup: cloneDeep(column),
         });
@@ -119,13 +122,13 @@ export default function useTableStore() {
               return {
                 ...e,
                 width,
-                showInTable: sameItem.showInTable,
+                showInTable: e.columnSelectorDisabled === true ? true : sameItem.showInTable,
                 fixed: sameItem.fixed || e.fixed,
               };
             }
             return e;
           });
-          setTableColumnsMap(tableKey, {
+          await setTableColumnsMap(tableKey, {
             ...tableColumnsMap,
             column: newColumns,
             columnBackup: cloneDeep(column),

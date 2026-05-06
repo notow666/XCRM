@@ -21,6 +21,8 @@ import cn.cordys.crm.customer.domain.Customer;
 import cn.cordys.crm.customer.dto.request.*;
 import cn.cordys.crm.customer.dto.response.CustomerGetResponse;
 import cn.cordys.crm.customer.dto.response.CustomerListResponse;
+import cn.cordys.crm.customer.dto.response.CustomerCallRecordListResponse;
+import cn.cordys.crm.customer.service.CustomerCallRecordService;
 import cn.cordys.crm.customer.service.CustomerExportService;
 import cn.cordys.crm.customer.service.CustomerService;
 import cn.cordys.crm.opportunity.dto.response.OpportunityListResponse;
@@ -43,6 +45,7 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.http.ResponseEntity;
 import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -82,6 +85,8 @@ public class CustomerController {
     private ContractInvoiceService contractInvoiceService;
     @Resource
     private OrderService orderService;
+    @Resource
+    private CustomerCallRecordService customerCallRecordService;
 
     @GetMapping("/module/form")
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_READ, PermissionConstants.CUSTOMER_MANAGEMENT_POOL_READ}, logical = Logical.OR)
@@ -332,6 +337,20 @@ public class CustomerController {
 				OrganizationContext.getOrganizationId(), PermissionConstants.CONTRACT_PAYMENT_RECORD_READ);
 		return contractPaymentRecordService.sumCustomerPaymentAmount(accountId, SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), deptDataPermission);
 	}
+
+    @PostMapping("/call-record/page")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_READ)
+    @Operation(summary = "客户详情-通话记录列表")
+    public Pager<List<CustomerCallRecordListResponse>> callRecordList(@Validated @RequestBody CustomerCallRecordPageRequest request) {
+        return customerCallRecordService.list(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
+    @GetMapping("/call-record/audio/{mediaFileId}")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_READ)
+    @Operation(summary = "客户详情-通话录音预览")
+    public ResponseEntity<org.springframework.core.io.Resource> previewCallRecordAudio(@PathVariable("mediaFileId") String mediaFileId) {
+        return customerCallRecordService.previewAudio(mediaFileId, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
 
     @PostMapping("/invoice/page")
     @RequiresPermissions({PermissionConstants.CUSTOMER_MANAGEMENT_READ, PermissionConstants.CONTRACT_INVOICE_READ})

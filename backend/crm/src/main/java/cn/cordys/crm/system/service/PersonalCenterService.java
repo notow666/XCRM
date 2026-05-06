@@ -26,17 +26,29 @@ import cn.cordys.crm.system.domain.User;
 import cn.cordys.crm.system.dto.request.PersonalInfoRequest;
 import cn.cordys.crm.system.dto.request.PersonalPasswordRequest;
 import cn.cordys.crm.system.dto.request.SendEmailDTO;
+import cn.cordys.crm.system.dto.response.PersonalDeviceItemResponse;
+import cn.cordys.crm.system.dto.response.PersonalDeviceResponse;
+import cn.cordys.crm.system.dto.response.PersonalWechatItemResponse;
+import cn.cordys.crm.system.dto.response.PersonalWechatResponse;
 import cn.cordys.crm.system.dto.response.UserResponse;
 import cn.cordys.crm.system.mapper.ExtOrganizationUserMapper;
 import cn.cordys.crm.system.mapper.ExtUserMapper;
 import cn.cordys.crm.system.mapper.ExtUserRoleMapper;
 import cn.cordys.crm.system.utils.MailSender;
+import cn.cordys.mmba.domain.MmbaDevice;
+import cn.cordys.mmba.domain.MmbaDeviceMapping;
+import cn.cordys.mmba.service.MmbaDeviceService;
+import cn.cordys.mmba.service.MmbaFacadeService;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -70,6 +82,10 @@ public class PersonalCenterService {
     private BaseMapper<Module> moduleMapper;
     @Resource
     private ExtOrganizationUserMapper extOrganizationUserMapper;
+    @Resource
+    private MmbaDeviceService mmbaDeviceService;
+    @Resource
+    private MmbaFacadeService mmbaFacadeService;
 
     private String tenantRedisKey(String rawKey) {
         return TenantRedisKeyBuilder.tenantKey(rawKey);
@@ -81,6 +97,36 @@ public class PersonalCenterService {
         }
         String orgUserIdByUserId = extOrganizationUserMapper.getOrgUserIdByUserId(orgId, id);
         return organizationUserService.getUserDetail(orgUserIdByUserId);
+    }
+
+    public PersonalDeviceResponse getPersonalDeviceList(String userId, String organizationId) {
+        User user = userBaseMapper.selectByPrimaryKey(userId);
+        String um = user == null ? null : StringUtils.trimToNull(user.getUm());
+        if (StringUtils.isBlank(um)) {
+            return buildPersonalDeviceResponse(List.of(), false);
+        }
+        List<MmbaDevice> devices = mmbaDeviceService.listByUm(um);
+        if (CollectionUtils.isNotEmpty(devices)) {
+            return buildPersonalDeviceResponse(devices, true);
+        }
+        mmbaFacadeService.queryDeviceList(buildPersonalDeviceQuery(um), userId, organizationId);
+        devices = mmbaDeviceService.listByUm(um);
+        return buildPersonalDeviceResponse(devices, CollectionUtils.isNotEmpty(devices));
+    }
+
+    public PersonalWechatResponse getPersonalWechatList(String userId, String organizationId) {
+        User user = userBaseMapper.selectByPrimaryKey(userId);
+        String um = user == null ? null : StringUtils.trimToNull(user.getUm());
+        if (StringUtils.isBlank(um)) {
+            return buildPersonalWechatResponse(List.of(), false);
+        }
+        List<MmbaDeviceMapping> mappings = mmbaDeviceService.listMappingsByUm(um);
+        if (CollectionUtils.isNotEmpty(mappings)) {
+            return buildPersonalWechatResponse(mappings, true);
+        }
+        mmbaFacadeService.queryLoginWxAccount(buildPersonalWechatQuery(um), userId, organizationId);
+        mappings = mmbaDeviceService.listMappingsByUm(um);
+        return buildPersonalWechatResponse(mappings, CollectionUtils.isNotEmpty(mappings));
     }
 
     /**
@@ -267,6 +313,67 @@ public class PersonalCenterService {
         }
 
         return resourceTypes;
+    }
+
+    private ObjectNode buildPersonalDeviceQuery(String um) {
+        ObjectNode request = JsonNodeFactory.instance.objectNode();
+        ArrayNode ums = request.putArray("ums");
+        ums.add(um);
+        return request;
+    }
+
+    private ObjectNode buildPersonalWechatQuery(String um) {
+        ObjectNode request = JsonNodeFactory.instance.objectNode();
+        request.put("um", um);
+        return request;
+    }
+
+    private PersonalDeviceResponse buildPersonalDeviceResponse(List<MmbaDevice> devices, boolean bound) {
+        PersonalDeviceResponse response = new PersonalDeviceResponse();
+        response.setBound(bound);
+        if (CollectionUtils.isEmpty(devices)) {
+            return response;
+        }
+        List<PersonalDeviceItemResponse> items = new ArrayList<>();
+        for (MmbaDevice device : devices) {
+            PersonalDeviceItemResponse item = new PersonalDeviceItemResponse();
+            item.setDeviceId(device.getDeviceId());
+            item.setDeviceName(device.getDeviceName());
+            item.setDeviceType(device.getDeviceType());
+            item.setPhone1(device.getPhone());
+            item.setPhone2(device.getPhone2());
+            item.setTelecomOperators1(device.getTelecomOperators());
+            item.setTelecomOperators2(device.getTelecomOperators2());
+            item.setImei1(device.getImei());
+            item.setImei2(device.getImei2());
+            item.setIccid1(device.getIccid());
+            item.setIccid2(device.getIccid2());
+            item.setUpdateTime(device.getUpdateTime());
+            items.add(item);
+        }
+        response.setDevices(items);
+        return response;
+    }
+
+    private PersonalWechatResponse buildPersonalWechatResponse(List<MmbaDeviceMapping> mappings, boolean bound) {
+        PersonalWechatResponse response = new PersonalWechatResponse();
+        response.setBound(bound);
+        if (CollectionUtils.isEmpty(mappings)) {
+            return response;
+        }
+        List<PersonalWechatItemResponse> items = new ArrayList<>();
+        for (MmbaDeviceMapping mapping : mappings) {
+            PersonalWechatItemResponse item = new PersonalWechatItemResponse();
+            item.setWxNickName(mapping.getWxNickName());
+            item.setWxId(mapping.getWxid());
+            item.setWxAccount(mapping.getWxAccount());
+            item.setWxPhone(mapping.getWxPhone());
+            item.setMappingStatus(mapping.getMappingStatus());
+            item.setUpdateTime(mapping.getLastSyncTime() == null ? mapping.getUpdateTime() : mapping.getLastSyncTime());
+            items.add(item);
+        }
+        response.setWechats(items);
+        return response;
     }
 
 

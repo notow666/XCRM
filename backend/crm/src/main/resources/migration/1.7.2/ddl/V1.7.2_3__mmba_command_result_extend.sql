@@ -1,0 +1,1 @@
+-- no-op: mmba init SQL already contains the final command-result structure for new environments.

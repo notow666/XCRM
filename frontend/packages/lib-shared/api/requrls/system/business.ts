@@ -26,6 +26,8 @@ export const GetPersonalUrl = '/personal/center/info';
 export const UpdatePersonalUrl = '/personal/center/update';
 export const SendEmailCodeUrl = '/personal/center/mail/code/send';
 export const UpdateUserPasswordUrl = '/personal/center/info/reset';
+export const GetPersonalDeviceUrl = '/personal/center/device/list';
+export const GetPersonalWechatUrl = '/personal/center/wechat/list';
 export const GetPersonalFollowUrl = '/personal/center/follow/plan/list'; // 用户跟进计划列表
 
 // 个人中心导出

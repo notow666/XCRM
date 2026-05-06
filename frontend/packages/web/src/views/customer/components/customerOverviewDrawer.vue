@@ -121,6 +121,7 @@
           :form-key="FormDesignKeyEnum.CONTRACT_PAYMENT_RECORD"
           :source-id="props.sourceId"
         />
+        <CustomerCallRecordTable v-else-if="activeTab === 'callRecord'" :source-id="props.sourceId" />
         <ContractTimeline
           v-else-if="activeTab === 'invoice'"
           :form-key="FormDesignKeyEnum.INVOICE"
@@ -175,6 +176,7 @@
   import TransferForm from '@/components/business/crm-transfer-modal/transferForm.vue';
   import CrmWorkflowCard from '@/components/business/crm-workflow-card/index.vue';
   import collaborator from './collaborator.vue';
+  import CustomerCallRecordTable from './customerCallRecordTable.vue';
   import customerRelation from './customerRelation.vue';
   import ContractTimeline from '@/views/contract/contract/components/contractTimeline.vue';
   import ContractDetailDrawer from '@/views/contract/contract/components/detail.vue';
@@ -362,6 +364,12 @@
         tab: t('module.paymentRecord'),
         enable: true,
         permission: ['CONTRACT_PAYMENT_RECORD:READ'],
+      },
+      {
+        name: 'callRecord',
+        tab: t('customer.callRecord'),
+        enable: true,
+        permission: ['CUSTOMER_MANAGEMENT:READ'],
       },
       // {
       //   name: 'invoice',

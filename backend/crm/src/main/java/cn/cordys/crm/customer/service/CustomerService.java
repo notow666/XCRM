@@ -69,6 +69,8 @@ import cn.cordys.crm.system.excel.listener.CustomFieldImportEventListener;
 import cn.cordys.crm.system.notice.CommonNoticeSendService;
 import cn.cordys.crm.system.service.*;
 import cn.cordys.excel.utils.EasyExcelExporter;
+import cn.cordys.mmba.dto.CustomerCallStatusDTO;
+import cn.cordys.mmba.mapper.ExtMmbaAuditMapper;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
 import cn.idev.excel.FastExcelFactory;
@@ -175,6 +177,8 @@ public class CustomerService {
     private CustomerFailReasonService customerFailReasonService;
     @Resource
     private GlobalPhoneMaskConfigService globalPhoneMaskConfigService;
+    @Resource
+    private ExtMmbaAuditMapper extMmbaAuditMapper;
 
     public PagerWithOption<List<CustomerListResponse>> list(CustomerPageRequest request, String userId, String orgId, DeptDataPermissionDTO deptDataPermission) {
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
@@ -235,6 +239,7 @@ public class CustomerService {
         boolean phoneMaskEnabled = applyGlobalPhoneMask && globalPhoneMaskConfigService.isEnabled(orgId);
         List<String> customerIds = list.stream().map(CustomerListResponse::getId)
                 .collect(Collectors.toList());
+        Map<String, Integer> customerCallStatusMap = buildCustomerCallStatusMap(list, orgId);
 
         Map<String, List<BaseModuleFieldValue>> caseCustomFiledMap = customerFieldService.getResourceFieldMap(customerIds, true);
 
@@ -282,6 +287,8 @@ public class CustomerService {
         Map<String, String> dictMap = dictList.stream().collect(Collectors.toMap(Dict::getId, Dict::getName));
 
         list.forEach(customerListResponse -> {
+            String mobile = customerListResponse.getMobile();
+            customerListResponse.setCallStatus(customerCallStatusMap.getOrDefault(mobile, 0));
             // 获取自定义字段
             List<BaseModuleFieldValue> customerFields = caseCustomFiledMap.get(customerListResponse.getId());
             customerListResponse.setModuleFields(customerFields);
@@ -318,6 +325,24 @@ public class CustomerService {
         });
 
         return list;
+    }
+
+    private Map<String, Integer> buildCustomerCallStatusMap(List<CustomerListResponse> list, String orgId) {
+        List<String> mobiles = list.stream()
+                .map(CustomerListResponse::getMobile)
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .toList();
+        if (CollectionUtils.isEmpty(mobiles)) {
+            return Map.of();
+        }
+        List<CustomerCallStatusDTO> callStatuses = extMmbaAuditMapper.listCustomerCallStatus(mobiles, orgId);
+        if (CollectionUtils.isEmpty(callStatuses)) {
+            return Map.of();
+        }
+        return callStatuses.stream()
+                .filter(item -> StringUtils.isNotBlank(item.getCustomerTel()) && item.getCallStatus() != null)
+                .collect(Collectors.toMap(CustomerCallStatusDTO::getCustomerTel, CustomerCallStatusDTO::getCallStatus, Integer::max));
     }
 
     public CustomerGetResponse getWithDataPermissionCheck(String id, String userId, String orgId) {
@@ -976,11 +1001,11 @@ public class CustomerService {
         List<List<String>> headList = moduleFormService.getCustomImportHeadsNoRef(FormKey.CUSTOMER.getKey(), currentOrg);
         List<BaseField> allFields = moduleFormService.getAllCustomImportFields(FormKey.CUSTOMER.getKey(), currentOrg);
         List<BaseField> filteredFields = filterOwnerField(allFields);
-        
+
         List<List<String>> filteredHeadList = headList.stream()
                 .filter(head -> !OWNER_FIELD_KEY.equals(getFieldInternalKeyByName(head.get(0), allFields)))
                 .collect(Collectors.toList());
-        
+
         new EasyExcelExporter()
                 .exportMultiSheetTplWithSharedHandler(response, filteredHeadList,
                         Translator.get("customer.import_tpl.name"), Translator.get(SheetKey.DATA), Translator.get(SheetKey.COMMENT),

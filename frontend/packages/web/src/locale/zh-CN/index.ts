@@ -42,6 +42,7 @@ export default {
     'menu.settings.license': 'License',
     'menu.settings.messageSetting': '消息设置',
     'menu.settings.log': '系统日志',
+    'menu.settings.contentAudit': '内容审计',
     'navbar.action.locale': '切换为中文',
     ...sys,
     ...localeSettings,

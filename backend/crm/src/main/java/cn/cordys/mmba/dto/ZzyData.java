@@ -336,6 +336,14 @@ public class ZzyData implements Serializable {
      */
     private String deviceName;
     /**
+     * 设备型号
+     */
+    private String deviceType;
+    /**
+     * 设备状态变化状态
+     */
+    private String deviceStatus;
+    /**
      * 应用包名
      */
     private String appPkgName;
@@ -381,6 +389,22 @@ public class ZzyData implements Serializable {
      * 微信聊天记录音视频、图片url
      */
     private String fileUrl;
+    /**
+     * 文件标识
+     */
+    private String fileIdentifier;
+    /**
+     * 真实文件名
+     */
+    private String fileName;
+    /**
+     * 消息ID
+     */
+    private String msgId;
+    /**
+     * 引用ID
+     */
+    private String quoteId;
 
     /**
      * 电话拨打时间，不是拨通时间
@@ -399,6 +423,14 @@ public class ZzyData implements Serializable {
      */
     private String endTimestamp;
     /**
+     * 电话接通时间
+     */
+    private String answerTime;
+    /**
+     * 电话接通时间戳
+     */
+    private String answerTimestamp;
+    /**
      * 通话时长（秒）
      */
     private String duration;
@@ -406,6 +438,18 @@ public class ZzyData implements Serializable {
      * 通话录音文件
      */
     private String record;
+    /**
+     * 通话状态
+     */
+    private String callStatus;
+    /**
+     * 联系人号码归属地
+     */
+    private String phoneLocation;
+    /**
+     * 振铃时长
+     */
+    private String ringDuration;
 
     /**
      * 运营商：0，未知；1，中国移动；2，中国联通；3，中国电信；4，Telekomsel
@@ -429,4 +473,9 @@ public class ZzyData implements Serializable {
      * 该通通话为重试上报，由客户端发起。
      */
     private String isRetry;
+
+    /**
+     * 设备信息变更时间/状态变化时间
+     */
+    private String changeTime;
 }

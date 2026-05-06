@@ -159,15 +159,26 @@
     @refresh="() => (tableRefreshId += 1)"
   />
   <mergeAccountModal v-model:show="showMergeModal" :selected-rows="selectedRows" @saved="() => (tableRefreshId += 1)" />
+  <customerSmsModal
+    v-model:show="showReachModal"
+    :mode="reachModal.mode"
+    :source-id="reachModal.sourceId"
+    :name="reachModal.name"
+    :mobile="reachModal.mobile"
+    :wechat-options="activeWechatOptions"
+    @submit="handleReachModalSubmit"
+  />
 </template>
 
 <script setup lang="ts">
   import { useRoute } from 'vue-router';
-  import { DataTableRowKey, NButton, useMessage } from 'naive-ui';
+  import { DataTableRowKey, NButton, NDropdown, NIcon, useMessage } from 'naive-ui';
+  import { LogoWechat } from '@vicons/ionicons5';
 
   import { CustomerSearchTypeEnum } from '@lib/shared/enums/customerEnum';
   import { FieldTypeEnum, FormDesignKeyEnum, FormLinkScenarioEnum } from '@lib/shared/enums/formDesignEnum';
   import { ReasonTypeEnum } from '@lib/shared/enums/moduleEnum';
+  import { SpecialColumnEnum } from '@lib/shared/enums/tableEnum';
   import { useI18n } from '@lib/shared/hooks/useI18n';
   import useLocale from '@lib/shared/locale/useLocale';
   import { characterLimit } from '@lib/shared/method';
@@ -191,15 +202,20 @@
   import CrmTransferCustomerModal from '@/components/business/crm-transfer-customer-modal/index.vue';
   import CrmViewSelect from '@/components/business/crm-view-select/index.vue';
   import customerOverviewDrawer from './customerOverviewDrawer.vue';
+  import customerSmsModal from './customerSmsModal.vue';
   import mergeAccountModal from './mergeAccountModal.vue';
 
   import {
+    addCustomerWxFriend,
     batchDeleteCustomer,
     batchDeleteCustomerByCondition,
     batchTransferCustomer,
     deleteCustomer,
+    dialCustomerPhone,
     getCustomerNextStage,
     getCustomerStageConfig,
+    getPersonalWechat,
+    sendCustomerSms,
   } from '@/api/modules';
   import { baseFilterConfigList } from '@/config/clue';
   import useFormCreateApi from '@/hooks/useFormCreateApi';
@@ -218,6 +234,27 @@
   const { t } = useI18n();
   const route = useRoute();
   const { currentLocale } = useLocale(Message.loading);
+  const dialCardSlotOptions = [
+    { label: '卡槽1', key: 1 },
+    { label: '卡槽2', key: 2 },
+  ];
+  type ReachModalMode = 'sms' | 'wxFriend';
+  interface ActiveWechatOption {
+    label: string;
+    value: string;
+    wxId: string;
+    wxPhone: string;
+  }
+  const callStatusColorMap: Record<number, string> = {
+    0: '#f0a020',
+    1: '#d03050',
+    2: '#18a058',
+  };
+  const callStatusTitleMap: Record<number, string> = {
+    0: '无拨打记录',
+    1: '未接通',
+    2: '已接通',
+  };
 
   const props = defineProps<{
     formKey: FormDesignKeyEnum.CUSTOMER | FormDesignKeyEnum.SEARCH_ADVANCED_CUSTOMER;
@@ -604,19 +641,53 @@
         },
     specialRender: {
       name: (row: any) => {
-        return props.isLimitShowDetail && row.hasPermission === false
-          ? h(CrmNameTooltip, { text: row.name })
-          : h(
-              CrmTableButton,
+        const callStatus = Number.isInteger(row.callStatus) ? row.callStatus : 0;
+        const nameNode =
+          props.isLimitShowDetail && row.hasPermission === false
+            ? h(CrmNameTooltip, { text: row.name })
+            : h(
+                CrmTableButton,
+                {
+                  onClick: () => {
+                    activeFormKey.value = FormDesignKeyEnum.CUSTOMER;
+                    activeSourceId.value = row.id;
+                    showOverviewDrawer.value = true;
+                  },
+                },
+                { trigger: () => row.name, default: () => row.name }
+              );
+        return h(
+          'div',
+          {
+            style: {
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              maxWidth: '100%',
+            },
+          },
+          [
+            nameNode,
+            h(
+              'span',
               {
-                onClick: () => {
-                  activeFormKey.value = FormDesignKeyEnum.CUSTOMER;
-                  activeSourceId.value = row.id;
-                  showOverviewDrawer.value = true;
+                title: callStatusTitleMap[callStatus] || callStatusTitleMap[0],
+                style: {
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  flexShrink: 0,
                 },
               },
-              { trigger: () => row.name, default: () => row.name }
-            );
+              [
+                h(CrmIcon, {
+                  type: 'iconicon_call',
+                  size: 14,
+                  color: callStatusColorMap[callStatus] || callStatusColorMap[0],
+                }),
+              ]
+            ),
+          ]
+        );
       },
       opportunityCount: (row: any) => {
         return !row.opportunityCount
@@ -684,18 +755,303 @@
     customerStage: stageConfig.value?.stageConfigList || [],
   });
   const { propsRes, propsEvent, tableQueryParams, loadList, setLoadListParams, setAdvanceFilter } = useTableRes;
+
+  async function handleDialCustomer(row: any, cardSlotNum: number) {
+    await dialCustomerPhone({
+      toPhone: row.mobile,
+      cardSlotNum,
+      bizExtInfo: {
+        customerId: row.id,
+      },
+    });
+    Message.success('正在拨打中,请稍等');
+  }
+
+  const showReachModal = ref(false);
+  const reachModal = ref<{
+    mode: ReachModalMode;
+    sourceId: string;
+    name: string;
+    mobile: string;
+    cardSlotNum: number;
+  }>({
+    mode: 'sms',
+    sourceId: '',
+    name: '',
+    mobile: '',
+    cardSlotNum: 1,
+  });
+  const activeWechatOptions = ref<ActiveWechatOption[]>([]);
+
+  function openReachModal(row: any, mode: ReachModalMode, cardSlotNum = 1) {
+    reachModal.value = {
+      mode,
+      sourceId: row.id,
+      name: row.name || '',
+      mobile: row.mobile,
+      cardSlotNum,
+    };
+    showReachModal.value = true;
+  }
+
+  function handleSmsCustomer(row: any, cardSlotNum: number) {
+    if (!row.mobile) {
+      Message.warning(t('customer.reach.phoneMissing'));
+      return;
+    }
+    openReachModal(row, 'sms', cardSlotNum);
+  }
+
+  function handleWechatCustomer() {
+    Message.info(t('customer.reach.wechatPending'));
+  }
+
+  async function ensureActiveWechatOptions() {
+    const response = await getPersonalWechat();
+    activeWechatOptions.value = (response.wechats || [])
+      .filter((item) => item.mappingStatus === 'ACTIVE' && item.wxId && item.wxPhone)
+      .map((item) => ({
+        label: item.wxNickName || item.wxAccount || item.wxId,
+        value: item.wxId,
+        wxId: item.wxId,
+        wxPhone: item.wxPhone,
+      }));
+  }
+
+  async function handleWechatFriendCustomer(row: any) {
+    if (!row.mobile) {
+      Message.warning(t('customer.reach.addWechatPhoneMissing'));
+      return;
+    }
+    const loadingMessage = Message.loading(t('customer.reach.wechatLoading'), { duration: 0 });
+    try {
+      await ensureActiveWechatOptions();
+      if (!activeWechatOptions.value.length) {
+        Message.warning(t('customer.reach.noActiveWechat'));
+        return;
+      }
+      openReachModal(row, 'wxFriend');
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(error);
+    } finally {
+      loadingMessage.destroy();
+    }
+  }
+
+  async function handleReachModalSubmit(payload: { msg: string; selectedWechat?: ActiveWechatOption }) {
+    try {
+      if (reachModal.value.mode === 'sms') {
+        await sendCustomerSms({
+          cardSlotNum: reachModal.value.cardSlotNum,
+          toPhone: reachModal.value.mobile,
+          msg: payload.msg,
+          bizExtInfo: {
+            customerId: reachModal.value.sourceId,
+          },
+        });
+        Message.success(t('customer.reach.smsSending'));
+        return;
+      }
+      if (!payload.selectedWechat) {
+        Message.warning(t('customer.reach.noActiveWechat'));
+        return;
+      }
+      await addCustomerWxFriend({
+        vinfo: payload.msg,
+        friendPhone: reachModal.value.mobile,
+        friendSearch: reachModal.value.mobile,
+        umPhone: payload.selectedWechat.wxPhone,
+        umWxid: payload.selectedWechat.wxId,
+        bizExtInfo: {
+          customerId: reachModal.value.sourceId,
+        },
+      });
+      Message.success(t('customer.reach.addWechatSending'));
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(error);
+    }
+  }
+
+  function buildReachActionButton(options: {
+    title: string;
+    iconType?: string;
+    iconComponent?: any;
+    color?: string;
+    showPlusBadge?: boolean;
+    onClick: () => void;
+  }) {
+    return h(
+      'button',
+      {
+        type: 'button',
+        title: options.title,
+        style: {
+          width: '24px',
+          height: '24px',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: 'none',
+          background: 'transparent',
+          cursor: 'pointer',
+          padding: '0',
+          position: 'relative',
+        },
+        onClick: (event: MouseEvent) => {
+          event.stopPropagation();
+          options.onClick();
+        },
+      },
+      [
+        options.iconType
+          ? h(CrmIcon, {
+              type: options.iconType,
+              size: 16,
+              color: options.color || 'var(--primary-8)',
+            })
+          : h(
+              NIcon,
+              {
+                size: 18,
+                color: options.color || '#07c160',
+              },
+              {
+                default: () => h(options.iconComponent),
+              }
+            ),
+        options.showPlusBadge
+          ? h(
+              'span',
+              {
+                style: {
+                  position: 'absolute',
+                  right: '-2px',
+                  bottom: '-2px',
+                  minWidth: '10px',
+                  height: '10px',
+                  borderRadius: '999px',
+                  background: 'var(--primary-8)',
+                  color: '#fff',
+                  fontSize: '9px',
+                  lineHeight: '10px',
+                  textAlign: 'center',
+                  border: '1px solid #fff',
+                },
+              },
+              '+'
+            )
+          : null,
+      ]
+    );
+  }
+
+  function buildReachColumn() {
+    return {
+      title: t('customer.reach'),
+      key: 'customerReach',
+      width: 132,
+      align: 'center',
+      showInTable: true,
+      columnSelectorDisabled: true,
+      render: (row: any) =>
+        h(
+          'div',
+          {
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+            },
+          },
+          [
+            h(
+              NDropdown,
+              {
+                trigger: 'click',
+                options: dialCardSlotOptions,
+                placement: 'bottom-start',
+                onSelect: (key: string | number) => handleDialCustomer(row, Number(key)),
+              },
+              {
+                default: () =>
+                  buildReachActionButton({
+                    title: t('customer.reach.call'),
+                    iconType: 'iconicon_call',
+                    onClick: () => undefined,
+                  }),
+              }
+            ),
+            h(
+              NDropdown,
+              {
+                trigger: 'click',
+                options: dialCardSlotOptions,
+                placement: 'bottom-start',
+                onSelect: (key: string | number) => handleSmsCustomer(row, Number(key)),
+              },
+              {
+                default: () =>
+                  buildReachActionButton({
+                    title: t('customer.reach.sms'),
+                    iconType: 'iconicon_chat',
+                    onClick: () => undefined,
+                  }),
+              }
+            ),
+            buildReachActionButton({
+              title: t('customer.reach.wechat'),
+              iconComponent: LogoWechat,
+              onClick: () => handleWechatCustomer(),
+            }),
+            buildReachActionButton({
+              title: t('customer.reach.addWechat'),
+              iconComponent: LogoWechat,
+              showPlusBadge: true,
+              onClick: () => handleWechatFriendCustomer(row),
+            }),
+          ]
+        ),
+    } as any;
+  }
+
+  const showDialColumn = computed(() => {
+    return (
+      !props.readonly &&
+      [CustomerSearchTypeEnum.SELF, CustomerSearchTypeEnum.DEPARTMENT].includes(
+        activeTab.value as CustomerSearchTypeEnum
+      )
+    );
+  });
+
   const tableColumns = computed(() => {
     const removedColumnKeys = new Set(['recyclePoolName', 'reasonId', 'reservedDays']);
-    const baseColumns = propsRes.value.columns.filter((item: any) => !removedColumnKeys.has(String(item.key)));
+    const baseColumns = propsRes.value.columns.filter(
+      (item: any) =>
+        !removedColumnKeys.has(String(item.key)) && !['customerDial', 'customerReach'].includes(String(item.key))
+    );
+
+    if (showDialColumn.value) {
+      const dialColumn = buildReachColumn();
+      const nameIndex = baseColumns.findIndex((item: any) => item.key === 'name');
+      const orderIndex = baseColumns.findIndex((item: any) => item.key === SpecialColumnEnum.ORDER);
+      let insertIndex = Math.min(baseColumns.length, 1);
+      if (nameIndex >= 0) {
+        insertIndex = nameIndex;
+      } else if (orderIndex >= 0) {
+        insertIndex = orderIndex + 1;
+      }
+      baseColumns.splice(insertIndex, 0, dialColumn);
+    }
+
     if (activeTab.value === CustomerSearchTypeEnum.CUSTOMER_COLLABORATION) {
       return baseColumns
         .filter((item: any) => item.type !== 'selection')
         .map((e) => {
           if (e.key === 'operation') {
-            return {
-              ...e,
-              width: 80,
-            };
+            return { ...e, width: 80 };
           }
           return e;
         });

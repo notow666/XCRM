@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cordys.mmba.mapper.ExtMmbaCommandResultMapper">
+
+    <select id="list" resultType="cn.cordys.mmba.domain.MmbaCommandResult">
+        select *
+        from mmba_command_result
+        where 1 = 1
+        <if test="request.behaviorType != null">
+            and behavior_type = #{request.behaviorType}
+        </if>
+        <if test="request.reqId != null and request.reqId != ''">
+            and req_id = #{request.reqId}
+        </if>
+        <if test="request.um != null and request.um != ''">
+            and um = #{request.um}
+        </if>
+        <if test="request.targetValue != null and request.targetValue != ''">
+            and target_value like concat('%', #{request.targetValue}, '%')
+        </if>
+        <if test="request.customerTel != null and request.customerTel != ''">
+            and customer_tel like concat('%', #{request.customerTel}, '%')
+        </if>
+        <if test="request.friendPhone != null and request.friendPhone != ''">
+            and friend_phone like concat('%', #{request.friendPhone}, '%')
+        </if>
+        <if test="request.processStatus != null">
+            and process_status = #{request.processStatus}
+        </if>
+        <if test="request.resultStatus != null">
+            and result_status = #{request.resultStatus}
+        </if>
+        <if test="request.keyword != null and request.keyword != ''">
+            and (
+                req_id like concat('%', #{request.keyword}, '%')
+                or target_value like concat('%', #{request.keyword}, '%')
+                or customer_tel like concat('%', #{request.keyword}, '%')
+                or friend_phone like concat('%', #{request.keyword}, '%')
+                or rec_id like concat('%', #{request.keyword}, '%')
+                or staff_name like concat('%', #{request.keyword}, '%')
+            )
+        </if>
+        order by update_time desc
+    </select>
+
+</mapper>

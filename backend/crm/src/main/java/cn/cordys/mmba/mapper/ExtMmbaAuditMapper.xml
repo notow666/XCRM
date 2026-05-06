@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cordys.mmba.mapper.ExtMmbaAuditMapper">
+
+    <select id="listCustomerCallStatus" resultType="cn.cordys.mmba.dto.CustomerCallStatusDTO">
+        select customer_tel as customerTel,
+               max(case when ifnull(is_connected, 0) = 1 then 2 else 1 end) as callStatus
+        from mmba_call_record_audit
+        where customer_tel is not null
+          and customer_tel != ''
+          and customer_tel in
+        <foreach collection="customerTels" item="customerTel" open="(" close=")" separator=",">
+            #{customerTel}
+        </foreach>
+        group by customer_tel
+    </select>
+
+    <select id="listCallRecord" resultType="cn.cordys.mmba.domain.MmbaCallRecordAudit">
+        select *
+        from mmba_call_record_audit
+        where 1 = 1
+        <if test="request.reqId != null and request.reqId != ''">
+            and req_id = #{request.reqId}
+        </if>
+        <if test="request.um != null and request.um != ''">
+            and um = #{request.um}
+        </if>
+        <if test="request.deviceId != null and request.deviceId != ''">
+            and device_id = #{request.deviceId}
+        </if>
+        <if test="request.imei != null and request.imei != ''">
+            and (imei = #{request.imei} or imei2 = #{request.imei})
+        </if>
+        <if test="request.customerTel != null and request.customerTel != ''">
+            and customer_tel like concat('%', #{request.customerTel}, '%')
+        </if>
+        <if test="request.staffName != null and request.staffName != ''">
+            and staff_name like concat('%', #{request.staffName}, '%')
+        </if>
+        <if test="request.keyword != null and request.keyword != ''">
+            and (
+                req_id like concat('%', #{request.keyword}, '%')
+                or customer like concat('%', #{request.keyword}, '%')
+                or customer_tel like concat('%', #{request.keyword}, '%')
+                or staff_name like concat('%', #{request.keyword}, '%')
+                or device_id like concat('%', #{request.keyword}, '%')
+            )
+        </if>
+        order by begin_timestamp desc, timestamp desc, es_id desc
+    </select>
+
+    <select id="listSmsRecord" resultType="cn.cordys.mmba.domain.MmbaSmsRecordAudit">
+        select *
+        from mmba_sms_record_audit
+        where 1 = 1
+        <if test="request.reqId != null and request.reqId != ''">
+            and req_id = #{request.reqId}
+        </if>
+        <if test="request.um != null and request.um != ''">
+            and um = #{request.um}
+        </if>
+        <if test="request.deviceId != null and request.deviceId != ''">
+            and device_id = #{request.deviceId}
+        </if>
+        <if test="request.imei != null and request.imei != ''">
+            and (imei = #{request.imei} or imei2 = #{request.imei})
+        </if>
+        <if test="request.customerTel != null and request.customerTel != ''">
+            and customer_tel like concat('%', #{request.customerTel}, '%')
+        </if>
+        <if test="request.type != null">
+            and type = #{request.type}
+        </if>
+        <if test="request.staffName != null and request.staffName != ''">
+            and staff_name like concat('%', #{request.staffName}, '%')
+        </if>
+        <if test="request.keyword != null and request.keyword != ''">
+            and (
+                req_id like concat('%', #{request.keyword}, '%')
+                or customer like concat('%', #{request.keyword}, '%')
+                or customer_tel like concat('%', #{request.keyword}, '%')
+                or content like concat('%', #{request.keyword}, '%')
+                or staff_name like concat('%', #{request.keyword}, '%')
+            )
+        </if>
+        order by timestamp desc, create_time desc, es_id desc
+    </select>
+
+    <select id="listWxAccount" resultType="cn.cordys.mmba.domain.MmbaWxAccountAudit">
+        select *
+        from mmba_wx_account_audit
+        where 1 = 1
+        <if test="request.um != null and request.um != ''">
+            and um = #{request.um}
+        </if>
+        <if test="request.deviceId != null and request.deviceId != ''">
+            and device_id = #{request.deviceId}
+        </if>
+        <if test="request.imei != null and request.imei != ''">
+            and (imei = #{request.imei} or imei2 = #{request.imei})
+        </if>
+        <if test="request.staffName != null and request.staffName != ''">
+            and staff_name like concat('%', #{request.staffName}, '%')
+        </if>
+        <if test="request.staffIdInApp != null and request.staffIdInApp != ''">
+            and staff_id_in_app like concat('%', #{request.staffIdInApp}, '%')
+        </if>
+        <if test="request.staffImAppAccount != null and request.staffImAppAccount != ''">
+            and staff_im_app_account like concat('%', #{request.staffImAppAccount}, '%')
+        </if>
+        <if test="request.keyword != null and request.keyword != ''">
+            and (
+                staff_name like concat('%', #{request.keyword}, '%')
+                or staff_id_in_app like concat('%', #{request.keyword}, '%')
+                or staff_im_app_account like concat('%', #{request.keyword}, '%')
+                or staff_im_nick_name like concat('%', #{request.keyword}, '%')
+                or staff_mobile like concat('%', #{request.keyword}, '%')
+            )
+        </if>
+        order by timestamp desc, create_time desc, es_id desc
+    </select>
+
+    <select id="listWxChat" resultType="cn.cordys.mmba.domain.MmbaWxChatAudit">
+        select *
+        from mmba_wx_chat_audit
+        where 1 = 1
+        <if test="request.reqId != null and request.reqId != ''">
+            and req_id = #{request.reqId}
+        </if>
+        <if test="request.um != null and request.um != ''">
+            and um = #{request.um}
+        </if>
+        <if test="request.deviceId != null and request.deviceId != ''">
+            and device_id = #{request.deviceId}
+        </if>
+        <if test="request.imei != null and request.imei != ''">
+            and (imei = #{request.imei} or imei2 = #{request.imei})
+        </if>
+        <if test="request.staffName != null and request.staffName != ''">
+            and staff_name like concat('%', #{request.staffName}, '%')
+        </if>
+        <if test="request.friendPhone != null and request.friendPhone != ''">
+            and friend_phone like concat('%', #{request.friendPhone}, '%')
+        </if>
+        <if test="request.customerAccount != null and request.customerAccount != ''">
+            and customer_account like concat('%', #{request.customerAccount}, '%')
+        </if>
+        <if test="request.customerAccountId != null and request.customerAccountId != ''">
+            and customer_account_id like concat('%', #{request.customerAccountId}, '%')
+        </if>
+        <if test="request.chatType != null">
+            and chat_type = #{request.chatType}
+        </if>
+        <if test="request.keyword != null and request.keyword != ''">
+            and (
+                req_id like concat('%', #{request.keyword}, '%')
+                or content like concat('%', #{request.keyword}, '%')
+                or customer like concat('%', #{request.keyword}, '%')
+                or customer_account like concat('%', #{request.keyword}, '%')
+                or friend_phone like concat('%', #{request.keyword}, '%')
+                or staff_name like concat('%', #{request.keyword}, '%')
+            )
+        </if>
+        order by timestamp desc, time desc, es_id desc
+    </select>
+
+    <select id="listWxFriendChange" resultType="cn.cordys.mmba.domain.MmbaWxFriendChangeAudit">
+        select *
+        from mmba_wx_friend_change_audit
+        where 1 = 1
+        <if test="request.um != null and request.um != ''">
+            and um = #{request.um}
+        </if>
+        <if test="request.deviceId != null and request.deviceId != ''">
+            and device_id = #{request.deviceId}
+        </if>
+        <if test="request.imei != null and request.imei != ''">
+            and (imei = #{request.imei} or imei2 = #{request.imei})
+        </if>
+        <if test="request.staffName != null and request.staffName != ''">
+            and staff_name like concat('%', #{request.staffName}, '%')
+        </if>
+        <if test="request.staffIdInApp != null and request.staffIdInApp != ''">
+            and staff_id_in_app like concat('%', #{request.staffIdInApp}, '%')
+        </if>
+        <if test="request.friendPhone != null and request.friendPhone != ''">
+            and friend_phone like concat('%', #{request.friendPhone}, '%')
+        </if>
+        <if test="request.operFlag != null">
+            and oper_flag = #{request.operFlag}
+        </if>
+        <if test="request.keyword != null and request.keyword != ''">
+            and (
+                contact_im_app_nick_name like concat('%', #{request.keyword}, '%')
+                or contact_im_app_account like concat('%', #{request.keyword}, '%')
+                or friend_phone like concat('%', #{request.keyword}, '%')
+                or contact_mobile like concat('%', #{request.keyword}, '%')
+                or staff_name like concat('%', #{request.keyword}, '%')
+            )
+        </if>
+        order by timestamp desc, create_time desc, es_id desc
+    </select>
+
+    <select id="listWxFriendList" resultType="cn.cordys.mmba.domain.MmbaWxFriendListAudit">
+        select *
+        from mmba_wx_friend_list_audit
+        where 1 = 1
+        <if test="request.um != null and request.um != ''">
+            and um = #{request.um}
+        </if>
+        <if test="request.imei != null and request.imei != ''">
+            and (imei = #{request.imei} or imei2 = #{request.imei})
+        </if>
+        <if test="request.staffName != null and request.staffName != ''">
+            and staff_name like concat('%', #{request.staffName}, '%')
+        </if>
+        <if test="request.staffIdInApp != null and request.staffIdInApp != ''">
+            and staff_id_in_app like concat('%', #{request.staffIdInApp}, '%')
+        </if>
+        <if test="request.contactMobile != null and request.contactMobile != ''">
+            and contact_mobile like concat('%', #{request.contactMobile}, '%')
+        </if>
+        <if test="request.keyword != null and request.keyword != ''">
+            and (
+                contact_im_app_nick_name like concat('%', #{request.keyword}, '%')
+                or contact_im_app_account like concat('%', #{request.keyword}, '%')
+                or contact_mobile like concat('%', #{request.keyword}, '%')
+                or staff_name like concat('%', #{request.keyword}, '%')
+            )
+        </if>
+        order by timestamp desc, create_time desc, es_id desc
+    </select>
+
+    <select id="listWxLogin" resultType="cn.cordys.mmba.domain.MmbaWxLoginAudit">
+        select *
+        from mmba_wx_login_audit
+        where 1 = 1
+        <if test="request.um != null and request.um != ''">
+            and um = #{request.um}
+        </if>
+        <if test="request.deviceId != null and request.deviceId != ''">
+            and device_id = #{request.deviceId}
+        </if>
+        <if test="request.staffName != null and request.staffName != ''">
+            and staff_name like concat('%', #{request.staffName}, '%')
+        </if>
+        <if test="request.staffIdInApp != null and request.staffIdInApp != ''">
+            and staff_id_in_app like concat('%', #{request.staffIdInApp}, '%')
+        </if>
+        <if test="request.staffImAppAccount != null and request.staffImAppAccount != ''">
+            and staff_im_app_account like concat('%', #{request.staffImAppAccount}, '%')
+        </if>
+        <if test="request.deviceName != null and request.deviceName != ''">
+            and device_name like concat('%', #{request.deviceName}, '%')
+        </if>
+        <if test="request.loginStatus != null">
+            and login_status = #{request.loginStatus}
+        </if>
+        <if test="request.keyword != null and request.keyword != ''">
+            and (
+                staff_name like concat('%', #{request.keyword}, '%')
+                or device_name like concat('%', #{request.keyword}, '%')
+                or staff_id_in_app like concat('%', #{request.keyword}, '%')
+                or staff_im_app_account like concat('%', #{request.keyword}, '%')
+            )
+        </if>
+        order by create_time desc, id desc
+    </select>
+
+    <select id="listDeviceInfo" resultType="cn.cordys.mmba.domain.MmbaDeviceInfoAudit">
+        select *
+        from mmba_device_info_audit
+        where 1 = 1
+        <if test="request.um != null and request.um != ''">
+            and um = #{request.um}
+        </if>
+        <if test="request.deviceId != null and request.deviceId != ''">
+            and device_id = #{request.deviceId}
+        </if>
+        <if test="request.imei != null and request.imei != ''">
+            and (imei = #{request.imei} or imei2 = #{request.imei})
+        </if>
+        <if test="request.staffName != null and request.staffName != ''">
+            and staff_name like concat('%', #{request.staffName}, '%')
+        </if>
+        <if test="request.phone != null and request.phone != ''">
+            and (phone like concat('%', #{request.phone}, '%') or phone2 like concat('%', #{request.phone}, '%'))
+        </if>
+        <if test="request.iccid != null and request.iccid != ''">
+            and (iccid like concat('%', #{request.iccid}, '%') or iccid2 like concat('%', #{request.iccid}, '%'))
+        </if>
+        <if test="request.deviceType != null and request.deviceType != ''">
+            and device_type = #{request.deviceType}
+        </if>
+        <if test="request.keyword != null and request.keyword != ''">
+            and (
+                device_id like concat('%', #{request.keyword}, '%')
+                or imei like concat('%', #{request.keyword}, '%')
+                or imei2 like concat('%', #{request.keyword}, '%')
+                or phone like concat('%', #{request.keyword}, '%')
+                or phone2 like concat('%', #{request.keyword}, '%')
+                or staff_name like concat('%', #{request.keyword}, '%')
+            )
+        </if>
+        order by timestamp desc, change_time desc, id desc
+    </select>
+
+    <select id="listDeviceStatus" resultType="cn.cordys.mmba.domain.MmbaDeviceStatusAudit">
+        select *
+        from mmba_device_status_audit
+        where 1 = 1
+        <if test="request.um != null and request.um != ''">
+            and um = #{request.um}
+        </if>
+        <if test="request.deviceId != null and request.deviceId != ''">
+            and device_id = #{request.deviceId}
+        </if>
+        <if test="request.imei != null and request.imei != ''">
+            and (imei = #{request.imei} or imei2 = #{request.imei})
+        </if>
+        <if test="request.deviceStatus != null">
+            and device_status = #{request.deviceStatus}
+        </if>
+        <if test="request.keyword != null and request.keyword != ''">
+            and (
+                device_id like concat('%', #{request.keyword}, '%')
+                or imei like concat('%', #{request.keyword}, '%')
+                or imei2 like concat('%', #{request.keyword}, '%')
+                or um like concat('%', #{request.keyword}, '%')
+            )
+        </if>
+        order by change_time desc, id desc
+    </select>
+
+</mapper>

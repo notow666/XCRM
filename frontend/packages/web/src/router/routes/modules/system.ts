@@ -17,6 +17,7 @@ const system: AppRouteRecordRaw = {
       'SYSTEM_NOTICE:READ',
       'SYSTEM_SETTING:READ',
       'OPERATION_LOG:READ',
+      'CONTENT_AUDIT:READ',
     ],
     icon: 'iconicon_set_up',
     collapsedLocale: 'menu.collapsedSettings',
@@ -75,6 +76,15 @@ const system: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.settings.log',
         permissions: ['OPERATION_LOG:READ'],
+      },
+    },
+    {
+      path: 'content-audit',
+      name: SystemRouteEnum.SYSTEM_CONTENT_AUDIT,
+      component: () => import('@/views/system/content-audit/index.vue'),
+      meta: {
+        locale: 'menu.settings.contentAudit',
+        permissions: ['CONTENT_AUDIT:READ'],
       },
     },
   ],

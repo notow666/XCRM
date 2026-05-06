@@ -1,0 +1,1 @@
+-- no-op: mmba init SQL already contains the final media-file structure for new environments.

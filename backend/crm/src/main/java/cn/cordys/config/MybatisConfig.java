@@ -41,7 +41,7 @@ import java.util.Properties;
  * @version 1.0
  */
 @Configuration
-@MapperScan(basePackages = {"cn.cordys.crm.**.mapper", "cn.cordys.common.mapper"}, sqlSessionFactoryRef = "sqlSessionFactory")
+@MapperScan(basePackages = {"cn.cordys.crm.**.mapper", "cn.cordys.common.mapper", "cn.cordys.mmba.mapper"}, sqlSessionFactoryRef = "sqlSessionFactory")
 @EnableTransactionManagement
 public class MybatisConfig {
 

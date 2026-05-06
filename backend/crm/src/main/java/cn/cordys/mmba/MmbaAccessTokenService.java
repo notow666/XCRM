@@ -1,6 +1,5 @@
 package cn.cordys.mmba;
 
-import cn.cordys.common.exception.GenericException;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +13,8 @@ import java.time.Duration;
 import java.util.Map;
 
 /**
- * accessToken 获取与 Redis 缓存（全局）。遇业务码 602 时强制刷新。
+ * MMBA accessToken 获取与 Redis 缓存服务。
+ * 当前按平台实际返回结构解析根节点 accessToken / expireTime。
  */
 @Slf4j
 @Service
@@ -52,24 +52,27 @@ public class MmbaAccessTokenService {
                 "secret", credential.secret()
         );
         JsonNode root = mmbaOutboundClient.postJson(base, MmbaApiPaths.ACCESS_TOKEN, credential.companyCode(), req);
+        String responseBody = root.toString();
+        String traceId = root.path("traceId").asText(null);
         int code = root.path("code").asInt(-1);
         if (code != 200) {
-            log.warn("MMBA 获取 accessToken 失败 code={} message={}", code, root.path("message").asText());
-            throw new GenericException("MMBA 获取 accessToken 失败: " + root.path("message").asText());
+            String message = root.path("message").asText();
+            log.warn("MMBA 获取 accessToken 失败 code={} message={}", code, message);
+            throw new MmbaInvokeException("MMBA 获取 accessToken 失败: " + message, code, traceId, responseBody, responseBody);
         }
-        JsonNode data = root.get("data");
-        if (data == null || !data.has("accessToken")) {
-            throw new GenericException("MMBA accessToken 响应缺少 data.accessToken");
+        JsonNode tokenNode = root.get("accessToken");
+        if (tokenNode == null || tokenNode.isNull() || StringUtils.isBlank(tokenNode.asText())) {
+            throw new MmbaInvokeException("MMBA accessToken 响应缺少 accessToken", code, traceId, responseBody, responseBody);
         }
-        String token = data.get("accessToken").asText();
-        long ttlMs = data.path("expiresIn").asLong(0) * 1000;
+        String token = tokenNode.asText();
+        long ttlMs = root.path("expireTime").asLong(0) * 1000;
         if (ttlMs <= 0) {
             ttlMs = DEFAULT_TTL_MS;
         }
         long cacheTtlMs = Math.max(ttlMs - CACHE_EARLY_EXPIRE_MS, 30_000);
         stringRedisTemplate.opsForValue().set(cacheKeyOf(credential), token, Duration.ofMillis(cacheTtlMs));
         long expireAt = System.currentTimeMillis() + cacheTtlMs;
-        log.info("MMBA accessToken 已刷新并写入Redis companyCode={} expireAtMs={}", credential.companyCode(), expireAt);
+        log.info("MMBA accessToken 已刷新并写入 Redis companyCode={} expireAtMs={}", credential.companyCode(), expireAt);
         return token;
     }
 

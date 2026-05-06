@@ -7,6 +7,8 @@ import cn.cordys.crm.follow.dto.response.FollowUpPlanListResponse;
 import cn.cordys.crm.system.dto.request.PersonalInfoRequest;
 import cn.cordys.crm.system.dto.request.PersonalPasswordRequest;
 import cn.cordys.crm.system.dto.request.SendEmailDTO;
+import cn.cordys.crm.system.dto.response.PersonalDeviceResponse;
+import cn.cordys.crm.system.dto.response.PersonalWechatResponse;
 import cn.cordys.crm.system.dto.response.UserResponse;
 import cn.cordys.crm.system.service.PersonalCenterService;
 import cn.cordys.security.SessionUtils;
@@ -64,5 +66,17 @@ public class PersonalCenterController {
     public PagerWithOption<List<FollowUpPlanListResponse>> list(@Validated @RequestBody FollowUpPlanPageRequest request) {
         request.setMyPlan(true);
         return personalCenterService.getPlanList(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
+    @GetMapping("/device/list")
+    @Operation(summary = "personal center device list")
+    public PersonalDeviceResponse getPersonalDeviceList() {
+        return personalCenterService.getPersonalDeviceList(SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
+    @GetMapping("/wechat/list")
+    @Operation(summary = "personal center wechat list")
+    public PersonalWechatResponse getPersonalWechatList() {
+        return personalCenterService.getPersonalWechatList(SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 }

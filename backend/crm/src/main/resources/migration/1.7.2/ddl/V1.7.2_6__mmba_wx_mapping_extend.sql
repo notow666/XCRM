@@ -1,0 +1,1 @@
+-- no-op: mmba init SQL already contains the final wx-mapping structure for new environments.
