@@ -1,0 +1,8 @@
+spring:
+    # 根据环境激活不同的 profile
+    profiles:
+        active: dev  # 默认生产环境
+    # 配置导入：加载 commons 配置
+    config:
+        import:
+            - classpath:application-commons.yml

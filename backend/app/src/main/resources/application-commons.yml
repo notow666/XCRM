@@ -1,0 +1,96 @@
+spring:
+  application:
+    name: cordys-crm
+  cache:
+    type: redis
+  datasource:
+    hikari:
+      auto-commit: true
+      connection-test-query: SELECT 1
+      connection-timeout: 30000
+      idle-timeout: 300000
+      max-lifetime: 1800000
+      maximum-pool-size: 100
+      minimum-idle: 10
+      pool-name: DatebookHikariCP
+    quartz:
+      hikari:
+        auto-commit: true
+        connection-test-query: SELECT 1
+        connection-timeout: 30000
+        idle-timeout: 300000
+        max-lifetime: 1800000
+        maximum-pool-size: 50
+        minimum-idle: 10
+        pool-name: DatebookHikariCP
+      password: ${spring.datasource.password}
+      url: ${spring.datasource.url}
+      username: ${spring.datasource.username}
+    type: com.zaxxer.hikari.HikariDataSource
+  flyway:
+    baseline-on-migrate: true
+    baseline-version: 0
+    enabled: true
+    encoding: UTF-8
+    locations: classpath:migration
+    table: cordys_crm_version
+    validate-on-migrate: false
+  freemarker:
+    check-template-location: false
+  groovy:
+    template:
+      check-template-location: false
+  main:
+    allow-circular-references: true
+  messages:
+    basename: i18n/cordys-crm
+    encoding: UTF-8
+  mvc:
+    log-request-details: false
+  servlet:
+    multipart:
+      max-file-size: 1024MB
+      max-request-size: 1024MB
+  session:
+    redis:
+      repository-type: indexed
+    timeout: 43200s
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain,application/javascript,text/css,text/javascript,image/jpeg
+    min-response-size: 2048
+  port: 8081
+
+mybatis:
+  configuration:
+    aggressive-lazy-loading: true
+    auto-mapping-behavior: full
+    cache-enabled: false
+    default-statement-timeout: 25000
+    lazy-loading-enabled: false
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+    map-underscore-to-camel-case: true
+    use-column-label: true
+
+quartz:
+  enabled: true
+  properties:
+    org:
+      quartz:
+        jobStore:
+          acquireTriggersWithinLock: true
+  scheduler-name: cordys-crm-quartz
+  thread-count: 10
+
+springdoc:
+  api-docs:
+    enabled: true
+    groups:
+      enabled: true
+  swagger-ui:
+    enabled: false
