@@ -79,7 +79,8 @@ redis:
         enabled: true
 
 mmba:
-    api-base-url: https://120.26.9.2:9074/YMFTEST
+    api-base-url: https://120.26.9.2:9074
     app-key: 1_01b0d6f7624fd7ee59899893c75f83e1
     company-code: YMFTEST
     secret: e333e60912e8a11cee384586afe780af
+    filepath: /mmba/file/
