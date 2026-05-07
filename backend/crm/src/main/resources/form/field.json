@@ -275,6 +275,118 @@
         "hasCurrentUser",
         "rules.required"
       ]
+    },
+    {
+      "name": "拨打状态",
+      "internalKey": "customerCallStatus",
+      "pos": 12,
+      "type": "SELECT",
+      "mobile": false,
+      "showLabel": false,
+      "placeholder": "",
+      "description": "",
+      "readable": false,
+      "editable": false,
+      "fieldWidth": 1.0,
+      "rules": [],
+      "businessKey": "callStatus",
+      "resourceFieldId": null,
+      "subTableFieldId": null,
+      "defaultValue": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "未拨打"
+        },
+        {
+          "value": "1",
+          "label": "拨打未接通"
+        },
+        {
+          "value": "2",
+          "label": "拨打已接通"
+        }
+      ],
+      "customOptions": [
+        {
+          "value": "0",
+          "label": "未拨打"
+        },
+        {
+          "value": "1",
+          "label": "拨打未接通"
+        },
+        {
+          "value": "2",
+          "label": "拨打已接通"
+        }
+      ],
+      "optionSource": "custom",
+      "refId": null,
+      "refFormKey": null,
+      "linkProp": null,
+      "disabledProps": [
+        "readable",
+        "mobile",
+        "editable",
+        "showLabel"
+      ]
+    },
+    {
+      "name": "微信好友状态",
+      "internalKey": "customerWechatFriendStatus",
+      "pos": 13,
+      "type": "SELECT",
+      "mobile": false,
+      "showLabel": false,
+      "placeholder": "",
+      "description": "",
+      "readable": false,
+      "editable": false,
+      "fieldWidth": 1.0,
+      "rules": [],
+      "businessKey": "wechatFriendStatus",
+      "resourceFieldId": null,
+      "subTableFieldId": null,
+      "defaultValue": "0",
+      "options": [
+        {
+          "value": "0",
+          "label": "未拨打"
+        },
+        {
+          "value": "1",
+          "label": "拨打未接通"
+        },
+        {
+          "value": "2",
+          "label": "拨打已接通"
+        }
+      ],
+      "customOptions": [
+        {
+          "value": "0",
+          "label": "未添加"
+        },
+        {
+          "value": "1",
+          "label": "添加未通过"
+        },
+        {
+          "value": "2",
+          "label": "已添加"
+        }
+      ],
+      "optionSource": "custom",
+      "refId": null,
+      "refFormKey": null,
+      "linkProp": null,
+      "disabledProps": [
+        "readable",
+        "mobile",
+        "editable",
+        "showLabel"
+      ]
     }
   ],
   "clue": [

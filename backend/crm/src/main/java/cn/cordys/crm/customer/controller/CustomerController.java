@@ -1,5 +1,6 @@
 package cn.cordys.crm.customer.controller;
 
+import cn.cordys.common.constants.BusinessModuleField;
 import cn.cordys.common.constants.FormKey;
 import cn.cordys.common.constants.InternalUserView;
 import cn.cordys.common.constants.PermissionConstants;
@@ -29,6 +30,7 @@ import cn.cordys.crm.opportunity.dto.response.OpportunityListResponse;
 import cn.cordys.crm.opportunity.service.OpportunityService;
 import cn.cordys.crm.order.dto.response.OrderListResponse;
 import cn.cordys.crm.order.service.OrderService;
+import cn.cordys.crm.system.dto.field.base.BaseField;
 import cn.cordys.crm.system.dto.request.BatchPoolReasonRequest;
 import cn.cordys.crm.system.dto.request.PoolReasonRequest;
 import cn.cordys.crm.system.dto.request.ResourceBatchEditRequest;
@@ -55,6 +57,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author jianxing
@@ -88,11 +91,23 @@ public class CustomerController {
     @Resource
     private CustomerCallRecordService customerCallRecordService;
 
-    @GetMapping("/module/form")
+    @GetMapping("/module/form/{tag}")
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_READ, PermissionConstants.CUSTOMER_MANAGEMENT_POOL_READ}, logical = Logical.OR)
     @Operation(summary = "获取表单配置")
-    public ModuleFormConfigDTO getModuleFormConfig() {
-        return moduleFormCacheService.getBusinessFormConfig(FormKey.CUSTOMER.getKey(), OrganizationContext.getOrganizationId());
+    public ModuleFormConfigDTO getModuleFormConfig(@PathVariable("tag") String tag) {
+        ModuleFormConfigDTO formConfigDTO = moduleFormCacheService.getBusinessFormConfig(FormKey.CUSTOMER.getKey(), OrganizationContext.getOrganizationId());
+        if("openSea".equals(tag)) {
+            List<BaseField> collect = formConfigDTO.getFields()
+                    .stream()
+                    .filter(field -> {
+                        return field.getInternalKey() == null ||
+                                (!BusinessModuleField.CUSTOMER_CALL_STATUS.getKey().equals(field.getInternalKey()) &&
+                                !BusinessModuleField.CUSTOMER_WECHAT_FRIEND_STATUS.getKey().equals(field.getInternalKey()));
+                    })
+                    .collect(Collectors.toList());
+            formConfigDTO.setFields(collect);
+        }
+        return formConfigDTO;
     }
 
     @PostMapping("/page")

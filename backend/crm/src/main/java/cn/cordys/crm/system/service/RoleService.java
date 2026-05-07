@@ -33,6 +33,7 @@ import cn.cordys.crm.system.mapper.ExtRoleMapper;
 import cn.cordys.crm.system.mapper.ExtUserRoleMapper;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
+import cn.cordys.security.SessionUtils;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.IOUtils;
@@ -78,6 +79,9 @@ public class RoleService {
 
     public List<RoleListResponse> list(String orgId) {
         List<RoleListResponse> roleListResponseList = getRoleListResponses(orgId);
+        if(Strings.CS.equals(SessionUtils.getUserId(), InternalUser.ADMIN.getValue())){
+            return baseService.setCreateAndUpdateUserName(roleListResponseList);
+        }
         return baseService.setCreateAndUpdateUserName(roleListResponseList)
                 .stream()
                 .filter(role -> !InternalRole.ORG_ADMIN.getValue().equals(role.getId()))

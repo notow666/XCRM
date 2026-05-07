@@ -20,6 +20,7 @@ import org.redisson.api.RLock;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author jianxing
@@ -47,36 +48,44 @@ public class DataInitService {
         // 多租户业务中心 Redis key 统一使用 tenantId: 前缀
         String tenantId = TenantContext.getTenantId();
         RLock lock = redisson.getLock(tenantId + ":init_data_lock");
-        lock.lock();
         try {
-            initOneTime(moduleService::initDefaultOrgModule, "init.module");
-            initOneTime(moduleFormService::initForm, "init.form");
-            initOneTime(moduleFieldService::modifyDateProp, "modify.form.date");
-            initOneTime(moduleFormService::modifyFormLinkProp, "modify.form.link");
-            initOneTime(moduleFormService::modifyFormProp, "modify.form.prop");
-            initOneTime(moduleFormService::modifyFieldMobile, "modify.field.mobile");
-            initOneTime(moduleFormService::processOldLinkData, "process.old.link.data");
-            initOneTime(moduleFormService::initFormScenarioProp, "init.record.form.scenario");
-            initOneTime(clueService::processTransferredCluePlanAndRecord, "process.transferred.clue");
-            initOneTime(moduleFormService::initUpgradeForm, "init.upgrade.form.v1.4.0");
-            initOneTime(moduleFormService::initUpgradeForm, "init.upgrade.form.v1.5.0");
-            initOneTime(moduleFormService::initUpgradeForm, "init.upgrade.form.v1.5.1");
-            initOneTime(moduleFormService::initExtFieldsByVer, "1.5.0", "init.ext.fields.v1.5.0");
-            initOneTime(moduleFormService::initExtFieldsByVer, "1.5.1", "init.ext.fields.v1.5.1");
-            initOneTime(moduleFieldExtService::setDefaultOptionSource, "set.default.option.source");
-            initOneTime(moduleFieldExtService::refreshPlanFieldPos, "refresh.plan.field.pos");
-            initOneTime(moduleFormService::initInvoiceFormScenarioProp, "init.invoice.form.scenario");
-            initOneTime(moduleFieldService::modifyInvoiceShowFields, "init.invoice.show.fields");
-            initOneTime(moduleService::deleteExtraModules, "delete.extra.modules");
-            initOneTime(moduleFieldExtService::modifySubProductSumColumn, "modify.quotation.product.sum.column");
-            initOneTime(moduleFormService::initUpgradeForm, "init.upgrade.form.v1.6.0");
-            initOneTime(moduleFieldService::initOrderFields, "init.order.fields");
-			initOneTime(moduleFormService::initContactFormLinkRules, "init.contact.form.link.rules");
-			initOneTime(moduleFormService::initContractToOrderLinkScenario, "init.order.form.link.rules");
-            initOneTime(moduleFormService::initOrderFormScenarioProp, "init.order.form.scenario");
-			initOneTime(moduleFieldExtService::modifyInternalSubSumColumn, "modify.internal.sum.column");
-			initOneTime(moduleFieldExtService::modifyInternalSubCalcFormula, "modify.internal.calc.formula");
-		} finally {
+            if(lock.tryLock(5, TimeUnit.MINUTES)) {
+                initOneTime(moduleService::initDefaultOrgModule, "init.module");
+                initOneTime(moduleFormService::initForm, "init.form");
+                initOneTime(moduleFieldService::modifyDateProp, "modify.form.date");
+                initOneTime(moduleFormService::modifyFormLinkProp, "modify.form.link");
+                initOneTime(moduleFormService::modifyFormProp, "modify.form.prop");
+//                initOneTime(moduleFormService::modifyFieldMobile, "modify.field.mobile");
+                initOneTime(moduleFormService::processOldLinkData, "process.old.link.data");
+                initOneTime(moduleFormService::initFormScenarioProp, "init.record.form.scenario");
+                initOneTime(clueService::processTransferredCluePlanAndRecord, "process.transferred.clue");
+                initOneTime(moduleFormService::initUpgradeForm, "init.upgrade.form.v1.4.0");
+                initOneTime(moduleFormService::initUpgradeForm, "init.upgrade.form.v1.5.0");
+                initOneTime(moduleFormService::initUpgradeForm, "init.upgrade.form.v1.5.1");
+                initOneTime(moduleFormService::initExtFieldsByVer, "1.5.0", "init.ext.fields.v1.5.0");
+                initOneTime(moduleFormService::initExtFieldsByVer, "1.5.1", "init.ext.fields.v1.5.1");
+                initOneTime(moduleFieldExtService::setDefaultOptionSource, "set.default.option.source");
+                initOneTime(moduleFieldExtService::refreshPlanFieldPos, "refresh.plan.field.pos");
+                initOneTime(moduleFormService::initInvoiceFormScenarioProp, "init.invoice.form.scenario");
+                initOneTime(moduleFieldService::modifyInvoiceShowFields, "init.invoice.show.fields");
+                initOneTime(moduleService::deleteExtraModules, "delete.extra.modules");
+                initOneTime(moduleFieldExtService::modifySubProductSumColumn, "modify.quotation.product.sum.column");
+                initOneTime(moduleFormService::initUpgradeForm, "init.upgrade.form.v1.6.0");
+                initOneTime(moduleFieldService::initOrderFields, "init.order.fields");
+                initOneTime(moduleFormService::initContactFormLinkRules, "init.contact.form.link.rules");
+                initOneTime(moduleFormService::initContractToOrderLinkScenario, "init.order.form.link.rules");
+                initOneTime(moduleFormService::initOrderFormScenarioProp, "init.order.form.scenario");
+                initOneTime(moduleFieldExtService::modifyInternalSubSumColumn, "modify.internal.sum.column");
+                initOneTime(moduleFieldExtService::modifyInternalSubCalcFormula, "modify.internal.calc.formula");
+            }
+            else {
+                log.error("初始化租户数据库异常");
+            }
+		}
+        catch (Exception e) {
+            log.error("初始化租户数据库异常", e);
+        }
+        finally {
             lock.unlock();
         }
     }

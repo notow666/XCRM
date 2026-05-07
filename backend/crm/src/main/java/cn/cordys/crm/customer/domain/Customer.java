@@ -54,4 +54,15 @@ public class Customer extends BaseModel {
 
     @Schema(description = "失败原因")
     private String failReason;
+
+    /**
+     * 拨打电话状态 0:未拨打 1:拨打未接通 2:拨打已接通
+     */
+    @Schema(description = "拨打电话状态 0:未拨打 1:拨打未接通 2:拨打已接通")
+    private Integer callStatus = 0;
+    /**
+     * 微信好友状态 0:未添加 1:添加未通过 2:已添加
+     */
+    @Schema(description = "微信好友状态 0:未添加 1:添加未通过 2:已添加")
+    private Integer wechatFriendStatus;
 }

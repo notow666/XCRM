@@ -100,6 +100,6 @@ public class CustomerListResponse {
     @Schema(description = "阶段状态")
     private String stageStatus;
 
-    @Schema(description = "通话状态 0-无拨打记录 1-未接通 2-已接通")
+    @Schema(description = "拨打电话状态 0:未拨打 1:拨打未接通 2:拨打已接通")
     private Integer callStatus;
 }
