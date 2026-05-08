@@ -203,6 +203,11 @@
       key: ModuleConfigEnum.TENDER,
       icon: 'iconicon_target',
     },
+    {
+      label: t('module.mmbaAudit'),
+      key: ModuleConfigEnum.MMBA_AUDIT,
+      icon: 'iconicon_dashboard1',
+    },
   ]);
 
   const moduleNavList = ref<ModuleNavItem[]>([]);

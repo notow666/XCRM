@@ -126,6 +126,7 @@ export default {
   'module.contract': '合同',
   'module.order': '订单',
   'module.task': '任务',
+  'module.mmbaAudit': '审计',
   'module.order.stateFlow': '订单状态流',
   'module.order.state': '订单状态',
   'module.order.stateType': '状态类型',

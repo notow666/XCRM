@@ -19,6 +19,7 @@ import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.Translator;
+import cn.cordys.context.OrganizationContext;
 import cn.cordys.crm.system.domain.Role;
 import cn.cordys.crm.system.domain.RolePermission;
 import cn.cordys.crm.system.domain.RoleScopeDept;
@@ -77,15 +78,16 @@ public class RoleService {
     @Resource
     private PermissionCache permissionCache;
 
-    public List<RoleListResponse> list(String orgId) {
+    public List<RoleListResponse> list(boolean filterAdmin) {
+        String orgId = OrganizationContext.getOrganizationId();
         List<RoleListResponse> roleListResponseList = getRoleListResponses(orgId);
-        if(Strings.CS.equals(SessionUtils.getUserId(), InternalUser.ADMIN.getValue())){
-            return baseService.setCreateAndUpdateUserName(roleListResponseList);
+        if(filterAdmin || !Strings.CS.equals(SessionUtils.getUserId(), InternalUser.ADMIN.getValue())) {
+            return baseService.setCreateAndUpdateUserName(roleListResponseList)
+                    .stream()
+                    .filter(role -> !InternalRole.ORG_ADMIN.getValue().equals(role.getId()))
+                    .collect(Collectors.toList());
         }
-        return baseService.setCreateAndUpdateUserName(roleListResponseList)
-                .stream()
-                .filter(role -> !InternalRole.ORG_ADMIN.getValue().equals(role.getId()))
-                .collect(Collectors.toList());
+        return baseService.setCreateAndUpdateUserName(roleListResponseList);
     }
 
     public List<RoleListResponse> getRoleListResponses(String orgId) {

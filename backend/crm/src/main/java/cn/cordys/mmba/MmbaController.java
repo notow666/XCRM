@@ -1,6 +1,10 @@
 package cn.cordys.mmba;
 
+import cn.cordys.common.constants.PermissionConstants;
+import cn.cordys.common.dto.OptionDTO;
+import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.pager.PagerWithOption;
+import cn.cordys.common.util.Translator;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.mmba.domain.MmbaCallRecordAudit;
 import cn.cordys.mmba.domain.MmbaCommandResult;
@@ -17,13 +21,18 @@ import cn.cordys.mmba.dto.request.MmbaCallRecordAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaCommandResultPageRequest;
 import cn.cordys.mmba.dto.request.MmbaDeviceInfoAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaDevicePageRequest;
+import cn.cordys.mmba.dto.request.MmbaDeviceSaveRequest;
 import cn.cordys.mmba.dto.request.MmbaDeviceStatusAuditPageRequest;
+import cn.cordys.mmba.dto.request.MmbaDeviceUpdateRequest;
+import cn.cordys.mmba.dto.response.MmbaDeviceImportResponse;
 import cn.cordys.mmba.dto.request.MmbaSmsRecordAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxAccountAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxChatAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxFriendChangeAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxFriendListAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxLoginAuditPageRequest;
+import cn.cordys.mmba.service.MmbaDeviceImportService;
+import cn.cordys.mmba.service.MmbaDeviceService;
 import cn.cordys.mmba.service.MmbaFacadeService;
 import cn.cordys.mmba.service.MmbaQueryService;
 import cn.cordys.security.SessionUtils;
@@ -33,11 +42,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
@@ -55,6 +69,10 @@ public class MmbaController {
     private MmbaFacadeService mmbaFacadeService;
     @Resource
     private MmbaQueryService mmbaQueryService;
+    @Resource
+    private MmbaDeviceService mmbaDeviceService;
+    @Resource
+    private MmbaDeviceImportService mmbaDeviceImportService;
 
     /**
      * 拨打电话。
@@ -185,8 +203,47 @@ public class MmbaController {
      */
     @PostMapping("/device/page")
     @Operation(summary = "MMBA设备列表")
+    @RequiresPermissions(PermissionConstants.MMBA_DEVICE_READ)
     public PagerWithOption<List<MmbaDevice>> pageDevice(@Valid @RequestBody MmbaDevicePageRequest request) {
         return mmbaQueryService.pageDevice(request, OrganizationContext.getOrganizationId());
+    }
+
+    @GetMapping("/device/list")
+    @Operation(summary = "MMBA设备列表")
+    public List<OptionDTO> listDevice() {
+        return mmbaQueryService.listDevice();
+    }
+
+    @GetMapping("/device/{id}")
+    @Operation(summary = "MMBA设备详情")
+    @RequiresPermissions(PermissionConstants.MMBA_DEVICE_READ)
+    public MmbaDevice getDevice(@PathVariable("id") String id) {
+        MmbaDevice device = mmbaDeviceService.getDevice(id);
+        if (device == null) {
+            throw new GenericException(Translator.get("mmba_device_not_found"));
+        }
+        return device;
+    }
+
+    @PostMapping("/device/add")
+    @Operation(summary = "MMBA设备新增")
+    @RequiresPermissions(PermissionConstants.MMBA_DEVICE_ADD)
+    public MmbaDevice addDevice(@Valid @RequestBody MmbaDeviceSaveRequest request) {
+        return mmbaDeviceService.addDevice(request, SessionUtils.getUserId());
+    }
+
+    @PostMapping("/device/update")
+    @Operation(summary = "MMBA设备修改")
+    @RequiresPermissions(PermissionConstants.MMBA_DEVICE_UPDATE)
+    public MmbaDevice updateDevice(@Valid @RequestBody MmbaDeviceUpdateRequest request) {
+        return mmbaDeviceService.updateDevice(request, SessionUtils.getUserId());
+    }
+
+    @PostMapping("/device/import")
+    @Operation(summary = "MMBA设备Excel导入")
+    @RequiresPermissions(PermissionConstants.MMBA_DEVICE_IMPORT)
+    public MmbaDeviceImportResponse importDevices(@RequestPart("file") MultipartFile file) {
+        return mmbaDeviceImportService.importExcel(file, SessionUtils.getUserId());
     }
 
     /**

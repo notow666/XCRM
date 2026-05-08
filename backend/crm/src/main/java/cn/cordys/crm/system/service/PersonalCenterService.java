@@ -26,8 +26,6 @@ import cn.cordys.crm.system.domain.User;
 import cn.cordys.crm.system.dto.request.PersonalInfoRequest;
 import cn.cordys.crm.system.dto.request.PersonalPasswordRequest;
 import cn.cordys.crm.system.dto.request.SendEmailDTO;
-import cn.cordys.crm.system.dto.response.PersonalDeviceItemResponse;
-import cn.cordys.crm.system.dto.response.PersonalDeviceResponse;
 import cn.cordys.crm.system.dto.response.PersonalWechatItemResponse;
 import cn.cordys.crm.system.dto.response.PersonalWechatResponse;
 import cn.cordys.crm.system.dto.response.UserResponse;
@@ -35,13 +33,11 @@ import cn.cordys.crm.system.mapper.ExtOrganizationUserMapper;
 import cn.cordys.crm.system.mapper.ExtUserMapper;
 import cn.cordys.crm.system.mapper.ExtUserRoleMapper;
 import cn.cordys.crm.system.utils.MailSender;
-import cn.cordys.mmba.domain.MmbaDevice;
 import cn.cordys.mmba.domain.MmbaDeviceMapping;
 import cn.cordys.mmba.service.MmbaDeviceService;
 import cn.cordys.mmba.service.MmbaFacadeService;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.pagehelper.Page;
@@ -97,21 +93,6 @@ public class PersonalCenterService {
         }
         String orgUserIdByUserId = extOrganizationUserMapper.getOrgUserIdByUserId(orgId, id);
         return organizationUserService.getUserDetail(orgUserIdByUserId);
-    }
-
-    public PersonalDeviceResponse getPersonalDeviceList(String userId, String organizationId) {
-        User user = userBaseMapper.selectByPrimaryKey(userId);
-        String um = user == null ? null : StringUtils.trimToNull(user.getUm());
-        if (StringUtils.isBlank(um)) {
-            return buildPersonalDeviceResponse(List.of(), false);
-        }
-        List<MmbaDevice> devices = mmbaDeviceService.listByUm(um);
-        if (CollectionUtils.isNotEmpty(devices)) {
-            return buildPersonalDeviceResponse(devices, true);
-        }
-        mmbaFacadeService.queryDeviceList(buildPersonalDeviceQuery(um), userId, organizationId);
-        devices = mmbaDeviceService.listByUm(um);
-        return buildPersonalDeviceResponse(devices, CollectionUtils.isNotEmpty(devices));
     }
 
     public PersonalWechatResponse getPersonalWechatList(String userId, String organizationId) {
@@ -315,44 +296,10 @@ public class PersonalCenterService {
         return resourceTypes;
     }
 
-    private ObjectNode buildPersonalDeviceQuery(String um) {
-        ObjectNode request = JsonNodeFactory.instance.objectNode();
-        ArrayNode ums = request.putArray("ums");
-        ums.add(um);
-        return request;
-    }
-
     private ObjectNode buildPersonalWechatQuery(String um) {
         ObjectNode request = JsonNodeFactory.instance.objectNode();
         request.put("um", um);
         return request;
-    }
-
-    private PersonalDeviceResponse buildPersonalDeviceResponse(List<MmbaDevice> devices, boolean bound) {
-        PersonalDeviceResponse response = new PersonalDeviceResponse();
-        response.setBound(bound);
-        if (CollectionUtils.isEmpty(devices)) {
-            return response;
-        }
-        List<PersonalDeviceItemResponse> items = new ArrayList<>();
-        for (MmbaDevice device : devices) {
-            PersonalDeviceItemResponse item = new PersonalDeviceItemResponse();
-            item.setDeviceId(device.getDeviceId());
-            item.setDeviceName(device.getDeviceName());
-            item.setDeviceType(device.getDeviceType());
-            item.setPhone1(device.getPhone());
-            item.setPhone2(device.getPhone2());
-            item.setTelecomOperators1(device.getTelecomOperators());
-            item.setTelecomOperators2(device.getTelecomOperators2());
-            item.setImei1(device.getImei());
-            item.setImei2(device.getImei2());
-            item.setIccid1(device.getIccid());
-            item.setIccid2(device.getIccid2());
-            item.setUpdateTime(device.getUpdateTime());
-            items.add(item);
-        }
-        response.setDevices(items);
-        return response;
     }
 
     private PersonalWechatResponse buildPersonalWechatResponse(List<MmbaDeviceMapping> mappings, boolean bound) {

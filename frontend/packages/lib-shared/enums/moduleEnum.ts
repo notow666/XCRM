@@ -37,6 +37,9 @@ export enum ModuleConfigEnum {
 
   /** 任务（跟进计划待办） */
   TASK = 'task',
+
+  /** MMBA审计 */
+  MMBA_AUDIT = 'mmbaAudit',
 }
 
 // 添加员工API

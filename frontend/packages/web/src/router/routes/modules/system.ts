@@ -12,12 +12,12 @@ const system: AppRouteRecordRaw = {
     locale: 'menu.settings',
     permissions: [
       'SYS_ORGANIZATION:READ',
+      'MMBA_DEVICE:READ',
       'SYSTEM_ROLE:READ',
       'MODULE_SETTING:READ',
       'SYSTEM_NOTICE:READ',
       'SYSTEM_SETTING:READ',
       'OPERATION_LOG:READ',
-      'CONTENT_AUDIT:READ',
     ],
     icon: 'iconicon_set_up',
     collapsedLocale: 'menu.collapsedSettings',
@@ -30,6 +30,15 @@ const system: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.settings.org',
         permissions: ['SYS_ORGANIZATION:READ'],
+      },
+    },
+    {
+      path: 'mmba-device',
+      name: SystemRouteEnum.SYSTEM_MMBA_DEVICE,
+      component: () => import('../../../views/system/mmba-device/index.vue'),
+      meta: {
+        locale: 'menu.settings.mmbaDevice',
+        permissions: ['MMBA_DEVICE:READ'],
       },
     },
     {
@@ -76,15 +85,6 @@ const system: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.settings.log',
         permissions: ['OPERATION_LOG:READ'],
-      },
-    },
-    {
-      path: 'content-audit',
-      name: SystemRouteEnum.SYSTEM_CONTENT_AUDIT,
-      component: () => import('@/views/system/content-audit/index.vue'),
-      meta: {
-        locale: 'menu.settings.contentAudit',
-        permissions: ['CONTENT_AUDIT:READ'],
       },
     },
   ],

@@ -1378,7 +1378,7 @@ public class ModuleFormService {
         field.setFormId(formId);
         field.setType(fieldMap.get("type").toString());
         field.setName(fieldMap.get("name").toString());
-        field.setMobile((Boolean) fieldMap.getOrDefault("mobile", false));
+        field.setMobile((Boolean) fieldMap.getOrDefault("mobile", true));
         field.setPos(pos);
         field.setCreateTime(System.currentTimeMillis());
         field.setCreateUser(InternalUser.ADMIN.getValue());

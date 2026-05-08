@@ -53,6 +53,7 @@ public class OrganizationLogService extends BaseModuleLogService {
             case "org_admin" -> Translator.get("role.org_admin");
             case "sales_manager" -> Translator.get("role.sales_staff");
             case "role.sales_manager" -> Translator.get("role.sales_manager");
+            case "mmba_audit_manager" -> Translator.get("role.mmba_audit_manager");
             default -> roleKey;
         };
     }

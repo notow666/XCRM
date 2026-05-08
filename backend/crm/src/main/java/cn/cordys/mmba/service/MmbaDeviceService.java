@@ -1,8 +1,13 @@
 package cn.cordys.mmba.service;
 
+import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.uid.IDGenerator;
+import cn.cordys.common.util.TimeUtils;
+import cn.cordys.common.util.Translator;
 import cn.cordys.mmba.domain.MmbaDevice;
 import cn.cordys.mmba.domain.MmbaDeviceMapping;
+import cn.cordys.mmba.dto.request.MmbaDeviceSaveRequest;
+import cn.cordys.mmba.dto.request.MmbaDeviceUpdateRequest;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
 import jakarta.annotation.Resource;
@@ -36,6 +41,120 @@ public class MmbaDeviceService {
             return device;
         }
         mergeDevice(db, device);
+        touch(db, userId);
+        mmbaDeviceMapper.update(db);
+        return db;
+    }
+
+    public MmbaDevice getDevice(String id) {
+        return mmbaDeviceMapper.selectByPrimaryKey(id);
+    }
+
+    public MmbaDevice addDevice(MmbaDeviceSaveRequest request, String userId) {
+        MmbaDevice device = new MmbaDevice();
+        device.setDeviceId(StringUtils.trimToNull(request.getDeviceId()));
+        device.setUm(StringUtils.trimToNull(request.getUm()));
+        device.setDeviceName(request.getDeviceName());
+        device.setDeviceType(request.getDeviceType());
+        device.setDeviceStatus(request.getDeviceStatus());
+        device.setImei(request.getImei());
+        device.setImei2(request.getImei2());
+        device.setIccid(request.getIccid());
+        device.setIccid2(request.getIccid2());
+        device.setPhone(request.getPhone());
+        device.setPhone2(request.getPhone2());
+        device.setTelecomOperators(request.getTelecomOperators());
+        device.setTelecomOperators2(request.getTelecomOperators2());
+        device.setStaffName(request.getStaffName());
+        device.setOrgName(request.getOrgName());
+        device.setOrgNames(request.getOrgNames());
+        String lastOnlineTime = StringUtils.trimToNull(request.getLastOnlineTime());
+        device.setLastOnlineTime(lastOnlineTime);
+        device.setLastOnline(TimeUtils.getEpochMillisOrNull(lastOnlineTime));
+        device.setLoginStatus(request.getLoginStatus());
+        return saveOrUpdateDevice(device, userId);
+    }
+
+    public MmbaDevice updateDevice(MmbaDeviceUpdateRequest request, String userId) {
+        MmbaDevice patch = new MmbaDevice();
+        if (request.getDeviceId() != null) {
+            patch.setDeviceId(StringUtils.trimToNull(request.getDeviceId()));
+        }
+        if (request.getUm() != null) {
+            patch.setUm(StringUtils.trimToNull(request.getUm()));
+        }
+        if (request.getDeviceName() != null) {
+            patch.setDeviceName(request.getDeviceName());
+        }
+        if (request.getDeviceType() != null) {
+            patch.setDeviceType(request.getDeviceType());
+        }
+        if (request.getDeviceStatus() != null) {
+            patch.setDeviceStatus(request.getDeviceStatus());
+        }
+        if (request.getImei() != null) {
+            patch.setImei(request.getImei());
+        }
+        if (request.getImei2() != null) {
+            patch.setImei2(request.getImei2());
+        }
+        if (request.getIccid() != null) {
+            patch.setIccid(request.getIccid());
+        }
+        if (request.getIccid2() != null) {
+            patch.setIccid2(request.getIccid2());
+        }
+        if (request.getPhone() != null) {
+            patch.setPhone(request.getPhone());
+        }
+        if (request.getPhone2() != null) {
+            patch.setPhone2(request.getPhone2());
+        }
+        if (request.getTelecomOperators() != null) {
+            patch.setTelecomOperators(request.getTelecomOperators());
+        }
+        if (request.getTelecomOperators2() != null) {
+            patch.setTelecomOperators2(request.getTelecomOperators2());
+        }
+        if (request.getStaffName() != null) {
+            patch.setStaffName(request.getStaffName());
+        }
+        if (request.getOrgName() != null) {
+            patch.setOrgName(request.getOrgName());
+        }
+        if (request.getOrgNames() != null) {
+            patch.setOrgNames(request.getOrgNames());
+        }
+        if (request.getLastOnlineTime() != null) {
+            if (StringUtils.isBlank(request.getLastOnlineTime())) {
+                patch.setLastOnlineTime(StringUtils.EMPTY);
+                patch.setLastOnline(null);
+            } else {
+                String lastOnlineTime = StringUtils.trimToNull(request.getLastOnlineTime());
+                patch.setLastOnlineTime(lastOnlineTime);
+                patch.setLastOnline(TimeUtils.getEpochMillisOrNull(lastOnlineTime));
+            }
+        }
+        if (request.getLoginStatus() != null) {
+            patch.setLoginStatus(request.getLoginStatus());
+        }
+        return updateDeviceById(request.getId(), patch, userId);
+    }
+
+    public MmbaDevice updateDeviceById(String id, MmbaDevice patch, String userId) {
+        MmbaDevice db = mmbaDeviceMapper.selectByPrimaryKey(id);
+        if (db == null) {
+            throw new GenericException(Translator.get("mmba_device_not_found"));
+        }
+        String newUm = patch.getUm() != null ? patch.getUm() : db.getUm();
+        String newDeviceId = patch.getDeviceId() != null ? patch.getDeviceId() : db.getDeviceId();
+        if (StringUtils.isNotBlank(newUm) && StringUtils.isNotBlank(newDeviceId)) {
+            MmbaDevice other = findDevice(newUm, newDeviceId);
+            if (other != null && !other.getId().equals(db.getId())) {
+                throw new GenericException(Translator.get("mmba_device_duplicate"));
+            }
+        }
+        mergeDevice(db, patch);
         touch(db, userId);
         mmbaDeviceMapper.update(db);
         return db;
@@ -162,8 +281,20 @@ public class MmbaDeviceService {
         target.setStaffName(firstNotBlank(source.getStaffName(), target.getStaffName()));
         target.setOrgName(firstNotBlank(source.getOrgName(), target.getOrgName()));
         target.setOrgNames(firstNotBlank(source.getOrgNames(), target.getOrgNames()));
-        target.setLastOnline(source.getLastOnline() == null ? target.getLastOnline() : source.getLastOnline());
-        target.setLastOnlineTime(firstNotBlank(source.getLastOnlineTime(), target.getLastOnlineTime()));
+        if (source.getLastOnlineTime() != null) {
+            if (StringUtils.EMPTY.equals(source.getLastOnlineTime())) {
+                target.setLastOnlineTime(null);
+                target.setLastOnline(null);
+            } else {
+                target.setLastOnlineTime(source.getLastOnlineTime());
+                Long ms = source.getLastOnline() != null
+                        ? source.getLastOnline()
+                        : TimeUtils.getEpochMillisOrNull(source.getLastOnlineTime());
+                target.setLastOnline(ms);
+            }
+        } else if (source.getLastOnline() != null) {
+            target.setLastOnline(source.getLastOnline());
+        }
         target.setLoginStatus(source.getLoginStatus() == null ? target.getLoginStatus() : source.getLoginStatus());
         target.setLastBehaviorType(source.getLastBehaviorType() == null ? target.getLastBehaviorType() : source.getLastBehaviorType());
         target.setLastAuditTime(source.getLastAuditTime() == null ? target.getLastAuditTime() : source.getLastAuditTime());

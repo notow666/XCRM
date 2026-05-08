@@ -4,40 +4,27 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="cn.cordys.mmba.mapper.ExtMmbaDeviceMapper">
 
-    <select id="list" resultType="cn.cordys.mmba.domain.MmbaDevice">
+    <select id="page" resultType="cn.cordys.mmba.domain.MmbaDevice">
         select *
         from mmba_device
         where 1 = 1
-        <if test="request.um != null and request.um != ''">
-            and um = #{request.um}
-        </if>
-        <if test="request.deviceId != null and request.deviceId != ''">
-            and device_id like concat('%', #{request.deviceId}, '%')
-        </if>
-        <if test="request.imei != null and request.imei != ''">
-            and (imei like concat('%', #{request.imei}, '%') or imei2 like concat('%', #{request.imei}, '%'))
-        </if>
-        <if test="request.phone != null and request.phone != ''">
-            and (phone like concat('%', #{request.phone}, '%') or phone2 like concat('%', #{request.phone}, '%'))
-        </if>
-        <if test="request.staffName != null and request.staffName != ''">
-            and staff_name like concat('%', #{request.staffName}, '%')
-        </if>
         <if test="request.deviceStatus != null">
             and device_status = #{request.deviceStatus}
         </if>
         <if test="request.keyword != null and request.keyword != ''">
             and (
-                device_id like concat('%', #{request.keyword}, '%')
-                or device_name like concat('%', #{request.keyword}, '%')
+                um like concat('%', #{request.keyword}, '%')
+                or staff_name like concat('%', #{request.keyword}, '%')
                 or imei like concat('%', #{request.keyword}, '%')
                 or imei2 like concat('%', #{request.keyword}, '%')
                 or phone like concat('%', #{request.keyword}, '%')
                 or phone2 like concat('%', #{request.keyword}, '%')
-                or staff_name like concat('%', #{request.keyword}, '%')
             )
         </if>
         order by update_time desc
     </select>
 
+    <select id="list" resultType="cn.cordys.mmba.domain.MmbaDevice">
+        select * from mmba_device where um is not null and um != ''
+    </select>
 </mapper>

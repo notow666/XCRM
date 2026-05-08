@@ -1,13 +1,13 @@
 export enum SystemRouteEnum {
   SYSTEM = 'system',
   SYSTEM_ORG = 'systemOrg',
+  SYSTEM_MMBA_DEVICE = 'systemMmbaDevice',
   SYSTEM_ROLE = 'systemRole',
   SYSTEM_MODULE = 'systemModule',
   SYSTEM_BUSINESS = 'systemBusiness',
   SYSTEM_LICENSE = 'systemLicense',
   SYSTEM_LOG = 'systemLog',
   SYSTEM_MESSAGE = 'systemMessage',
-  SYSTEM_CONTENT_AUDIT = 'systemContentAudit',
 }
 
 export enum OpportunityRouteEnum {
@@ -83,6 +83,16 @@ export enum TaskRouteEnum {
   TASK_INDEX = 'taskIndex',
 }
 
+export enum MMBAAuditRouteEnum {
+  MMBA_AUDIT = 'mmbaAudit',
+  /** 审计-微信 */
+  MMBA_AUDIT_WECHAT = 'mmbaAuditWechat',
+  /** 审计-通话 */
+  MMBA_AUDIT_CALL = 'mmbaAuditCall',
+  /** 审计-短信 */
+  MMBA_AUDIT_SMS = 'mmbaAuditSms',
+}
+
 export enum ManagementCenterRouteEnum {
   MANAGEMENT_CENTER = 'managementCenter',
   MANAGEMENT_CENTER_OVERVIEW = 'managementCenterOverview',
@@ -111,5 +121,6 @@ export const AppRouteEnum = {
   ...OrderRouteEnum,
   ...TenderRouteEnum,
   ...TaskRouteEnum,
+  ...MMBAAuditRouteEnum,
   ...ManagementCenterRouteEnum,
 };

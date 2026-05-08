@@ -29,6 +29,7 @@ pnpm-error.log*
 # macOS
 .DS_Store
 
+docs
 .cursor
 graphify-out
 .graphify_detect.json

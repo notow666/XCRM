@@ -792,7 +792,7 @@ export const getFormConfigApiMap: Record<FormDesignKeyEnum, (id?: string) => Pro
   [FormDesignKeyEnum.CLUE_TRANSITION_CUSTOMER]: getCustomerFormConfig,
   [FormDesignKeyEnum.CLUE_POOL]: getClueFormConfig,
   [FormDesignKeyEnum.PRODUCT]: getProductFormConfig,
-  [FormDesignKeyEnum.CUSTOMER_OPEN_SEA]: getCustomerFormConfig,
+  [FormDesignKeyEnum.CUSTOMER_OPEN_SEA]: (tag) => getCustomerFormConfig('openSea'),
   [FormDesignKeyEnum.BUSINESS_CONTACT]: getCustomerContactFormConfig,
   [FormDesignKeyEnum.CUSTOMER_OPPORTUNITY]: getOptFormConfig,
   [FormDesignKeyEnum.FOLLOW_RECORD]: getCustomerFollowRecordFormConfig,

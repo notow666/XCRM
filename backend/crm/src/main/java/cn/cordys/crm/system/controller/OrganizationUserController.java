@@ -154,7 +154,7 @@ public class OrganizationUserController {
     @Operation(summary = "获取用户角色下拉option")
     @RequiresPermissions(PermissionConstants.SYS_ORGANIZATION_READ)
     public List<OptionDTO> getUserRoleList() {
-        List<RoleListResponse> list = roleService.list(OrganizationContext.getOrganizationId());
+        List<RoleListResponse> list = roleService.list(true);
         return list.stream()
                 .map(role -> new OptionDTO(role.getId(), role.getName())).toList();
     }

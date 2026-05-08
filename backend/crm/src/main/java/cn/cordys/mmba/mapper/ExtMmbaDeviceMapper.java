@@ -11,5 +11,6 @@ import java.util.List;
  */
 public interface ExtMmbaDeviceMapper {
 
-    List<MmbaDevice> list(@Param("request") MmbaDevicePageRequest request, @Param("orgId") String orgId);
+    List<MmbaDevice> list();
+    List<MmbaDevice> page(@Param("request") MmbaDevicePageRequest request, @Param("orgId") String orgId);
 }

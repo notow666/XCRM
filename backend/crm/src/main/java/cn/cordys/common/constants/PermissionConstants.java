@@ -259,5 +259,16 @@ public class PermissionConstants {
     public static final String TASK_READ = "TASK:READ";
     public static final String TASK_COMPLETE = "TASK:COMPLETE";
     /*------ end: TASK ------*/
+
+    /*------ start: MMBA_AUDIT (内容审计) ------*/
+    public static final String MMBA_AUDIT_READ = "MMBA_AUDIT:READ";
+    /*------ end: MMBA_AUDIT ------*/
+
+    /*------ start: MMBA_DEVICE (设备管理) ------*/
+    public static final String MMBA_DEVICE_READ = "MMBA_DEVICE:READ";
+    public static final String MMBA_DEVICE_ADD = "MMBA_DEVICE:ADD";
+    public static final String MMBA_DEVICE_UPDATE = "MMBA_DEVICE:UPDATE";
+    public static final String MMBA_DEVICE_IMPORT = "MMBA_DEVICE:IMPORT";
+    /*------ end: MMBA_DEVICE ------*/
 }
 

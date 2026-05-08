@@ -149,7 +149,7 @@ public class UserRoleService {
 
     public List<RoleUserTreeNode> getRoleUserTree(String orgId, String roleId) {
         // 查询角色信息
-        List<RoleListResponse> list = roleService.list(orgId);
+        List<RoleListResponse> list = roleService.list(false);
         List<RoleUserTreeNode> treeNodes = list.stream().filter(role -> !StringUtil.equals(roleId, role.getId()))
                 .map((role) -> {
                     RoleUserTreeNode roleNode = new RoleUserTreeNode();

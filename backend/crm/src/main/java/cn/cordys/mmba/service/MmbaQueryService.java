@@ -25,6 +25,7 @@ import cn.cordys.mmba.dto.request.MmbaWxChatAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxFriendChangeAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxFriendListAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxLoginAuditPageRequest;
+import cn.cordys.mmba.excel.MmbaDeviceImportDict;
 import cn.cordys.mmba.mapper.ExtMmbaAuditMapper;
 import cn.cordys.mmba.mapper.ExtMmbaCommandResultMapper;
 import cn.cordys.mmba.mapper.ExtMmbaDeviceMapper;
@@ -32,10 +33,12 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * MMBA 查询服务。
@@ -58,8 +61,19 @@ public class MmbaQueryService {
      */
     public PagerWithOption<List<MmbaDevice>> pageDevice(MmbaDevicePageRequest request, String organizationId) {
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
-        List<MmbaDevice> list = extMmbaDeviceMapper.list(request, organizationId);
+        List<MmbaDevice> list = extMmbaDeviceMapper.page(request, organizationId);
         return PageUtils.setPageInfoWithOption(page, list, EMPTY_OPTIONS);
+    }
+
+    public List<OptionDTO> listDevice() {
+        List<MmbaDevice> list = extMmbaDeviceMapper.list();
+        if(CollectionUtils.isEmpty(list)) {
+            return Collections.emptyList();
+        }
+        return list.stream()
+                .map(d -> {
+                    return new OptionDTO(d.getUm(), d.getUm() + "-" + MmbaDeviceImportDict.parseDeviceStatus(d.getDeviceStatus()));
+                }).collect(Collectors.toList());
     }
 
     /**

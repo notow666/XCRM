@@ -51,7 +51,7 @@ public class RoleController {
     @RequiresPermissions(PermissionConstants.SYSTEM_ROLE_READ)
     @Operation(summary = "角色列表")
     public List<RoleListResponse> list() {
-        return roleService.list(OrganizationContext.getOrganizationId());
+        return roleService.list(false);
     }
 
     @GetMapping("/get/{id}")

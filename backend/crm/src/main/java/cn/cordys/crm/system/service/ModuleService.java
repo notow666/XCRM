@@ -181,12 +181,11 @@ public class ModuleService {
     /**
      * 获取角色树
      *
-     * @param orgId 组织ID
      * @return 角色树
      */
-    public List<RoleUserTreeNode> getRoleTree(String orgId) {
+    public List<RoleUserTreeNode> getRoleTree() {
         // 查询角色信息
-        List<RoleListResponse> list = roleService.list(orgId);
+        List<RoleListResponse> list = roleService.list(false);
         List<RoleUserTreeNode> treeNodes = list.stream().map((role) -> {
             RoleUserTreeNode roleNode = new RoleUserTreeNode();
             roleNode.setNodeType("ROLE");

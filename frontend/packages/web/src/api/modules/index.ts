@@ -6,13 +6,13 @@ import useCustomerApi from '@lib/shared/api/modules/customer';
 import useDashboard from '@lib/shared/api/modules/dashboard';
 import useFollowApi from '@lib/shared/api/modules/follow';
 import useHomeApi from '@lib/shared/api/modules/home';
+import useMmbaDeviceApi from '@lib/shared/api/modules/mmba/device';
 import useOpportunityApi from '@lib/shared/api/modules/opportunity';
 import useOrderApi from '@lib/shared/api/modules/order';
 import useProductApi from '@lib/shared/api/modules/product';
 import useSysApi from '@lib/shared/api/modules/sys';
 import useLicenseApi from '@lib/shared/api/modules/system/authorizedManagement';
 import useBusinessApi from '@lib/shared/api/modules/system/business';
-import useContentAuditApi from '@lib/shared/api/modules/system/contentAudit';
 import useLoginApi from '@lib/shared/api/modules/system/login';
 import useMessageApi from '@lib/shared/api/modules/system/message';
 import useModuleApi from '@lib/shared/api/modules/system/module';
@@ -42,13 +42,13 @@ const followApi = useFollowApi(CDR);
 const productApi = useProductApi(CDR);
 const messageApi = useMessageApi(CDR);
 const licenseApi = useLicenseApi(CDR);
-const contentAuditApi = useContentAuditApi(CDR);
 const customerApi = useCustomerApi(CDR);
 const businessApi = useBusinessApi(CDR);
 const dashboardApi = useDashboard(CDR);
 const opportunityApi = useOpportunityApi(CDR);
 const contractApi = useContractApi(CDR);
 const orderApi = useOrderApi(CDR);
+const mmbaDeviceApi = useMmbaDeviceApi(CDR);
 
 export const {
   getOrderFormConfig,
@@ -586,7 +586,6 @@ export const {
   switchThirdParty,
   updateAuthStatus,
   updateConfigEmail,
-  getPersonalDevice,
   getPersonalWechat,
   getPersonalFollow,
   updatePersonalInfo,
@@ -623,6 +622,15 @@ export const {
   setAllNotificationRead,
   getMessageTaskConfigDetail,
 } = messageApi;
+
+export const {
+  getMmbaDevicePage,
+  getMmbaDeviceDetail,
+  addMmbaDevice,
+  updateMmbaDevice,
+  importMmbaDevice,
+  getMmbaDeviceOptionList,
+} = mmbaDeviceApi;
 
 export const {
   addReason,
@@ -751,8 +759,6 @@ export const { login, signout, isLogin, getKey, getThirdCallback, getThirdOauthC
 export const { getSystemVersion, changeLocaleBackEnd } = sysApi;
 
 export const { getLicense, addLicense } = licenseApi;
-
-export const { getWechatAccountStatPage } = contentAuditApi;
 
 export const {
   dashboardAdd,

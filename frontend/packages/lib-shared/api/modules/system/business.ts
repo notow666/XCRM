@@ -17,7 +17,6 @@ import {
   GetDETokenUrl,
   GetExportCenterListUrl,
   GetPageConfigUrl,
-  GetPersonalDeviceUrl,
   GetPersonalFollowUrl,
   GetPersonalUrl,
   GetPersonalWechatUrl,
@@ -68,26 +67,6 @@ import {
   SendEmailDTO,
 } from '@lib/shared/models/system/business';
 import { type DEToken, OrgUserInfo } from '@lib/shared/models/system/org';
-
-interface PersonalDeviceItem {
-  deviceId: string;
-  deviceName: string;
-  deviceType: string;
-  phone1: string;
-  phone2: string;
-  telecomOperators1: string;
-  telecomOperators2: string;
-  imei1: string;
-  imei2: string;
-  iccid1: string;
-  iccid2: string;
-  updateTime: number | null;
-}
-
-interface PersonalDeviceResponse {
-  bound: boolean;
-  devices: PersonalDeviceItem[];
-}
 
 export default function useProductApi(CDR: CordysAxios) {
   // 获取邮件设置
@@ -228,10 +207,6 @@ export default function useProductApi(CDR: CordysAxios) {
     return CDR.post<CommonList<FollowDetailItem>>({ url: GetPersonalFollowUrl, data });
   }
 
-  function getPersonalDevice() {
-    return CDR.get<PersonalDeviceResponse>({ url: GetPersonalDeviceUrl });
-  }
-
   function getPersonalWechat() {
     return CDR.get<PersonalWechatResponse>({ url: GetPersonalWechatUrl });
   }
@@ -323,7 +298,6 @@ export default function useProductApi(CDR: CordysAxios) {
     sendEmailCode,
     updateUserPassword,
     getPersonalFollow,
-    getPersonalDevice,
     getPersonalWechat,
     getExportCenterList,
     exportCenterDownload,

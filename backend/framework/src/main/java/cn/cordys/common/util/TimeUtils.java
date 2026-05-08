@@ -76,4 +76,13 @@ public abstract class TimeUtils extends DateUtils {
         Date startDate = parseDate(DateFormatUtils.format(new Date(), DAY_PATTERN) + " 00:00:00", DATETIME_PATTERN);
         return startDate.getTime();
     }
+
+    public static Long getEpochMillisOrNull(String timer) {
+        if (StringUtils.isBlank(timer)) {
+            return 0L;
+        }
+        String s = timer.trim();
+        Date startDate = parseDate(s, DATETIME_PATTERN);
+        return startDate.getTime();
+    }
 }

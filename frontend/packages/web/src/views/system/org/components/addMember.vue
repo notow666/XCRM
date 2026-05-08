@@ -76,13 +76,19 @@
           />
         </n-form-item>
         <n-form-item
-            v-if="canEditUm"
-            require-mark-placement="left"
-            label-placement="left"
-            path="um"
-            :label="t('org.um')"
+          v-if="canEditUm"
+          require-mark-placement="left"
+          label-placement="left"
+          path="um"
+          :label="t('org.um')"
         >
-          <n-input v-model:value="form.um" type="text" :placeholder="t('common.pleaseInput')" :maxlength="16" />
+          <n-select
+            v-model:value="form.um"
+            filterable
+            clearable
+            :placeholder="t('common.pleaseSelect')"
+            :options="umOptions"
+          />
         </n-form-item>
         <CrmExpandButton v-model:expand="showForm">
           <n-form-item
@@ -230,7 +236,15 @@
   import CrmExpandButton from '@/components/business/crm-expand-button/index.vue';
   import CrmUserSelect from '@/components/business/crm-user-select/index.vue';
 
-  import { addUser, getDepartmentTree, getRoleOptions, getUserDetail, getUserOptions, updateUser } from '@/api/modules';
+  import {
+    addUser,
+    getDepartmentTree,
+    getMmbaDeviceOptionList,
+    getRoleOptions,
+    getUserDetail,
+    getUserOptions,
+    updateUser,
+  } from '@/api/modules';
   import useLicenseStore from '@/store/modules/setting/license';
   import useUserStore from '@/store/modules/user';
 
@@ -262,7 +276,7 @@
     gender: false,
     phone: '',
     email: '',
-    um: '',
+    um: null,
     departmentId: '',
     employeeId: '',
     position: '',
@@ -369,6 +383,19 @@
   }
 
   const roleOptions = ref<SelectOption[]>([]);
+  const umOptions = ref<SelectOption[]>([]);
+  async function initUmOptions() {
+    if (!canEditUm.value) {
+      return;
+    }
+    try {
+      const list = await getMmbaDeviceOptionList();
+      umOptions.value = list.map((e) => ({ label: e.name, value: e.id }));
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+    }
+  }
   async function initRoleList() {
     try {
       const res = await getRoleOptions();
@@ -416,6 +443,7 @@
         getDetail();
         initDepartList();
         initRoleList();
+        initUmOptions();
       }
     }
   );

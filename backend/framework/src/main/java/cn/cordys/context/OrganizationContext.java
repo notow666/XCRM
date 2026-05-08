@@ -30,41 +30,41 @@ public class OrganizationContext {
      * @return
      */
     public static String getOrganizationId() {
-        String orgId = ORGANIZATION_ID.get();
-        SessionUser user = SessionUtils.getUser();
-        if (user == null) {
-            // 没有登入，则为API接口或者系统定时任务
+        return DEFAULT_ORGANIZATION_ID;
+//        String orgId = ORGANIZATION_ID.get();
+//        SessionUser user = SessionUtils.getUser();
+//        if (user == null) {
+//            // 没有登入，则为API接口或者系统定时任务
 //            String userId = MDC.get(MdcConstants.USER_ID_KEY);
 //            if(StringUtils.isNotBlank(userId) && Strings.CS.equals(InternalUser.ADMIN.getValue(), userId)){
 //                // 是管理员，则返回默认组织ID
 //                return DEFAULT_ORGANIZATION_ID;
 //            }
-            return DEFAULT_ORGANIZATION_ID;
-        }
-        boolean isAdmin = Strings.CS.equals(InternalUser.ADMIN.getValue(), user.getId());
-        if (StringUtils.isBlank(orgId)) {
-            Set<String> organizationIds = user.getOrganizationIds();
-            if (CollectionUtils.isNotEmpty(organizationIds)) {
-                // 如果有组织权限
-                if (organizationIds.contains(user.getLastOrganizationId())) {
-                    // 如果上次登入的组织任有权限，则获取该组织ID
-                    orgId = user.getLastOrganizationId();
-                } else {
-                    // 获取一个组织ID
-                    orgId = organizationIds.iterator().next();
-                }
-                return orgId;
-            } else if (isAdmin) {
-                // 如果是管理员，则返回默认组织ID
-                return DEFAULT_ORGANIZATION_ID;
-            }
-        } else if (user.getOrganizationIds().contains(orgId) || isAdmin) {
-            // 如果用户有组织权限则返回
-            return orgId;
-        }
-
-        // 没有权限，抛出异常
-        throw new GenericException(CrmHttpResultCode.FORBIDDEN, "No organization permission");
+//        }
+//        boolean isAdmin = Strings.CS.equals(InternalUser.ADMIN.getValue(), user.getId());
+//        if (StringUtils.isBlank(orgId)) {
+//            Set<String> organizationIds = user.getOrganizationIds();
+//            if (CollectionUtils.isNotEmpty(organizationIds)) {
+//                // 如果有组织权限
+//                if (organizationIds.contains(user.getLastOrganizationId())) {
+//                    // 如果上次登入的组织任有权限，则获取该组织ID
+//                    orgId = user.getLastOrganizationId();
+//                } else {
+//                    // 获取一个组织ID
+//                    orgId = organizationIds.iterator().next();
+//                }
+//                return orgId;
+//            } else if (isAdmin) {
+//                // 如果是管理员，则返回默认组织ID
+//                return DEFAULT_ORGANIZATION_ID;
+//            }
+//        } else if (user.getOrganizationIds().contains(orgId) || isAdmin) {
+//            // 如果用户有组织权限则返回
+//            return orgId;
+//        }
+//
+//        // 没有权限，抛出异常
+//        throw new GenericException(CrmHttpResultCode.FORBIDDEN, "No organization permission");
     }
 
     /**

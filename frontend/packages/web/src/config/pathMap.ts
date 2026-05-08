@@ -132,6 +132,28 @@ export const pathMap: PathMapItem[] = [
     ],
   },
   {
+    key: 'MMBA_AUDIT',
+    route: AppRouteEnum.MMBA_AUDIT,
+    locale: 'menu.mmbaAudit',
+    children: [
+      {
+        key: 'MMBA_AUDIT_WECHAT',
+        route: AppRouteEnum.MMBA_AUDIT_WECHAT,
+        locale: 'mmbaAudit.channel.wechat',
+      },
+      {
+        key: 'MMBA_AUDIT_CALL',
+        route: AppRouteEnum.MMBA_AUDIT_CALL,
+        locale: 'mmbaAudit.channel.call',
+      },
+      {
+        key: 'MMBA_AUDIT_SMS',
+        route: AppRouteEnum.MMBA_AUDIT_SMS,
+        locale: 'mmbaAudit.channel.sms',
+      },
+    ],
+  },
+  {
     key: 'CLUE_MANAGEMENT',
     route: AppRouteEnum.CLUE_MANAGEMENT,
     locale: 'module.clueManagement',
@@ -184,6 +206,11 @@ export const pathMap: PathMapItem[] = [
         key: 'SYSTEM_ORGANIZATION',
         route: AppRouteEnum.SYSTEM_ORG,
         locale: 'menu.settings.org',
+      },
+      {
+        key: 'SYSTEM_MMBA_DEVICE',
+        route: AppRouteEnum.SYSTEM_MMBA_DEVICE,
+        locale: 'menu.settings.mmbaDevice',
       },
       {
         key: 'SYSTEM_ROLE',

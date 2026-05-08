@@ -9,10 +9,5 @@ import lombok.Data;
 @Data
 public class MmbaDevicePageRequest extends BasePageRequest {
     private String keyword;
-    private String um;
-    private String deviceId;
-    private String imei;
-    private String phone;
-    private String staffName;
     private Integer deviceStatus;
 }

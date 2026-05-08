@@ -69,7 +69,7 @@ public class ModuleController {
     @Operation(summary = "获取角色树")
     @RequiresPermissions(PermissionConstants.MODULE_SETTING_READ)
     public List<RoleUserTreeNode> getRoleTree() {
-        return moduleService.getRoleTree(OrganizationContext.getOrganizationId());
+        return moduleService.getRoleTree();
     }
 
 	@GetMapping("/advanced-search/settings")

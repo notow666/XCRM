@@ -547,6 +547,13 @@
       groupList: [],
       enable: true,
     },
+    {
+      label: t('module.mmbaAudit'),
+      key: ModuleConfigEnum.MMBA_AUDIT,
+      icon: 'iconicon_dashboard1',
+      groupList: [],
+      enable: true,
+    },
   ];
 
   const moduleConfigList = computed<ModuleConfigItem[]>(() => {

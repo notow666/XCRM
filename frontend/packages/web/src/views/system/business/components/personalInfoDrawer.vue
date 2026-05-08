@@ -86,37 +86,6 @@
           :any-permission="['CUSTOMER_MANAGEMENT:READ', 'OPPORTUNITY_MANAGEMENT:READ', 'CLUE_MANAGEMENT:READ']"
         />
       </CrmCard>
-      <CrmCard v-if="activeTab === PersonalEnum.MY_DEVICE" hide-footer :special-height="64">
-        <n-spin :show="deviceLoading" :description="deviceLoadingText" class="min-h-[240px]">
-          <div v-if="personalDevice.bound && personalDevice.devices.length" class="grid gap-[16px]">
-            <div
-              v-for="device in personalDevice.devices"
-              :key="device.deviceId || device.imei1 || device.iccid1"
-              class="rounded-[var(--border-radius-small)] bg-[var(--text-n9)] p-[24px]"
-            >
-              <div class="mb-[16px] flex flex-wrap items-center justify-between gap-[12px]">
-                <div class="text-[16px] font-medium text-[var(--text-n1)]">{{ formatValue(device.deviceName) }}</div>
-                <div class="text-[14px] text-[var(--text-n4)]">
-                  {{ deviceModelLabel }}{{ formatValue(device.deviceType) }}
-                </div>
-              </div>
-              <div class="grid gap-[12px] md:grid-cols-2 xl:grid-cols-3">
-                <div v-for="field in deviceFieldList" :key="field.key" class="flex">
-                  <n-p class="m-[0] shrink-0 text-[var(--text-n4)]">{{ field.label }}</n-p>
-                  <n-p class="mx-[8px] my-[0] break-all text-[var(--text-n1)]">
-                    {{ formatValue(device[field.key]) }}
-                  </n-p>
-                </div>
-                <div class="flex">
-                  <n-p class="m-[0] shrink-0 text-[var(--text-n4)]">{{ updateTimeLabel }}</n-p>
-                  <n-p class="mx-[8px] my-[0] text-[var(--text-n1)]">{{ formatTime(device.updateTime) }}</n-p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <n-empty v-else :description="deviceEmptyText" class="py-[64px]" />
-        </n-spin>
-      </CrmCard>
       <CrmCard v-if="activeTab === PersonalEnum.MY_WECHAT" hide-footer :special-height="64">
         <n-spin :show="wechatLoading" :description="wechatLoadingText" class="min-h-[240px]">
           <div v-if="personalWechat.bound && personalWechat.wechats.length" class="grid gap-[16px]">
@@ -173,7 +142,7 @@
   import EditPasswordModal from '@/views/system/business/components/editPasswordModal.vue';
   import EditPersonalInfoModal from '@/views/system/business/components/editPersonalInfoModal.vue';
 
-  import { getPersonalDevice, getPersonalInfo, getPersonalWechat } from '@/api/modules';
+  import { getPersonalInfo, getPersonalWechat } from '@/api/modules';
   import { defaultUserInfo } from '@/config/business';
   import { useUserStore } from '@/store';
   import { hasAnyPermission } from '@/utils/permission';
@@ -194,14 +163,6 @@
     ...defaultUserInfo,
   });
 
-  type PersonalDeviceResponse = Awaited<ReturnType<typeof getPersonalDevice>>;
-  type PersonalDeviceItem = PersonalDeviceResponse['devices'][number];
-
-  const personalDevice = ref<PersonalDeviceResponse>({
-    bound: false,
-    devices: [],
-  });
-  const deviceLoading = ref(false);
   const personalWechat = ref<PersonalWechatResponse>({
     bound: false,
     wechats: [],
@@ -219,13 +180,9 @@
   const showEditPasswordModal = ref<boolean>(false);
   const refreshKey = ref(0);
 
-  const myDeviceTabLabel = '\u6211\u7684\u8bbe\u5907';
   const myWechatTabLabel = '\u6211\u7684\u5fae\u4fe1';
-  const deviceLoadingText = '\u6b63\u5728\u67e5\u8be2\u4e2d';
   const wechatLoadingText = '\u6b63\u5728\u67e5\u8be2\u4e2d';
-  const deviceEmptyText = '\u60a8\u6682\u65f6\u672a\u7ed1\u5b9a,\u8bf7\u8054\u7cfb\u7ba1\u7406\u5458';
   const wechatEmptyText = '\u60a8\u6682\u65f6\u672a\u7ed1\u5b9a,\u8bf7\u8054\u7cfb\u7ba1\u7406\u5458';
-  const deviceModelLabel = '\u8bbe\u5907\u578b\u53f7\uff1a';
   const updateTimeLabel = '\u66f4\u65b0\u65f6\u95f4';
 
   const tabList = computed<TabPaneProps[]>(() => {
@@ -237,10 +194,6 @@
       {
         name: PersonalEnum.MY_PLAN,
         tab: t('system.personal.plan'),
-      },
-      {
-        name: PersonalEnum.MY_DEVICE,
-        tab: myDeviceTabLabel,
       },
       {
         name: PersonalEnum.MY_WECHAT,
@@ -257,14 +210,6 @@
     ];
   });
 
-  const deviceFieldList: { label: string; key: keyof PersonalDeviceItem }[] = [
-    { label: '\u624b\u673a\u53f71', key: 'phone1' },
-    { label: '\u624b\u673a\u53f72', key: 'phone2' },
-    { label: 'IMEI1', key: 'imei1' },
-    { label: 'IMEI2', key: 'imei2' },
-    { label: 'ICCID1', key: 'iccid1' },
-    { label: 'ICCID2', key: 'iccid2' },
-  ];
   const wechatFieldList: { label: string; key: keyof PersonalWechatResponse['wechats'][number] }[] = [
     { label: '\u5fae\u4fe1\u8d26\u53f7\u6635\u79f0', key: 'wxNickName' },
     { label: '\u5fae\u4fe1\u8d26\u53f7id', key: 'wxId' },
@@ -282,15 +227,6 @@
           return;
         }
         throw error;
-      }
-      return;
-    }
-    if (activeTab.value === PersonalEnum.MY_DEVICE) {
-      deviceLoading.value = true;
-      try {
-        personalDevice.value = await getPersonalDevice();
-      } finally {
-        deviceLoading.value = false;
       }
       return;
     }
