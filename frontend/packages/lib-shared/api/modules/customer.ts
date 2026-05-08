@@ -373,8 +373,9 @@ export default function useProductApi(CDR: CordysAxios) {
 
   // 获取客户表单配置
   function getCustomerFormConfig(tag = 'other') {
+    const finalTag = tag && tag.trim() ? tag : 'other';
     // 公海池获取客户表单配置，过滤掉拨打电话状态、微信好友状态
-    return CDR.get<FormDesignConfigDetailParams>({ url: `${GetCustomerFormConfigUrl}/${tag}` });
+    return CDR.get<FormDesignConfigDetailParams>({ url: `${GetCustomerFormConfigUrl}/${finalTag}` });
   }
 
   // 获取客户详情
