@@ -39,6 +39,14 @@ public enum BusinessModuleField {
      * 失败原因
      */
     CUSTOMER_FAIL_REASON("customerFailReason", "failReason", Set.of(), FormKey.CUSTOMER.getKey()),
+    /**
+     * 拨打电话状态
+     */
+    CUSTOMER_CALL_STATUS("customerCallStatus", "callStatus", Set.of("readable", "mobile", "editable", "showLabel"), FormKey.CUSTOMER.getKey()),
+    /**
+     * 微信好友状态
+     */
+    CUSTOMER_WECHAT_FRIEND_STATUS("customerWechatFriendStatus", "wechatFriendStatus", Set.of("readable", "mobile", "editable", "showLabel"), FormKey.CUSTOMER.getKey()),
     /*------ end: CUSTOMER ------*/
 
     /*------ start: CLUE ------*/
