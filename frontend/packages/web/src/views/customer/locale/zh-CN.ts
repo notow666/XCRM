@@ -82,6 +82,7 @@ export default {
   'customer.callStatus': '拨打状态',
   'customer.wechatFriendStatus': '微信好友状态',
   'customer.wechatFriendAdded': '已添加',
+  'customer.wechatFriendPending': '添加未通过',
   'customer.wechatFriendNotAdded': '未添加',
   'customer.reach': '沟通',
   'customer.reach.call': '拨打电话',

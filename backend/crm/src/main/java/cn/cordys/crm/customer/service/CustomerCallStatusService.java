@@ -1,6 +1,7 @@
 package cn.cordys.crm.customer.service;
 
 import cn.cordys.crm.customer.domain.Customer;
+import cn.cordys.crm.system.domain.User;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
 import jakarta.annotation.Resource;
@@ -8,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * 客户拨打状态维护。
@@ -24,15 +27,17 @@ public class CustomerCallStatusService {
 
     @Resource
     private BaseMapper<Customer> customerMapper;
+    @Resource
+    private BaseMapper<User> userBaseMapper;
 
-    public void upgradeByCustomer(String customerId, String customerTel, Integer targetStatus, String userId) {
+    public void upgradeByCustomer(String customerId, String customerTel, String um, Integer targetStatus, String userId) {
         if (targetStatus == null || targetStatus < DIALED_NOT_CONNECTED) {
             return;
         }
-        Customer customer = findCustomer(customerId, customerTel);
+        Customer customer = findCustomer(customerId, customerTel, um);
         if (customer == null) {
-            log.warn("客户拨打状态更新跳过，未找到客户 customerId={} customerTel={} targetStatus={}",
-                    customerId, customerTel, targetStatus);
+            log.warn("客户拨打状态更新跳过，未找到客户 customerId={} customerTel={} um={} targetStatus={}",
+                    customerId, customerTel, um, targetStatus);
             return;
         }
         int currentStatus = customer.getCallStatus() == null ? NOT_DIALED : customer.getCallStatus();
@@ -49,16 +54,29 @@ public class CustomerCallStatusService {
                 customer.getId(), customer.getMobile(), currentStatus, targetStatus);
     }
 
-    private Customer findCustomer(String customerId, String customerTel) {
+    private Customer findCustomer(String customerId, String customerTel, String um) {
         if (StringUtils.isNotBlank(customerId)) {
             return customerMapper.selectByPrimaryKey(customerId);
         }
         String mobile = StringUtils.trimToNull(customerTel);
-        if (mobile == null) {
+        String normalizedUm = StringUtils.trimToNull(um);
+        if (mobile == null || normalizedUm == null) {
+            return null;
+        }
+        LambdaQueryWrapper<User> userWrapper = new LambdaQueryWrapper<>();
+        userWrapper.eq(User::getUm, normalizedUm);
+        List<String> ownerIds = userBaseMapper.selectListByLambda(userWrapper).stream()
+                .map(User::getId)
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .toList();
+        if (ownerIds.isEmpty()) {
             return null;
         }
         LambdaQueryWrapper<Customer> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Customer::getMobile, mobile);
+        wrapper.eq(Customer::getMobile, mobile)
+                .eq(Customer::getInSharedPool, false)
+                .in(Customer::getOwner, ownerIds);
         return customerMapper.selectListByLambda(wrapper).stream().findFirst().orElse(null);
     }
 }

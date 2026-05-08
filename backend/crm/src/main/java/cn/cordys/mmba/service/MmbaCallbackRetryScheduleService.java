@@ -8,6 +8,7 @@ import cn.cordys.mmba.callback.consumer.AuditCallConsumer;
 import cn.cordys.mmba.callback.consumer.CommandCallConsumer;
 import cn.cordys.mmba.domain.MmbaCallbackRecord;
 import cn.cordys.mmba.dto.MmbaAuditRequest;
+import cn.cordys.mmba.dto.ZzyData;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -64,6 +65,7 @@ public class MmbaCallbackRetryScheduleService {
             }
             request.setRawPayload(record.getPayloadRaw());
             request.hydrateDataRawPayload();
+            hydrateTenantId(request, tenantId);
             String group = MmbaBehaviorTypes.SUPPORTED.get(request.getBehaviorType());
             if (MmbaConstants.GROUP_BY_AUDIT.equals(group)) {
                 auditCallConsumer.process(request);
@@ -78,6 +80,17 @@ public class MmbaCallbackRetryScheduleService {
         } catch (Exception e) {
             log.error("MMBA失败回调补偿执行失败 callbackRecordId={} behaviorType={} tenantId={}",
                     record.getId(), record.getBehaviorType(), tenantId, e);
+        }
+    }
+
+    private void hydrateTenantId(MmbaAuditRequest request, String tenantId) {
+        if (request == null || !StringUtils.hasText(tenantId) || request.getData() == null) {
+            return;
+        }
+        for (ZzyData item : request.getData()) {
+            if (item != null && !StringUtils.hasText(item.getTenantId())) {
+                item.setTenantId(tenantId);
+            }
         }
     }
 }

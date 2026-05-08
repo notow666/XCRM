@@ -2,6 +2,7 @@ package cn.cordys.mmba.service;
 
 import cn.cordys.common.util.JSON;
 import cn.cordys.crm.customer.service.CustomerCallStatusService;
+import cn.cordys.crm.customer.service.CustomerWechatFriendStatusService;
 import cn.cordys.mmba.MmbaBehaviorTypes;
 import cn.cordys.mmba.MmbaConstants;
 import cn.cordys.mmba.domain.MmbaCallRecordAudit;
@@ -57,6 +58,8 @@ public class MmbaCallbackDispatchService {
     private MmbaFacadeService mmbaFacadeService;
     @Resource
     private CustomerCallStatusService customerCallStatusService;
+    @Resource
+    private CustomerWechatFriendStatusService customerWechatFriendStatusService;
 
     /**
      * 审计类回调分发。
@@ -70,12 +73,17 @@ public class MmbaCallbackDispatchService {
                     MmbaCallRecordAudit callAudit = mmbaAuditPersistenceService.saveOrUpdateCallAudit(
                             buildCallAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER
                     );
-                    upgradeCustomerCallStatus(callAudit.getCustomerId(), callAudit.getCustomerTel(),
+                    upgradeCustomerCallStatus(callAudit.getCustomerId(), callAudit.getCustomerTel(), callAudit.getUm(),
                             resolveAuditCustomerCallStatus(callAudit), callbackRecord.getId());
                 }
                 case MmbaBehaviorTypes.SMS_RECORD_AUDIT -> mmbaAuditPersistenceService.saveOrUpdateSmsAudit(buildSmsAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
                 case MmbaBehaviorTypes.WX_CHAT_AUDIT -> mmbaAuditPersistenceService.saveOrUpdateWxChatAudit(buildWxChatAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
-                case MmbaBehaviorTypes.WX_FRIEND_CHANGE_AUDIT -> mmbaAuditPersistenceService.saveOrUpdateWxFriendChangeAudit(buildWxFriendChangeAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
+                case MmbaBehaviorTypes.WX_FRIEND_CHANGE_AUDIT -> {
+                    mmbaAuditPersistenceService.saveOrUpdateWxFriendChangeAudit(buildWxFriendChangeAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
+                    customerWechatFriendStatusService.handleFriendChangeAudit(
+                            data.getUm(), data.getFriendPhone(), data.getIsFriend(), toInteger(data.getOperFlag()), MmbaConstants.SYSTEM_USER
+                    );
+                }
                 case MmbaBehaviorTypes.WX_FRIEND_LIST_AUDIT -> mmbaAuditPersistenceService.saveOrUpdateWxFriendListAudit(buildWxFriendListAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
                 case MmbaBehaviorTypes.WX_ACCOUNT_AUDIT -> {
                     mmbaAuditPersistenceService.saveOrUpdateWxAccountAudit(buildWxAccountAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
@@ -92,6 +100,7 @@ public class MmbaCallbackDispatchService {
                 case MmbaBehaviorTypes.WX_LOGIN_LOGOUT_AUDIT -> {
                     mmbaAuditPersistenceService.saveOrUpdateWxLoginAudit(buildWxLoginAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
                     mmbaWxMappingSyncService.syncMappingStatusFromLoginAudit(data, MmbaConstants.SYSTEM_USER);
+                    customerWechatFriendStatusService.recalculateByUm(data.getUm(), MmbaConstants.SYSTEM_USER);
                 }
                 default -> {
                 }
@@ -108,8 +117,16 @@ public class MmbaCallbackDispatchService {
                     callbackRecord.getId(), dto.getBehaviorType(), data.getReqId(), data.getTenantId());
             mmbaCommandResultService.saveOrUpdate(buildCommandResult(dto.getBehaviorType(), data, callbackRecord), MmbaConstants.SYSTEM_USER);
             if (dto.getBehaviorType() == MmbaBehaviorTypes.DIAL_FAIL_RECEIPT) {
-                upgradeCustomerCallStatus(resolveCustomerId(data.getBizExtInfo()), data.getCustomerTel(),
+                upgradeCustomerCallStatus(resolveCustomerId(data.getBizExtInfo()), data.getCustomerTel(), data.getUm(),
                         CustomerCallStatusService.DIALED_NOT_CONNECTED, callbackRecord.getId());
+            }
+            if (dto.getBehaviorType() == MmbaBehaviorTypes.ADD_WECHAT_FRIEND_RECEIPT) {
+                customerWechatFriendStatusService.handleAddFriendReceipt(
+                        data.getUm(),
+                        data.getFriendPhone(),
+                        toInteger(firstNotBlank(data.getProcessStatus(), data.getStatus())),
+                        MmbaConstants.SYSTEM_USER
+                );
             }
         }
     }
@@ -639,6 +656,10 @@ public class MmbaCallbackDispatchService {
         if (StringUtils.isBlank(value)) {
             return null;
         }
+        Long timestampValue = toLong(value);
+        if (timestampValue != null) {
+            return timestampValue;
+        }
         try {
             DateTimeFormatter formatter = new DateTimeFormatterBuilder()
                     .appendOptional(DateTimeFormatter.ofPattern("yyyy-M-d H:m:s"))
@@ -687,9 +708,9 @@ public class MmbaCallbackDispatchService {
                 : CustomerCallStatusService.DIALED_NOT_CONNECTED;
     }
 
-    private void upgradeCustomerCallStatus(String customerId, String customerTel, Integer targetStatus, String callbackRecordId) {
-        customerCallStatusService.upgradeByCustomer(customerId, customerTel, targetStatus, MmbaConstants.SYSTEM_USER);
-        log.info("MMBA客户拨打状态维护 callbackRecordId={} customerId={} customerTel={} targetStatus={}",
-                callbackRecordId, customerId, customerTel, targetStatus);
+    private void upgradeCustomerCallStatus(String customerId, String customerTel, String um, Integer targetStatus, String callbackRecordId) {
+        customerCallStatusService.upgradeByCustomer(customerId, customerTel, um, targetStatus, MmbaConstants.SYSTEM_USER);
+        log.info("MMBA客户拨打状态维护 callbackRecordId={} customerId={} customerTel={} um={} targetStatus={}",
+                callbackRecordId, customerId, customerTel, um, targetStatus);
     }
 }

@@ -88,6 +88,7 @@ export default {
   'customer.callStatus': 'Call Status',
   'customer.wechatFriendStatus': 'WeChat Friend Status',
   'customer.wechatFriendAdded': 'Added',
+  'customer.wechatFriendPending': 'Pending',
   'customer.wechatFriendNotAdded': 'Not Added',
   'customer.reach': 'Communication',
   'customer.reach.call': 'Call',

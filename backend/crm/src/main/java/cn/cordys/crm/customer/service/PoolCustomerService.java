@@ -109,6 +109,8 @@ public class PoolCustomerService {
     private CustomerOwnerHistoryService customerOwnerHistoryService;
     @Resource
     private CustomerStageService customerStageService;
+    @Resource
+    private CustomerWechatFriendStatusService customerWechatFriendStatusService;
 
     /**
      * 获取当前用户公海选项
@@ -639,6 +641,7 @@ public class PoolCustomerService {
             customer.setStageStatus(CustomerStageService.STATUS_NEW);
         }
         extCustomerMapper.updateIncludeNullById(customer);
+        customerWechatFriendStatusService.recalculateCustomer(customerId, ownerId);
 
         // 清空负责人历史记录
         customerOwnerHistoryService.deleteByCustomerIds(List.of(customerId));

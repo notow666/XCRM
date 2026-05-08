@@ -70,7 +70,6 @@ import cn.cordys.crm.system.excel.listener.CustomFieldImportEventListener;
 import cn.cordys.crm.system.notice.CommonNoticeSendService;
 import cn.cordys.crm.system.service.*;
 import cn.cordys.excel.utils.EasyExcelExporter;
-import cn.cordys.mmba.dto.CustomerWxFriendStatusDTO;
 import cn.cordys.mmba.dto.CustomerWxSendRouteDTO;
 import cn.cordys.mmba.mapper.ExtMmbaAuditMapper;
 import cn.cordys.mmba.service.MmbaDeviceService;
@@ -192,6 +191,8 @@ public class CustomerService {
     private MmbaDeviceService mmbaDeviceService;
     @Resource
     private MmbaFacadeService mmbaFacadeService;
+    @Resource
+    private CustomerWechatFriendStatusService customerWechatFriendStatusService;
 
     public PagerWithOption<List<CustomerListResponse>> list(CustomerPageRequest request, String userId, String orgId, DeptDataPermissionDTO deptDataPermission) {
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
@@ -260,7 +261,6 @@ public class CustomerService {
         boolean phoneMaskEnabled = applyGlobalPhoneMask && globalPhoneMaskConfigService.isEnabled(orgId);
         List<String> customerIds = list.stream().map(CustomerListResponse::getId)
                 .collect(Collectors.toList());
-        Map<String, Boolean> customerWxFriendStatusMap = buildCustomerWxFriendStatusMap(list, userId);
 
         Map<String, List<BaseModuleFieldValue>> caseCustomFiledMap = customerFieldService.getResourceFieldMap(customerIds, true);
 
@@ -308,9 +308,8 @@ public class CustomerService {
         Map<String, String> dictMap = dictList.stream().collect(Collectors.toMap(Dict::getId, Dict::getName));
 
         list.forEach(customerListResponse -> {
-            String mobile = customerListResponse.getMobile();
             customerListResponse.setCallStatus(Optional.ofNullable(customerListResponse.getCallStatus()).orElse(0));
-            customerListResponse.setWxFriendAdded(customerWxFriendStatusMap.getOrDefault(mobile, false));
+            customerListResponse.setWechatFriendStatus(Optional.ofNullable(customerListResponse.getWechatFriendStatus()).orElse(0));
             // 获取自定义字段
             List<BaseModuleFieldValue> customerFields = caseCustomFiledMap.get(customerListResponse.getId());
             customerListResponse.setModuleFields(customerFields);
@@ -347,37 +346,6 @@ public class CustomerService {
         });
 
         return list;
-    }
-
-    private Map<String, Boolean> buildCustomerWxFriendStatusMap(List<CustomerListResponse> list, String userId) {
-        List<String> mobiles = list.stream()
-                .map(CustomerListResponse::getMobile)
-                .filter(StringUtils::isNotBlank)
-                .distinct()
-                .toList();
-        if (CollectionUtils.isEmpty(mobiles) || StringUtils.isBlank(userId)) {
-            return Map.of();
-        }
-        String um = readCurrentUserUm(userId);
-        if (StringUtils.isBlank(um)) {
-            return Map.of();
-        }
-        List<String> activeWxIds = mmbaDeviceService.listMappingsByUm(um).stream()
-                .filter(mapping -> StringUtils.equals("ACTIVE", mapping.getMappingStatus()))
-                .map(mapping -> StringUtils.trimToNull(mapping.getWxid()))
-                .filter(StringUtils::isNotBlank)
-                .distinct()
-                .toList();
-        if (CollectionUtils.isEmpty(activeWxIds)) {
-            return Map.of();
-        }
-        List<CustomerWxFriendStatusDTO> wxFriendStatuses = extMmbaAuditMapper.listCustomerWxFriendStatus(mobiles, um, activeWxIds);
-        if (CollectionUtils.isEmpty(wxFriendStatuses)) {
-            return Map.of();
-        }
-        return wxFriendStatuses.stream()
-                .filter(item -> StringUtils.isNotBlank(item.getFriendSearch()) && item.getWxFriendAdded() != null)
-                .collect(Collectors.toMap(CustomerWxFriendStatusDTO::getFriendSearch, item -> item.getWxFriendAdded() == 1, Boolean::logicalOr));
     }
 
     private String readCurrentUserUm(String userId) {
@@ -678,14 +646,18 @@ public class CustomerService {
         dataScopeService.checkDataPermission(userId, orgId, originCustomer.getOwner(), PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE);
 
         Customer customer = BeanUtils.copyBean(new Customer(), request);
-        if (isMobileChanged(originCustomer, request)) {
+        boolean mobileChanged = isMobileChanged(originCustomer, request);
+        boolean ownerChanged = StringUtils.isNotBlank(request.getOwner())
+                && !Strings.CS.equals(request.getOwner(), originCustomer.getOwner());
+        if (mobileChanged) {
             customer.setCallStatus(0);
+            customer.setWechatFriendStatus(0);
         }
         customer.setUpdateTime(System.currentTimeMillis());
         customer.setUpdateUser(userId);
 
         if (StringUtils.isNotBlank(request.getOwner())) {
-            if (!Strings.CS.equals(request.getOwner(), originCustomer.getOwner())) {
+            if (ownerChanged) {
                 //客户负责人变更，联系人同步更新
                 customerContactService.updateContactOwner(request.getId(), request.getOwner(), originCustomer.getOwner(), orgId);
 
@@ -711,6 +683,9 @@ public class CustomerService {
         }
 
         customerMapper.update(customer);
+        if (ownerChanged && !mobileChanged) {
+            customerWechatFriendStatusService.recalculateCustomer(request.getId(), userId);
+        }
 
         customer = customerMapper.selectByPrimaryKey(request.getId());
         baseService.handleUpdateLog(originCustomer, customer, originCustomerFields, request.getModuleFields(), originCustomer.getId(), originCustomer.getName());
@@ -856,6 +831,7 @@ public class CustomerService {
         // 添加责任人历史
         customerOwnerHistoryService.batchAdd(transferRequest, userId);
         extCustomerMapper.batchTransfer(transferRequest, userId);
+        customerWechatFriendStatusService.recalculateCustomers(transferIds, userId);
 
         // 记录日志
         List<Customer> transferredCustomers = customerMapper.selectByIds(transferIds);
@@ -1016,6 +992,7 @@ public class CustomerService {
             customer.setCollectionTime(null);
             customer.setUpdateUser(currentUser);
             customer.setUpdateTime(System.currentTimeMillis());
+            customer.setWechatFriendStatus(0);
             // 回收客户至公海
             extCustomerMapper.moveToPool(customer);
             success++;

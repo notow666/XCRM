@@ -37,6 +37,10 @@ public interface ExtMmbaAuditMapper {
                                                                @Param("um") String um,
                                                                @Param("staffIdInApps") List<String> staffIdInApps);
 
+    Boolean existsPendingAddFriendReceipt(@Param("um") String um,
+                                          @Param("friendPhone") String friendPhone,
+                                          @Param("umWxids") List<String> umWxids);
+
     CustomerWxSendRouteDTO getCustomerWxSendRoute(@Param("um") String um,
                                                   @Param("friendPhone") String friendPhone);
 

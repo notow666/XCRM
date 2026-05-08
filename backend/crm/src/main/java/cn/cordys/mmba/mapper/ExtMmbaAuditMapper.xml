@@ -46,6 +46,33 @@
         group by latest.friend_phone
     </select>
 
+    <select id="existsPendingAddFriendReceipt" resultType="java.lang.Boolean">
+        select exists(
+            select 1
+            from (
+                select result.friend_phone,
+                       result.um_wxid,
+                       max(ifnull(result.timestamp_value, ifnull(result.insert_time_value, result.update_time))) as latest_sort_time
+                from mmba_command_result result
+                where result.behavior_type = 50
+                  and result.um = #{um}
+                  and result.friend_phone = #{friendPhone}
+                  and result.um_wxid in
+                <foreach collection="umWxids" item="umWxid" open="(" close=")" separator=",">
+                    #{umWxid}
+                </foreach>
+                group by result.friend_phone, result.um_wxid
+            ) latest
+            join mmba_command_result current_result
+              on current_result.behavior_type = 50
+             and current_result.um = #{um}
+             and current_result.friend_phone = latest.friend_phone
+             and current_result.um_wxid = latest.um_wxid
+             and ifnull(current_result.timestamp_value, ifnull(current_result.insert_time_value, current_result.update_time)) = latest.latest_sort_time
+            where current_result.process_status = 4
+        )
+    </select>
+
     <select id="getCustomerWxSendRoute" resultType="cn.cordys.mmba.dto.CustomerWxSendRouteDTO">
         select latest_audit.staff_id_in_app as umWxid,
                latest_audit.contact_im_id_in_app as recId,

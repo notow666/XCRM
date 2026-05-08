@@ -2,6 +2,7 @@ package cn.cordys.mmba.service;
 
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.JSON;
+import cn.cordys.common.exception.GenericException;
 import cn.cordys.context.TenantContext;
 import cn.cordys.crm.system.domain.User;
 import cn.cordys.mmba.MmbaApiPaths;
@@ -17,12 +18,14 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -60,7 +63,7 @@ public class MmbaFacadeService {
         return executeJson(
                 MmbaBizTypes.CALL_DIAL,
                 MmbaApiPaths.PHONE_DIAL,
-                enrichDialRequest(request, userId),
+                enrichDialRequest(request, userId, organizationId),
                 userId,
                 organizationId,
                 mmbaIntegrationService::dial
@@ -81,7 +84,7 @@ public class MmbaFacadeService {
         return executeJson(
                 MmbaBizTypes.SMS_SEND,
                 MmbaApiPaths.PHONE_SEND_MSG,
-                enrichSmsRequest(request, userId),
+                enrichSmsRequest(request, userId, organizationId),
                 userId,
                 organizationId,
                 mmbaIntegrationService::sendSms
@@ -319,32 +322,73 @@ public class MmbaFacadeService {
         return JSON.parseObject(JSON.toJSONString(request), ObjectNode.class);
     }
 
-    private ObjectNode enrichDialRequest(JsonNode request, String userId) {
+    private ObjectNode enrichDialRequest(JsonNode request, String userId, String organizationId) {
         ObjectNode payload = normalizeRequest(request);
-        if (StringUtils.isNotBlank(payload.path("um").asText(null))) {
-            return payload;
-        }
-        User user = userBaseMapper.selectByPrimaryKey(userId);
-        String um = user == null ? null : StringUtils.trimToNull(user.getUm());
+        String um = payload.path("um").asText(null);
         if (StringUtils.isBlank(um)) {
-            throw new IllegalArgumentException("\u5f53\u524d\u767b\u5f55\u4eba\u672a\u914d\u7f6eUM\uff0c\u65e0\u6cd5\u62e8\u6253\u7535\u8bdd");
+            um = requireCurrentUserUm(userId, "无法拨打电话");
+            payload.put("um", um);
         }
-        payload.put("um", um);
+        Integer cardSlotNum = readCardSlotNum(payload, "拨打电话");
+        if (cardSlotNum != null) {
+            ensureCardSlotAvailable(um, cardSlotNum, userId, organizationId, "拨打电话");
+        }
         return payload;
     }
 
-    private ObjectNode enrichSmsRequest(JsonNode request, String userId) {
+    private ObjectNode enrichSmsRequest(JsonNode request, String userId, String organizationId) {
         ObjectNode payload = normalizeRequest(request);
-        if (StringUtils.isNotBlank(payload.path("um").asText(null))) {
-            return payload;
+        String um = payload.path("um").asText(null);
+        if (StringUtils.isBlank(um)) {
+            um = requireCurrentUserUm(userId, "无法发送短信");
+            payload.put("um", um);
         }
+        Integer cardSlotNum = readCardSlotNum(payload, "发送短信");
+        if (cardSlotNum != null) {
+            ensureCardSlotAvailable(um, cardSlotNum, userId, organizationId, "发送短信");
+        }
+        return payload;
+    }
+
+    private String requireCurrentUserUm(String userId, String actionText) {
         User user = userBaseMapper.selectByPrimaryKey(userId);
         String um = user == null ? null : StringUtils.trimToNull(user.getUm());
         if (StringUtils.isBlank(um)) {
-            throw new IllegalArgumentException("当前登录人未配置UM，无法发送短信");
+            throw new GenericException("当前登录人未配置UM，" + actionText);
         }
-        payload.put("um", um);
-        return payload;
+        return um;
+    }
+
+    private Integer readCardSlotNum(ObjectNode payload, String actionText) {
+        JsonNode cardSlotNode = payload.get("cardSlotNum");
+        if (cardSlotNode == null || cardSlotNode.isNull()) {
+            return null;
+        }
+        if (!cardSlotNode.canConvertToInt()) {
+            throw new GenericException(actionText + "时卡槽参数无效");
+        }
+        int cardSlotNum = cardSlotNode.asInt();
+        if (cardSlotNum != 1 && cardSlotNum != 2) {
+            throw new GenericException(actionText + "时卡槽参数无效");
+        }
+        return cardSlotNum;
+    }
+
+    private void ensureCardSlotAvailable(String um, int cardSlotNum, String userId, String organizationId, String actionText) {
+        List<MmbaDevice> devices = mmbaDeviceService.listByUm(um);
+        if (CollectionUtils.isEmpty(devices) || devices.stream().noneMatch(device -> hasCardSlot(device, cardSlotNum))) {
+            throw new GenericException("当前登录人下未配置卡槽" + cardSlotNum + "，" + actionText);
+        }
+    }
+
+    private boolean hasCardSlot(MmbaDevice device, int cardSlotNum) {
+        if (device == null) {
+            return false;
+        }
+        if (cardSlotNum == 1) {
+            return StringUtils.isNotBlank(device.getPhone()) || StringUtils.isNotBlank(device.getIccid());
+        }
+        return StringUtils.isNotBlank(device.getPhone2()) || StringUtils.isNotBlank(device.getIccid2());
     }
 
     private ObjectNode enrichAddWxFriendRequest(JsonNode request, String userId) {
@@ -358,11 +402,7 @@ public class MmbaFacadeService {
         if (StringUtils.isNotBlank(payload.path("um").asText(null))) {
             return payload;
         }
-        User user = userBaseMapper.selectByPrimaryKey(userId);
-        String um = user == null ? null : StringUtils.trimToNull(user.getUm());
-        if (StringUtils.isBlank(um)) {
-            throw new IllegalArgumentException("当前登录人未配置UM，无法添加微信好友");
-        }
+        String um = requireCurrentUserUm(userId, "无法添加微信好友");
         payload.put("um", um);
         return payload;
     }

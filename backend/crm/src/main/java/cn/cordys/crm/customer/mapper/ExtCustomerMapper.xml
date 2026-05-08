@@ -17,6 +17,7 @@
     <select id="list" resultType="cn.cordys.crm.customer.dto.response.CustomerListResponse">
         select c.id, c.`name`, if(c.in_shared_pool, null, c.owner) as owner, c.create_time, c.update_time, c.create_user, c.update_user, c.collection_time, c.pool_id,
                c.follower, c.follow_time, c.reason_id, c.mobile, c.stage, c.stage_status, c.call_status as callStatus,
+               c.wechat_friend_status as wechatFriendStatus,
                IFNULL(ssc.name, '') as stage_name
                  <if test="dataPermission != null and dataPermission.visible">
                      ,cc.collaboration_type
@@ -300,7 +301,7 @@
 
     <select id="sourceList" resultType="cn.cordys.crm.customer.dto.response.CustomerListResponse">
         select distinct c.id, c.`name`, if(c.in_shared_pool, null, c.owner) as owner, c.create_time, c.update_time, c.create_user, c.update_user, c.collection_time, c.pool_id,
-        c.follower, c.follow_time, c.mobile, c.stage, c.stage_status,
+        c.follower, c.follow_time, c.mobile, c.stage, c.stage_status, c.wechat_friend_status as wechatFriendStatus,
         IFNULL(ssc.name, '') as stage_name
         from customer c left join customer_collaboration cc on c.id = cc.customer_id and cc.user_id = #{userId}
         LEFT JOIN customer_stage_config ssc ON c.stage = ssc.id
@@ -642,7 +643,8 @@
 
     <update id="moveToPool" parameterType="cn.cordys.crm.customer.domain.Customer">
         update customer set pool_id = #{customer.poolId}, in_shared_pool = #{customer.inSharedPool}, owner = #{customer.owner}, reason_id = #{customer.reasonId},
-                            collection_time = #{customer.collectionTime}, call_status = 0, update_time = #{customer.updateTime}, update_user = #{customer.updateUser}
+                            collection_time = #{customer.collectionTime}, call_status = 0, wechat_friend_status = 0,
+                            update_time = #{customer.updateTime}, update_user = #{customer.updateUser}
         where id = #{customer.id}
     </update>
 
@@ -840,7 +842,7 @@
         update customer set name = #{customer.name}, mobile = #{customer.mobile}, pool_id = #{customer.poolId}, in_shared_pool = #{customer.inSharedPool}, owner = #{customer.owner},
                 collection_time = #{customer.collectionTime}, follower = #{customer.follower}, follow_time = #{customer.followTime},
                 reason_id = #{customer.reasonId}, stage = #{customer.stage}, stage_status = #{customer.stageStatus}, fail_reason = #{customer.failReason},
-                update_time = #{customer.updateTime}, update_user = #{customer.updateUser}
+                wechat_friend_status = 0, update_time = #{customer.updateTime}, update_user = #{customer.updateUser}
         where id = #{customer.id}
     </update>
 
@@ -906,6 +908,7 @@
                 WHEN #{customer.id} THEN #{customer.failReason}
             </foreach>
         END,
+        wechat_friend_status = 0,
         update_time = CASE id
             <foreach collection="customers" item="customer">
                 WHEN #{customer.id} THEN #{customer.updateTime}

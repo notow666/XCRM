@@ -607,14 +607,28 @@
     return callStatusTitleMap[readCallStatus(row)] || callStatusTitleMap[0];
   }
 
+  function readWechatFriendStatus(row: any) {
+    if (Number.isInteger(row.wechatFriendStatus)) {
+      return row.wechatFriendStatus;
+    }
+    return 0;
+  }
+
   function getWxFriendStatusText(row: any) {
-    return row.wxFriendAdded ? t('customer.wechatFriendAdded') : t('customer.wechatFriendNotAdded');
+    const status = readWechatFriendStatus(row);
+    if (status === 2) {
+      return t('customer.wechatFriendAdded');
+    }
+    if (status === 1) {
+      return t('customer.wechatFriendPending');
+    }
+    return t('customer.wechatFriendNotAdded');
   }
 
   await initStageConfig();
   const { useTableRes, customFieldsFilterConfig, fieldList } = await useFormCreateTable({
     formKey: props.formKey,
-    excludeFieldIds: ['callStatus'],
+    excludeFieldIds: ['callStatus', 'wechatFriendStatus'],
     disabledSelection: (row: any) => {
       return row.collaborationType === 'READ_ONLY';
     },
@@ -1016,14 +1030,14 @@
                   }),
               }
             ),
-            row.wxFriendAdded
+            readWechatFriendStatus(row) === 2
               ? buildReachActionButton({
                   title: t('customer.reach.wechat'),
                   iconComponent: LogoWechat,
                   onClick: () => handleWechatCustomer(row),
                 })
               : null,
-            !row.wxFriendAdded
+            readWechatFriendStatus(row) !== 2
               ? buildReachActionButton({
                   title: t('customer.reach.addWechat'),
                   iconComponent: LogoWechat,
