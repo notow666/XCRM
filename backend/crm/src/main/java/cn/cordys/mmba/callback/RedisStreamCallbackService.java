@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class RedisStreamCallbackService implements SmartLifecycle {
+    private static final String MESSAGE_DTO_FIELD = "ZZYAuditReceipt";
+    private static final String MESSAGE_RAW_PAYLOAD_FIELD = "rawPayload";
 
     private volatile boolean running = false;
     private final Object lifecycleLock = new Object();
@@ -75,14 +77,16 @@ public class RedisStreamCallbackService implements SmartLifecycle {
      */
     private void writeToRedisStream(JsonNode json) {
         try {
+            String rawPayload = json == null ? null : json.toString();
             Map<String, String> stringStringMap = tenantMetaService.listEnabledTenant();
             MmbaAuditRequest dto = MmbaAuditRequest.generate(json, stringStringMap);
             if(CollectionUtils.isEmpty(dto.getData())) {
                 log.debug("MmbaAuditRequest invalid: {}", JSON.toJSONString(json));
             }
             else if(MmbaBehaviorTypes.isSupported(dto.getBehaviorType())) {
-                Map<String, Object> message = new HashMap<>(3);
-                message.put("ZZYAuditReceipt", JSON.toJSONString(dto));
+                Map<String, Object> message = new HashMap<>(6);
+                message.put(MESSAGE_DTO_FIELD, JSON.toJSONString(dto));
+                message.put(MESSAGE_RAW_PAYLOAD_FIELD, rawPayload);
                 message.put("timestamp", System.currentTimeMillis());
                 message.put("source", "callback_api");
                 message.put("retryCount", 0);
@@ -333,7 +337,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
         List<MapRecord<String, Object, Object>> validRecords = records.stream()
                 .filter(record -> {
                     Map<Object, Object> value = record.getValue();
-                    return !value.containsKey("init") && value.containsKey("ZZYAuditReceipt");
+                    return !value.containsKey("init") && value.containsKey(MESSAGE_DTO_FIELD);
                 })
                 .collect(Collectors.toList());
 
@@ -431,7 +435,10 @@ public class RedisStreamCallbackService implements SmartLifecycle {
 
         try {
             // 解析消息
-            String dataJson = String.valueOf(value.get("ZZYAuditReceipt"));
+            String dataJson = String.valueOf(value.get(MESSAGE_DTO_FIELD));
+            String rawPayload = value.containsKey(MESSAGE_RAW_PAYLOAD_FIELD)
+                    ? String.valueOf(value.get(MESSAGE_RAW_PAYLOAD_FIELD))
+                    : null;
 
             if(!StringUtils.hasText(dataJson)){
                 log.warn("Empty data in message: {}", messageId);
@@ -439,6 +446,8 @@ public class RedisStreamCallbackService implements SmartLifecycle {
             }
 
             MmbaAuditRequest dto = JSON.parseObject(dataJson, MmbaAuditRequest.class);
+            dto.setRawPayload(rawPayload);
+            dto.hydrateDataRawPayload();
 
             // 获取重试信息
             int retryCount = 0;

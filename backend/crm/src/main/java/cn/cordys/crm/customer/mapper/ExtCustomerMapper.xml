@@ -6,6 +6,7 @@
         update customer
         set owner = #{request.owner},
             customer.collection_time = ${@java.lang.System@currentTimeMillis()},
+            customer.call_status = 0,
             customer.update_time = ${@java.lang.System@currentTimeMillis()}, customer.update_user = #{userId}
         where owner != #{request.owner} and id in
         <foreach collection="request.ids" item="id" open="(" close=")" separator=",">
@@ -15,7 +16,7 @@
 
     <select id="list" resultType="cn.cordys.crm.customer.dto.response.CustomerListResponse">
         select c.id, c.`name`, if(c.in_shared_pool, null, c.owner) as owner, c.create_time, c.update_time, c.create_user, c.update_user, c.collection_time, c.pool_id,
-               c.follower, c.follow_time, c.reason_id, c.mobile, c.stage, c.stage_status,
+               c.follower, c.follow_time, c.reason_id, c.mobile, c.stage, c.stage_status, c.call_status as callStatus,
                IFNULL(ssc.name, '') as stage_name
                  <if test="dataPermission != null and dataPermission.visible">
                      ,cc.collaboration_type
@@ -641,7 +642,7 @@
 
     <update id="moveToPool" parameterType="cn.cordys.crm.customer.domain.Customer">
         update customer set pool_id = #{customer.poolId}, in_shared_pool = #{customer.inSharedPool}, owner = #{customer.owner}, reason_id = #{customer.reasonId},
-                            collection_time = #{customer.collectionTime}, update_time = #{customer.updateTime}, update_user = #{customer.updateUser}
+                            collection_time = #{customer.collectionTime}, call_status = 0, update_time = #{customer.updateTime}, update_user = #{customer.updateUser}
         where id = #{customer.id}
     </update>
 

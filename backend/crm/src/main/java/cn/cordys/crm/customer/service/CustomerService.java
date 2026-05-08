@@ -53,6 +53,7 @@ import cn.cordys.crm.system.constants.DictModule;
 import cn.cordys.crm.system.constants.NotificationConstants;
 import cn.cordys.crm.system.constants.SheetKey;
 import cn.cordys.crm.system.domain.Dict;
+import cn.cordys.crm.system.domain.User;
 import cn.cordys.crm.system.dto.DictConfigDTO;
 import cn.cordys.crm.system.dto.field.base.BaseField;
 import cn.cordys.crm.system.dto.request.BatchPoolReasonRequest;
@@ -69,11 +70,17 @@ import cn.cordys.crm.system.excel.listener.CustomFieldImportEventListener;
 import cn.cordys.crm.system.notice.CommonNoticeSendService;
 import cn.cordys.crm.system.service.*;
 import cn.cordys.excel.utils.EasyExcelExporter;
-import cn.cordys.mmba.dto.CustomerCallStatusDTO;
+import cn.cordys.mmba.dto.CustomerWxFriendStatusDTO;
+import cn.cordys.mmba.dto.CustomerWxSendRouteDTO;
 import cn.cordys.mmba.mapper.ExtMmbaAuditMapper;
+import cn.cordys.mmba.service.MmbaDeviceService;
+import cn.cordys.mmba.service.MmbaFacadeService;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
 import cn.idev.excel.FastExcelFactory;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import jakarta.annotation.Resource;
@@ -179,11 +186,17 @@ public class CustomerService {
     private GlobalPhoneMaskConfigService globalPhoneMaskConfigService;
     @Resource
     private ExtMmbaAuditMapper extMmbaAuditMapper;
+    @Resource
+    private BaseMapper<User> userBaseMapper;
+    @Resource
+    private MmbaDeviceService mmbaDeviceService;
+    @Resource
+    private MmbaFacadeService mmbaFacadeService;
 
     public PagerWithOption<List<CustomerListResponse>> list(CustomerPageRequest request, String userId, String orgId, DeptDataPermissionDTO deptDataPermission) {
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         List<CustomerListResponse> list = extCustomerMapper.list(request, orgId, userId, deptDataPermission);
-        List<CustomerListResponse> buildList = buildListData(list, orgId);
+        List<CustomerListResponse> buildList = buildListData(list, userId, orgId);
         Map<String, List<OptionDTO>> optionMap = buildOptionMap(orgId, list, buildList);
         return PageUtils.setPageInfoWithOption(page, buildList, optionMap);
     }
@@ -223,23 +236,31 @@ public class CustomerService {
     public PagerWithOption<List<CustomerListResponse>> sourceList(CustomerPageRequest request, String userId, String orgId, DeptDataPermissionDTO deptDataPermission) {
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         List<CustomerListResponse> list = extCustomerMapper.sourceList(request, orgId, userId, deptDataPermission);
-        List<CustomerListResponse> buildList = buildListData(list, orgId);
+        List<CustomerListResponse> buildList = buildListData(list, userId, orgId);
         Map<String, List<OptionDTO>> optionMap = buildOptionMap(orgId, list, buildList);
         return PageUtils.setPageInfoWithOption(page, buildList, optionMap);
     }
 
     public List<CustomerListResponse> buildListData(List<CustomerListResponse> list, String orgId) {
-        return buildListData(list, orgId, true);
+        return buildListData(list, null, orgId, true);
     }
 
     public List<CustomerListResponse> buildListData(List<CustomerListResponse> list, String orgId, boolean applyGlobalPhoneMask) {
+        return buildListData(list, null, orgId, applyGlobalPhoneMask);
+    }
+
+    public List<CustomerListResponse> buildListData(List<CustomerListResponse> list, String userId, String orgId) {
+        return buildListData(list, userId, orgId, true);
+    }
+
+    public List<CustomerListResponse> buildListData(List<CustomerListResponse> list, String userId, String orgId, boolean applyGlobalPhoneMask) {
         if (CollectionUtils.isEmpty(list)) {
             return list;
         }
         boolean phoneMaskEnabled = applyGlobalPhoneMask && globalPhoneMaskConfigService.isEnabled(orgId);
         List<String> customerIds = list.stream().map(CustomerListResponse::getId)
                 .collect(Collectors.toList());
-        Map<String, Integer> customerCallStatusMap = buildCustomerCallStatusMap(list, orgId);
+        Map<String, Boolean> customerWxFriendStatusMap = buildCustomerWxFriendStatusMap(list, userId);
 
         Map<String, List<BaseModuleFieldValue>> caseCustomFiledMap = customerFieldService.getResourceFieldMap(customerIds, true);
 
@@ -288,7 +309,8 @@ public class CustomerService {
 
         list.forEach(customerListResponse -> {
             String mobile = customerListResponse.getMobile();
-            customerListResponse.setCallStatus(customerCallStatusMap.getOrDefault(mobile, 0));
+            customerListResponse.setCallStatus(Optional.ofNullable(customerListResponse.getCallStatus()).orElse(0));
+            customerListResponse.setWxFriendAdded(customerWxFriendStatusMap.getOrDefault(mobile, false));
             // 获取自定义字段
             List<BaseModuleFieldValue> customerFields = caseCustomFiledMap.get(customerListResponse.getId());
             customerListResponse.setModuleFields(customerFields);
@@ -327,22 +349,76 @@ public class CustomerService {
         return list;
     }
 
-    private Map<String, Integer> buildCustomerCallStatusMap(List<CustomerListResponse> list, String orgId) {
+    private Map<String, Boolean> buildCustomerWxFriendStatusMap(List<CustomerListResponse> list, String userId) {
         List<String> mobiles = list.stream()
                 .map(CustomerListResponse::getMobile)
                 .filter(StringUtils::isNotBlank)
                 .distinct()
                 .toList();
-        if (CollectionUtils.isEmpty(mobiles)) {
+        if (CollectionUtils.isEmpty(mobiles) || StringUtils.isBlank(userId)) {
             return Map.of();
         }
-        List<CustomerCallStatusDTO> callStatuses = extMmbaAuditMapper.listCustomerCallStatus(mobiles, orgId);
-        if (CollectionUtils.isEmpty(callStatuses)) {
+        String um = readCurrentUserUm(userId);
+        if (StringUtils.isBlank(um)) {
             return Map.of();
         }
-        return callStatuses.stream()
-                .filter(item -> StringUtils.isNotBlank(item.getCustomerTel()) && item.getCallStatus() != null)
-                .collect(Collectors.toMap(CustomerCallStatusDTO::getCustomerTel, CustomerCallStatusDTO::getCallStatus, Integer::max));
+        List<String> activeWxIds = mmbaDeviceService.listMappingsByUm(um).stream()
+                .filter(mapping -> StringUtils.equals("ACTIVE", mapping.getMappingStatus()))
+                .map(mapping -> StringUtils.trimToNull(mapping.getWxid()))
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .toList();
+        if (CollectionUtils.isEmpty(activeWxIds)) {
+            return Map.of();
+        }
+        List<CustomerWxFriendStatusDTO> wxFriendStatuses = extMmbaAuditMapper.listCustomerWxFriendStatus(mobiles, um, activeWxIds);
+        if (CollectionUtils.isEmpty(wxFriendStatuses)) {
+            return Map.of();
+        }
+        return wxFriendStatuses.stream()
+                .filter(item -> StringUtils.isNotBlank(item.getFriendSearch()) && item.getWxFriendAdded() != null)
+                .collect(Collectors.toMap(CustomerWxFriendStatusDTO::getFriendSearch, item -> item.getWxFriendAdded() == 1, Boolean::logicalOr));
+    }
+
+    private String readCurrentUserUm(String userId) {
+        User user = userBaseMapper.selectByPrimaryKey(userId);
+        return user == null ? null : StringUtils.trimToNull(user.getUm());
+    }
+
+    public JsonNode sendWechat(CustomerSendWechatRequest request, String userId, String orgId) {
+        getWithDataPermissionCheck(request.getCustomerId(), userId, orgId);
+        String um = readCurrentUserUm(userId);
+        if (StringUtils.isBlank(um)) {
+            throw new GenericException("暂未绑定UM");
+        }
+
+        Customer customer = customerMapper.selectByPrimaryKey(request.getCustomerId());
+        if (customer == null) {
+            throw new GenericException(Translator.get("customer.not.exist"));
+        }
+        String mobile = StringUtils.trimToNull(customer.getMobile());
+        if (StringUtils.isBlank(mobile)) {
+            throw new GenericException("当前客户缺少手机号，无法发送微信");
+        }
+
+        CustomerWxSendRouteDTO sendRoute = extMmbaAuditMapper.getCustomerWxSendRoute(um, mobile);
+        if (sendRoute == null
+                || StringUtils.isAnyBlank(sendRoute.getUmPhone(), sendRoute.getUmWxid(), sendRoute.getRecId())) {
+            throw new GenericException("当前无可用于发送微信的活跃好友账号");
+        }
+
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.put("um", um);
+        payload.put("umPhone", sendRoute.getUmPhone());
+        payload.put("umWxid", sendRoute.getUmWxid());
+        payload.put("recId", sendRoute.getRecId());
+        payload.put("type", 1);
+        payload.put("message", StringUtils.trim(request.getMessage()));
+        payload.put("messageType", 1);
+        ObjectNode bizExtInfo = JsonNodeFactory.instance.objectNode();
+        bizExtInfo.put("customerId", request.getCustomerId());
+        payload.set("bizExtInfo", bizExtInfo);
+        return mmbaFacadeService.sendWxMsg(payload, userId, orgId);
     }
 
     public CustomerGetResponse getWithDataPermissionCheck(String id, String userId, String orgId) {
@@ -602,6 +678,9 @@ public class CustomerService {
         dataScopeService.checkDataPermission(userId, orgId, originCustomer.getOwner(), PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE);
 
         Customer customer = BeanUtils.copyBean(new Customer(), request);
+        if (isMobileChanged(originCustomer, request)) {
+            customer.setCallStatus(0);
+        }
         customer.setUpdateTime(System.currentTimeMillis());
         customer.setUpdateUser(userId);
 
@@ -616,6 +695,8 @@ public class CustomerService {
                 sendTransferNotice(List.of(originCustomer), request.getOwner(), userId, orgId);
                 // 重置领取时间
                 customer.setCollectionTime(System.currentTimeMillis());
+                // 负责人变化后开启新的持有周期，拨打状态同步清零
+                customer.setCallStatus(0);
             }
         }
 
@@ -647,6 +728,13 @@ public class CustomerService {
         if (StringUtils.equals(request.getMobile(), PhoneMaskUtil.maskGlobalPhone(originCustomer.getMobile()))) {
             request.setMobile(originCustomer.getMobile());
         }
+    }
+
+    private boolean isMobileChanged(Customer originCustomer, CustomerUpdateRequest request) {
+        if (originCustomer == null || request == null || request.getMobile() == null) {
+            return false;
+        }
+        return !StringUtils.equals(StringUtils.trimToNull(originCustomer.getMobile()), StringUtils.trimToNull(request.getMobile()));
     }
 
     // 【已禁用】客户详情页面阶段跳转功能已禁用，此方法不再被调用

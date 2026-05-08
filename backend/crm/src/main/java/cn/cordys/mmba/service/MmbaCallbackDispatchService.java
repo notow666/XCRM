@@ -1,6 +1,7 @@
 package cn.cordys.mmba.service;
 
 import cn.cordys.common.util.JSON;
+import cn.cordys.crm.customer.service.CustomerCallStatusService;
 import cn.cordys.mmba.MmbaBehaviorTypes;
 import cn.cordys.mmba.MmbaConstants;
 import cn.cordys.mmba.domain.MmbaCallRecordAudit;
@@ -54,6 +55,8 @@ public class MmbaCallbackDispatchService {
     private MmbaWxMappingSyncService mmbaWxMappingSyncService;
     @Resource
     private MmbaFacadeService mmbaFacadeService;
+    @Resource
+    private CustomerCallStatusService customerCallStatusService;
 
     /**
      * 审计类回调分发。
@@ -67,7 +70,8 @@ public class MmbaCallbackDispatchService {
                     MmbaCallRecordAudit callAudit = mmbaAuditPersistenceService.saveOrUpdateCallAudit(
                             buildCallAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER
                     );
-                    mmbaFacadeService.downloadCallRecordAsset(callAudit, MmbaConstants.SYSTEM_USER);
+                    upgradeCustomerCallStatus(callAudit.getCustomerId(), callAudit.getCustomerTel(),
+                            resolveAuditCustomerCallStatus(callAudit), callbackRecord.getId());
                 }
                 case MmbaBehaviorTypes.SMS_RECORD_AUDIT -> mmbaAuditPersistenceService.saveOrUpdateSmsAudit(buildSmsAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
                 case MmbaBehaviorTypes.WX_CHAT_AUDIT -> mmbaAuditPersistenceService.saveOrUpdateWxChatAudit(buildWxChatAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
@@ -103,6 +107,10 @@ public class MmbaCallbackDispatchService {
             log.info("MMBA结果回调分发 callbackRecordId={} behaviorType={} reqId={} tenantId={}",
                     callbackRecord.getId(), dto.getBehaviorType(), data.getReqId(), data.getTenantId());
             mmbaCommandResultService.saveOrUpdate(buildCommandResult(dto.getBehaviorType(), data, callbackRecord), MmbaConstants.SYSTEM_USER);
+            if (dto.getBehaviorType() == MmbaBehaviorTypes.DIAL_FAIL_RECEIPT) {
+                upgradeCustomerCallStatus(resolveCustomerId(data.getBizExtInfo()), data.getCustomerTel(),
+                        CustomerCallStatusService.DIALED_NOT_CONNECTED, callbackRecord.getId());
+            }
         }
     }
 
@@ -139,6 +147,7 @@ public class MmbaCallbackDispatchService {
         record.setSoundChannel(toInteger(data.getSoundChannel()));
         record.setCallStatus(data.getCallStatus());
         record.setPhoneLocation(data.getPhoneLocation());
+        record.setRetry(toInteger(data.getRetry()));
         record.setRingDuration(toInteger(data.getRingDuration()));
         record.setTimestamp(data.getTimestamp());
         record.setInsertTime(data.getInsertTime());
@@ -354,16 +363,19 @@ public class MmbaCallbackDispatchService {
      */
     private MmbaCommandResult buildCommandResult(Integer behaviorType, ZzyData data, MmbaCallbackRecord callbackRecord) {
         MmbaCommandResult record = new MmbaCommandResult();
+        String operateTime = firstNotBlank(data.getOperateTime(), data.getCreateTime());
         record.setTenantId(data.getTenantId());
         record.setTenancyName(data.getTenancyName());
         record.setBehaviorType(behaviorType);
         record.setAppId(data.getAppId());
         record.setAppName(data.getAppName());
-        record.setCreateTimeText(data.getCreateTime());
+        record.setCreateTimeText(operateTime);
         record.setTimestampValue(data.getTimestamp());
         record.setInsertTimeValue(toLong(data.getInsertTime()));
         record.setReqId(data.getReqId());
         record.setUm(data.getUm());
+        record.setUmPhone(data.getUmPhone());
+        record.setUmWxid(data.getUmWxid());
         record.setStaffIdInApp(data.getStaffIdInApp());
         record.setStaffImAppAccount(data.getStaffImAppAccount());
         record.setStaffImNickName(data.getStaffImNickName());
@@ -395,8 +407,8 @@ public class MmbaCallbackDispatchService {
         record.setContactImIdInApp(data.getContactImIdInApp());
         record.setContactImAppAccount(data.getContactImAppAccount());
         record.setContactImAppNickName(data.getContactImAppNickName());
-        record.setContactImAppNote(data.getContactImAppNote());
-        record.setContactDescription(data.getContactDescription());
+        record.setContactImAppNote(firstNotBlank(data.getContactImAppNote(), data.getNote()));
+        record.setContactDescription(firstNotBlank(data.getContactDescription(), data.getDescription()));
         record.setContactImAppHeaderPic(data.getContactImAppHeaderPic());
         record.setContactMobile(data.getContactMobile());
         record.setContactArea(data.getContactArea());
@@ -412,15 +424,16 @@ public class MmbaCallbackDispatchService {
         record.setMemberAccount(data.getMemberAccount());
         record.setMemberNickName(data.getMemberNickName());
         record.setMemberPic(data.getMemberPic());
-        record.setRecId(data.getCustomerAccountId());
-        record.setMsgType(toInteger(data.getType()));
+        record.setRecId(firstNotBlank(data.getRecId(), data.getCustomerAccountId()));
+        record.setMsgType(toInteger(firstNotBlank(data.getMsgType(), data.getType())));
         record.setChatType(toInteger(data.getChatType()));
-        record.setMsgStatus(toInteger(data.getStatus()));
-        record.setProcessStatus(toInteger(data.getStatus()));
-        record.setResultStatus(toInteger(data.getStatus()));
-        record.setOperateTime(data.getCreateTime());
+        record.setMsgStatus(toInteger(firstNotBlank(data.getMsgStatus(), data.getStatus())));
+        record.setProcessStatus(toInteger(firstNotBlank(data.getProcessStatus(), data.getStatus())));
+        record.setResultStatus(toInteger(firstNotBlank(data.getResultStatus(), data.getProcessStatus(), data.getStatus())));
+        record.setOperateTime(operateTime);
+        record.setProcessMsg(data.getProcessMsg());
         record.setBizExtInfo(data.getBizExtInfo());
-        record.setRawData(JSON.toJSONString(data));
+        record.setRawData(requireRawData(data));
         record.setCallbackRecordId(callbackRecord.getId());
         switch (behaviorType) {
             case MmbaBehaviorTypes.DIAL_FAIL_RECEIPT, MmbaBehaviorTypes.SMS_FAIL_RECEIPT -> {
@@ -429,19 +442,19 @@ public class MmbaCallbackDispatchService {
             }
             case MmbaBehaviorTypes.WX_MESSAGE_RECEIPT -> {
                 record.setTargetType("WX_CHAT_TARGET");
-                record.setTargetValue(firstNotBlank(data.getCustomerAccountId(), data.getCustomerAccount(), data.getFriendPhone()));
+                record.setTargetValue(firstNotBlank(data.getRecId(), data.getCustomerAccountId(), data.getCustomerAccount(), data.getFriendPhone()));
             }
             case MmbaBehaviorTypes.ADD_WECHAT_FRIEND_RECEIPT -> {
                 record.setTargetType("WX_FRIEND");
-                record.setTargetValue(firstNotBlank(data.getFriendPhone(), data.getContactImIdInApp(), data.getContactImAppAccount()));
+                record.setTargetValue(firstNotBlank(data.getFriendSearch(), data.getFriendPhone(), data.getContactImIdInApp(), data.getContactImAppAccount()));
             }
             case MmbaBehaviorTypes.WX_MOMENT_RECEIPT -> {
                 record.setTargetType("WX_MOMENT");
-                record.setTargetValue(firstNotBlank(data.getStaffIdInApp(), data.getUm()));
+                record.setTargetValue(firstNotBlank(data.getUmWxid(), data.getStaffIdInApp(), data.getUm()));
             }
             case MmbaBehaviorTypes.WX_REMARK_RECEIPT -> {
                 record.setTargetType("WX_REMARK");
-                record.setTargetValue(firstNotBlank(data.getContactImIdInApp(), data.getContactImAppAccount(), data.getFriendPhone()));
+                record.setTargetValue(firstNotBlank(data.getContactImIdInApp(), data.getContactImAppAccount(), data.getFriendPhone(), data.getUmWxid(), data.getUm()));
             }
             default -> {
                 record.setTargetType("UNKNOWN");
@@ -471,7 +484,7 @@ public class MmbaCallbackDispatchService {
         device.setOrgNames(data.getOrgNames());
         device.setLastBehaviorType(behaviorType);
         device.setLastAuditTime(data.getTimestamp());
-        device.setRawData(JSON.toJSONString(data));
+        device.setRawData(requireRawData(data));
         log.info("MMBA设备快照同步 behaviorType={} tenantId={} deviceId={} imei={} um={}",
                 behaviorType, data.getTenantId(), device.getDeviceId(), device.getImei(), device.getUm());
         mmbaDeviceService.saveOrUpdateDevice(device, MmbaConstants.SYSTEM_USER);
@@ -497,7 +510,7 @@ public class MmbaCallbackDispatchService {
         mapping.setWxPhone(data.getStaffMobile());
         mapping.setMappingStatus("ACTIVE");
         mapping.setLastSyncTime(data.getTimestamp());
-        mapping.setRawData(JSON.toJSONString(data));
+        mapping.setRawData(requireRawData(data));
         log.info("MMBA设备映射同步 tenantId={} um={} deviceId={} imei={} wxid={}",
                 data.getTenantId(), mapping.getUm(), mapping.getDeviceId(), mapping.getImei(), mapping.getWxid());
         mmbaDeviceService.saveOrUpdateMapping(mapping, MmbaConstants.SYSTEM_USER);
@@ -536,11 +549,18 @@ public class MmbaCallbackDispatchService {
             if (hasMethod(target, "setImei2", String.class)) {
                 target.getClass().getMethod("setImei2", String.class).invoke(target, data.getImei2());
             }
-            target.getClass().getMethod("setRawData", String.class).invoke(target, JSON.toJSONString(data));
+            target.getClass().getMethod("setRawData", String.class).invoke(target, requireRawData(data));
             target.getClass().getMethod("setCallbackRecordId", String.class).invoke(target, callbackRecord.getId());
         } catch (Exception e) {
             throw new IllegalStateException("MMBA公共字段填充失败", e);
         }
+    }
+
+    private String requireRawData(ZzyData data) {
+        if (data != null && StringUtils.isNotBlank(data.getRawPayload())) {
+            return data.getRawPayload();
+        }
+        throw new IllegalStateException("MMBA回调明细缺少原始rawPayload，禁止使用DTO重序列化结果写入raw_data");
     }
 
     private boolean hasMethod(Object target, String methodName, Class<?>... parameterTypes) {
@@ -659,5 +679,17 @@ public class MmbaCallbackDispatchService {
             log.warn("MMBA bizExtInfo 解析 customerId 失败 bizExtInfo={}", bizExtInfo, e);
             return null;
         }
+    }
+
+    private Integer resolveAuditCustomerCallStatus(MmbaCallRecordAudit record) {
+        return record != null && Integer.valueOf(1).equals(record.getIsConnected())
+                ? CustomerCallStatusService.DIALED_CONNECTED
+                : CustomerCallStatusService.DIALED_NOT_CONNECTED;
+    }
+
+    private void upgradeCustomerCallStatus(String customerId, String customerTel, Integer targetStatus, String callbackRecordId) {
+        customerCallStatusService.upgradeByCustomer(customerId, customerTel, targetStatus, MmbaConstants.SYSTEM_USER);
+        log.info("MMBA客户拨打状态维护 callbackRecordId={} customerId={} customerTel={} targetStatus={}",
+                callbackRecordId, customerId, customerTel, targetStatus);
     }
 }

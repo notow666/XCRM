@@ -162,6 +162,9 @@ public class MmbaDeviceService {
         target.setStaffName(firstNotBlank(source.getStaffName(), target.getStaffName()));
         target.setOrgName(firstNotBlank(source.getOrgName(), target.getOrgName()));
         target.setOrgNames(firstNotBlank(source.getOrgNames(), target.getOrgNames()));
+        target.setLastOnline(source.getLastOnline() == null ? target.getLastOnline() : source.getLastOnline());
+        target.setLastOnlineTime(firstNotBlank(source.getLastOnlineTime(), target.getLastOnlineTime()));
+        target.setLoginStatus(source.getLoginStatus() == null ? target.getLoginStatus() : source.getLoginStatus());
         target.setLastBehaviorType(source.getLastBehaviorType() == null ? target.getLastBehaviorType() : source.getLastBehaviorType());
         target.setLastAuditTime(source.getLastAuditTime() == null ? target.getLastAuditTime() : source.getLastAuditTime());
         target.setRawData(firstNotBlank(source.getRawData(), target.getRawData()));

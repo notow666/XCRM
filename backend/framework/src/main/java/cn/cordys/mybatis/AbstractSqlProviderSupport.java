@@ -55,10 +55,19 @@ public abstract class AbstractSqlProviderSupport {
         }
 
         sql.append("</trim>");
-        sql.append(" WHERE ").append(table.getPrimaryKeyColumn()).append(" = #{id}");
+        sql.append(" WHERE ").append(table.getPrimaryKeyColumn()).append(" = #{").append(primaryKeyFieldName()).append("}");
         sql.append("</script>");
 
         return sql.toString();
+    }
+
+    private String primaryKeyFieldName() {
+        for (Field field : table.getFields()) {
+            if (table.getPrimaryKeyColumn().equals(columnName(field))) {
+                return field.getName();
+            }
+        }
+        return "id";
     }
 
     public void tableWhere(StringBuilder sql) {

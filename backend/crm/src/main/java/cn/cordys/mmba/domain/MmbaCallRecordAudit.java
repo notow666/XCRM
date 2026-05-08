@@ -41,6 +41,7 @@ public class MmbaCallRecordAudit {
     private String phoneLocation;
     private String record;
     private String reqId;
+    private Integer retry;
     private Integer ringDuration;
     private Integer soundChannel;
     private String staffName;

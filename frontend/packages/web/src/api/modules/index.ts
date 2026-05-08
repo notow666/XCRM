@@ -299,6 +299,7 @@ export const {
   getCustomer,
   dialCustomerPhone,
   sendCustomerSms,
+  sendCustomerWechat,
   addCustomerWxFriend,
   mergeAccount,
   importAccount,

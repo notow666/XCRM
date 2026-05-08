@@ -11,6 +11,6 @@ public class CustomerCallRecordListResponse {
     private String endTime;
     private Integer isConnected;
     private Integer duration;
-    private String mediaFileId;
-    private String mediaFileName;
+    private String record;
+    private String recordUrl;
 }

@@ -23,6 +23,9 @@ public class MmbaDevice extends BaseModel {
     private String staffName;
     private String orgName;
     private String orgNames;
+    private Long lastOnline;
+    private String lastOnlineTime;
+    private Integer loginStatus;
     private Integer lastBehaviorType;
     private Long lastAuditTime;
     private String rawData;

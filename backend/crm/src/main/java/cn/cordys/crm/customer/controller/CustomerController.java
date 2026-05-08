@@ -39,6 +39,7 @@ import cn.cordys.crm.system.dto.response.ImportResponse;
 import cn.cordys.crm.system.dto.response.ModuleFormConfigDTO;
 import cn.cordys.crm.system.service.ModuleFormCacheService;
 import cn.cordys.security.SessionUtils;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -47,10 +48,10 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import org.springframework.http.ResponseEntity;
 import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -118,6 +119,13 @@ public class CustomerController {
         DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(SessionUtils.getUserId(),
                 OrganizationContext.getOrganizationId(), request.getViewId(), PermissionConstants.CUSTOMER_MANAGEMENT_READ);
         return customerService.list(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), deptDataPermission);
+    }
+
+    @PostMapping("/wechat/send")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_READ)
+    @Operation(summary = "客户发微信")
+    public JsonNode sendWechat(@Validated @RequestBody CustomerSendWechatRequest request) {
+        return customerService.sendWechat(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
     @GetMapping("/get/{id}")
@@ -360,11 +368,11 @@ public class CustomerController {
         return customerCallRecordService.list(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
-    @GetMapping("/call-record/audio/{mediaFileId}")
+    @GetMapping("/call-record/audio/{auditId}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_READ)
     @Operation(summary = "客户详情-通话录音预览")
-    public ResponseEntity<org.springframework.core.io.Resource> previewCallRecordAudio(@PathVariable("mediaFileId") String mediaFileId) {
-        return customerCallRecordService.previewAudio(mediaFileId, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    public ResponseEntity<org.springframework.core.io.ByteArrayResource> previewCallRecordAudio(@PathVariable("auditId") String auditId) {
+        return customerCallRecordService.previewAudio(auditId, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
     @PostMapping("/invoice/page")

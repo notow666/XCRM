@@ -62,6 +62,8 @@ public class MmbaCallbackRetryScheduleService {
                 log.warn("MMBA失败回调补偿跳过，payload 无法解析 callbackRecordId={} tenantId={}", record.getId(), tenantId);
                 return;
             }
+            request.setRawPayload(record.getPayloadRaw());
+            request.hydrateDataRawPayload();
             String group = MmbaBehaviorTypes.SUPPORTED.get(request.getBehaviorType());
             if (MmbaConstants.GROUP_BY_AUDIT.equals(group)) {
                 auditCallConsumer.process(request);

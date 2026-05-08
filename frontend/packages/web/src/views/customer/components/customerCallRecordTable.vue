@@ -14,7 +14,7 @@
 </template>
 
 <script lang="ts" setup>
-  import { h, onBeforeMount, onBeforeUnmount, ref, watch } from 'vue';
+  import { computed, h, onBeforeMount, onBeforeUnmount, ref, watch } from 'vue';
   import { NButton } from 'naive-ui';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
@@ -34,8 +34,8 @@
 
   const { t } = useI18n();
   const activeAudioRowId = ref('');
-  const loadingAudioRowId = ref('');
   const audioUrlMap = ref<Record<string, string>>({});
+  const loadingAudioRowId = ref('');
 
   function formatDuration(duration?: number | null) {
     if (!duration || duration <= 0) {
@@ -49,40 +49,46 @@
     return `${minutes}分${String(seconds).padStart(2, '0')}秒`;
   }
 
+  function revokeAudioUrl(url?: string) {
+    if (!url) {
+      return;
+    }
+    URL.revokeObjectURL(url);
+  }
+
   function resetAudioCache() {
     Object.values(audioUrlMap.value).forEach((url) => {
-      URL.revokeObjectURL(url);
+      revokeAudioUrl(url);
     });
     audioUrlMap.value = {};
-    activeAudioRowId.value = '';
-    loadingAudioRowId.value = '';
   }
 
   async function toggleAudio(row: CustomerCallRecordListItem) {
-    if (!row.mediaFileId) {
+    if (!row.recordUrl) {
       return;
     }
     if (activeAudioRowId.value === row.id) {
       activeAudioRowId.value = '';
       return;
     }
-    if (audioUrlMap.value[row.id]) {
-      activeAudioRowId.value = row.id;
-      return;
+    if (!audioUrlMap.value[row.id]) {
+      loadingAudioRowId.value = row.id;
+      try {
+        const res = await previewAccountCallRecordAudio(row.id);
+        const audioUrl = URL.createObjectURL(new Blob([res.data], { type: res.headers['content-type'] || 'audio/mpeg' }));
+        audioUrlMap.value = {
+          ...audioUrlMap.value,
+          [row.id]: audioUrl,
+        };
+      } finally {
+        loadingAudioRowId.value = '';
+      }
     }
-    loadingAudioRowId.value = row.id;
-    try {
-      const response = await previewAccountCallRecordAudio(row.mediaFileId);
-      const blob = response.data instanceof Blob ? response.data : new Blob([response.data]);
-      audioUrlMap.value[row.id] = URL.createObjectURL(blob);
-      activeAudioRowId.value = row.id;
-    } finally {
-      loadingAudioRowId.value = '';
-    }
+    activeAudioRowId.value = row.id;
   }
 
   function renderRecordingCell(row: CustomerCallRecordListItem) {
-    if (!row.mediaFileId) {
+    if (!row.recordUrl) {
       return t('customer.callRecord.noRecording');
     }
     const children = [
@@ -91,10 +97,10 @@
         {
           type: 'primary',
           text: true,
-          loading: loadingAudioRowId.value === row.id,
-          onClick: async () => {
-            await toggleAudio(row);
+          onClick: () => {
+            toggleAudio(row).catch(() => undefined);
           },
+          loading: loadingAudioRowId.value === row.id,
         },
         {
           default: () =>
@@ -102,7 +108,7 @@
         }
       ),
     ];
-    if (activeAudioRowId.value === row.id && audioUrlMap.value[row.id]) {
+    if (activeAudioRowId.value === row.id) {
       children.push(
         h('audio', {
           src: audioUrlMap.value[row.id],
@@ -147,7 +153,7 @@
     },
     {
       title: t('customer.callRecord.recording'),
-      key: 'mediaFileId',
+      key: 'recordUrl',
       width: 320,
       render: (row: CustomerCallRecordListItem) => renderRecordingCell(row),
     },
@@ -163,6 +169,7 @@
   );
 
   function initData() {
+    activeAudioRowId.value = '';
     resetAudioCache();
     setLoadListParams({
       sourceId: props.sourceId,

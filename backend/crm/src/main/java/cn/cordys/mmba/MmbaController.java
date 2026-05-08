@@ -181,24 +181,6 @@ public class MmbaController {
     }
 
     /**
-     * 下载带鉴权的媒体资源。
-     */
-    @PostMapping("/media/download")
-    @Operation(summary = "下载媒体资源")
-    public JsonNode fetchAsset(@RequestBody JsonNode request) {
-        return mmbaFacadeService.fetchAsset(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
-    }
-
-    /**
-     * 保留旧地址别名，避免联调期间切路由影响调用方。
-     */
-    @PostMapping("/asset/download")
-    @Operation(summary = "下载媒体资源-兼容地址")
-    public JsonNode fetchAssetAlias(@RequestBody JsonNode request) {
-        return fetchAsset(request);
-    }
-
-    /**
      * 查询设备最新快照列表。
      */
     @PostMapping("/device/page")

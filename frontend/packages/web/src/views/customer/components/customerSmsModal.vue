@@ -39,7 +39,7 @@
           type="textarea"
           :placeholder="contentPlaceholder"
           allow-clear
-          maxlength="500"
+          :maxlength="contentMaxLength"
           show-count
         />
       </n-form-item>
@@ -63,7 +63,7 @@
   }
 
   const props = defineProps<{
-    mode: 'sms' | 'wxFriend';
+    mode: 'sms' | 'wx' | 'wxFriend';
     sourceId: string;
     name: string;
     mobile: string;
@@ -87,20 +87,44 @@
   });
 
   const showWechatSelector = computed(() => props.mode === 'wxFriend' && wxFriendStep.value === 'select');
-  const showContentInput = computed(() => props.mode === 'sms' || wxFriendStep.value === 'content');
-  const modalTitle = computed(() => (props.mode === 'sms' ? t('customer.reach.sms') : t('customer.reach.addWechat')));
+  const showContentInput = computed(() => props.mode === 'sms' || props.mode === 'wx' || wxFriendStep.value === 'content');
+  const modalTitle = computed(() => {
+    if (props.mode === 'sms') {
+      return t('customer.reach.sms');
+    }
+    if (props.mode === 'wx') {
+      return t('customer.reach.wechat');
+    }
+    return t('customer.reach.addWechat');
+  });
   const positiveText = computed(() => {
     if (props.mode === 'sms') {
       return t('customer.reach.sendSms');
     }
+    if (props.mode === 'wx') {
+      return t('customer.reach.sendWechat');
+    }
     return wxFriendStep.value === 'select' ? t('customer.reach.nextStep') : t('customer.reach.confirmAddWechat');
   });
-  const contentLabel = computed(() =>
-    props.mode === 'sms' ? t('customer.reach.smsContent') : t('customer.reach.verifyInfo')
-  );
-  const contentPlaceholder = computed(() =>
-    props.mode === 'sms' ? t('customer.reach.smsPlaceholder') : t('customer.reach.verifyPlaceholder')
-  );
+  const contentLabel = computed(() => {
+    if (props.mode === 'sms') {
+      return t('customer.reach.smsContent');
+    }
+    if (props.mode === 'wx') {
+      return t('customer.reach.wechatContent');
+    }
+    return t('customer.reach.verifyInfo');
+  });
+  const contentPlaceholder = computed(() => {
+    if (props.mode === 'sms') {
+      return t('customer.reach.smsPlaceholder');
+    }
+    if (props.mode === 'wx') {
+      return t('customer.reach.wechatPlaceholder');
+    }
+    return t('customer.reach.verifyPlaceholder');
+  });
+  const contentMaxLength = computed(() => (props.mode === 'wx' ? 2048 : 500));
   const selectedWechat = computed(() =>
     (props.wechatOptions || []).find((item) => item.value === form.value.selectedWechatId)
   );

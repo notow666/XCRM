@@ -106,6 +106,7 @@ import {
   MmbaPhoneDialUrl,
   MmbaSmsSendUrl,
   MmbaWxFriendAddUrl,
+  CustomerWechatSendUrl,
   MoveToCustomerUrl,
   PickOpenSeaCustomerUrl,
   PoolAccountBatchUpdateUrl,
@@ -128,11 +129,11 @@ import {
   GetAccountContractListUrl,
   GetAccountContractStatisticUrl,
   GetAccountCallRecordListUrl,
+  PreviewAccountCallRecordAudioUrl,
   GetAccountPaymentListUrl,
   GetAccountPaymentStatisticUrl,
   GetAccountPaymentRecordStatisticUrl,
   GetAccountPaymentRecordListUrl,
-  PreviewAccountCallRecordAudioUrl,
   GetAccountInvoiceListUrl,
   GetAccountInvoiceStatisticUrl,
   GetAccountOrderListUrl,
@@ -369,6 +370,10 @@ export default function useProductApi(CDR: CordysAxios) {
     bizExtInfo: { customerId: string };
   }) {
     return CDR.post({ url: MmbaWxFriendAddUrl, data });
+  }
+
+  function sendCustomerWechat(data: { customerId: string; message: string }) {
+    return CDR.post({ url: CustomerWechatSendUrl, data });
   }
 
   // 获取客户表单配置
@@ -1031,10 +1036,10 @@ export default function useProductApi(CDR: CordysAxios) {
     return CDR.post<CommonList<CustomerCallRecordListItem>>({ url: GetAccountCallRecordListUrl, data });
   }
 
-  function previewAccountCallRecordAudio(mediaFileId: string) {
+  function previewAccountCallRecordAudio(auditId: string) {
     return CDR.get(
       {
-        url: `${PreviewAccountCallRecordAudioUrl}/${mediaFileId}`,
+        url: `${PreviewAccountCallRecordAudioUrl}/${auditId}`,
         responseType: 'blob',
       },
       { isTransformResponse: false, isReturnNativeResponse: true }
@@ -1047,6 +1052,7 @@ export default function useProductApi(CDR: CordysAxios) {
     getCustomerList,
     dialCustomerPhone,
     sendCustomerSms,
+    sendCustomerWechat,
     addCustomerWxFriend,
     getCustomerContactTab,
     getCustomerFormConfig,

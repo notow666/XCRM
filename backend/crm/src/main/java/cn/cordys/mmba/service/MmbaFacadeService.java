@@ -9,9 +9,7 @@ import cn.cordys.mmba.MmbaBizTypes;
 import cn.cordys.mmba.MmbaConstants;
 import cn.cordys.mmba.MmbaIntegrationService;
 import cn.cordys.mmba.MmbaInvokeException;
-import cn.cordys.mmba.domain.MmbaCallRecordAudit;
 import cn.cordys.mmba.domain.MmbaDevice;
-import cn.cordys.mmba.domain.MmbaMediaFile;
 import cn.cordys.mmba.domain.MmbaRequestRecord;
 import cn.cordys.mybatis.BaseMapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -23,13 +21,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.DigestUtils;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -40,7 +32,6 @@ import java.util.function.Function;
  * 1. 生成 reqId
  * 2. 记录请求流水
  * 3. 调用底层 MMBA 接口
- * 4. 下载媒体时补充媒体元数据
  */
 @Slf4j
 @Service
@@ -51,19 +42,10 @@ public class MmbaFacadeService {
 
     @Value("${mmba.company-code:}")
     private String companyCode;
-    @Value("${mmba.filepath:}")
-    private String mmbaFilePath;
-    @Value("${mmba.asset.download-retry-count:2}")
-    private int assetDownloadRetryCount;
-    @Value("${mmba.asset.retry-max-count:10}")
-    private int assetRetryMaxCount;
-
     @Resource
     private MmbaIntegrationService mmbaIntegrationService;
     @Resource
     private MmbaRequestRecordService mmbaRequestRecordService;
-    @Resource
-    private MmbaMediaFileService mmbaMediaFileService;
     @Resource
     private MmbaWxMappingSyncService mmbaWxMappingSyncService;
     @Resource
@@ -195,48 +177,10 @@ public class MmbaFacadeService {
     }
 
     /**
-     * 下载媒体资源，并记录媒体元数据。
+     * 实时下载 MMBA 媒体文件流，用于页面预览，避免提前落本地文件。
      */
-    public JsonNode fetchAsset(JsonNode request, String userId, String organizationId) {
-        ObjectNode payload = normalizeRequest(request);
-        ensureAssetPayload(payload);
-        String customerId = firstNotBlank(text(payload, "customerId"), resolveCustomerId(payload.path("bizExtInfo").asText(null)));
-        MmbaMediaFile mediaFile = buildMediaFile(payload, customerId);
-        DownloadAssetResult result = downloadAssetToLocal(payload, mediaFile, userId, organizationId, false);
-        return buildAssetResponse(result);
-    }
-
-    public void downloadCallRecordAsset(MmbaCallRecordAudit audit, String userId) {
-        String sourceFilePath = extractAssetFilePath(audit.getRecord());
-        if (StringUtils.isBlank(sourceFilePath)) {
-            return;
-        }
-        String customerId = resolveCustomerId(audit.getBizExtInfo());
-        ObjectNode payload = JsonNodeFactory.instance.objectNode();
-        payload.put("filePath", sourceFilePath);
-        payload.put("format", "");
-        putIfNotBlank(payload, "esId", audit.getEsId());
-        putIfNotBlank(payload, "deviceId", audit.getDeviceId());
-        putIfNotBlank(payload, "imei", audit.getImei());
-        putIfNotBlank(payload, "um", audit.getUm());
-        putIfNotBlank(payload, "bizExtInfo", audit.getBizExtInfo());
-
-        MmbaMediaFile existing = mmbaMediaFileService.findByBizKey(audit.getEsId(), sourceFilePath);
-        if (shouldSkipExistingAsset(existing)) {
-            log.info("MMBA 通话录音已存在，跳过下载 esId={} storagePath={}",
-                    audit.getEsId(), existing.getStoragePath());
-            return;
-        }
-
-        MmbaMediaFile mediaFile = buildMediaFile(payload, customerId);
-        mediaFile.setReqId(existing == null ? null : existing.getReqId());
-        mediaFile.setSourceType(MmbaConstants.MEDIA_SOURCE_CALL_AUDIT_RECORD);
-        mediaFile.setAuditRecordId(audit.getEsId());
-        mediaFile.setBehaviorType(audit.getBehaviorType());
-        if (existing != null) {
-            mediaFile.setRetryCount(existing.getRetryCount());
-        }
-        downloadAssetToLocal(payload, mediaFile, userId, null, true);
+    public byte[] fetchAssetBinary(JsonNode request, String userId, String organizationId) {
+        return executeBinary(MmbaBizTypes.ASSET_FETCH, MmbaApiPaths.FILE_FETCH_ASSET, request, userId, organizationId, mmbaIntegrationService::fetchAsset);
     }
 
     /**
@@ -318,27 +262,6 @@ public class MmbaFacadeService {
     }
 
     /**
-     * 初始化媒体元数据记录。
-     */
-    private MmbaMediaFile buildMediaFile(ObjectNode payload, String customerId) {
-        String filePath = payload.path("filePath").asText(null);
-        MmbaMediaFile mediaFile = new MmbaMediaFile();
-        mediaFile.setCustomerId(customerId);
-        mediaFile.setSourceFilePath(filePath);
-        mediaFile.setSourceType(MmbaConstants.MEDIA_SOURCE_MMBA_ASSET);
-        mediaFile.setFileName(resolveFileName(filePath));
-        mediaFile.setFileExt(resolveFileExt(filePath));
-        mediaFile.setAuditRecordId(payload.path("auditRecordId").asText(null));
-        mediaFile.setBehaviorType(payload.path("behaviorType").isMissingNode() ? null : payload.path("behaviorType").asInt());
-        mediaFile.setEsId(payload.path("esId").asText(null));
-        mediaFile.setDeviceId(payload.path("deviceId").asText(null));
-        mediaFile.setImei(payload.path("imei").asText(null));
-        mediaFile.setUm(payload.path("um").asText(null));
-        mediaFile.setRawData(JSON.toJSONString(payload));
-        return mediaFile;
-    }
-
-    /**
      * 回填同步成功结果。
      */
     private void fillSuccess(MmbaRequestRecord record, JsonNode response, String userId) {
@@ -394,17 +317,6 @@ public class MmbaFacadeService {
             return objectNode.deepCopy();
         }
         return JSON.parseObject(JSON.toJSONString(request), ObjectNode.class);
-    }
-
-    private void ensureAssetPayload(ObjectNode payload) {
-        String filePath = extractAssetFilePath(text(payload, "filePath"));
-        if (StringUtils.isBlank(filePath)) {
-            throw new IllegalArgumentException("MMBA 下载参数 filePath 不能为空");
-        }
-        payload.put("filePath", filePath);
-        if (!payload.has("format") || payload.get("format") == null || payload.get("format").isNull()) {
-            payload.put("format", "");
-        }
     }
 
     private ObjectNode enrichDialRequest(JsonNode request, String userId) {
@@ -556,7 +468,10 @@ public class MmbaFacadeService {
         device.setStaffName(firstNotBlank(text(item, "name"), text(item, "staffName")));
         device.setOrgName(text(item, "orgName"));
         device.setOrgNames(text(item, "orgNames"));
-        device.setLastAuditTime(longValue(item, "lastOnline"));
+        device.setLastOnline(longValue(item, "lastOnline"));
+        device.setLastOnlineTime(text(item, "lastOnlineTime"));
+        device.setLoginStatus(intValue(item, "loginStatus"));
+        device.setLastAuditTime(device.getLastOnline());
         device.setRawData(JSON.toJSONString(item));
         return device;
     }
@@ -603,224 +518,10 @@ public class MmbaFacadeService {
         return null;
     }
 
-    private String resolveFileName(String filePath) {
-        if (filePath == null || filePath.isBlank()) {
-            return null;
-        }
-        int index = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
-        return index >= 0 ? filePath.substring(index + 1) : filePath;
-    }
-
-    private String resolveFileExt(String filePath) {
-        String fileName = resolveFileName(filePath);
-        if (fileName == null) {
-            return null;
-        }
-        int index = fileName.lastIndexOf('.');
-        return index >= 0 ? fileName.substring(index + 1) : null;
-    }
-
-    private DownloadAssetResult downloadAssetToLocal(ObjectNode payload, MmbaMediaFile mediaFile, String userId,
-                                                     String organizationId, boolean suppressException) {
-        String tenantId = TenantContext.getTenantIdOrDefault();
-        int maxAttempts = Math.max(1, assetDownloadRetryCount + 1);
-        Exception lastException = null;
-        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-            String reqId = ensureReqId(payload);
-            MmbaRequestRecord requestRecord = initRequestRecord(
-                    MmbaBizTypes.ASSET_FETCH, MmbaApiPaths.FILE_FETCH_ASSET, reqId, organizationId, userId, payload
-            );
-            mediaFile.setReqId(reqId);
-            mediaFile.setRetryCount(nextRetryCount(mediaFile.getRetryCount()));
-            mediaFile.setLastDownloadTime(System.currentTimeMillis());
-            log.info("MMBA 录音下载开始 reqId={} tenantId={} organizationId={} attempt={} filePath={}",
-                    reqId, tenantId, organizationId, attempt, mediaFile.getSourceFilePath());
-            try {
-                byte[] response = mmbaIntegrationService.fetchAsset(payload);
-                if (response == null || response.length == 0) {
-                    throw new IllegalStateException("MMBA 下载失败：响应体为空");
-                }
-                Path storagePath = writeAssetFile(tenantId, mediaFile, response);
-                fillBinarySuccess(requestRecord, response, userId);
-                mediaFile.setDownloadStatus(MmbaConstants.REQUEST_STATUS_SUCCESS);
-                mediaFile.setStorageType(MmbaConstants.MEDIA_STORAGE_LOCAL);
-                mediaFile.setStoragePath(storagePath.toString());
-                mediaFile.setMimeType(Files.probeContentType(storagePath));
-                mediaFile.setFileSize((long) response.length);
-                mediaFile.setMd5(DigestUtils.md5DigestAsHex(response));
-                mediaFile.setErrorMessage(null);
-                mmbaMediaFileService.saveOrUpdateByBizKey(mediaFile, userId);
-                log.info("MMBA 录音下载成功 reqId={} tenantId={} organizationId={} storagePath={} size={}",
-                        reqId, tenantId, organizationId, storagePath, response.length);
-                return new DownloadAssetResult(requestRecord, mediaFile, true);
-            } catch (Exception e) {
-                lastException = e;
-                fillFailed(requestRecord, e, userId);
-                mediaFile.setDownloadStatus(MmbaConstants.REQUEST_STATUS_FAILED);
-                mediaFile.setStorageType(MmbaConstants.MEDIA_STORAGE_LOCAL);
-                mediaFile.setErrorMessage(truncateErrorMessage(e.getMessage()));
-                mmbaMediaFileService.saveOrUpdateByBizKey(mediaFile, userId);
-                log.error("MMBA 录音下载失败 reqId={} tenantId={} organizationId={} attempt={} message={}",
-                        reqId, tenantId, organizationId, attempt, e.getMessage(), e);
-            }
-        }
-        if (suppressException) {
-            return new DownloadAssetResult(null, mediaFile, false);
-        }
-        throw new IllegalStateException("MMBA 录音下载失败: " + (lastException == null ? "unknown" : lastException.getMessage()), lastException);
-    }
-
-    public void retryFailedAssetDownloads() {
-        for (MmbaMediaFile mediaFile : mmbaMediaFileService.listByDownloadStatus(MmbaConstants.REQUEST_STATUS_FAILED)) {
-            if (mediaFile == null || mediaFile.getRetryCount() != null && mediaFile.getRetryCount() >= assetRetryMaxCount) {
-                continue;
-            }
-            ObjectNode payload = JsonNodeFactory.instance.objectNode();
-            putIfNotBlank(payload, "filePath", mediaFile.getSourceFilePath());
-            putIfNotBlank(payload, "esId", mediaFile.getEsId());
-            putIfNotBlank(payload, "deviceId", mediaFile.getDeviceId());
-            putIfNotBlank(payload, "imei", mediaFile.getImei());
-            putIfNotBlank(payload, "um", mediaFile.getUm());
-            putIfNotBlank(payload, "customerId", mediaFile.getCustomerId());
-            if (StringUtils.isBlank(mediaFile.getSourceFilePath())) {
-                continue;
-            }
-            downloadAssetToLocal(payload, mediaFile, MmbaConstants.SYSTEM_USER, null, true);
-        }
-    }
-
-    private boolean shouldSkipExistingAsset(MmbaMediaFile existing) {
-        if (existing == null || !MmbaConstants.REQUEST_STATUS_SUCCESS.equals(existing.getDownloadStatus())) {
-            return false;
-        }
-        if (StringUtils.isBlank(existing.getStoragePath())) {
-            return false;
-        }
-        return Files.exists(Paths.get(existing.getStoragePath()));
-    }
-
-    private ObjectNode buildAssetResponse(DownloadAssetResult result) {
-        ObjectNode response = JsonNodeFactory.instance.objectNode();
-        response.put("success", result.success());
-        if (result.requestRecord() != null) {
-            putIfNotBlank(response, "reqId", result.requestRecord().getReqId());
-        }
-        if (result.mediaFile() != null) {
-            putIfNotBlank(response, "storagePath", result.mediaFile().getStoragePath());
-            putIfNotBlank(response, "fileName", result.mediaFile().getFileName());
-            putIfNotBlank(response, "fileExt", result.mediaFile().getFileExt());
-            putIfNotBlank(response, "esId", result.mediaFile().getEsId());
-            putIfNotBlank(response, "customerId", result.mediaFile().getCustomerId());
-            putIfNotBlank(response, "auditRecordId", result.mediaFile().getAuditRecordId());
-            if (result.mediaFile().getBehaviorType() != null) {
-                response.put("behaviorType", result.mediaFile().getBehaviorType());
-            }
-            if (result.mediaFile().getFileSize() != null) {
-                response.put("fileSize", result.mediaFile().getFileSize());
-            }
-            putIfNotBlank(response, "downloadStatus", result.mediaFile().getDownloadStatus());
-        }
-        return response;
-    }
-
-    private void fillBinarySuccess(MmbaRequestRecord record, byte[] response, String userId) {
-        record.setResponseCode(200);
-        record.setResponseMessage("BINARY");
-        record.setRequestStatus(MmbaConstants.REQUEST_STATUS_SUCCESS);
-        record.setRawResult("binary:" + response.length);
-        mmbaRequestRecordService.update(record, userId);
-    }
-
-    private Path writeAssetFile(String tenantId, MmbaMediaFile mediaFile, byte[] response) throws IOException {
-        if (StringUtils.isBlank(mmbaFilePath)) {
-            throw new IllegalStateException("mmba.filepath 未配置");
-        }
-        String customerId = StringUtils.defaultIfBlank(mediaFile.getCustomerId(), "unknown");
-        String fileName = resolveStorageFileName(mediaFile);
-        Path directory = Paths.get(mmbaFilePath, tenantId, customerId, "call-audit");
-        Files.createDirectories(directory);
-        Path storagePath = directory.resolve(fileName);
-        Files.write(storagePath, response, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
-        mediaFile.setFileName(fileName);
-        mediaFile.setFileExt(resolveFileExt(fileName));
-        return storagePath;
-    }
-
-    private String resolveStorageFileName(MmbaMediaFile mediaFile) {
-        String fileName = StringUtils.trimToNull(mediaFile.getFileName());
-        if (StringUtils.isNotBlank(fileName)) {
-            return fileName;
-        }
-        String fallbackName = firstNotBlank(mediaFile.getEsId(), mediaFile.getReqId(), "mmba_asset");
-        String ext = StringUtils.trimToNull(mediaFile.getFileExt());
-        if (StringUtils.isBlank(ext)) {
-            return fallbackName + ".dat";
-        }
-        return fallbackName + "." + ext;
-    }
-
-    private String resolveCustomerId(String bizExtInfo) {
-        if (StringUtils.isBlank(bizExtInfo)) {
-            return null;
-        }
-        try {
-            JsonNode bizExt = JSON.parseObject(bizExtInfo, JsonNode.class);
-            String customerId = text(bizExt, "customerId");
-            if (StringUtils.isNotBlank(customerId)) {
-                return customerId;
-            }
-        } catch (Exception e) {
-            log.warn("MMBA bizExtInfo 解析 customerId 失败 bizExtInfo={}", bizExtInfo, e);
-        }
-        return null;
-    }
-
-    private String extractAssetFilePath(String rawValue) {
-        String text = StringUtils.trimToNull(rawValue);
-        if (StringUtils.isBlank(text)) {
-            return null;
-        }
-        if (!text.startsWith("[")) {
-            return text;
-        }
-        try {
-            JsonNode node = JSON.parseObject(text, JsonNode.class);
-            if (!node.isArray() || node.isEmpty()) {
-                return null;
-            }
-            for (JsonNode item : node) {
-                if (item == null || item.isNull()) {
-                    continue;
-                }
-                String filePath = StringUtils.trimToNull(item.asText());
-                if (StringUtils.isNotBlank(filePath)) {
-                    return filePath;
-                }
-            }
-        } catch (Exception e) {
-            log.warn("MMBA recordInfo 解析 filePath 失败 rawValue={}", rawValue, e);
-        }
-        return null;
-    }
-
     private void putIfNotBlank(ObjectNode payload, String fieldName, String value) {
         if (StringUtils.isNotBlank(value)) {
             payload.put(fieldName, value);
         }
-    }
-
-    private int nextRetryCount(Integer currentRetryCount) {
-        return (currentRetryCount == null ? 0 : currentRetryCount) + 1;
-    }
-
-    private String truncateErrorMessage(String errorMessage) {
-        if (StringUtils.isBlank(errorMessage)) {
-            return null;
-        }
-        return errorMessage.length() <= 1000 ? errorMessage : errorMessage.substring(0, 1000);
-    }
-
-    private record DownloadAssetResult(MmbaRequestRecord requestRecord, MmbaMediaFile mediaFile, boolean success) {
     }
 }
 

@@ -37,12 +37,12 @@ public class AuditCallConsumer extends AbstractZZYConsumer {
     public void process(MmbaAuditRequest dto) {
         log.info("MMBA审计回调开始消费 behaviorType={} tenancyName={} contextTenantId={} count={}",
                 dto.getBehaviorType(), dto.getTenancyName(), TenantContext.getTenantId(), dto.getData() == null ? 0 : dto.getData().size());
-        log.debug("AuditCallConsumer payload={}", JSON.toJSONString(dto));
+        log.debug("AuditCallConsumer payload={}", dto.getRawPayload());
         for (Map.Entry<String, List<ZzyData>> entry : groupByTenant(dto).entrySet()) {
             String previousTenantId = TenantContext.getTenantId();
             String tenantId = entry.getKey();
             MmbaCallbackProcessService.CallbackRecordPrepareResult prepareResult = null;
-            MmbaAuditRequest tenantDto = new MmbaAuditRequest(dto.getBehaviorType(), dto.getTenancyName(), entry.getValue());
+            MmbaAuditRequest tenantDto = dto.copyWithData(entry.getValue());
             try {
                 TenantContext.setTenantId(tenantId);
                 prepareResult = mmbaCallbackProcessService.prepareCallbackRecord(tenantDto);

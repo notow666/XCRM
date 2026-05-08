@@ -11,20 +11,12 @@
                cra.end_time as endTime,
                cra.is_connected as isConnected,
                cra.duration,
-               mf.id as mediaFileId,
-               mf.file_name as mediaFileName
+               cra.record as record
         from mmba_call_record_audit cra
         left join sys_user su on su.um = cra.um
-        left join mmba_media_file mf on mf.id = (
-            select m1.id
-            from mmba_media_file m1
-            where m1.audit_record_id = cra.es_id
-              and m1.behavior_type = 10
-              and m1.download_status = 'SUCCESS'
-            order by m1.update_time desc
-            limit 1
-        )
-        where cra.customer_id = #{request.sourceId}
+        where cra.um = #{um}
+          and cra.customer_tel = #{customerTel}
+          and ifnull(cra.begin_timestamp, cra.timestamp) >= #{collectionTime}
         order by cra.begin_timestamp desc, cra.timestamp desc, cra.es_id desc
     </select>
 </mapper>

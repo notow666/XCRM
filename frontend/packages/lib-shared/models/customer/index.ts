@@ -32,6 +32,8 @@ export interface CustomerListItem {
   latestFollowUpTime: number;
   collectionTime: number;
   reservedDays: number; // 剩余归属天数
+  mobile: string;
+  wxFriendAdded: boolean;
   moduleFields: ModuleField[];
 }
 
@@ -407,8 +409,8 @@ export interface CustomerCallRecordListItem {
   endTime: string;
   isConnected: number | null;
   duration: number | null;
-  mediaFileId?: string;
-  mediaFileName?: string;
+  record?: string;
+  recordUrl?: string;
 }
 
 export interface CustomerInvoiceItem {

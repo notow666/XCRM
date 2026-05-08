@@ -8,6 +8,9 @@ import java.util.List;
 
 public interface ExtCustomerCallRecordMapper {
 
-    List<CustomerCallRecordListResponse> list(@Param("request") CustomerCallRecordPageRequest request,
+    List<CustomerCallRecordListResponse> list(@Param("um") String um,
+                                              @Param("customerTel") String customerTel,
+                                              @Param("collectionTime") Long collectionTime,
+                                              @Param("request") CustomerCallRecordPageRequest request,
                                               @Param("orgId") String orgId);
 }

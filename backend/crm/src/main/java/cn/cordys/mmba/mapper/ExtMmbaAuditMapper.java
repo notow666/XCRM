@@ -10,6 +10,8 @@ import cn.cordys.mmba.domain.MmbaWxFriendChangeAudit;
 import cn.cordys.mmba.domain.MmbaWxFriendListAudit;
 import cn.cordys.mmba.domain.MmbaWxLoginAudit;
 import cn.cordys.mmba.dto.CustomerCallStatusDTO;
+import cn.cordys.mmba.dto.CustomerWxFriendStatusDTO;
+import cn.cordys.mmba.dto.CustomerWxSendRouteDTO;
 import cn.cordys.mmba.dto.request.MmbaCallRecordAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaDeviceInfoAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaDeviceStatusAuditPageRequest;
@@ -30,6 +32,13 @@ public interface ExtMmbaAuditMapper {
 
     List<CustomerCallStatusDTO> listCustomerCallStatus(@Param("customerTels") List<String> customerTels,
                                                        @Param("orgId") String orgId);
+
+    List<CustomerWxFriendStatusDTO> listCustomerWxFriendStatus(@Param("friendSearches") List<String> friendSearches,
+                                                               @Param("um") String um,
+                                                               @Param("staffIdInApps") List<String> staffIdInApps);
+
+    CustomerWxSendRouteDTO getCustomerWxSendRoute(@Param("um") String um,
+                                                  @Param("friendPhone") String friendPhone);
 
     List<MmbaCallRecordAudit> listCallRecord(@Param("request") MmbaCallRecordAuditPageRequest request,
                                              @Param("orgId") String orgId);

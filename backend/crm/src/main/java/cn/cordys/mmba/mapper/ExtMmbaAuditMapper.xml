@@ -17,6 +17,71 @@
         group by customer_tel
     </select>
 
+    <select id="listCustomerWxFriendStatus" resultType="cn.cordys.mmba.dto.CustomerWxFriendStatusDTO">
+        select latest.friend_phone as friendSearch,
+               cast(max(case when current_audit.is_friend = '1' then 1 else 0 end) as unsigned) as wxFriendAdded
+        from (
+            select friend_phone,
+                   staff_id_in_app,
+                   max(`timestamp`) as latest_timestamp
+            from mmba_wx_friend_change_audit
+            where behavior_type = 60
+              and um = #{um}
+              and friend_phone in
+            <foreach collection="friendSearches" item="friendSearch" open="(" close=")" separator=",">
+                #{friendSearch}
+            </foreach>
+              and staff_id_in_app in
+            <foreach collection="staffIdInApps" item="staffIdInApp" open="(" close=")" separator=",">
+                #{staffIdInApp}
+            </foreach>
+            group by friend_phone, staff_id_in_app
+        ) latest
+        join mmba_wx_friend_change_audit current_audit
+          on current_audit.friend_phone = latest.friend_phone
+         and current_audit.staff_id_in_app = latest.staff_id_in_app
+         and current_audit.`timestamp` = latest.latest_timestamp
+        where current_audit.behavior_type = 60
+          and current_audit.um = #{um}
+        group by latest.friend_phone
+    </select>
+
+    <select id="getCustomerWxSendRoute" resultType="cn.cordys.mmba.dto.CustomerWxSendRouteDTO">
+        select latest_audit.staff_id_in_app as umWxid,
+               latest_audit.contact_im_id_in_app as recId,
+               device_mapping.wx_phone as umPhone
+        from (
+            select current_audit.*
+            from (
+                select friend_phone,
+                       staff_id_in_app,
+                       max(`timestamp`) as latest_timestamp
+                from mmba_wx_friend_change_audit
+                where behavior_type = 60
+                  and um = #{um}
+                  and friend_phone = #{friendPhone}
+                group by friend_phone, staff_id_in_app
+            ) latest
+            join mmba_wx_friend_change_audit current_audit
+              on current_audit.friend_phone = latest.friend_phone
+             and current_audit.staff_id_in_app = latest.staff_id_in_app
+             and current_audit.`timestamp` = latest.latest_timestamp
+            where current_audit.behavior_type = 60
+              and current_audit.um = #{um}
+              and current_audit.is_friend = '1'
+              and current_audit.contact_im_id_in_app is not null
+              and current_audit.contact_im_id_in_app != ''
+        ) latest_audit
+        join mmba_device_mapping device_mapping
+          on device_mapping.um = latest_audit.um
+         and device_mapping.wxid = latest_audit.staff_id_in_app
+        where device_mapping.mapping_status = 'ACTIVE'
+          and device_mapping.wx_phone is not null
+          and device_mapping.wx_phone != ''
+        order by latest_audit.`timestamp` desc, latest_audit.es_id desc
+        limit 1
+    </select>
+
     <select id="listCallRecord" resultType="cn.cordys.mmba.domain.MmbaCallRecordAudit">
         select *
         from mmba_call_record_audit

@@ -1,5 +1,6 @@
 package cn.cordys.mmba.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -40,6 +41,10 @@ public class ZzyData implements Serializable {
      */
     private String createTime;
     /**
+     * 指令/回执操作时间
+     */
+    private String operateTime;
+    /**
      * 字段 createTime 对应时间的时间戳
      */
     private Long timestamp;
@@ -51,6 +56,10 @@ public class ZzyData implements Serializable {
      * 备注
      */
     private String note;
+    /**
+     * 描述信息
+     */
+    private String description;
     /**
      * 个性签名
      */
@@ -224,6 +233,10 @@ public class ZzyData implements Serializable {
      */
     private String friendSearch;
     /**
+     * 指令处理详情
+     */
+    private String processMsg;
+    /**
      * 公司
      */
     private String company;
@@ -292,6 +305,19 @@ public class ZzyData implements Serializable {
      */
     private String reqId;
     /**
+     * 微信消息接收对象
+     */
+    private String recId;
+    /**
+     * 员工微信手机号
+     */
+    private String umPhone;
+    /**
+     * 员工微信ID
+     */
+    @JsonAlias("umWxId")
+    private String umWxid;
+    /**
      * 业务员微信账号
      */
     private String staffAccout;
@@ -319,6 +345,18 @@ public class ZzyData implements Serializable {
      * 聊天收发状态
      */
     private String status;
+    /**
+     * 微信消息发送状态
+     */
+    private String msgStatus;
+    /**
+     * 指令处理状态
+     */
+    private String processStatus;
+    /**
+     * 指令结果状态
+     */
+    private String resultStatus;
     /**
      * 聊天对象类型
      */
@@ -359,6 +397,10 @@ public class ZzyData implements Serializable {
      * 信息类型
      */
     private String type;
+    /**
+     * 微信消息类型
+     */
+    private String msgType;
     /**
      * 短信或彩信关联sim的iccid
      */
@@ -473,9 +515,17 @@ public class ZzyData implements Serializable {
      * 该通通话为重试上报，由客户端发起。
      */
     private String isRetry;
+    /**
+     * 通话记录重试次数
+     */
+    private String retry;
 
     /**
      * 设备信息变更时间/状态变化时间
      */
     private String changeTime;
+    /**
+     * 单条回调原始JSON
+     */
+    private transient String rawPayload;
 }

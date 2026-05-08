@@ -175,3 +175,4 @@ export const DeleteCustomerDataCleanupUrl = '/customer/dataCleanup/delete';
 export const MmbaPhoneDialUrl = '/mmba/phone/dial';
 export const MmbaSmsSendUrl = '/mmba/sms/send';
 export const MmbaWxFriendAddUrl = '/mmba/wx/friend/add';
+export const CustomerWechatSendUrl = '/account/wechat/send';

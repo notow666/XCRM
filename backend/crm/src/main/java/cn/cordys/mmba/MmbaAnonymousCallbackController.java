@@ -39,7 +39,7 @@ public class MmbaAnonymousCallbackController {
     @Operation(summary = "MMBA 审计/回执回调", hidden = true)
     public ResponseEntity<String> callback(@RequestBody JsonNode body) {
         try {
-
+            log.info("进入回调,原始数据{}", body);
             streamCallbackService.callbackStream(body);
 
             return ResponseEntity.ok("ok");

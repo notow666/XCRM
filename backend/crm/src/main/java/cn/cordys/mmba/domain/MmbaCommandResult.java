@@ -77,6 +77,7 @@ public class MmbaCommandResult extends BaseModel {
     private Integer processStatus;
     private Integer resultStatus;
     private String operateTime;
+    private String processMsg;
     private String bizExtInfo;
     private String rawData;
     private String callbackRecordId;

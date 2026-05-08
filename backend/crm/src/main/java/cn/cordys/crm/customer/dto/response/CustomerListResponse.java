@@ -102,4 +102,7 @@ public class CustomerListResponse {
 
     @Schema(description = "拨打电话状态 0:未拨打 1:拨打未接通 2:拨打已接通")
     private Integer callStatus;
+
+    @Schema(description = "是否已是当前登录人活跃微信号的好友")
+    private Boolean wxFriendAdded;
 }

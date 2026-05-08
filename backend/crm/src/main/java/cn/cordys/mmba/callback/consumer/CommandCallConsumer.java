@@ -42,7 +42,7 @@ public class CommandCallConsumer extends AbstractZZYConsumer {
             String previousTenantId = TenantContext.getTenantId();
             String tenantId = entry.getKey();
             MmbaCallbackProcessService.CallbackRecordPrepareResult prepareResult = null;
-            MmbaAuditRequest tenantDto = new MmbaAuditRequest(dto.getBehaviorType(), dto.getTenancyName(), entry.getValue());
+            MmbaAuditRequest tenantDto = dto.copyWithData(entry.getValue());
             try {
                 TenantContext.setTenantId(tenantId);
                 prepareResult = mmbaCallbackProcessService.prepareCallbackRecord(tenantDto);

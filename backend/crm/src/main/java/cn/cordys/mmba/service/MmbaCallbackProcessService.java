@@ -92,15 +92,23 @@ public class MmbaCallbackProcessService {
     }
 
     private MmbaCallbackRecord buildCallbackRecord(MmbaAuditRequest dto) {
+        String rawPayload = requireRawPayload(dto);
         MmbaCallbackRecord record = new MmbaCallbackRecord();
         record.setBehaviorType(dto.getBehaviorType());
         record.setTenancyName(dto.getTenancyName());
         record.setRecordCount(CollectionUtils.isEmpty(dto.getData()) ? 0 : dto.getData().size());
-        record.setPayloadRaw(JSON.toJSONString(dto));
-        record.setPayloadHash(DigestUtils.md5DigestAsHex(record.getPayloadRaw().getBytes(StandardCharsets.UTF_8)));
+        record.setPayloadRaw(rawPayload);
+        record.setPayloadHash(DigestUtils.md5DigestAsHex(rawPayload.getBytes(StandardCharsets.UTF_8)));
         record.setProcessStatus(MmbaConstants.CALLBACK_PROCESS_PENDING);
         record.setRetryCount(0);
         return record;
+    }
+
+    private String requireRawPayload(MmbaAuditRequest dto) {
+        if (dto != null && StringUtils.hasText(dto.getRawPayload())) {
+            return dto.getRawPayload();
+        }
+        throw new IllegalStateException("MMBA回调缺少原始payload，禁止使用DTO重序列化结果入库");
     }
 
     private String truncateErrorMessage(String errorMessage) {

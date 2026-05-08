@@ -216,6 +216,7 @@
     getCustomerStageConfig,
     getPersonalWechat,
     sendCustomerSms,
+    sendCustomerWechat,
   } from '@/api/modules';
   import { baseFilterConfigList } from '@/config/clue';
   import useFormCreateApi from '@/hooks/useFormCreateApi';
@@ -238,18 +239,13 @@
     { label: '卡槽1', key: 1 },
     { label: '卡槽2', key: 2 },
   ];
-  type ReachModalMode = 'sms' | 'wxFriend';
+  type ReachModalMode = 'sms' | 'wx' | 'wxFriend';
   interface ActiveWechatOption {
     label: string;
     value: string;
     wxId: string;
     wxPhone: string;
   }
-  const callStatusColorMap: Record<number, string> = {
-    0: '#f0a020',
-    1: '#d03050',
-    2: '#18a058',
-  };
   const callStatusTitleMap: Record<number, string> = {
     0: '无拨打记录',
     1: '未接通',
@@ -599,9 +595,26 @@
     handleAdvanceFilter,
     handleSearchData,
   });
+
+  function readCallStatus(row: any) {
+    if (Number.isInteger(row.callStatus)) {
+      return row.callStatus;
+    }
+    return 0;
+  }
+
+  function getCallStatusText(row: any) {
+    return callStatusTitleMap[readCallStatus(row)] || callStatusTitleMap[0];
+  }
+
+  function getWxFriendStatusText(row: any) {
+    return row.wxFriendAdded ? t('customer.wechatFriendAdded') : t('customer.wechatFriendNotAdded');
+  }
+
   await initStageConfig();
   const { useTableRes, customFieldsFilterConfig, fieldList } = await useFormCreateTable({
     formKey: props.formKey,
+    excludeFieldIds: ['callStatus'],
     disabledSelection: (row: any) => {
       return row.collaborationType === 'READ_ONLY';
     },
@@ -641,53 +654,19 @@
         },
     specialRender: {
       name: (row: any) => {
-        const callStatus = Number.isInteger(row.callStatus) ? row.callStatus : 0;
-        const nameNode =
-          props.isLimitShowDetail && row.hasPermission === false
-            ? h(CrmNameTooltip, { text: row.name })
-            : h(
-                CrmTableButton,
-                {
-                  onClick: () => {
-                    activeFormKey.value = FormDesignKeyEnum.CUSTOMER;
-                    activeSourceId.value = row.id;
-                    showOverviewDrawer.value = true;
-                  },
-                },
-                { trigger: () => row.name, default: () => row.name }
-              );
-        return h(
-          'div',
-          {
-            style: {
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              maxWidth: '100%',
-            },
-          },
-          [
-            nameNode,
-            h(
-              'span',
+        return props.isLimitShowDetail && row.hasPermission === false
+          ? h(CrmNameTooltip, { text: row.name })
+          : h(
+              CrmTableButton,
               {
-                title: callStatusTitleMap[callStatus] || callStatusTitleMap[0],
-                style: {
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  flexShrink: 0,
+                onClick: () => {
+                  activeFormKey.value = FormDesignKeyEnum.CUSTOMER;
+                  activeSourceId.value = row.id;
+                  showOverviewDrawer.value = true;
                 },
               },
-              [
-                h(CrmIcon, {
-                  type: 'iconicon_call',
-                  size: 14,
-                  color: callStatusColorMap[callStatus] || callStatusColorMap[0],
-                }),
-              ]
-            ),
-          ]
-        );
+              { trigger: () => row.name, default: () => row.name }
+            );
       },
       opportunityCount: (row: any) => {
         return !row.opportunityCount
@@ -756,6 +735,30 @@
   });
   const { propsRes, propsEvent, tableQueryParams, loadList, setLoadListParams, setAdvanceFilter } = useTableRes;
 
+  function buildCallStatusColumn() {
+    return {
+      title: t('customer.callStatus'),
+      key: 'customerCallStatusText',
+      width: 120,
+      align: 'center',
+      showInTable: true,
+      columnSelectorDisabled: true,
+      render: (row: any) => getCallStatusText(row),
+    } as any;
+  }
+
+  function buildWxFriendStatusColumn() {
+    return {
+      title: t('customer.wechatFriendStatus'),
+      key: 'customerWechatFriendStatusText',
+      width: 120,
+      align: 'center',
+      showInTable: true,
+      columnSelectorDisabled: true,
+      render: (row: any) => getWxFriendStatusText(row),
+    } as any;
+  }
+
   async function handleDialCustomer(row: any, cardSlotNum: number) {
     await dialCustomerPhone({
       toPhone: row.mobile,
@@ -802,8 +805,12 @@
     openReachModal(row, 'sms', cardSlotNum);
   }
 
-  function handleWechatCustomer() {
-    Message.info(t('customer.reach.wechatPending'));
+  function handleWechatCustomer(row: any) {
+    if (!row.mobile) {
+      Message.warning(t('customer.reach.wechatPhoneMissing'));
+      return;
+    }
+    openReachModal(row, 'wx');
   }
 
   async function ensureActiveWechatOptions() {
@@ -851,6 +858,14 @@
           },
         });
         Message.success(t('customer.reach.smsSending'));
+        return;
+      }
+      if (reachModal.value.mode === 'wx') {
+        await sendCustomerWechat({
+          customerId: reachModal.value.sourceId,
+          message: payload.msg,
+        });
+        Message.success(t('customer.reach.wechatSending'));
         return;
       }
       if (!payload.selectedWechat) {
@@ -1001,17 +1016,21 @@
                   }),
               }
             ),
-            buildReachActionButton({
-              title: t('customer.reach.wechat'),
-              iconComponent: LogoWechat,
-              onClick: () => handleWechatCustomer(),
-            }),
-            buildReachActionButton({
-              title: t('customer.reach.addWechat'),
-              iconComponent: LogoWechat,
-              showPlusBadge: true,
-              onClick: () => handleWechatFriendCustomer(row),
-            }),
+            row.wxFriendAdded
+              ? buildReachActionButton({
+                  title: t('customer.reach.wechat'),
+                  iconComponent: LogoWechat,
+                  onClick: () => handleWechatCustomer(row),
+                })
+              : null,
+            !row.wxFriendAdded
+              ? buildReachActionButton({
+                  title: t('customer.reach.addWechat'),
+                  iconComponent: LogoWechat,
+                  showPlusBadge: true,
+                  onClick: () => handleWechatFriendCustomer(row),
+                })
+              : null,
           ]
         ),
     } as any;
@@ -1030,11 +1049,16 @@
     const removedColumnKeys = new Set(['recyclePoolName', 'reasonId', 'reservedDays']);
     const baseColumns = propsRes.value.columns.filter(
       (item: any) =>
-        !removedColumnKeys.has(String(item.key)) && !['customerDial', 'customerReach'].includes(String(item.key))
+        !removedColumnKeys.has(String(item.key)) &&
+        !['customerDial', 'customerReach', 'customerCallStatusText', 'customerWechatFriendStatusText'].includes(
+          String(item.key)
+        )
     );
 
     if (showDialColumn.value) {
       const dialColumn = buildReachColumn();
+      const callStatusColumn = buildCallStatusColumn();
+      const wxFriendStatusColumn = buildWxFriendStatusColumn();
       const nameIndex = baseColumns.findIndex((item: any) => item.key === 'name');
       const orderIndex = baseColumns.findIndex((item: any) => item.key === SpecialColumnEnum.ORDER);
       let insertIndex = Math.min(baseColumns.length, 1);
@@ -1043,7 +1067,7 @@
       } else if (orderIndex >= 0) {
         insertIndex = orderIndex + 1;
       }
-      baseColumns.splice(insertIndex, 0, dialColumn);
+      baseColumns.splice(insertIndex, 0, dialColumn, callStatusColumn, wxFriendStatusColumn);
     }
 
     if (activeTab.value === CustomerSearchTypeEnum.CUSTOMER_COLLABORATION) {
