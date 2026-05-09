@@ -30,7 +30,7 @@
         :data="tableData"
         :loading="loading"
         :bordered="false"
-        :scroll-x="1400"
+        :scroll-x="1500"
         class="px-[16px]"
       />
       <div class="flex justify-end px-[16px] py-[16px]">
@@ -56,25 +56,25 @@
     style="width: 960px"
     @positive-click="handleSubmit"
   >
-    <n-form ref="formRef" :model="form" label-placement="top" class="mt-[12px]">
+    <n-form ref="formRef" :model="form" :rules="rules" label-placement="top" class="mt-[12px]">
       <div class="grid grid-cols-2 gap-x-[20px] gap-y-[2px]">
+        <n-form-item :label="t('mmbaDevice.form.id')" path="id">
+          <n-input v-model:value="form.id" size="small" :disabled="isEdit" />
+        </n-form-item>
+        <n-form-item :label="t('mmbaDevice.form.staffName')" path="staffName">
+          <n-input v-model:value="form.staffName" size="small" />
+        </n-form-item>
         <n-form-item :label="t('mmbaDevice.form.deviceId')" path="deviceId">
           <n-input v-model:value="form.deviceId" size="small" />
         </n-form-item>
         <n-form-item :label="t('mmbaDevice.form.deviceStatus')" path="deviceStatus">
           <n-select
-            v-model:value="form.deviceStatus"
-            size="small"
-            class="w-full"
-            clearable
-            :options="deviceStatusOptions"
+              v-model:value="form.deviceStatus"
+              size="small"
+              class="w-full"
+              clearable
+              :options="deviceStatusOptions"
           />
-        </n-form-item>
-        <n-form-item :label="t('mmbaDevice.form.um')" path="um">
-          <n-input v-model:value="form.um" size="small" />
-        </n-form-item>
-        <n-form-item :label="t('mmbaDevice.form.staffName')" path="staffName">
-          <n-input v-model:value="form.staffName" size="small" />
         </n-form-item>
         <n-form-item :label="t('mmbaDevice.form.deviceName')" path="deviceName">
           <n-input v-model:value="form.deviceName" size="small" />
@@ -120,6 +120,7 @@
   import {
     type DataTableColumns,
     type FormInst,
+    type FormRules,
     NButton,
     NDataTable,
     NForm,
@@ -160,8 +161,8 @@
   const editingId = ref('');
   const formRef = ref<FormInst | null>(null);
   const form = reactive({
+    id: '',
     deviceId: '',
-    um: '',
     staffName: '',
     deviceName: '',
     deviceType: '',
@@ -175,6 +176,21 @@
     telecomOperators2: '',
     deviceStatus: null as number | null,
   });
+
+  const rules = computed<FormRules>(() => ({
+    id: [
+      {
+        required: true,
+        trigger: ['blur', 'input'],
+        validator: (_rule, value: string) => {
+          if (String(value ?? '').trim().length > 0) {
+            return true;
+          }
+          return new Error(t('mmbaDevice.form.idRequired'));
+        },
+      },
+    ],
+  }));
 
   const deviceStatusOptions = computed(() =>
     [1, 3, 4, 5, 6, 7, 8, 9].map((v) => ({
@@ -242,9 +258,19 @@
     return String(v);
   }
 
+  function formatUserEnable(v?: boolean | null) {
+    if (v === true) {
+      return t('mmbaDevice.userStatus.enabled');
+    }
+    if (v === false) {
+      return t('mmbaDevice.userStatus.disabled');
+    }
+    return '-';
+  }
+
   function resetForm() {
+    form.id = '';
     form.deviceId = '';
-    form.um = '';
     form.staffName = '';
     form.deviceName = '';
     form.deviceType = '';
@@ -264,8 +290,8 @@
     if (row) {
       isEdit.value = true;
       editingId.value = row.id;
+      form.id = row.id ?? '';
       form.deviceId = row.deviceId ?? '';
-      form.um = row.um ?? '';
       form.staffName = row.staffName ?? '';
       form.deviceName = row.deviceName ?? '';
       form.deviceType = row.deviceType ?? '';
@@ -286,11 +312,17 @@
   }
 
   const columns = computed<DataTableColumns<MmbaDevice>>(() => [
+    { title: t('mmbaDevice.col.id'), key: 'id', ellipsis: { tooltip: true }, width: 120 },
+    { title: t('mmbaDevice.col.staffName'), key: 'staffName', width: 100 },
+    {
+      title: t('mmbaDevice.col.userStatus'),
+      key: 'enable',
+      width: 96,
+      render: (row) => formatUserEnable(row.enable ?? null),
+    },
     { title: t('mmbaDevice.col.deviceId'), key: 'deviceId', ellipsis: { tooltip: true }, width: 140 },
     { title: t('mmbaDevice.col.deviceName'), key: 'deviceName', ellipsis: { tooltip: true }, width: 140 },
     { title: t('mmbaDevice.col.deviceType'), key: 'deviceType', ellipsis: { tooltip: true }, width: 120 },
-    { title: t('mmbaDevice.col.um'), key: 'um', width: 100 },
-    { title: t('mmbaDevice.col.staffName'), key: 'staffName', width: 100 },
     {
       title: t('mmbaDevice.col.phone'),
       key: 'phone',
@@ -374,7 +406,6 @@
         await updateMmbaDevice({
           id: editingId.value,
           deviceId: form.deviceId.trim() || undefined,
-          um: form.um.trim() || undefined,
           staffName: form.staffName.trim() || undefined,
           deviceName: form.deviceName || undefined,
           deviceType: form.deviceType || undefined,
@@ -390,8 +421,8 @@
         });
       } else {
         await addMmbaDevice({
+          id: form.id.trim(),
           deviceId: form.deviceId.trim() || undefined,
-          um: form.um.trim() || undefined,
           staffName: form.staffName.trim() || undefined,
           deviceName: form.deviceName || undefined,
           deviceType: form.deviceType || undefined,

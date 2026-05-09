@@ -1,6 +1,7 @@
 package cn.cordys.mmba.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 /**
@@ -9,11 +10,12 @@ import lombok.Data;
 @Data
 public class MmbaDeviceSaveRequest {
 
+    @NotBlank
+    @Schema(description = "主键id = um")
+    private String id;
+
     @Schema(description = "设备ID，可为空")
     private String deviceId;
-
-    @Schema(description = "用户名(UM)，可为空")
-    private String um;
 
     @Schema(description = "设备名称")
     private String deviceName;

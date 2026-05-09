@@ -23,7 +23,6 @@ import cn.cordys.mmba.dto.request.MmbaDeviceInfoAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaDevicePageRequest;
 import cn.cordys.mmba.dto.request.MmbaDeviceSaveRequest;
 import cn.cordys.mmba.dto.request.MmbaDeviceStatusAuditPageRequest;
-import cn.cordys.mmba.dto.request.MmbaDeviceUpdateRequest;
 import cn.cordys.mmba.dto.response.MmbaDeviceImportResponse;
 import cn.cordys.mmba.dto.request.MmbaSmsRecordAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxAccountAuditPageRequest;
@@ -182,12 +181,6 @@ public class MmbaController {
         return mmbaFacadeService.pushDeviceMessage(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
-    @PostMapping("/device/list/query")
-    @Operation(summary = "设备列表查询")
-    public JsonNode queryDeviceList(@RequestBody JsonNode request) {
-        return mmbaFacadeService.queryDeviceList(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
-    }
-
     /**
      * 下载带鉴权的 MMBA 文件。
      */
@@ -235,7 +228,7 @@ public class MmbaController {
     @PostMapping("/device/update")
     @Operation(summary = "MMBA设备修改")
     @RequiresPermissions(PermissionConstants.MMBA_DEVICE_UPDATE)
-    public MmbaDevice updateDevice(@Valid @RequestBody MmbaDeviceUpdateRequest request) {
+    public MmbaDevice updateDevice(@Valid @RequestBody MmbaDeviceSaveRequest request) {
         return mmbaDeviceService.updateDevice(request, SessionUtils.getUserId());
     }
 

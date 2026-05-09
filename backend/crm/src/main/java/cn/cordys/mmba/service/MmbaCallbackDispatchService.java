@@ -1,6 +1,7 @@
 package cn.cordys.mmba.service;
 
 import cn.cordys.common.util.JSON;
+import cn.cordys.common.util.TimeUtils;
 import cn.cordys.crm.customer.service.CustomerCallStatusService;
 import cn.cordys.crm.customer.service.CustomerWechatFriendStatusService;
 import cn.cordys.mmba.MmbaBehaviorTypes;
@@ -342,11 +343,13 @@ public class MmbaCallbackDispatchService {
         record.setDeptInfo(data.getDeptInfo());
         record.setDeviceType(firstNotBlank(data.getDeviceType(), data.getAppPkgName()));
         record.setIccid(data.getIccid());
-        record.setIccid2(null);
-        record.setPhone(data.getIccidPhone());
-        record.setPhone2(null);
-        record.setTelecomOperators(data.getMobileVendor());
-        record.setTelecomOperators2(null);
+        record.setIccid2(data.getIccid2());
+        record.setPhone(data.getPhone());
+        record.setPhone2(data.getPhone2());
+        record.setTelecomOperators(data.getTelecomOperators());
+        record.setTelecomOperators2(data.getTelecomOperators2());
+        record.setImei(data.getImei());
+        record.setImei2(data.getImei2());
         record.setTimestamp(data.getTimestamp());
         return record;
     }
@@ -409,7 +412,7 @@ public class MmbaCallbackDispatchService {
         record.setCompany(data.getCompany());
         record.setRegion(data.getRegion());
         record.setDepartment(data.getDepartment());
-        record.setDeviceId(toStringValue(data.getDeviceId()));
+        record.setDeviceId(data.getDeviceId());
         record.setDeviceName(data.getDeviceName());
         record.setAppPkgName(data.getAppPkgName());
         record.setImei(data.getImei());
@@ -486,52 +489,59 @@ public class MmbaCallbackDispatchService {
      */
     private void syncDeviceSnapshot(ZzyData data, int behaviorType) {
         MmbaDevice device = new MmbaDevice();
-        device.setDeviceId(toStringValue(data.getDeviceId()));
-        device.setDeviceName(data.getDeviceName());
-        device.setDeviceType(data.getAppPkgName());
-        device.setDeviceStatus(toInteger(data.getStatus()));
-        device.setImei(data.getImei());
-        device.setImei2(data.getImei2());
-        device.setIccid(data.getIccid());
-        device.setPhone(data.getIccidPhone());
-        device.setTelecomOperators(data.getMobileVendor());
-        device.setUm(data.getUm());
-        device.setStaffName(data.getStaffName());
-        device.setOrgName(data.getOrgName());
-        device.setOrgNames(data.getOrgNames());
+        device.setId(data.getUm());
+        device.setUpdateTime(TimeUtils.getEpochMillisOrNull(data.getChangeTime()));
+        device.setDeviceId(data.getDeviceId());
+        if(StringUtils.isNotBlank(data.getDeviceName())) {
+            device.setDeviceName(data.getDeviceName());
+        }
+        if(StringUtils.isNotBlank(data.getDeviceType())) {
+            device.setDeviceType(data.getDeviceType());
+        }
+        if(StringUtils.isNotBlank(data.getDeviceStatus())) {
+            device.setDeviceStatus(toInteger(data.getDeviceStatus()));
+        }
+        if(StringUtils.isNotBlank(data.getImei())) {
+            device.setImei(data.getImei());
+        }
+        if(StringUtils.isNotBlank(data.getImei2())) {
+            device.setImei2(data.getImei2());
+        }
+        if(StringUtils.isNotBlank(data.getIccid())) {
+            device.setIccid(data.getIccid());
+        }
+        if(StringUtils.isNotBlank(data.getIccid2())) {
+            device.setIccid2(data.getIccid2());
+        }
+        if(StringUtils.isNotBlank(data.getPhone())) {
+            device.setPhone(data.getPhone());
+        }
+        if(StringUtils.isNotBlank(data.getPhone2())) {
+            device.setPhone2(data.getPhone2());
+        }
+        if(StringUtils.isNotBlank(data.getTelecomOperators())) {
+            device.setTelecomOperators(data.getTelecomOperators());
+        }
+        if(StringUtils.isNotBlank(data.getTelecomOperators2())) {
+            device.setTelecomOperators2(data.getTelecomOperators2());
+        }
+        if(StringUtils.isNotBlank(data.getStaffName())) {
+            device.setStaffName(data.getStaffName());
+        }
+        if(StringUtils.isNotBlank(data.getOrgName())) {
+            device.setOrgName(data.getOrgName());
+        }
+        if(StringUtils.isNotBlank(data.getOrgNames())) {
+            device.setOrgNames(data.getOrgNames());
+        }
         device.setLastBehaviorType(behaviorType);
         device.setLastAuditTime(data.getTimestamp());
         device.setRawData(requireRawData(data));
         log.info("MMBA设备快照同步 behaviorType={} tenantId={} deviceId={} imei={} um={}",
-                behaviorType, data.getTenantId(), device.getDeviceId(), device.getImei(), device.getUm());
+                behaviorType, data.getTenantId(), device.getDeviceId(), device.getImei(), data.getUm());
         mmbaDeviceService.saveOrUpdateDevice(device, MmbaConstants.SYSTEM_USER);
     }
 
-    /**
-     * 维护设备、员工、微信账号之间的映射关系，便于后续 CRM 业务关联。
-     */
-    private void syncDeviceMapping(ZzyData data) {
-        if (StringUtils.isBlank(data.getUm()) && StringUtils.isBlank(data.getStaffIdInApp())) {
-            log.warn("MMBA设备映射跳过，um 和 staffIdInApp 都为空 tenantId={} reqId={} esId={}",
-                    data.getTenantId(), data.getReqId(), data.getEsId());
-            return;
-        }
-        MmbaDeviceMapping mapping = new MmbaDeviceMapping();
-        mapping.setUm(data.getUm());
-        mapping.setStaffName(data.getStaffName());
-        mapping.setDeviceId(toStringValue(data.getDeviceId()));
-        mapping.setImei(data.getImei());
-        mapping.setIccid(data.getIccid());
-        mapping.setWxid(data.getStaffIdInApp());
-        mapping.setWxAccount(data.getStaffImAppAccount());
-        mapping.setWxPhone(data.getStaffMobile());
-        mapping.setMappingStatus("ACTIVE");
-        mapping.setLastSyncTime(data.getTimestamp());
-        mapping.setRawData(requireRawData(data));
-        log.info("MMBA设备映射同步 tenantId={} um={} deviceId={} imei={} wxid={}",
-                data.getTenantId(), mapping.getUm(), mapping.getDeviceId(), mapping.getImei(), mapping.getWxid());
-        mmbaDeviceService.saveOrUpdateMapping(mapping, MmbaConstants.SYSTEM_USER);
-    }
 
     /**
      * 各业务表公共字段填充。
@@ -558,10 +568,10 @@ public class MmbaCallbackDispatchService {
                 target.getClass().getMethod("setOrgNames", String.class).invoke(target, data.getOrgNames());
             }
             if (hasMethod(target, "setDeviceId", String.class)) {
-                target.getClass().getMethod("setDeviceId", String.class).invoke(target, toStringValue(data.getDeviceId()));
+                target.getClass().getMethod("setDeviceId", String.class).invoke(target, data.getDeviceId());
             }
             if (hasMethod(target, "setImei", String.class)) {
-                target.getClass().getMethod("setImei", String.class).invoke(target, firstNotBlank(data.getImei(), data.getImei1()));
+                target.getClass().getMethod("setImei", String.class).invoke(target, firstNotBlank(data.getImei(), data.getImei()));
             }
             if (hasMethod(target, "setImei2", String.class)) {
                 target.getClass().getMethod("setImei2", String.class).invoke(target, data.getImei2());

@@ -131,11 +131,11 @@ public class ZzyData implements Serializable {
     /**
      * 产生数据的设备的唯一标识
      */
-    private Long deviceId;
+    private String deviceId;
     /**
      * 设备自带的唯一标识属性
      */
-    private String imei1;
+    private String imei;
     /**
      * 设备自带的唯一标识属性
      */
@@ -193,10 +193,6 @@ public class ZzyData implements Serializable {
      * 好友类型
      */
     private String isFriend;
-    /**
-     * 设备自带的唯一标识属性
-     */
-    private String imei;
     /**
      * 操作类型：
      * 1:添加好友，2:删除好友，3:编辑好友，4:对方主动添加好友,5:我方主动添加好友,
@@ -405,6 +401,7 @@ public class ZzyData implements Serializable {
      * 短信或彩信关联sim的iccid
      */
     private String iccid;
+    private String iccid2;
     /**
      * sim卡手机号
      */
@@ -524,6 +521,21 @@ public class ZzyData implements Serializable {
      * 设备信息变更时间/状态变化时间
      */
     private String changeTime;
+
+    /**
+     * 卡槽1的sim卡手机号
+     */
+    private String phone;
+    /**
+     * 卡槽2的sim卡手机号
+     */
+    private String phone2;
+    /**
+     * 运营商
+     */
+    private String telecomOperators;
+    private String telecomOperators2;
+
     /**
      * 单条回调原始JSON
      */

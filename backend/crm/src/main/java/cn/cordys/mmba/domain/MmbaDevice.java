@@ -4,21 +4,28 @@ import cn.cordys.common.domain.BaseModel;
 import jakarta.persistence.Table;
 import lombok.Data;
 
+/**
+ * mmba用户&设备一对一表
+ */
 @Data
 @Table(name = "mmba_device")
 public class MmbaDevice extends BaseModel {
     /**
+     * 用户启用/禁用
+     */
+    private Boolean enable;
+    /**
      * 设备ID
      */
-    private String deviceId;
+    private String deviceId = "";
     /**
      * 设备名称
      */
-    private String deviceName;
+    private String deviceName = "";
     /**
      * 设备型号
      */
-    private String deviceType;
+    private String deviceType = "";
     /**
      * 设备状态
      */
@@ -26,39 +33,35 @@ public class MmbaDevice extends BaseModel {
     /**
      * IMEI
      */
-    private String imei;
+    private String imei = "";
     /**
      * IMEI
      */
-    private String imei2;
+    private String imei2 = "";
     /**
      * ICCID
      */
-    private String iccid;
+    private String iccid = "";
     /**
      * ICCID
      */
-    private String iccid2;
+    private String iccid2 = "";
     /**
      * 手机号
      */
-    private String phone;
+    private String phone = "";
     /**
      * 手机号
      */
-    private String phone2;
+    private String phone2 = "";
     /**
      * 运营商
      */
-    private String telecomOperators;
+    private String telecomOperators = "";
     /**
      * 运营商
      */
-    private String telecomOperators2;
-    /**
-     * 用户名
-     */
-    private String um;
+    private String telecomOperators2 = "";
     /**
      * 姓名
      */
@@ -70,7 +73,7 @@ public class MmbaDevice extends BaseModel {
     /**
      *
      */
-    private String orgNames;
+    private String orgNames = "";
     /**
      * 最后上线时间戳
      */

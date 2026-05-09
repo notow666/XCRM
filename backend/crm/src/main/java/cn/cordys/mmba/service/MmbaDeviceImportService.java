@@ -72,8 +72,7 @@ public class MmbaDeviceImportService {
                 if (isBlankRow(row)) {
                     return;
                 }
-                String um = StringUtils.trimToNull(row.getUm());
-                MmbaDevice device = toDevice(row, um);
+                MmbaDevice device = toDevice(row);
                 deviceService.saveOrUpdateDevice(device, userId);
                 successCount++;
             } catch (Exception e) {
@@ -93,38 +92,17 @@ public class MmbaDeviceImportService {
             }
             return StringUtils.isAllBlank(
                     row.getUm(),
-                    row.getDeviceName(),
-                    row.getDeviceType(),
                     row.getStaffName(),
-                    row.getOrgNames(),
-                    row.getPhone(),
-                    row.getTelecomOperators(),
-                    row.getLastOnlineTime(),
-                    row.getImei(),
-                    row.getImei2(),
-                    row.getIccid(),
-                    row.getDeviceStatus(),
-                    row.getLoginStatus());
+                    row.getOrgName(),
+                    row.getUmStatus());
         }
 
-        private static MmbaDevice toDevice(MmbaDeviceImportRow row, String um) {
+        private static MmbaDevice toDevice(MmbaDeviceImportRow row) {
             MmbaDevice d = new MmbaDevice();
-            d.setDeviceId("");
-            d.setUm(um);
-            d.setDeviceName(StringUtils.trimToNull(row.getDeviceName()));
-            d.setDeviceType(StringUtils.trimToNull(row.getDeviceType()));
+            d.setId(StringUtils.trimToNull(row.getUm()));
             d.setStaffName(StringUtils.trimToNull(row.getStaffName()));
-            d.setOrgNames(StringUtils.trimToNull(row.getOrgNames()));
-            applyPhoneFromImportCell(row.getPhone(), d);
-            applyTelecomOperatorsFromImportCell(row.getTelecomOperators(), d);
-            String lastOnlineTime = StringUtils.trimToNull(row.getLastOnlineTime());
-            d.setLastOnlineTime(lastOnlineTime);
-            d.setLastOnline(TimeUtils.getEpochMillisOrNull(lastOnlineTime));
-            d.setImei(StringUtils.trimToNull(row.getImei()));
-            d.setImei2(StringUtils.trimToNull(row.getImei2()));
-            applyIccidFromImportCell(row.getIccid(), d);
-            d.setDeviceStatus(MmbaDeviceImportDict.parseDeviceStatus(row.getDeviceStatus()));
-            d.setLoginStatus(MmbaDeviceImportDict.parseLoginStatus(row.getLoginStatus()));
+            d.setOrgName(StringUtils.trimToNull(row.getOrgName()));
+            d.setEnable("启用".equals(StringUtils.trimToNull(row.getUmStatus())));
             return d;
         }
 

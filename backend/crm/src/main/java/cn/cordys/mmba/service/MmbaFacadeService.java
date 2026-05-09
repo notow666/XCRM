@@ -165,6 +165,13 @@ public class MmbaFacadeService {
         return executeJson(MmbaBizTypes.DEVICE_PUSH, MmbaApiPaths.DEVICE_MESSAGE_PUSH, request, userId, organizationId, mmbaIntegrationService::pushDeviceMessage);
     }
 
+    /**
+     * 查询设备并同步
+     * @param request
+     * @param userId
+     * @param organizationId
+     * @return
+     */
     public JsonNode queryDeviceList(JsonNode request, String userId, String organizationId) {
         ObjectNode payload = normalizeDeviceListRequest(request);
         JsonNode response = executeJson(MmbaBizTypes.DEVICE_LIST_QUERY, MmbaApiPaths.DEVICE_LIST_QUERY, payload, userId, organizationId, mmbaIntegrationService::queryDeviceList);
@@ -375,8 +382,8 @@ public class MmbaFacadeService {
     }
 
     private void ensureCardSlotAvailable(String um, int cardSlotNum, String userId, String organizationId, String actionText) {
-        List<MmbaDevice> devices = mmbaDeviceService.listByUm(um);
-        if (CollectionUtils.isEmpty(devices) || devices.stream().noneMatch(device -> hasCardSlot(device, cardSlotNum))) {
+        MmbaDevice device = mmbaDeviceService.getDevice(um);
+        if (!hasCardSlot(device, cardSlotNum)) {
             throw new GenericException("当前登录人下未配置卡槽" + cardSlotNum + "，" + actionText);
         }
     }
@@ -488,13 +495,14 @@ public class MmbaFacadeService {
     }
 
     private MmbaDevice buildDeviceFromQueryItem(JsonNode item) {
-        String deviceId = text(item, "deviceId");
-        if (StringUtils.isBlank(deviceId)) {
-            log.warn("MMBA 设备列表项缺少 deviceId，跳过同步 item={}", JSON.toJSONString(item));
+        String um = firstNotBlank(text(item, "loginName"), text(item, "um"));
+        if (StringUtils.isBlank(um)) {
+            log.warn("MMBA设备列表同步缺少 um，跳过同步 item={}", JSON.toJSONString(item));
             return null;
         }
         MmbaDevice device = new MmbaDevice();
-        device.setDeviceId(deviceId);
+        device.setId(um);
+        device.setDeviceId(text(item, "deviceId"));
         device.setDeviceName(text(item, "deviceName"));
         device.setDeviceType(text(item, "deviceType"));
         device.setDeviceStatus(intValue(item, "deviceStatus"));
@@ -504,7 +512,6 @@ public class MmbaFacadeService {
         device.setIccid2(text(item, "iccid2"));
         device.setPhone(firstNotBlank(text(item, "phone1"), text(item, "phone")));
         device.setPhone2(text(item, "phone2"));
-        device.setUm(firstNotBlank(text(item, "loginName"), text(item, "um")));
         device.setStaffName(firstNotBlank(text(item, "name"), text(item, "staffName")));
         device.setOrgName(text(item, "orgName"));
         device.setOrgNames(text(item, "orgNames"));

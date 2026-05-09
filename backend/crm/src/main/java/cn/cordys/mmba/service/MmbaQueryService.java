@@ -72,7 +72,7 @@ public class MmbaQueryService {
         }
         return list.stream()
                 .map(d -> {
-                    return new OptionDTO(d.getUm(), d.getUm() + "-" + MmbaDeviceImportDict.parseDeviceStatus(d.getDeviceStatus()));
+                    return new OptionDTO(d.getId(), d.getId() + "-" + MmbaDeviceImportDict.parseDeviceStatus(d.getDeviceStatus()));
                 }).collect(Collectors.toList());
     }
 

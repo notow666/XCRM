@@ -59,16 +59,16 @@ public class DataEaseSyncService {
     @Resource
     private TenantTaskExecutor tenantTaskExecutor;
 
-    @QuartzScheduled(cron = "0 0 0 * * ?")
-    public void syncDataEase() {
-        tenantTaskExecutor.runForEachEnabledTenant("DataEaseSyncService.syncDataEase", tenantId -> {
-            Set<String> orgIds = extOrganizationMapper.selectAllOrganizationIds();
-            for (String orgId : orgIds) {
-                log.info("定时同步DataEase数据，tenantId={}, 组织ID={}", tenantId, orgId);
-                syncDataEase(orgId);
-            }
-        });
-    }
+//    @QuartzScheduled(cron = "0 0 0 * * ?")
+//    public void syncDataEase() {
+//        tenantTaskExecutor.runForEachEnabledTenant("DataEaseSyncService.syncDataEase", tenantId -> {
+//            Set<String> orgIds = extOrganizationMapper.selectAllOrganizationIds();
+//            for (String orgId : orgIds) {
+//                log.info("定时同步DataEase数据，tenantId={}, 组织ID={}", tenantId, orgId);
+//                syncDataEase(orgId);
+//            }
+//        });
+//    }
 
     public void syncDataEase(String orgId) {
         LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);

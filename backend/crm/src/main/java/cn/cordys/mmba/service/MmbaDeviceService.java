@@ -7,7 +7,6 @@ import cn.cordys.common.util.Translator;
 import cn.cordys.mmba.domain.MmbaDevice;
 import cn.cordys.mmba.domain.MmbaDeviceMapping;
 import cn.cordys.mmba.dto.request.MmbaDeviceSaveRequest;
-import cn.cordys.mmba.dto.request.MmbaDeviceUpdateRequest;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
 import jakarta.annotation.Resource;
@@ -34,9 +33,13 @@ public class MmbaDeviceService {
      * 保存或更新设备主表快照。
      */
     public MmbaDevice saveOrUpdateDevice(MmbaDevice device, String userId) {
-        MmbaDevice db = findDevice(device.getUm(), device.getDeviceId());
+        MmbaDevice db = findDevice(device.getId());
         if (db == null) {
-            init(device, userId);
+            long now = System.currentTimeMillis();
+            device.setCreateTime(now);
+            device.setCreateUser(userId);
+            device.setUpdateTime(now);
+            device.setUpdateUser(userId);
             mmbaDeviceMapper.insert(device);
             return device;
         }
@@ -52,8 +55,8 @@ public class MmbaDeviceService {
 
     public MmbaDevice addDevice(MmbaDeviceSaveRequest request, String userId) {
         MmbaDevice device = new MmbaDevice();
+        device.setId(StringUtils.trimToNull(request.getId()));
         device.setDeviceId(StringUtils.trimToNull(request.getDeviceId()));
-        device.setUm(StringUtils.trimToNull(request.getUm()));
         device.setDeviceName(request.getDeviceName());
         device.setDeviceType(request.getDeviceType());
         device.setDeviceStatus(request.getDeviceStatus());
@@ -75,13 +78,11 @@ public class MmbaDeviceService {
         return saveOrUpdateDevice(device, userId);
     }
 
-    public MmbaDevice updateDevice(MmbaDeviceUpdateRequest request, String userId) {
+    public MmbaDevice updateDevice(MmbaDeviceSaveRequest request, String userId) {
         MmbaDevice patch = new MmbaDevice();
+        patch.setId(StringUtils.trimToNull(request.getId()));
         if (request.getDeviceId() != null) {
             patch.setDeviceId(StringUtils.trimToNull(request.getDeviceId()));
-        }
-        if (request.getUm() != null) {
-            patch.setUm(StringUtils.trimToNull(request.getUm()));
         }
         if (request.getDeviceName() != null) {
             patch.setDeviceName(request.getDeviceName());
@@ -146,14 +147,6 @@ public class MmbaDeviceService {
         if (db == null) {
             throw new GenericException(Translator.get("mmba_device_not_found"));
         }
-        String newUm = patch.getUm() != null ? patch.getUm() : db.getUm();
-        String newDeviceId = patch.getDeviceId() != null ? patch.getDeviceId() : db.getDeviceId();
-        if (StringUtils.isNotBlank(newUm) && StringUtils.isNotBlank(newDeviceId)) {
-            MmbaDevice other = findDevice(newUm, newDeviceId);
-            if (other != null && !other.getId().equals(db.getId())) {
-                throw new GenericException(Translator.get("mmba_device_duplicate"));
-            }
-        }
         mergeDevice(db, patch);
         touch(db, userId);
         mmbaDeviceMapper.update(db);
@@ -196,19 +189,6 @@ public class MmbaDeviceService {
         return true;
     }
 
-    /**
-     * 优先按 deviceId 查，查不到再按 imei 查。
-     */
-    public List<MmbaDevice> listByUm(String um) {
-        if (StringUtils.isBlank(um)) {
-            return List.of();
-        }
-        LambdaQueryWrapper<MmbaDevice> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(MmbaDevice::getUm, um)
-                .orderByDesc(MmbaDevice::getUpdateTime);
-        return mmbaDeviceMapper.selectListByLambda(wrapper);
-    }
-
     public List<MmbaDeviceMapping> listMappingsByUm(String um) {
         if (StringUtils.isBlank(um)) {
             return List.of();
@@ -220,14 +200,11 @@ public class MmbaDeviceService {
         return mmbaDeviceMappingMapper.selectListByLambda(wrapper);
     }
 
-    private MmbaDevice findDevice(String um, String deviceId) {
-        if (StringUtils.isBlank(um) || StringUtils.isBlank(deviceId)) {
+    private MmbaDevice findDevice(String um) {
+        if (StringUtils.isBlank(um)) {
             return null;
         }
-        MmbaDevice query = new MmbaDevice();
-        query.setUm(um);
-        query.setDeviceId(deviceId);
-        return mmbaDeviceMapper.selectOne(query);
+        return mmbaDeviceMapper.selectByPrimaryKey(um);
     }
 
     /**
@@ -277,7 +254,6 @@ public class MmbaDeviceService {
         target.setPhone2(firstNotBlank(source.getPhone2(), target.getPhone2()));
         target.setTelecomOperators(firstNotBlank(source.getTelecomOperators(), target.getTelecomOperators()));
         target.setTelecomOperators2(firstNotBlank(source.getTelecomOperators2(), target.getTelecomOperators2()));
-        target.setUm(firstNotBlank(source.getUm(), target.getUm()));
         target.setStaffName(firstNotBlank(source.getStaffName(), target.getStaffName()));
         target.setOrgName(firstNotBlank(source.getOrgName(), target.getOrgName()));
         target.setOrgNames(firstNotBlank(source.getOrgNames(), target.getOrgNames()));

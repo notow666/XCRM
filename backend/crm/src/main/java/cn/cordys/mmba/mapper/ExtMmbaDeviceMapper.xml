@@ -13,7 +13,7 @@
         </if>
         <if test="request.keyword != null and request.keyword != ''">
             and (
-                um like concat('%', #{request.keyword}, '%')
+                id like concat('%', #{request.keyword}, '%')
                 or staff_name like concat('%', #{request.keyword}, '%')
                 or imei like concat('%', #{request.keyword}, '%')
                 or imei2 like concat('%', #{request.keyword}, '%')
@@ -25,6 +25,6 @@
     </select>
 
     <select id="list" resultType="cn.cordys.mmba.domain.MmbaDevice">
-        select * from mmba_device where um is not null and um != ''
+        select * from mmba_device where `enable` = true
     </select>
 </mapper>
