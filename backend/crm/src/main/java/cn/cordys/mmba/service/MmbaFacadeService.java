@@ -183,7 +183,7 @@ public class MmbaFacadeService {
         List<String> ums = mmbaDevices.stream().map(BaseModel::getId).toList();
         ObjectMapper mapper = JSON.MAPPER;
         ObjectNode objectNode = mapper.createObjectNode();
-        objectNode.put("ums", JSON.toJSONString(ums));
+        objectNode.set("ums", mapper.valueToTree(ums));
         JsonNode response = executeJson(MmbaBizTypes.DEVICE_LIST_QUERY, MmbaApiPaths.DEVICE_LIST_QUERY, objectNode, userId,
                 OrganizationContext.getOrganizationId(), mmbaIntegrationService::queryDeviceList);
         syncDeviceListSnapshot(response, userId);

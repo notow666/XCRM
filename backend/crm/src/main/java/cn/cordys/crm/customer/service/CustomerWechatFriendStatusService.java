@@ -26,6 +26,7 @@ public class CustomerWechatFriendStatusService {
     public static final int NOT_ADDED = 0;
     public static final int PENDING = 1;
     public static final int ADDED = 2;
+    public static final int PROCESS_STATUS_ALREADY_FRIEND = 3;
     public static final int PROCESS_STATUS_REQUEST_SENT = 4;
     private static final int OPER_FLAG_ADD_CONFIRMED = 1;
     private static final int OPER_FLAG_DELETE_FRIEND = 2;
@@ -45,7 +46,8 @@ public class CustomerWechatFriendStatusService {
     private MmbaDeviceService mmbaDeviceService;
 
     public void handleAddFriendReceipt(String um, String friendPhone, Integer processStatus, String userId) {
-        if (processStatus == null || processStatus != PROCESS_STATUS_REQUEST_SENT) {
+        Integer targetStatus = resolveAddFriendReceiptStatus(processStatus);
+        if (targetStatus == null) {
             return;
         }
         List<Customer> customers = listOwnedCustomers(um, friendPhone);
@@ -56,10 +58,10 @@ public class CustomerWechatFriendStatusService {
         }
         for (Customer customer : customers) {
             int currentStatus = normalizeStatus(customer.getWechatFriendStatus());
-            if (currentStatus == ADDED) {
+            if (currentStatus == targetStatus) {
                 continue;
             }
-            updateStatus(customer, PENDING, userId);
+            updateStatus(customer, targetStatus, userId);
         }
     }
 
@@ -214,6 +216,17 @@ public class CustomerWechatFriendStatusService {
             case OPER_FLAG_DELETE_FRIEND, OPER_FLAG_ADD_BLACKLIST, OPER_FLAG_REMOVE_BLACKLIST -> NOT_ADDED;
             case OPER_FLAG_EDIT_FRIEND -> null;
             default -> NOT_ADDED;
+        };
+    }
+
+    private Integer resolveAddFriendReceiptStatus(Integer processStatus) {
+        if (processStatus == null) {
+            return null;
+        }
+        return switch (processStatus) {
+            case PROCESS_STATUS_ALREADY_FRIEND -> ADDED;
+            case PROCESS_STATUS_REQUEST_SENT -> PENDING;
+            default -> null;
         };
     }
 
