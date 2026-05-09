@@ -178,6 +178,7 @@ public class MmbaCallbackDispatchService {
         record.setSubject(data.getSubject());
         record.setCustomer(data.getCustomer());
         record.setCustomerTel(data.getCustomerTel());
+        record.setCardSlotNum(data.getCardSlotNum());
         record.setDirection(toInteger(data.getDirection()));
         record.setType(toInteger(data.getType()));
         record.setCreateTime(data.getCreateTime());

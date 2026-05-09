@@ -45,6 +45,10 @@ public class ZzyData implements Serializable {
      */
     private String operateTime;
     /**
+     * 卡槽编号：1==一号卡槽，2==二号卡槽
+     */
+    private Integer cardSlotNum;
+    /**
      * 字段 createTime 对应时间的时间戳
      */
     private Long timestamp;
