@@ -134,4 +134,8 @@ public interface ExtCustomerMapper {
 
     List<Customer> getPoolCustomersByMobiles(@Param("orgId") String orgId, @Param("poolId") String poolId, @Param("mobiles") List<String> mobiles);
 
+    void updateWechatFriendStatusById(@Param("id") String id, @Param("wechatFriendStatus") Integer wechatFriendStatus);
+
+    void updateCallStatusById(@Param("id") String id, @Param("callStatus") Integer callStatus);
+
 }

@@ -866,7 +866,12 @@
     }
   }
 
-  async function handleReachModalSubmit(payload: { msg: string; selectedWechat?: ActiveWechatOption }) {
+  async function handleReachModalSubmit(payload: {
+    msg: string;
+    note: string;
+    description: string;
+    selectedWechat?: ActiveWechatOption;
+  }) {
     try {
       if (reachModal.value.mode === 'sms') {
         await sendCustomerSms({
@@ -894,6 +899,8 @@
       }
       await addCustomerWxFriend({
         vinfo: payload.msg,
+        note: payload.note || undefined,
+        description: payload.description || undefined,
         friendPhone: reachModal.value.mobile,
         friendSearch: reachModal.value.mobile,
         umPhone: payload.selectedWechat.wxPhone,
@@ -1074,13 +1081,17 @@
           String(item.key)
         )
     );
+    const nameIndex = baseColumns.findIndex((item: any) => item.key === 'name');
+    const orderIndex = baseColumns.findIndex((item: any) => item.key === SpecialColumnEnum.ORDER);
+    if (nameIndex >= 0 && orderIndex >= 0 && nameIndex !== orderIndex + 1) {
+      const [nameColumn] = baseColumns.splice(nameIndex, 1);
+      baseColumns.splice(orderIndex + 1, 0, nameColumn);
+    }
 
     if (showDialColumn.value) {
       const dialColumn = buildReachColumn();
       const callStatusColumn = buildCallStatusColumn();
       const wxFriendStatusColumn = buildWxFriendStatusColumn();
-      const nameIndex = baseColumns.findIndex((item: any) => item.key === 'name');
-      const orderIndex = baseColumns.findIndex((item: any) => item.key === SpecialColumnEnum.ORDER);
       let insertIndex = Math.min(baseColumns.length, 1);
       if (nameIndex >= 0) {
         insertIndex = nameIndex;

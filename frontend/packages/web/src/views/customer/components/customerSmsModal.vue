@@ -43,6 +43,26 @@
           show-count
         />
       </n-form-item>
+      <n-form-item v-if="showFriendNoteInput" path="note" :label="t('common.remark')">
+        <n-input
+          v-model:value="form.note"
+          type="textarea"
+          :placeholder="t('customer.reach.friendNotePlaceholder')"
+          allow-clear
+          :maxlength="50"
+          show-count
+        />
+      </n-form-item>
+      <n-form-item v-if="showFriendDescriptionInput" path="description" :label="t('customer.reach.friendDescription')">
+        <n-input
+          v-model:value="form.description"
+          type="textarea"
+          :placeholder="t('customer.reach.friendDescriptionPlaceholder')"
+          allow-clear
+          :maxlength="400"
+          show-count
+        />
+      </n-form-item>
     </n-form>
   </CrmModal>
 </template>
@@ -71,7 +91,7 @@
   }>();
 
   const emit = defineEmits<{
-    (e: 'submit', payload: { msg: string; selectedWechat?: WechatOption }): void;
+    (e: 'submit', payload: { msg: string; note: string; description: string; selectedWechat?: WechatOption }): void;
   }>();
 
   const visible = defineModel<boolean>('show', { required: true });
@@ -81,13 +101,17 @@
   const loading = ref(false);
   const formRef = ref<FormInst | null>(null);
   const wxFriendStep = ref<'select' | 'content'>('select');
-  const form = ref<{ msg: string; selectedWechatId: string | null }>({
+  const form = ref<{ msg: string; note: string; description: string; selectedWechatId: string | null }>({
     msg: '',
+    note: '',
+    description: '',
     selectedWechatId: null,
   });
 
   const showWechatSelector = computed(() => props.mode === 'wxFriend' && wxFriendStep.value === 'select');
   const showContentInput = computed(() => props.mode === 'sms' || props.mode === 'wx' || wxFriendStep.value === 'content');
+  const showFriendNoteInput = computed(() => props.mode === 'wxFriend' && wxFriendStep.value === 'content');
+  const showFriendDescriptionInput = computed(() => props.mode === 'wxFriend' && wxFriendStep.value === 'content');
   const modalTitle = computed(() => {
     if (props.mode === 'sms') {
       return t('customer.reach.sms');
@@ -163,6 +187,8 @@
       }
       emit('submit', {
         msg: form.value.msg.trim(),
+        note: form.value.note.trim(),
+        description: form.value.description.trim(),
         selectedWechat: selectedWechat.value,
       });
       visible.value = false;
@@ -177,6 +203,8 @@
     wxFriendStep.value = 'select';
     form.value = {
       msg: '',
+      note: '',
+      description: '',
       selectedWechatId: null,
     };
     nextTick(() => {

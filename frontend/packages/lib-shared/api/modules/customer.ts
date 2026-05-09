@@ -363,6 +363,8 @@ export default function useProductApi(CDR: CordysAxios) {
 
   function addCustomerWxFriend(data: {
     vinfo: string;
+    note?: string;
+    description?: string;
     friendPhone: string;
     friendSearch: string;
     umPhone: string;

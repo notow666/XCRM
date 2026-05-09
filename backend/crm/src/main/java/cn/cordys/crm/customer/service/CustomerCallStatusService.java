@@ -1,6 +1,7 @@
 package cn.cordys.crm.customer.service;
 
 import cn.cordys.crm.customer.domain.Customer;
+import cn.cordys.crm.customer.mapper.ExtCustomerMapper;
 import cn.cordys.crm.system.domain.User;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
@@ -29,6 +30,8 @@ public class CustomerCallStatusService {
     private BaseMapper<Customer> customerMapper;
     @Resource
     private BaseMapper<User> userBaseMapper;
+    @Resource
+    private ExtCustomerMapper extCustomerMapper;
 
     public void upgradeByCustomer(String customerId, String customerTel, String um, Integer targetStatus, String userId) {
         if (targetStatus == null || targetStatus < DIALED_NOT_CONNECTED) {
@@ -44,10 +47,7 @@ public class CustomerCallStatusService {
         if (currentStatus >= targetStatus) {
             return;
         }
-        Customer update = new Customer();
-        update.setId(customer.getId());
-        update.setCallStatus(targetStatus);
-        customerMapper.updateById(update);
+        extCustomerMapper.updateCallStatusById(customer.getId(), targetStatus);
         log.info("客户拨打状态升级 customerId={} customerTel={} from={} to={}",
                 customer.getId(), customer.getMobile(), currentStatus, targetStatus);
     }

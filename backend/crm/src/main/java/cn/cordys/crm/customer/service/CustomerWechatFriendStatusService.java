@@ -1,6 +1,7 @@
 package cn.cordys.crm.customer.service;
 
 import cn.cordys.crm.customer.domain.Customer;
+import cn.cordys.crm.customer.mapper.ExtCustomerMapper;
 import cn.cordys.crm.system.domain.User;
 import cn.cordys.mmba.dto.CustomerWxFriendStatusDTO;
 import cn.cordys.mmba.mapper.ExtMmbaAuditMapper;
@@ -40,6 +41,8 @@ public class CustomerWechatFriendStatusService {
     private BaseMapper<Customer> customerMapper;
     @Resource
     private BaseMapper<User> userBaseMapper;
+    @Resource
+    private ExtCustomerMapper extCustomerMapper;
     @Resource
     private ExtMmbaAuditMapper extMmbaAuditMapper;
     @Resource
@@ -238,10 +241,7 @@ public class CustomerWechatFriendStatusService {
         if (currentStatus == targetStatus) {
             return;
         }
-        Customer update = new Customer();
-        update.setId(customer.getId());
-        update.setWechatFriendStatus(targetStatus);
-        customerMapper.updateById(update);
+        extCustomerMapper.updateWechatFriendStatusById(customer.getId(), targetStatus);
         customer.setWechatFriendStatus(targetStatus);
         log.info("客户微信好友状态更新 customerId={} mobile={} from={} to={}",
                 customer.getId(), customer.getMobile(), currentStatus, targetStatus);
