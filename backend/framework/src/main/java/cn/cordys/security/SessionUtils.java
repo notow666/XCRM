@@ -44,11 +44,26 @@ public class SessionUtils {
      */
     public static SessionUser getUser() {
         try {
+            // 检查 SecurityManager 是否存在
+            if (SecurityUtils.getSecurityManager() == null) {
+                log.warn("SecurityManager 未配置，可能为非 Web 环境");
+                return null;
+            }
+
             Subject subject = SecurityUtils.getSubject();
-            Session session = subject.getSession();
-            return (SessionUser) session.getAttribute(ATTR_USER);
+            if (subject == null) {
+                return null;
+            }
+
+            Session session = subject.getSession(false); // 不自动创建 session
+            if (session == null) {
+                return null;
+            }
+
+            Object user = session.getAttribute(ATTR_USER);
+            return user instanceof SessionUser ? (SessionUser) user : null;
         } catch (Exception e) {
-            log.warn("后台获取在线用户失败: {}", e.getMessage());
+            log.warn("获取在线用户失败: {}", e.getMessage());
             return null;
         }
     }

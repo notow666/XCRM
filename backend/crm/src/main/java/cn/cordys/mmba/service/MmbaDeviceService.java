@@ -1,5 +1,6 @@
 package cn.cordys.mmba.service;
 
+import cn.cordys.common.domain.BaseModel;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.TimeUtils;
@@ -13,8 +14,11 @@ import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * MMBA 设备主表和设备映射表服务。
@@ -157,6 +161,14 @@ public class MmbaDeviceService {
         touch(db, userId);
         mmbaDeviceMapper.update(db);
         return db;
+    }
+
+    public List<MmbaDevice> syncDevices() {
+        List<MmbaDevice> mmbaDevices = mmbaDeviceMapper.selectAll(null);
+        if(CollectionUtils.isEmpty(mmbaDevices)) {
+            return Collections.emptyList();
+        }
+        return mmbaDevices;
     }
 
     /**

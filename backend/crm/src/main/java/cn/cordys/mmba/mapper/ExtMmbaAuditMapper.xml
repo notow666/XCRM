@@ -398,32 +398,4 @@
         </if>
         order by timestamp desc, change_time desc, id desc
     </select>
-
-    <select id="listDeviceStatus" resultType="cn.cordys.mmba.domain.MmbaDeviceStatusAudit">
-        select *
-        from mmba_device_status_audit
-        where 1 = 1
-        <if test="request.um != null and request.um != ''">
-            and um = #{request.um}
-        </if>
-        <if test="request.deviceId != null and request.deviceId != ''">
-            and device_id = #{request.deviceId}
-        </if>
-        <if test="request.imei != null and request.imei != ''">
-            and (imei = #{request.imei} or imei2 = #{request.imei})
-        </if>
-        <if test="request.deviceStatus != null">
-            and device_status = #{request.deviceStatus}
-        </if>
-        <if test="request.keyword != null and request.keyword != ''">
-            and (
-                device_id like concat('%', #{request.keyword}, '%')
-                or imei like concat('%', #{request.keyword}, '%')
-                or imei2 like concat('%', #{request.keyword}, '%')
-                or um like concat('%', #{request.keyword}, '%')
-            )
-        </if>
-        order by change_time desc, id desc
-    </select>
-
 </mapper>

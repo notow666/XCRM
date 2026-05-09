@@ -4,6 +4,7 @@ import cn.cordys.common.constants.BusinessModuleField;
 import cn.cordys.common.constants.FormKey;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.uid.IDGenerator;
+import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.Translator;
 import cn.cordys.crm.customer.domain.Customer;
 import cn.cordys.crm.customer.domain.CustomerPool;
@@ -30,6 +31,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.StopWatch;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Comment;
@@ -131,61 +133,60 @@ public class PoolCustomerImportService {
      * 3. 流式写入错误Excel：使用EasyExcel重新生成，避免内存溢出
      */
     public PoolCustomerImportCheckResponse preCheck(MultipartFile file, String poolId, String orgId, String userId) {
-        long totalStartTime = System.currentTimeMillis();
         log.info("========== 公海导入预检查开始 ========== poolId: {}", poolId);
-
         if (file == null) {
             throw new GenericException(Translator.get("file_cannot_be_null"));
         }
-
-        long stepStartTime = System.currentTimeMillis();
+        Map<String, Object> view = new HashMap<>();
+        StopWatch started = StopWatch.createStarted();
+        // 步骤1-校验公海池
         CustomerPool pool = validatePool(poolId);
-        log.info("[耗时] 步骤1-校验公海池: {} ms", System.currentTimeMillis() - stepStartTime);
+        view.put("操作员", userId);
+        view.put("公海池", poolId + "-" + pool.getName());
 
-        stepStartTime = System.currentTimeMillis();
+        // 步骤2-获取表单字段
         List<BaseField> fields = moduleFormService.getAllCustomImportFields(FormKey.CUSTOMER.getKey(), orgId);
         List<BaseField> filteredFields = filterOwnerField(fields);
         removeUniqueRules(filteredFields);
-        log.info("[耗时] 步骤2-获取表单字段: {} ms", System.currentTimeMillis() - stepStartTime);
 
+        // 步骤3-读取Excel
         PoolCustomerCheckEventListener checkListener = new PoolCustomerCheckEventListener(
                 filteredFields, "customer", "customer_field", orgId);
-        
-        stepStartTime = System.currentTimeMillis();
         readExcel(file, checkListener);
-        log.info("[耗时] 步骤3-读取Excel: {} ms, 成功行数: {}, 错误行数: {}", 
-                System.currentTimeMillis() - stepStartTime, checkListener.getSuccess(), checkListener.getErrList().size());
+
+        view.put("读取成功行数", checkListener.getSuccess());
+        view.put("读取错误行数", checkListener.getErrList().size());
 
         int totalRows = checkListener.getSuccess() + checkListener.getErrList().size();
         Map<Integer, String> rowMobileMap = checkListener.getRowMobileMap();
         String mobileFieldName = checkListener.getMobileFieldName();
-        log.info("[统计] Excel总行数: {}, 手机号数量: {}", totalRows, rowMobileMap.size());
 
-        stepStartTime = System.currentTimeMillis();
+        view.put("Excel总行数", totalRows);
+        view.put("手机号数量", rowMobileMap.size());
+
+        // 步骤4-错误检查
         ErrorCheckResult result = doErrorCheck(rowMobileMap, checkListener.getErrList(), orgId, poolId, mobileFieldName);
-        log.info("[耗时] 步骤4-错误检查: {} ms", System.currentTimeMillis() - stepStartTime);
 
         PoolCustomerImportCheckResponse response = buildResponse(result, totalRows);
-
         if (!result.isPassed()) {
-            stepStartTime = System.currentTimeMillis();
+            // 步骤5-写入错误Excel
             String errorFileId = IDGenerator.nextStr();
             String errorFileName = Translator.get("pool.import.error.file.name");
             try {
                 writeErrorExcelStreaming(file, result, errorFileId, orgId);
                 response.setErrorFileId(errorFileId);
                 response.setErrorFileName(errorFileName);
-                log.info("[耗时] 步骤5-写入错误Excel: {} ms, 错误行数: {}", 
-                        System.currentTimeMillis() - stepStartTime, result.getRowErrorCount());
+
+                view.put("错误行数", result.getRowErrorCount());
             } catch (Exception e) {
                 log.error("write error excel failed: {}", e.getMessage(), e);
             }
             response.setErrorSummary(buildErrorSummary(result));
         }
 
-        log.info("========== 公海导入预检查完成 ========== 总耗时: {} ms, 通过: {}, 错误数: {}", 
-                System.currentTimeMillis() - totalStartTime, result.isPassed(), result.getRowErrorCount());
-
+        started.stop();
+        log.info("========== 公海导入预检查完成 ========== 总耗时: {} ms, 预检结果: {}, 预检详情: [{}]",
+                started.formatSplitTime(), result.isPassed() ? "全部通过" : "有异常", JSON.toFormatJSONString(view));
         return response;
     }
 

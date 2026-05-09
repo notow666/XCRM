@@ -10,8 +10,6 @@ import cn.cordys.mmba.domain.MmbaCallbackRecord;
 import cn.cordys.mmba.domain.MmbaCommandResult;
 import cn.cordys.mmba.domain.MmbaDevice;
 import cn.cordys.mmba.domain.MmbaDeviceInfoAudit;
-import cn.cordys.mmba.domain.MmbaDeviceMapping;
-import cn.cordys.mmba.domain.MmbaDeviceStatusAudit;
 import cn.cordys.mmba.domain.MmbaSmsRecordAudit;
 import cn.cordys.mmba.domain.MmbaWxAccountAudit;
 import cn.cordys.mmba.domain.MmbaWxChatAudit;
@@ -93,10 +91,6 @@ public class MmbaCallbackDispatchService {
                     mmbaAuditPersistenceService.saveOrUpdateDeviceInfoAudit(buildDeviceInfoAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
                     syncDeviceSnapshot(data, dto.getBehaviorType());
                 }
-//                case MmbaBehaviorTypes.DEVICE_STATUS_AUDIT -> {
-//                    mmbaAuditPersistenceService.saveOrUpdateDeviceStatusAudit(buildDeviceStatusAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
-//                    syncDeviceSnapshot(data, dto.getBehaviorType());
-//                }
                 case MmbaBehaviorTypes.WX_LOGIN_LOGOUT_AUDIT -> {
                     mmbaAuditPersistenceService.saveOrUpdateWxLoginAudit(buildWxLoginAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
                     mmbaWxMappingSyncService.syncMappingStatusFromLoginAudit(data, MmbaConstants.SYSTEM_USER);
@@ -350,14 +344,6 @@ public class MmbaCallbackDispatchService {
         record.setImei(data.getImei());
         record.setImei2(data.getImei2());
         record.setTimestamp(data.getTimestamp());
-        return record;
-    }
-
-    private MmbaDeviceStatusAudit buildDeviceStatusAudit(ZzyData data, MmbaCallbackRecord callbackRecord) {
-        MmbaDeviceStatusAudit record = new MmbaDeviceStatusAudit();
-        fillCommon(record, data, callbackRecord);
-        record.setChangeTime(firstNotBlank(data.getChangeTime(), data.getCreateTime()));
-        record.setDeviceStatus(toInteger(firstNotBlank(data.getDeviceStatus(), data.getStatus())));
         return record;
     }
 

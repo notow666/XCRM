@@ -10,7 +10,6 @@ import cn.cordys.mmba.domain.MmbaCallRecordAudit;
 import cn.cordys.mmba.domain.MmbaCommandResult;
 import cn.cordys.mmba.domain.MmbaDevice;
 import cn.cordys.mmba.domain.MmbaDeviceInfoAudit;
-import cn.cordys.mmba.domain.MmbaDeviceStatusAudit;
 import cn.cordys.mmba.domain.MmbaSmsRecordAudit;
 import cn.cordys.mmba.domain.MmbaWxAccountAudit;
 import cn.cordys.mmba.domain.MmbaWxChatAudit;
@@ -22,7 +21,6 @@ import cn.cordys.mmba.dto.request.MmbaCommandResultPageRequest;
 import cn.cordys.mmba.dto.request.MmbaDeviceInfoAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaDevicePageRequest;
 import cn.cordys.mmba.dto.request.MmbaDeviceSaveRequest;
-import cn.cordys.mmba.dto.request.MmbaDeviceStatusAuditPageRequest;
 import cn.cordys.mmba.dto.response.MmbaDeviceImportResponse;
 import cn.cordys.mmba.dto.request.MmbaSmsRecordAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxAccountAuditPageRequest;
@@ -201,6 +199,16 @@ public class MmbaController {
         return mmbaQueryService.pageDevice(request, OrganizationContext.getOrganizationId());
     }
 
+    /**
+     * 查询设备并同步。
+     */
+    @PostMapping("/device/sync")
+    @Operation(summary = "查询设备并同步")
+    @RequiresPermissions(PermissionConstants.MMBA_DEVICE_READ)
+    public void syncDevices() {
+        mmbaFacadeService.syncDevices(SessionUtils.getUserId());
+    }
+
     @GetMapping("/device/list")
     @Operation(summary = "MMBA设备列表")
     public List<OptionDTO> listDevice() {
@@ -318,15 +326,6 @@ public class MmbaController {
     @Operation(summary = "设备信息审计")
     public PagerWithOption<List<MmbaDeviceInfoAudit>> pageDeviceInfoAudit(@Valid @RequestBody MmbaDeviceInfoAuditPageRequest request) {
         return mmbaQueryService.pageDeviceInfoAudit(request, OrganizationContext.getOrganizationId());
-    }
-
-    /**
-     * 查询设备状态变更审计。
-     */
-    @PostMapping("/device/status/audit/page")
-    @Operation(summary = "设备状态审计列表")
-    public PagerWithOption<List<MmbaDeviceStatusAudit>> pageDeviceStatusAudit(@Valid @RequestBody MmbaDeviceStatusAuditPageRequest request) {
-        return mmbaQueryService.pageDeviceStatusAudit(request, OrganizationContext.getOrganizationId());
     }
 
     /**

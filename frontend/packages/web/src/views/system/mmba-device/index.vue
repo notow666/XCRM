@@ -15,6 +15,9 @@
           >
             <n-button>{{ t('mmbaDevice.import') }}</n-button>
           </n-upload>
+          <n-button v-permission="['MMBA_DEVICE:READ']" type="primary" ghost @click="handleSyncClick">
+            {{ t('mmbaDevice.sync') }}
+          </n-button>
         </div>
         <div class="flex min-w-0 flex-1 items-center justify-end gap-[12px]">
           <CrmSearchInput
@@ -69,11 +72,11 @@
         </n-form-item>
         <n-form-item :label="t('mmbaDevice.form.deviceStatus')" path="deviceStatus">
           <n-select
-              v-model:value="form.deviceStatus"
-              size="small"
-              class="w-full"
-              clearable
-              :options="deviceStatusOptions"
+            v-model:value="form.deviceStatus"
+            size="small"
+            class="w-full"
+            clearable
+            :options="deviceStatusOptions"
           />
         </n-form-item>
         <n-form-item :label="t('mmbaDevice.form.deviceName')" path="deviceName">
@@ -142,12 +145,14 @@
   import CrmCard from '@/components/pure/crm-card/index.vue';
   import CrmSearchInput from '@/components/pure/crm-search-input/index.vue';
 
-  import { addMmbaDevice, getMmbaDevicePage, importMmbaDevice, updateMmbaDevice } from '@/api/modules';
+  import { addMmbaDevice, getMmbaDevicePage, importMmbaDevice, syncMmbaDevices, updateMmbaDevice } from '@/api/modules';
+  import useModal from '@/hooks/useModal';
   import useLicenseStore from '@/store/modules/setting/license';
   import { hasAnyPermission } from '@/utils/permission';
 
   const { t } = useI18n();
   const message = useMessage();
+  const { openModal } = useModal();
   const licenseStore = useLicenseStore();
 
   const keyword = ref('');
@@ -444,6 +449,21 @@
     } catch {
       return false;
     }
+  }
+
+  function handleSyncClick() {
+    openModal({
+      type: 'warning',
+      title: t('mmbaDevice.sync'),
+      content: t('mmbaDevice.syncConfirm'),
+      positiveText: t('common.confirm'),
+      negativeText: t('common.cancel'),
+      onPositiveClick: async () => {
+        await syncMmbaDevices();
+        message.success(t('mmbaDevice.syncSuccess'));
+        load();
+      },
+    });
   }
 
   async function handleImport({ file, onFinish, onError }: UploadCustomRequestOptions) {

@@ -1,8 +1,10 @@
 package cn.cordys.mmba.service;
 
+import cn.cordys.common.domain.BaseModel;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.JSON;
 import cn.cordys.common.exception.GenericException;
+import cn.cordys.context.OrganizationContext;
 import cn.cordys.context.TenantContext;
 import cn.cordys.crm.system.domain.User;
 import cn.cordys.mmba.MmbaApiPaths;
@@ -13,16 +15,19 @@ import cn.cordys.mmba.MmbaInvokeException;
 import cn.cordys.mmba.domain.MmbaDevice;
 import cn.cordys.mmba.domain.MmbaRequestRecord;
 import cn.cordys.mybatis.BaseMapper;
+import cn.cordys.security.SessionUtils;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -167,16 +172,21 @@ public class MmbaFacadeService {
 
     /**
      * 查询设备并同步
-     * @param request
-     * @param userId
-     * @param organizationId
      * @return
      */
-    public JsonNode queryDeviceList(JsonNode request, String userId, String organizationId) {
-        ObjectNode payload = normalizeDeviceListRequest(request);
-        JsonNode response = executeJson(MmbaBizTypes.DEVICE_LIST_QUERY, MmbaApiPaths.DEVICE_LIST_QUERY, payload, userId, organizationId, mmbaIntegrationService::queryDeviceList);
+    @Async
+    public void syncDevices(String userId) {
+        List<MmbaDevice> mmbaDevices = mmbaDeviceService.syncDevices();
+        if(CollectionUtils.isEmpty(mmbaDevices)) {
+            return;
+        }
+        List<String> ums = mmbaDevices.stream().map(BaseModel::getId).toList();
+        ObjectMapper mapper = JSON.MAPPER;
+        ObjectNode objectNode = mapper.createObjectNode();
+        objectNode.put("ums", JSON.toJSONString(ums));
+        JsonNode response = executeJson(MmbaBizTypes.DEVICE_LIST_QUERY, MmbaApiPaths.DEVICE_LIST_QUERY, objectNode, userId,
+                OrganizationContext.getOrganizationId(), mmbaIntegrationService::queryDeviceList);
         syncDeviceListSnapshot(response, userId);
-        return response;
     }
 
     /**
@@ -452,20 +462,19 @@ public class MmbaFacadeService {
      * 统一摊平成 MMBA 业务 data 体，避免再次被网关包装后出现 data.data。
      */
     private ObjectNode normalizeDeviceListRequest(JsonNode request) {
-        ObjectNode payload = normalizeRequest(request);
-        JsonNode dataNode = payload.get("data");
-        if (!(dataNode instanceof ObjectNode dataObject) || !shouldUnwrapDeviceListData(payload, dataObject)) {
-            return payload;
+        JsonNode dataNode = request.get("data");
+        if (!(dataNode instanceof ObjectNode dataObject) || !shouldUnwrapDeviceListData(request, dataObject)) {
+            return normalizeRequest(request);
         }
         ObjectNode normalized = dataObject.deepCopy();
-        JsonNode reqId = payload.get("reqId");
+        JsonNode reqId = request.get("reqId");
         if (reqId != null && !reqId.isNull()) {
             normalized.set("reqId", reqId.deepCopy());
         }
         return normalized;
     }
 
-    private boolean shouldUnwrapDeviceListData(ObjectNode payload, ObjectNode dataObject) {
+    private boolean shouldUnwrapDeviceListData(JsonNode payload, ObjectNode dataObject) {
         if (payload.size() == 1) {
             return true;
         }
@@ -506,19 +515,19 @@ public class MmbaFacadeService {
         device.setDeviceName(text(item, "deviceName"));
         device.setDeviceType(text(item, "deviceType"));
         device.setDeviceStatus(intValue(item, "deviceStatus"));
-        device.setImei(firstNotBlank(text(item, "imei1"), text(item, "imei")));
+        device.setImei(text(item, "imei1"));
         device.setImei2(text(item, "imei2"));
-        device.setIccid(firstNotBlank(text(item, "iccid1"), text(item, "iccid")));
+        device.setIccid(text(item, "iccid1"));
         device.setIccid2(text(item, "iccid2"));
-        device.setPhone(firstNotBlank(text(item, "phone1"), text(item, "phone")));
+        device.setPhone(text(item, "phone1"));
         device.setPhone2(text(item, "phone2"));
-        device.setStaffName(firstNotBlank(text(item, "name"), text(item, "staffName")));
+        device.setStaffName(text(item, "name"));
         device.setOrgName(text(item, "orgName"));
         device.setOrgNames(text(item, "orgNames"));
         device.setLastOnline(longValue(item, "lastOnline"));
         device.setLastOnlineTime(text(item, "lastOnlineTime"));
         device.setLoginStatus(intValue(item, "loginStatus"));
-        device.setLastAuditTime(device.getLastOnline());
+        device.setLastAuditTime(System.currentTimeMillis());
         device.setRawData(JSON.toJSONString(item));
         return device;
     }

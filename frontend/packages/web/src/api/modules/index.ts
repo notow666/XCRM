@@ -630,6 +630,7 @@ export const {
   updateMmbaDevice,
   importMmbaDevice,
   getMmbaDeviceOptionList,
+  syncMmbaDevices,
 } = mmbaDeviceApi;
 
 export const {

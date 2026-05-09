@@ -4,6 +4,7 @@ import {
   MmbaDeviceImportUrl,
   MmbaDeviceListOptionsUrl,
   MmbaDevicePageUrl,
+  MmbaDeviceSyncUrl,
   MmbaDeviceUpdateUrl,
   getMmbaDeviceDetailUrl,
 } from '@lib/shared/api/requrls/mmba/device';
@@ -46,6 +47,10 @@ export default function useMmbaDeviceApi(CDR: CordysAxios) {
     return CDR.get<OptionDTO[]>({ url: MmbaDeviceListOptionsUrl });
   }
 
+  function syncMmbaDevices() {
+    return CDR.post<void>({ url: MmbaDeviceSyncUrl, data: {} });
+  }
+
   return {
     getMmbaDevicePage,
     getMmbaDeviceDetail,
@@ -53,5 +58,6 @@ export default function useMmbaDeviceApi(CDR: CordysAxios) {
     updateMmbaDevice,
     importMmbaDevice,
     getMmbaDeviceOptionList,
+    syncMmbaDevices,
   };
 }

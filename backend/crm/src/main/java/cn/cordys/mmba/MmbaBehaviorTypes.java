@@ -84,11 +84,6 @@ public final class MmbaBehaviorTypes {
     public static final int DEVICE_INFO_AUDIT = 120;
 
     /**
-     * 设备状态变化审计。
-     */
-    public static final int DEVICE_STATUS_AUDIT = 121;
-
-    /**
      * 微信登录登出审计。
      */
     public static final int WX_LOGIN_LOGOUT_AUDIT = 200;
@@ -125,7 +120,6 @@ public final class MmbaBehaviorTypes {
         groups.put(WX_REMARK_RECEIPT, MmbaConstants.GROUP_BY_COMMAND);
         groups.put(WX_ACCOUNT_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
         groups.put(DEVICE_INFO_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
-        groups.put(DEVICE_STATUS_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
         groups.put(WX_LOGIN_LOGOUT_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
         return groups;
     }

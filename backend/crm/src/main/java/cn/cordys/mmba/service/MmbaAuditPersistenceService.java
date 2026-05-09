@@ -3,7 +3,6 @@ package cn.cordys.mmba.service;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.mmba.domain.MmbaCallRecordAudit;
 import cn.cordys.mmba.domain.MmbaDeviceInfoAudit;
-import cn.cordys.mmba.domain.MmbaDeviceStatusAudit;
 import cn.cordys.mmba.domain.MmbaSmsRecordAudit;
 import cn.cordys.mmba.domain.MmbaWxAccountAudit;
 import cn.cordys.mmba.domain.MmbaWxChatAudit;
@@ -41,8 +40,6 @@ public class MmbaAuditPersistenceService {
     private BaseMapper<MmbaWxLoginAudit> mmbaWxLoginAuditMapper;
     @Resource
     private BaseMapper<MmbaDeviceInfoAudit> mmbaDeviceInfoAuditMapper;
-    @Resource
-    private BaseMapper<MmbaDeviceStatusAudit> mmbaDeviceStatusAuditMapper;
 
     public MmbaCallRecordAudit saveOrUpdateCallAudit(MmbaCallRecordAudit record, String userId) {
         return saveOrReplaceByEsId(record, mmbaCallRecordAuditMapper);
@@ -96,22 +93,6 @@ public class MmbaAuditPersistenceService {
         }
         record.setId(db.getId());
         mmbaDeviceInfoAuditMapper.update(record);
-        return record;
-    }
-
-    public MmbaDeviceStatusAudit saveOrUpdateDeviceStatusAudit(MmbaDeviceStatusAudit record, String userId) {
-        MmbaDeviceStatusAudit query = new MmbaDeviceStatusAudit();
-        query.setDeviceId(record.getDeviceId());
-        query.setDeviceStatus(record.getDeviceStatus());
-        query.setChangeTime(record.getChangeTime());
-        MmbaDeviceStatusAudit db = mmbaDeviceStatusAuditMapper.selectOne(query);
-        if (db == null) {
-            record.setId(IDGenerator.nextStr());
-            mmbaDeviceStatusAuditMapper.insert(record);
-            return record;
-        }
-        record.setId(db.getId());
-        mmbaDeviceStatusAuditMapper.update(record);
         return record;
     }
 

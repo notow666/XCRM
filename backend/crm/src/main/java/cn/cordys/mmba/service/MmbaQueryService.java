@@ -7,7 +7,6 @@ import cn.cordys.mmba.domain.MmbaCallRecordAudit;
 import cn.cordys.mmba.domain.MmbaCommandResult;
 import cn.cordys.mmba.domain.MmbaDevice;
 import cn.cordys.mmba.domain.MmbaDeviceInfoAudit;
-import cn.cordys.mmba.domain.MmbaDeviceStatusAudit;
 import cn.cordys.mmba.domain.MmbaSmsRecordAudit;
 import cn.cordys.mmba.domain.MmbaWxAccountAudit;
 import cn.cordys.mmba.domain.MmbaWxChatAudit;
@@ -18,7 +17,6 @@ import cn.cordys.mmba.dto.request.MmbaCallRecordAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaCommandResultPageRequest;
 import cn.cordys.mmba.dto.request.MmbaDeviceInfoAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaDevicePageRequest;
-import cn.cordys.mmba.dto.request.MmbaDeviceStatusAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaSmsRecordAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxAccountAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxChatAuditPageRequest;
@@ -154,15 +152,6 @@ public class MmbaQueryService {
     public PagerWithOption<List<MmbaDeviceInfoAudit>> pageDeviceInfoAudit(MmbaDeviceInfoAuditPageRequest request, String organizationId) {
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         List<MmbaDeviceInfoAudit> list = extMmbaAuditMapper.listDeviceInfo(request, organizationId);
-        return PageUtils.setPageInfoWithOption(page, list, EMPTY_OPTIONS);
-    }
-
-    /**
-     * 查询设备状态审计流水。
-     */
-    public PagerWithOption<List<MmbaDeviceStatusAudit>> pageDeviceStatusAudit(MmbaDeviceStatusAuditPageRequest request, String organizationId) {
-        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
-        List<MmbaDeviceStatusAudit> list = extMmbaAuditMapper.listDeviceStatus(request, organizationId);
         return PageUtils.setPageInfoWithOption(page, list, EMPTY_OPTIONS);
     }
 }
