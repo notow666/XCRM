@@ -53,7 +53,16 @@ public class MmbaAuditRequest implements Serializable {
         List<ZzyData> invalid = new ArrayList<>();
         for (int i = 0; i < sourceData.size(); i++) {
             ZzyData zzy = sourceData.get(i);
+            zzy.setRawPayload(extractRawData(rawDataNode, i, zzy));
+            if (!StringUtils.hasText(zzy.getDeptIdPath())) {
+                invalid.add(zzy);
+                continue;
+            }
             String[] orgPath = zzy.getDeptIdPath().split("/");
+            if (orgPath.length <= 1) {
+                invalid.add(zzy);
+                continue;
+            }
             if(tenant.containsKey(orgPath[1])) {
                 zzy.setTenantId(tenant.get(orgPath[1]));
 
@@ -64,7 +73,6 @@ public class MmbaAuditRequest implements Serializable {
                 zzy.setCompany(split.length >= 2 ? split[1] : "");
                 zzy.setRegion(split.length >= 3 ? split[2] : "");
                 zzy.setDepartment(split.length >= 4 ? split[3] : "");
-                zzy.setRawPayload(extractRawData(rawDataNode, i, zzy));
 
                 _new.add(zzy);
             }

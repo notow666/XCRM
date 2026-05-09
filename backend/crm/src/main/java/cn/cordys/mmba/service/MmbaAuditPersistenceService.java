@@ -87,7 +87,6 @@ public class MmbaAuditPersistenceService {
     public MmbaDeviceInfoAudit saveOrUpdateDeviceInfoAudit(MmbaDeviceInfoAudit record, String userId) {
         MmbaDeviceInfoAudit query = new MmbaDeviceInfoAudit();
         query.setDeviceId(record.getDeviceId());
-        query.setImei(record.getImei());
         query.setTimestamp(record.getTimestamp());
         MmbaDeviceInfoAudit db = mmbaDeviceInfoAuditMapper.selectOne(query);
         if (db == null) {

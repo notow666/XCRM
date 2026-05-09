@@ -66,8 +66,20 @@
   }
 
   function getParams(): FilterResult {
+    const normalizeConditionValue = (item: FilterFormItem) => {
+      if (item.valueType !== 'number') {
+        return item.value;
+      }
+      if (Array.isArray(item.value)) {
+        return item.value.map((value) =>
+          value === '' || value === null || value === undefined ? value : Number(value)
+        );
+      }
+      return item.value === '' || item.value === null || item.value === undefined ? item.value : Number(item.value);
+    };
+
     const conditions: ConditionsItem[] = formModel.value.list.map((item: any) => ({
-      value: item.value,
+      value: normalizeConditionValue(item),
       operator: item.operator,
       name: item.dataIndex ?? '',
       multipleValue: multipleValueTypeList.includes(item.type),

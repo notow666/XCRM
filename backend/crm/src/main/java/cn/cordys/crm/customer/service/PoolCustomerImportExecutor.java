@@ -76,6 +76,7 @@ public class PoolCustomerImportExecutor {
     private CustomImportAfterDoConsumer<Customer, BaseResourceSubField> buildAfterDoConsumer(String poolId, String userId, String orgId) {
         return (customers, customerFields, customerFieldBlobs) -> {
             customers.forEach(customer -> {
+                initCustomerContactStatus(customer);
                 customer.setInSharedPool(true);
                 customer.setPoolId(poolId);
                 customer.setOwner(null);
@@ -201,6 +202,15 @@ public class PoolCustomerImportExecutor {
             int end = Math.min(i + BATCH_SIZE, customers.size());
             List<Customer> batch = customers.subList(i, end);
             customerMapper.batchMoveToPoolIncludeStage(batch);
+        }
+    }
+
+    private void initCustomerContactStatus(Customer customer) {
+        if (customer.getCallStatus() == null) {
+            customer.setCallStatus(0);
+        }
+        if (customer.getWechatFriendStatus() == null) {
+            customer.setWechatFriendStatus(0);
         }
     }
 

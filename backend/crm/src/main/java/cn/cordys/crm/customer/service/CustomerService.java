@@ -527,6 +527,7 @@ public class CustomerService {
     @OperationLog(module = LogModule.CUSTOMER_INDEX, type = LogType.ADD, resourceName = "{#request.name}")
     public Customer add(CustomerAddRequest request, String userId, String orgId) {
         Customer customer = BeanUtils.copyBean(new Customer(), request);
+        initCustomerContactStatus(customer);
         if (StringUtils.isBlank(request.getOwner())) {
             customer.setOwner(userId);
         }
@@ -568,6 +569,7 @@ public class CustomerService {
 
     public Customer moveToPool(CustomerAddRequest request, String userId, String orgId, String targetPoolId) {
         Customer customer = BeanUtils.copyBean(new Customer(), request);
+        initCustomerContactStatus(customer);
         if (StringUtils.isBlank(request.getOwner())) {
             customer.setOwner(userId);
         }
@@ -605,6 +607,15 @@ public class CustomerService {
                 NotificationConstants.Event.CUSTOMER_ADD, customer.getName(), userId,
                 orgId, ownerIds, true);
         return customer;
+    }
+
+    private void initCustomerContactStatus(Customer customer) {
+        if (customer.getCallStatus() == null) {
+            customer.setCallStatus(0);
+        }
+        if (customer.getWechatFriendStatus() == null) {
+            customer.setWechatFriendStatus(0);
+        }
     }
 
     /**
@@ -1127,6 +1138,7 @@ public class CustomerService {
                 List<LogDTO> logs = new ArrayList<>();
                 List<CustomerContact> contacts = new ArrayList<>();
                 customers.forEach(customer -> {
+                    initCustomerContactStatus(customer);
                     customer.setCollectionTime(customer.getCreateTime());
                     customer.setInSharedPool(false);
                     customer.setOwner(currentUser);

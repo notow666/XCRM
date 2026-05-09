@@ -24,6 +24,7 @@ export interface FilterFormItem {
   title?: string; // 第一列下拉显示的label
   operator?: OperatorEnum; // 第二列的值
   operatorOption?: { value: string; label: string }[]; // operatorOptionsMap里设置的下拉数据不符合业务时，可以通过这个字段传入
+  valueType?: 'string' | 'number'; // 提交筛选条件时的值类型
   type: FieldTypeEnum; // 类型：判断第二列下拉数据和第三列显示形式
   showScope?: boolean;
   scope?: string[];

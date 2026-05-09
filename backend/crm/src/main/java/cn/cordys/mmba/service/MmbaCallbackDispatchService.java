@@ -1,7 +1,6 @@
 package cn.cordys.mmba.service;
 
 import cn.cordys.common.util.JSON;
-import cn.cordys.common.util.TimeUtils;
 import cn.cordys.crm.customer.service.CustomerCallStatusService;
 import cn.cordys.crm.customer.service.CustomerWechatFriendStatusService;
 import cn.cordys.mmba.MmbaBehaviorTypes;
@@ -94,10 +93,10 @@ public class MmbaCallbackDispatchService {
                     mmbaAuditPersistenceService.saveOrUpdateDeviceInfoAudit(buildDeviceInfoAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
                     syncDeviceSnapshot(data, dto.getBehaviorType());
                 }
-                case MmbaBehaviorTypes.DEVICE_STATUS_AUDIT -> {
-                    mmbaAuditPersistenceService.saveOrUpdateDeviceStatusAudit(buildDeviceStatusAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
-                    syncDeviceSnapshot(data, dto.getBehaviorType());
-                }
+//                case MmbaBehaviorTypes.DEVICE_STATUS_AUDIT -> {
+//                    mmbaAuditPersistenceService.saveOrUpdateDeviceStatusAudit(buildDeviceStatusAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
+//                    syncDeviceSnapshot(data, dto.getBehaviorType());
+//                }
                 case MmbaBehaviorTypes.WX_LOGIN_LOGOUT_AUDIT -> {
                     mmbaAuditPersistenceService.saveOrUpdateWxLoginAudit(buildWxLoginAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
                     mmbaWxMappingSyncService.syncMappingStatusFromLoginAudit(data, MmbaConstants.SYSTEM_USER);
@@ -488,50 +487,55 @@ public class MmbaCallbackDispatchService {
      * 维护设备主表最新快照，避免前端查设备列表时扫审计流水。
      */
     private void syncDeviceSnapshot(ZzyData data, int behaviorType) {
+        if (StringUtils.isBlank(data.getUm())) {
+            log.warn("MMBA设备快照同步跳过，um为空 behaviorType={} tenantId={} deviceId={} reqId={} esId={}",
+                    behaviorType, data.getTenantId(), data.getDeviceId(), data.getReqId(), data.getEsId());
+            return;
+        }
         MmbaDevice device = new MmbaDevice();
         device.setId(data.getUm());
-        device.setUpdateTime(TimeUtils.getEpochMillisOrNull(data.getChangeTime()));
         device.setDeviceId(data.getDeviceId());
-        if(StringUtils.isNotBlank(data.getDeviceName())) {
+        if (StringUtils.isNotBlank(data.getDeviceName())) {
             device.setDeviceName(data.getDeviceName());
         }
-        if(StringUtils.isNotBlank(data.getDeviceType())) {
+        if (StringUtils.isNotBlank(data.getDeviceType())) {
             device.setDeviceType(data.getDeviceType());
         }
-        if(StringUtils.isNotBlank(data.getDeviceStatus())) {
-            device.setDeviceStatus(toInteger(data.getDeviceStatus()));
+        String deviceStatus = firstNotBlank(data.getDeviceStatus(), data.getStatus());
+        if (StringUtils.isNotBlank(deviceStatus)) {
+            device.setDeviceStatus(toInteger(deviceStatus));
         }
-        if(StringUtils.isNotBlank(data.getImei())) {
+        if (StringUtils.isNotBlank(data.getImei())) {
             device.setImei(data.getImei());
         }
-        if(StringUtils.isNotBlank(data.getImei2())) {
+        if (StringUtils.isNotBlank(data.getImei2())) {
             device.setImei2(data.getImei2());
         }
-        if(StringUtils.isNotBlank(data.getIccid())) {
+        if (StringUtils.isNotBlank(data.getIccid())) {
             device.setIccid(data.getIccid());
         }
-        if(StringUtils.isNotBlank(data.getIccid2())) {
+        if (StringUtils.isNotBlank(data.getIccid2())) {
             device.setIccid2(data.getIccid2());
         }
-        if(StringUtils.isNotBlank(data.getPhone())) {
+        if (StringUtils.isNotBlank(data.getPhone())) {
             device.setPhone(data.getPhone());
         }
-        if(StringUtils.isNotBlank(data.getPhone2())) {
+        if (StringUtils.isNotBlank(data.getPhone2())) {
             device.setPhone2(data.getPhone2());
         }
-        if(StringUtils.isNotBlank(data.getTelecomOperators())) {
+        if (StringUtils.isNotBlank(data.getTelecomOperators())) {
             device.setTelecomOperators(data.getTelecomOperators());
         }
-        if(StringUtils.isNotBlank(data.getTelecomOperators2())) {
+        if (StringUtils.isNotBlank(data.getTelecomOperators2())) {
             device.setTelecomOperators2(data.getTelecomOperators2());
         }
-        if(StringUtils.isNotBlank(data.getStaffName())) {
+        if (StringUtils.isNotBlank(data.getStaffName())) {
             device.setStaffName(data.getStaffName());
         }
-        if(StringUtils.isNotBlank(data.getOrgName())) {
+        if (StringUtils.isNotBlank(data.getOrgName())) {
             device.setOrgName(data.getOrgName());
         }
-        if(StringUtils.isNotBlank(data.getOrgNames())) {
+        if (StringUtils.isNotBlank(data.getOrgNames())) {
             device.setOrgNames(data.getOrgNames());
         }
         device.setLastBehaviorType(behaviorType);
@@ -571,7 +575,7 @@ public class MmbaCallbackDispatchService {
                 target.getClass().getMethod("setDeviceId", String.class).invoke(target, data.getDeviceId());
             }
             if (hasMethod(target, "setImei", String.class)) {
-                target.getClass().getMethod("setImei", String.class).invoke(target, firstNotBlank(data.getImei(), data.getImei()));
+                target.getClass().getMethod("setImei", String.class).invoke(target, data.getImei());
             }
             if (hasMethod(target, "setImei2", String.class)) {
                 target.getClass().getMethod("setImei2", String.class).invoke(target, data.getImei2());

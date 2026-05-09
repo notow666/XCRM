@@ -71,7 +71,7 @@
         v-if="!props.hiddenAdvanceFilter"
         ref="tableAdvanceFilterRef"
         v-model:keyword="keyword"
-        :custom-fields-config-list="customFieldsFilterConfig"
+        :custom-fields-config-list="customerAdvancedFilterConfig"
         :filter-config-list="filterConfigList"
         @adv-search="handleAdvSearch"
         @keyword-search="searchData"
@@ -82,7 +82,7 @@
         v-if="!props.hiddenAdvanceFilter"
         v-model:active-tab="activeTab"
         :type="FormDesignKeyEnum.CUSTOMER"
-        :custom-fields-config-list="customFieldsFilterConfig"
+        :custom-fields-config-list="customerAdvancedFilterConfig"
         :filter-config-list="filterConfigList"
         :advanced-original-form="advancedOriginalForm"
         :route-name="CustomerRouteEnum.CUSTOMER_INDEX"
@@ -247,9 +247,9 @@
     wxPhone: string;
   }
   const callStatusTitleMap: Record<number, string> = {
-    0: '无拨打记录',
-    1: '未接通',
-    2: '已接通',
+    0: '未拨打',
+    1: '拨打未接通',
+    2: '拨打已接通',
   };
 
   const props = defineProps<{
@@ -748,6 +748,12 @@
     customerStage: stageConfig.value?.stageConfigList || [],
   });
   const { propsRes, propsEvent, tableQueryParams, loadList, setLoadListParams, setAdvanceFilter } = useTableRes;
+  const advancedNumberFilterFields = new Set(['callStatus', 'wechatFriendStatus']);
+  const customerAdvancedFilterConfig = computed<FilterFormItem[]>(() =>
+    (customFieldsFilterConfig.value as FilterFormItem[]).map((item) =>
+      item.dataIndex && advancedNumberFilterFields.has(item.dataIndex) ? { ...item, valueType: 'number' } : item
+    )
+  );
 
   function buildCallStatusColumn() {
     return {
@@ -1277,7 +1283,7 @@
   onMounted(() => {
     emit('init', {
       filterConfigList: filterConfigList.value,
-      customFieldsFilterConfig: customFieldsFilterConfig.value as FilterFormItem[],
+      customFieldsFilterConfig: customerAdvancedFilterConfig.value,
     });
     if (route.query.id) {
       activeFormKey.value = FormDesignKeyEnum.CUSTOMER;

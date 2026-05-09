@@ -228,8 +228,6 @@ public class CustomerWechatFriendStatusService {
         Customer update = new Customer();
         update.setId(customer.getId());
         update.setWechatFriendStatus(targetStatus);
-        update.setUpdateTime(System.currentTimeMillis());
-        update.setUpdateUser(userId);
         customerMapper.updateById(update);
         customer.setWechatFriendStatus(targetStatus);
         log.info("客户微信好友状态更新 customerId={} mobile={} from={} to={}",

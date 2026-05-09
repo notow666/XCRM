@@ -36,12 +36,18 @@ public class MmbaDeviceService {
         MmbaDevice db = findDevice(device.getId());
         if (db == null) {
             long now = System.currentTimeMillis();
+            if (device.getEnable() == null) {
+                device.setEnable(Boolean.TRUE);
+            }
             device.setCreateTime(now);
             device.setCreateUser(userId);
             device.setUpdateTime(now);
             device.setUpdateUser(userId);
             mmbaDeviceMapper.insert(device);
             return device;
+        }
+        if (isOlderSnapshot(device, db)) {
+            return db;
         }
         mergeDevice(db, device);
         touch(db, userId);
@@ -299,5 +305,12 @@ public class MmbaDeviceService {
 
     private String firstNotBlank(String preferred, String fallback) {
         return StringUtils.isNotBlank(preferred) ? preferred : fallback;
+    }
+
+    private boolean isOlderSnapshot(MmbaDevice source, MmbaDevice target) {
+        if (source == null || source.getLastAuditTime() == null || target == null || target.getLastAuditTime() == null) {
+            return false;
+        }
+        return source.getLastAuditTime() < target.getLastAuditTime();
     }
 }

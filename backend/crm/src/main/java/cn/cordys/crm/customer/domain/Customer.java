@@ -64,5 +64,5 @@ public class Customer extends BaseModel {
      * 微信好友状态 0:未添加 1:添加未通过 2:已添加
      */
     @Schema(description = "微信好友状态 0:未添加 1:添加未通过 2:已添加")
-    private Integer wechatFriendStatus;
+    private Integer wechatFriendStatus = 0;
 }

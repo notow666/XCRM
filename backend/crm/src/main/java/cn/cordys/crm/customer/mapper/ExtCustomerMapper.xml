@@ -361,8 +361,8 @@
                 <bind name="sortName" value="${sort}.name" />
                 order by
                 <choose>
-                    <when test="${sort}.name in
-                        {'name', 'owner', 'create_time', 'update_time', 'follower', 'follow_time', 'create_user', 'update_user', 'collection_time', 'reason_id', 'mobile', 'stage', 'stage_status'}">
+                <when test="${sort}.name in
+                        {'name', 'owner', 'create_time', 'update_time', 'follower', 'follow_time', 'create_user', 'update_user', 'collection_time', 'reason_id', 'mobile', 'stage', 'stage_status', 'call_status', 'wechat_friend_status'}">
                         c.${sortName} ${sortType}, c.id ASC
                     </when>
                     <when test="${sort}.name == 'department_id'">
@@ -388,7 +388,7 @@
         <if test="${conditions} != null and ${conditions}.size() > 0">
             <foreach collection="${conditions}" item="condition" index="i">
                 <if test="condition.name not in
-                {'name', 'owner', 'createTime', 'updateTime', 'follower', 'followTime', 'createUser', 'updateUser', 'departmentId', 'mobile', 'stage', 'stageStatus'}">
+                {'name', 'owner', 'createTime', 'updateTime', 'follower', 'followTime', 'createUser', 'updateUser', 'departmentId', 'mobile', 'stage', 'stageStatus', 'callStatus', 'wechatFriendStatus'}">
                     <if test="condition.multipleValue">
                         left join customer_field_blob ${tablePrefix}_${i}
                         on c.id = ${tablePrefix}_${i}.resource_id and ${tablePrefix}_${i}.field_id = #{condition.name}
@@ -552,6 +552,18 @@
                 <include refid="cn.cordys.common.mapper.CommonMapper.condition">
                     <property name="condition" value="condition"/>
                     <property name="column" value="c.stage_status"/>
+                </include>
+            </when>
+            <when test="condition.name == 'callStatus'">
+                <include refid="cn.cordys.common.mapper.CommonMapper.condition">
+                    <property name="condition" value="condition"/>
+                    <property name="column" value="c.call_status"/>
+                </include>
+            </when>
+            <when test="condition.name == 'wechatFriendStatus'">
+                <include refid="cn.cordys.common.mapper.CommonMapper.condition">
+                    <property name="condition" value="condition"/>
+                    <property name="column" value="c.wechat_friend_status"/>
                 </include>
             </when>
             <otherwise>

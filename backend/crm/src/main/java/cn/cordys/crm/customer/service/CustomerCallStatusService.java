@@ -47,8 +47,6 @@ public class CustomerCallStatusService {
         Customer update = new Customer();
         update.setId(customer.getId());
         update.setCallStatus(targetStatus);
-        update.setUpdateTime(System.currentTimeMillis());
-        update.setUpdateUser(userId);
         customerMapper.updateById(update);
         log.info("客户拨打状态升级 customerId={} customerTel={} from={} to={}",
                 customer.getId(), customer.getMobile(), currentStatus, targetStatus);
