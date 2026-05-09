@@ -99,6 +99,19 @@ export function getUrlParameterWidthRegExp(name: string) {
 }
 
 /**
+ * 与 axios 的 baseURL 前缀一致（如生产 `VITE_API_BASE_URL=front` → `/front`），
+ * 保证 SSE 与接口走同一网关前缀。
+ */
+function getApiPathPrefix(): string {
+  const raw = import.meta.env.VITE_API_BASE_URL as string | undefined;
+  if (raw == null || raw === '') return '';
+  const trimmed = String(raw).trim().replace(/^['"]|['"]$/g, '');
+  if (!trimmed) return '';
+  const seg = trimmed.replace(/^\/+|\/+$/g, '');
+  return seg ? `/${seg}` : '';
+}
+
+/**
  * 建立 SSE 连接
  * @param url 连接地址
  * @param host 连接主机
@@ -112,8 +125,11 @@ export const apiSSE = (url: string, host?: string): EventSource => {
     protocol = 'https://';
   }
 
-  // 解析 URL，自动适配 host
-  const uri = protocol + (host?.split('://')[1] || window.location.host) + url;
+  const hostPart = host?.split('://')[1] || window.location.host;
+  const prefix = url.startsWith('http') ? '' : getApiPathPrefix();
+  const path = url.startsWith('http') ? url : `${prefix}${url.startsWith('/') ? url : `/${url}`}`;
+
+  const uri = protocol + hostPart + path;
 
   return new EventSource(uri, {
     withCredentials: true,

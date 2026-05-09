@@ -235,21 +235,21 @@
     ];
 
     const baseMessageTypes = [
-      {
-        value: SystemResourceMessageTypeEnum.CLUE,
-        label: t('menu.clue'),
-        count: messageCount.value[SystemResourceMessageTypeEnum.CLUE] || 0,
-      },
+      // {
+      //   value: SystemResourceMessageTypeEnum.CLUE,
+      //   label: t('menu.clue'),
+      //   count: messageCount.value[SystemResourceMessageTypeEnum.CLUE] || 0,
+      // },
       {
         value: SystemResourceMessageTypeEnum.CUSTOMER,
         label: t('system.message.customerMessage'),
         count: messageCount.value[SystemResourceMessageTypeEnum.CUSTOMER] || 0,
       },
-      {
-        value: SystemResourceMessageTypeEnum.OPPORTUNITY,
-        label: t('system.message.opportunityMessage'),
-        count: messageCount.value[SystemResourceMessageTypeEnum.OPPORTUNITY] || 0,
-      },
+      // {
+      //   value: SystemResourceMessageTypeEnum.OPPORTUNITY,
+      //   label: t('system.message.opportunityMessage'),
+      //   count: messageCount.value[SystemResourceMessageTypeEnum.OPPORTUNITY] || 0,
+      // },
       {
         value: SystemResourceMessageTypeEnum.CONTRACT,
         label: t('module.contract'),

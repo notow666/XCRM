@@ -101,6 +101,7 @@
 <script setup lang="ts">
   import { NButton, NDivider, NScrollbar, NSwitch, useMessage } from 'naive-ui';
   import { LanguageOutline } from '@vicons/ionicons5';
+  import axios from 'axios';
   import { VueDraggable } from 'vue-draggable-plus';
 
   import { ModuleConfigEnum } from '@lib/shared/enums/moduleEnum';
@@ -152,11 +153,11 @@
       key: ModuleConfigEnum.CONTRACT,
       icon: 'iconicon_contract',
     },
-    {
-      label: t('module.order'),
-      key: ModuleConfigEnum.ORDER,
-      icon: 'iconicon_order_form',
-    },
+    // {
+    //   label: t('module.order'),
+    //   key: ModuleConfigEnum.ORDER,
+    //   icon: 'iconicon_order_form',
+    // },
     {
       label: t('module.task'),
       key: ModuleConfigEnum.TASK,
@@ -167,42 +168,42 @@
       key: ModuleConfigEnum.CLUE_MANAGEMENT,
       icon: 'iconicon_clue',
     },
-    {
-      label: t('module.businessManagement'),
-      key: ModuleConfigEnum.BUSINESS_MANAGEMENT,
-      icon: 'iconicon_business_opportunity',
-    },
+    // {
+    //   label: t('module.businessManagement'),
+    //   key: ModuleConfigEnum.BUSINESS_MANAGEMENT,
+    //   icon: 'iconicon_business_opportunity',
+    // },
     // TODO 不上 xxw
     // {
     //   label: t('module.dataManagement'),
     //   key: ModuleConfigEnum.DATA_MANAGEMENT,
     //   icon: 'iconicon_data',
     // },
-    {
-      label: t('module.productManagement'),
-      key: ModuleConfigEnum.PRODUCT_MANAGEMENT,
-      icon: 'iconicon_product',
-    },
+    // {
+    //   label: t('module.productManagement'),
+    //   key: ModuleConfigEnum.PRODUCT_MANAGEMENT,
+    //   icon: 'iconicon_product',
+    // },
     {
       label: t('menu.settings'),
       key: ModuleConfigEnum.SYSTEM_SETTINGS,
       icon: 'iconicon_set_up',
     },
-    {
-      label: t('menu.dashboard'),
-      key: ModuleConfigEnum.DASHBOARD,
-      icon: 'iconicon_dashboard1',
-    },
-    {
-      label: t('module.agent'),
-      key: ModuleConfigEnum.AGENT,
-      icon: 'iconicon_bot',
-    },
-    {
-      label: t('module.tender'),
-      key: ModuleConfigEnum.TENDER,
-      icon: 'iconicon_target',
-    },
+    // {
+    //   label: t('menu.dashboard'),
+    //   key: ModuleConfigEnum.DASHBOARD,
+    //   icon: 'iconicon_dashboard1',
+    // },
+    // {
+    //   label: t('module.agent'),
+    //   key: ModuleConfigEnum.AGENT,
+    //   icon: 'iconicon_bot',
+    // },
+    // {
+    //   label: t('module.tender'),
+    //   key: ModuleConfigEnum.TENDER,
+    //   icon: 'iconicon_target',
+    // },
     {
       label: t('module.mmbaAudit'),
       key: ModuleConfigEnum.MMBA_AUDIT,
@@ -300,11 +301,22 @@
   }
 
   const globalPhoneMaskEnabled = ref(false);
+  function isRequestCanceled(error: unknown) {
+    return (
+      axios.isCancel(error) ||
+      (error as { name?: string; code?: string })?.name === 'CanceledError' ||
+      (error as { name?: string; code?: string })?.code === 'ERR_CANCELED'
+    );
+  }
+
   async function initGlobalPhoneMaskConfig() {
     try {
       const res = await getGlobalPhoneMaskConfig();
       globalPhoneMaskEnabled.value = !!res.enabled;
     } catch (error) {
+      if (isRequestCanceled(error)) {
+        return;
+      }
       // eslint-disable-next-line no-console
       console.log(error);
     }
@@ -390,7 +402,10 @@
   onMounted(() => {
     enable.value = appStore.getMenuIconStatus;
     getEnableAdvanced();
-    initGlobalPhoneMaskConfig();
+    // orgId 已有值时由下方 watch(immediate) 拉取，避免与 Axios 重复请求取消逻辑冲突触发 CanceledError
+    if (!appStore.orgId) {
+      initGlobalPhoneMaskConfig();
+    }
   });
 
   watch(

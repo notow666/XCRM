@@ -22,14 +22,13 @@ public class SendModuleService {
     private BaseMapper<Module> moduleMapper;
 
     /**
-     * 获取已开启的模块
+     * 获取已开启的消息通知模块
      *
      * @return 已开启的模块列表
      */
     public List<String> getNoticeModules() {
         List<String> enabledModules = moduleMapper.selectListByLambda(
                         new LambdaQueryWrapper<Module>()
-                                .eq(Module::getOrganizationId, OrganizationContext.getOrganizationId())
                                 .eq(Module::getEnable, true)
                 ).stream()
                 .map(Module::getModuleKey).distinct()
@@ -37,14 +36,8 @@ public class SendModuleService {
 
         List<String> modules = new ArrayList<>();
         for (String enabledModule : enabledModules) {
-            if (Strings.CI.equals(enabledModule, ModuleKey.BUSINESS.getKey())) {
-                modules.add(NotificationConstants.Module.OPPORTUNITY);
-            }
             if (Strings.CI.equals(enabledModule, ModuleKey.CUSTOMER.getKey())) {
                 modules.add(NotificationConstants.Module.CUSTOMER);
-            }
-            if (Strings.CI.equals(enabledModule, ModuleKey.CLUE.getKey())) {
-                modules.add(NotificationConstants.Module.CLUE);
             }
             if (Strings.CI.equals(enabledModule, "contract")) {
                 modules.add(NotificationConstants.Module.CONTRACT);

@@ -432,9 +432,9 @@ export const defaultUserInfo: OrgUserInfo = {
   defaultPwd: true,
 };
 // 默认登录图片
-export const defaultLoginImage = `${import.meta.env.BASE_URL}images/xlj.png`;
+export const defaultLoginImage = `${import.meta.env.BASE_URL}images/login-banner.png`;
 // 默认登录logo
-export const defaultLoginLogo = `${import.meta.env.BASE_URL}images/xlj.svg`;
+export const defaultLoginLogo = `${import.meta.env.BASE_URL}images/login-logo.svg`;
 // 默认左上角平台logo
 export const defaultPlatformLogo = `${import.meta.env.BASE_URL}images/logo_CORDYS.svg`;
 

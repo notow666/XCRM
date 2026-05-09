@@ -4,10 +4,7 @@ import lombok.Getter;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * LambdaQueryWrapper 用于构建 SQL 查询条件，支持链式调用。
@@ -192,7 +189,7 @@ public class LambdaQueryWrapper<T> {
      *
      * @return 当前 LambdaQueryWrapper 实例
      */
-    public LambdaQueryWrapper<T> in(XFunction<T, ?> column, List<?> valueList) {
+    public LambdaQueryWrapper<T> in(XFunction<T, ?> column, Collection<?> valueList) {
         if (valueList == null || valueList.isEmpty()) {
             return this;
         }

@@ -118,7 +118,8 @@
         "eventName": "",
         "emailEnable": false,
         "sysEnable": false,
-        "weComEnable": false
+        "weComEnable": false,
+        "display": false
       },
       {
         "event": "CLUE_CONVERT_BUSINESS",
@@ -141,7 +142,8 @@
         "eventName": "",
         "emailEnable": false,
         "sysEnable": false,
-        "weComEnable": false
+        "weComEnable": false,
+        "display": false
       },
       {
         "event": "CLUE_DISTRIBUTED",

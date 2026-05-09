@@ -6,6 +6,7 @@ import lombok.Data;
 
 /**
  * mmba用户&设备一对一表
+ * Id = um
  */
 @Data
 @Table(name = "mmba_device")

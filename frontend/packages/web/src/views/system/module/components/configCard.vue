@@ -1,6 +1,6 @@
 <template>
   <div class="nav-config-list">
-    <div v-for="item of moduleConfigList" v-show="item.enable" :key="item.key" class="nav-config-item">
+    <div v-for="item of moduleConfigList" :key="item.key" class="nav-config-item">
       <div class="nav-config-item-title">
         <div class="nav-config-item-icon">
           <CrmIcon :type="item.icon ?? ''" :size="20" class="text-[var(--text-n10)]" />
@@ -455,46 +455,46 @@
         },
       ],
     },
-    {
-      label: t('module.businessManagement'),
-      key: ModuleConfigEnum.BUSINESS_MANAGEMENT,
-      icon: 'iconicon_business_opportunity',
-      enable: true,
-      groupList: [
-        {
-          label: t('module.opportunityFormSetting'),
-          key: 'newForm',
-        },
-        {
-          label: t('module.opportunityQuotationFormSetting'),
-          key: 'newFormOpportunityQuotation',
-        },
-        {
-          label: t('module.businessManage.businessStepSet'),
-          key: 'businessStepSet',
-        },
-        {
-          label: t('common.more'),
-          slotName: 'more',
-        },
-      ],
-    },
-    {
-      label: t('module.order'),
-      key: ModuleConfigEnum.ORDER,
-      icon: 'iconicon_order_form',
-      enable: true,
-      groupList: [
-        {
-          label: `${t('module.order')}${t('module.formSettings')}`,
-          key: 'newForm',
-        },
-        {
-          label: t('module.order.stateFlow'),
-          key: 'orderStateFlow',
-        },
-      ],
-    },
+    // {
+    //   label: t('module.businessManagement'),
+    //   key: ModuleConfigEnum.BUSINESS_MANAGEMENT,
+    //   icon: 'iconicon_business_opportunity',
+    //   enable: true,
+    //   groupList: [
+    //     {
+    //       label: t('module.opportunityFormSetting'),
+    //       key: 'newForm',
+    //     },
+    //     {
+    //       label: t('module.opportunityQuotationFormSetting'),
+    //       key: 'newFormOpportunityQuotation',
+    //     },
+    //     {
+    //       label: t('module.businessManage.businessStepSet'),
+    //       key: 'businessStepSet',
+    //     },
+    //     {
+    //       label: t('common.more'),
+    //       slotName: 'more',
+    //     },
+    //   ],
+    // },
+    // {
+    //   label: t('module.order'),
+    //   key: ModuleConfigEnum.ORDER,
+    //   icon: 'iconicon_order_form',
+    //   enable: true,
+    //   groupList: [
+    //     {
+    //       label: `${t('module.order')}${t('module.formSettings')}`,
+    //       key: 'newForm',
+    //     },
+    //     {
+    //       label: t('module.order.stateFlow'),
+    //       key: 'orderStateFlow',
+    //     },
+    //   ],
+    // },
     {
       label: t('module.task'),
       key: ModuleConfigEnum.TASK,
@@ -510,43 +510,43 @@
     //   enable: true,
     //   groupList: [],
     // },
-    {
-      label: t('module.productManagement'),
-      key: ModuleConfigEnum.PRODUCT_MANAGEMENT,
-      icon: 'iconicon_product',
-      groupList: [
-        {
-          label: t('module.productFormSetting'),
-          key: 'newForm',
-        },
-        {
-          label: t('module.priceTableFormSetting'),
-          key: 'newPriceForm',
-        },
-      ],
-      enable: true,
-    },
-    {
-      label: t('common.dashboard'),
-      key: ModuleConfigEnum.DASHBOARD,
-      icon: 'iconicon_dashboard1',
-      groupList: [],
-      enable: true,
-    },
-    {
-      label: t('module.agent'),
-      key: ModuleConfigEnum.AGENT,
-      icon: 'iconicon_bot',
-      groupList: [],
-      enable: true,
-    },
-    {
-      label: t('module.tender'),
-      key: ModuleConfigEnum.TENDER,
-      icon: 'iconicon_target',
-      groupList: [],
-      enable: true,
-    },
+    // {
+    //   label: t('module.productManagement'),
+    //   key: ModuleConfigEnum.PRODUCT_MANAGEMENT,
+    //   icon: 'iconicon_product',
+    //   groupList: [
+    //     {
+    //       label: t('module.productFormSetting'),
+    //       key: 'newForm',
+    //     },
+    //     {
+    //       label: t('module.priceTableFormSetting'),
+    //       key: 'newPriceForm',
+    //     },
+    //   ],
+    //   enable: true,
+    // },
+    // {
+    //   label: t('common.dashboard'),
+    //   key: ModuleConfigEnum.DASHBOARD,
+    //   icon: 'iconicon_dashboard1',
+    //   groupList: [],
+    //   enable: true,
+    // },
+    // {
+    //   label: t('module.agent'),
+    //   key: ModuleConfigEnum.AGENT,
+    //   icon: 'iconicon_bot',
+    //   groupList: [],
+    //   enable: true,
+    // },
+    // {
+    //   label: t('module.tender'),
+    //   key: ModuleConfigEnum.TENDER,
+    //   icon: 'iconicon_target',
+    //   groupList: [],
+    //   enable: true,
+    // },
     {
       label: t('module.mmbaAudit'),
       key: ModuleConfigEnum.MMBA_AUDIT,

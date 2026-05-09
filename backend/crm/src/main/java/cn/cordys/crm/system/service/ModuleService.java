@@ -15,6 +15,7 @@ import cn.cordys.common.dto.RoleUserTreeNode;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.Translator;
+import cn.cordys.crm.system.constants.ModuleConstants;
 import cn.cordys.crm.system.constants.OrganizationConfigConstants;
 import cn.cordys.crm.system.domain.Module;
 import cn.cordys.crm.system.domain.OrganizationConfig;
@@ -74,7 +75,7 @@ public class ModuleService {
     public List<ModuleDTO> getModuleList(ModuleRequest request) {
         LambdaQueryWrapper<Module> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Module::getOrganizationId, request.getOrganizationId());
-        queryWrapper.eq(Module::getEnable, true);
+        queryWrapper.in(Module::getModuleKey, ModuleConstants.DISPLAY_MODULE);
         List<Module> modules = moduleMapper.selectListByLambda(queryWrapper);
         return modules.stream()
                 .map(module -> {
