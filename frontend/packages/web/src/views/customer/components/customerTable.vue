@@ -1066,11 +1066,11 @@
   const showDialColumn = computed(() => {
     return (
       !props.readonly &&
-      [CustomerSearchTypeEnum.SELF, CustomerSearchTypeEnum.DEPARTMENT].includes(
-        activeTab.value as CustomerSearchTypeEnum
-      )
+      activeTab.value === CustomerSearchTypeEnum.SELF
     );
   });
+
+  const showStatusColumns = computed(() => true);
 
   const tableColumns = computed(() => {
     const removedColumnKeys = new Set(['recyclePoolName', 'reasonId', 'reservedDays']);
@@ -1088,17 +1088,23 @@
       baseColumns.splice(orderIndex + 1, 0, nameColumn);
     }
 
+    let insertIndex = Math.min(baseColumns.length, 1);
+    if (nameIndex >= 0) {
+      insertIndex = nameIndex;
+    } else if (orderIndex >= 0) {
+      insertIndex = orderIndex + 1;
+    }
+
     if (showDialColumn.value) {
       const dialColumn = buildReachColumn();
+      baseColumns.splice(insertIndex, 0, dialColumn);
+      insertIndex += 1;
+    }
+
+    if (showStatusColumns.value) {
       const callStatusColumn = buildCallStatusColumn();
       const wxFriendStatusColumn = buildWxFriendStatusColumn();
-      let insertIndex = Math.min(baseColumns.length, 1);
-      if (nameIndex >= 0) {
-        insertIndex = nameIndex;
-      } else if (orderIndex >= 0) {
-        insertIndex = orderIndex + 1;
-      }
-      baseColumns.splice(insertIndex, 0, dialColumn, callStatusColumn, wxFriendStatusColumn);
+      baseColumns.splice(insertIndex, 0, callStatusColumn, wxFriendStatusColumn);
     }
 
     if (activeTab.value === CustomerSearchTypeEnum.CUSTOMER_COLLABORATION) {
