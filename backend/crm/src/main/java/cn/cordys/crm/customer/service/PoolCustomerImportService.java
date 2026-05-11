@@ -186,7 +186,7 @@ public class PoolCustomerImportService {
 
         started.stop();
         log.info("========== 公海导入预检查完成 ========== 总耗时: {} ms, 预检结果: {}, 预检详情: [{}]",
-                started.formatSplitTime(), result.isPassed() ? "全部通过" : "有异常", JSON.toFormatJSONString(view));
+                started.getTime(), result.isPassed() ? "全部通过" : "有异常", JSON.toFormatJSONString(view));
         return response;
     }
 
