@@ -35,10 +35,11 @@ public class MmbaCallbackRetryScheduleService {
     @Resource
     private CommandCallConsumer commandCallConsumer;
 
-    @Scheduled(
-            initialDelayString = "${mmba.callback.retry.initial-delay-ms:120000}",
-            fixedDelayString = "${mmba.callback.retry.fixed-delay-ms:300000}"
-    )
+    // 暂停数据库失败回调的定时补偿，仅保留 Redis 侧重试链路。
+//    @Scheduled(
+//            initialDelayString = "${mmba.callback.retry.initial-delay-ms:120000}",
+//            fixedDelayString = "${mmba.callback.retry.fixed-delay-ms:300000}"
+//    )
     public void retryFailedCallbacks() {
         tenantTaskExecutor.runForEachEnabledTenant("mmba-callback-retry", tenantId -> {
             List<MmbaCallbackRecord> records = mmbaCallbackRecordService

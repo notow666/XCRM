@@ -564,6 +564,7 @@ public class CustomerService {
         commonNoticeSendService.sendNotice(NotificationConstants.Module.CUSTOMER,
                 NotificationConstants.Event.CUSTOMER_ADD, customer.getName(), userId,
                 orgId, List.of(customer.getOwner()), true);
+        customerWechatFriendStatusService.recalculateCustomer(customer.getId(), userId);
         return customer;
     }
 
@@ -1168,6 +1169,8 @@ public class CustomerService {
                 customerMapper.batchInsert(customers);
                 customerFieldMapper.batchInsert(customerFields.stream().map(field -> BeanUtils.copyBean(new CustomerField(), field)).toList());
                 customerFieldBlobMapper.batchInsert(customerFieldBlobs.stream().map(field -> BeanUtils.copyBean(new CustomerFieldBlob(), field)).toList());
+                List<String> customerIds = customers.stream().map(Customer::getId).toList();
+                customerWechatFriendStatusService.recalculateCustomers(customerIds, currentUser);
                 // 批量插入联系人
                 if (CollectionUtils.isNotEmpty(contacts)) {
                     customerContactMapper.batchInsert(contacts);
