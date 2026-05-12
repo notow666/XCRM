@@ -73,11 +73,11 @@
           { name: 'wxAccountStat', tab: t('mmbaAudit.wechatTab.accountStat') },
           { name: 'singleChat', tab: t('mmbaAudit.wechatTab.singleChat') },
           { name: 'groupChat', tab: t('mmbaAudit.wechatTab.groupChat') },
-          { name: 'rejectedFriend', tab: t('mmbaAudit.wechatTab.rejectedFriend') },
-          { name: 'verifyMessage', tab: t('mmbaAudit.wechatTab.verifyMessage') },
+          // { name: 'rejectedFriend', tab: t('mmbaAudit.wechatTab.rejectedFriend') },
+          // { name: 'verifyMessage', tab: t('mmbaAudit.wechatTab.verifyMessage') },
           { name: 'loggedWx', tab: t('mmbaAudit.wechatTab.loggedWx') },
           { name: 'loginLogout', tab: t('mmbaAudit.wechatTab.loginLogout') },
-          { name: 'wxTeamMsg', tab: t('mmbaAudit.wechatTab.wxTeamMsg') },
+          // { name: 'wxTeamMsg', tab: t('mmbaAudit.wechatTab.wxTeamMsg') },
         ];
       case MMBAAuditRouteEnum.MMBA_AUDIT_CALL:
         return [

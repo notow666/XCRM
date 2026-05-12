@@ -35,7 +35,7 @@
 <script setup lang="ts">
   import { FieldRule, showToast, UploaderFileListItem } from 'vant';
 
-  import { PreviewAttachmentUrl } from '@lib/shared/api/requrls/system/module';
+  import { getAttachmentPreviewSrc } from '@lib/shared/api/requrls/system/module';
   import { useI18n } from '@lib/shared/hooks/useI18n';
   import { Result } from '@lib/shared/types/axios';
 
@@ -100,7 +100,7 @@
         resArr.forEach((res, index) => {
           fileKeys.value.push(...res.data);
           file[index].status = 'done';
-          file[index].content = `${PreviewAttachmentUrl}/${res.data[0]}`;
+          file[index].content = getAttachmentPreviewSrc(res.data[0]);
         });
       } catch (error) {
         // eslint-disable-next-line no-console
@@ -119,7 +119,7 @@
           const res = await uploadTempAttachment(file.file!);
           fileKeys.value.push(...res.data);
           file.status = 'done';
-          file.content = `${PreviewAttachmentUrl}/${res.data[0]}`;
+          file.content = getAttachmentPreviewSrc(res.data[0]);
           emit('change', fileKeys.value, fileList.value);
         }
       } catch (error) {
@@ -133,7 +133,7 @@
   function handleBeforeDelete(file: UploaderFileListItem) {
     const index = fileList.value.findIndex((item) => item.content === file.content);
     if (index !== -1) {
-      fileKeys.value = fileKeys.value.filter((key) => `${PreviewAttachmentUrl}/${key}` !== file.content);
+      fileKeys.value = fileKeys.value.filter((key) => getAttachmentPreviewSrc(key) !== file.content);
       fileList.value.splice(index, 1);
     }
   }
@@ -145,8 +145,8 @@
         (arr?.map((e) => ({
           ...e,
           status: 'finished',
-          url: `${PreviewAttachmentUrl}/${e.id}`,
-          content: `${PreviewAttachmentUrl}/${e.id}`,
+          url: getAttachmentPreviewSrc(String(e.id)),
+          content: getAttachmentPreviewSrc(String(e.id)),
           isImage: /(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(e.type),
         })) as UploaderFileListItem[]) || [];
     },

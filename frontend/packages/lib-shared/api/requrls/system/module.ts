@@ -1,3 +1,6 @@
+import { withApiPathPrefix } from '@lib/shared/method/api-path';
+import { appendTenantQuery } from '@lib/shared/method/tenant-url';
+
 // 模块首页
 export const getModuleNavConfigListUrl = '/module/list'; // 模块-首页-获取模块设置列表
 export const moduleNavListSortUrl = '/module/sort'; // 模块-首页-模块排序
@@ -70,10 +73,17 @@ export const GetFieldBusinessTitleListUrl = '/field/source/business-title';
 export const GetFieldRefDetailListUrl = '/field/source/ref-detail'; // 批量获取数据源字段详情
 
 export const UploadTempFileUrl = '/pic/upload/temp'; // 上传临时图片
-export const PreviewPictureUrl = '/pic/preview'; // 预览图片
+export const PreviewPictureUrl = '/pic/preview'; // 预览图片（axios 相对路径，由 baseURL 拼 /front）
 export const DownloadPictureUrl = '/pic/download'; // 下载图片
 export const UploadTempAttachmentUrl = '/attachment/upload/temp'; // 上传临时附件
-export const PreviewAttachmentUrl = '/attachment/preview'; // 预览附件
+export const PreviewAttachmentUrl = '/attachment/preview'; // 预览附件（axios）
+
+/** 图片预览完整路径（img、NImage 等浏览器直连，含网关前缀；附带 tenantId 供匿名预览识别租户） */
+export const getPicturePreviewSrc = (id: string | number | unknown, tenantId?: string) =>
+  appendTenantQuery(withApiPathPrefix(`${PreviewPictureUrl}/${String(id)}`), tenantId);
+/** 附件预览完整路径（浏览器直连；附带 tenantId） */
+export const getAttachmentPreviewSrc = (id: string | number | unknown, tenantId?: string) =>
+  appendTenantQuery(withApiPathPrefix(`${PreviewAttachmentUrl}/${String(id)}`), tenantId);
 export const DownloadAttachmentUrl = '/attachment/download'; // 下载附件
 export const DeleteAttachmentUrl = '/attachment/delete'; // 删除附件
 

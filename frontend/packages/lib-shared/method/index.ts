@@ -2,6 +2,7 @@ import { cloneDeep } from 'lodash-es';
 import dayjs from 'dayjs';
 import JSEncrypt from 'jsencrypt';
 
+import { getApiPathPrefix } from './api-path';
 import { isObject } from './is';
 import { CHINA_PCD, COUNTRIES_TREE } from '@cordys/web/src/components/business/crm-city-select/config';
 import type {
@@ -96,19 +97,6 @@ export function getUrlParameterWidthRegExp(name: string) {
   if (!results) return null;
   if (!results[2]) return '';
   return decodeURIComponent(results[2].replace(/\+/g, ' '));
-}
-
-/**
- * 与 axios 的 baseURL 前缀一致（如生产 `VITE_API_BASE_URL=front` → `/front`），
- * 保证 SSE 与接口走同一网关前缀。
- */
-function getApiPathPrefix(): string {
-  const raw = import.meta.env.VITE_API_BASE_URL as string | undefined;
-  if (raw == null || raw === '') return '';
-  const trimmed = String(raw).trim().replace(/^['"]|['"]$/g, '');
-  if (!trimmed) return '';
-  const seg = trimmed.replace(/^\/+|\/+$/g, '');
-  return seg ? `/${seg}` : '';
 }
 
 /**

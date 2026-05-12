@@ -1,5 +1,6 @@
 package cn.cordys.crm.system.job.listener;
 
+import cn.cordys.context.TenantContext;
 import cn.cordys.crm.system.service.FileCommonService;
 import cn.cordys.file.engine.DefaultRepositoryDir;
 import cn.cordys.file.engine.FileRequest;
@@ -32,7 +33,7 @@ public class CleanTempResourceListener implements ApplicationListener<ExecuteEve
     private void clean() {
         log.info("开始清理临时目录资源");
         try {
-            FileRequest request = new FileRequest(DefaultRepositoryDir.getTmpDir(), StorageType.LOCAL.name(), null);
+            FileRequest request = new FileRequest(DefaultRepositoryDir.getTmpDir(TenantContext.requireTenantId()), StorageType.LOCAL.name(), null);
             fileCommonService.cleanTempResource(request);
             log.info("临时目录资源清理完成");
         } catch (Exception e) {

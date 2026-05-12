@@ -47,7 +47,7 @@
   import { NButton, NDivider, NImagePreview, useMessage } from 'naive-ui';
   import dayjs from 'dayjs';
 
-  import { PreviewAttachmentUrl } from '@lib/shared/api/requrls/system/module';
+  import { getAttachmentPreviewSrc } from '@lib/shared/api/requrls/system/module';
   import { useI18n } from '@lib/shared/hooks/useI18n';
   import { isDingTalkBrowser, isLarkBrowser, isWeComBrowser } from '@lib/shared/method';
 
@@ -82,7 +82,7 @@
   const showPreview = ref(false);
   const previewSrc = ref('');
   function handlePreview(file: AttachmentInfo) {
-    previewSrc.value = `${PreviewAttachmentUrl}/${file.id}`;
+    previewSrc.value = getAttachmentPreviewSrc(String(file.id));
     showPreview.value = true;
   }
 

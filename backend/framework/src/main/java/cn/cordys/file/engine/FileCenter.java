@@ -30,11 +30,13 @@ public class FileCenter {
      * @return 返回对应的 {@link FileRepository} 实现，如果存储类型未知，则返回默认的仓库。
      */
     public static FileRepository getRepository(String storage) {
-        if (Strings.CS.equals(S3.name(), storage)) {
-            return CommonBeanFactory.getBean(S3Repository.class);
-        } else {
-            return CommonBeanFactory.getBean(LocalRepository.class);
-        }
+//        if (Strings.CS.equals(S3.name(), storage)) {
+//            return CommonBeanFactory.getBean(S3Repository.class);
+//        } else {
+//            return CommonBeanFactory.getBean(LocalRepository.class);
+//        }
+        // TODO 暂时只用 StorageType.LOCAL
+        return CommonBeanFactory.getBean(LocalRepository.class);
     }
 
     /**

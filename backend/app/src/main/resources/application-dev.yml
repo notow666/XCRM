@@ -2,6 +2,9 @@ spring:
     config:
         activate:
             on-profile: dev
+    servlet:
+        multipart:
+            location: D:\workSpace\CordysCRM\temp
     data:
         redis:
             database: 3
@@ -38,6 +41,8 @@ cordys:
     tenant:
         provision:
             drop-database-on-failure: true
+    file:
+        root-dir: D:\workSpace\CordysCRM\files
 
 dashboard:
     whitelist:
@@ -55,7 +60,7 @@ logger:
 logging:
     config: classpath:logback-spring.xml
     file:
-        path: D:\workSpace\CordysCRM\logs\cordys-crm
+        path: D:\workSpace\CordysCRM\logs
     level:
         com:
             zaxxer:
@@ -83,4 +88,4 @@ mmba:
     app-key: 1_01b0d6f7624fd7ee59899893c75f83e1
     company-code: YMFTEST
     secret: e333e60912e8a11cee384586afe780af
-    filepath: /mmba/file/
+

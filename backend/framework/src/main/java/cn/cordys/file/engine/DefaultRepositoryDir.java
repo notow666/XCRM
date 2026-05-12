@@ -1,128 +1,87 @@
 package cn.cordys.file.engine;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * 默认的资源目录工具类
+ * 默认的资源目录工具类；逻辑路径首段为租户 ID。调用方必须传入非空的 tenantId，禁止静默回退到默认租户。
  */
 public final class DefaultRepositoryDir {
 
-    /**
-     * 临时目录
-     */
-    private static final String TMP_DIR = "/tmp";
+    private static final String DEFAULT_REPOSITORY_ROOT = "/opt/cordys/data/files";
+    private static volatile String repositoryRoot = DEFAULT_REPOSITORY_ROOT;
 
-    /**
-     * 文件默认目录
-     */
-    private static final String DEFAULT_DIR = "/opt/cordys/data/files";
+    private static final String TMP_SEGMENT = "tmp";
+    private static final String EXPORT_SEGMENT = "export";
+    private static final String PIC_SEGMENT = "pic";
 
-    /**
-     * 导出目录
-     */
-    private static final String EXPORT_DIR = "/export";
-
-    /**
-     * 图片正式目录
-     */
-    private static final String PIC_DIR = "/pic";
-
-    /**
-     * 私有构造方法，防止实例化
-     */
     private DefaultRepositoryDir() {
-        // 工具类不应被实例化
     }
 
     /**
-     * 获取临时目录路径
-     *
-     * @return 临时目录路径
+     * 由 Spring 在启动时注入；未调用前使用 {@link #DEFAULT_REPOSITORY_ROOT}。
      */
-    public static String getTmpDir() {
-        return TMP_DIR;
+    public static void setRepositoryRoot(String root) {
+        if (StringUtils.isBlank(root)) {
+            return;
+        }
+        repositoryRoot = root.trim();
     }
 
     /**
-     * 获取图片目录路径
-     *
-     * @return 图片目录路径
+     * 临时根目录（相对仓库根的逻辑路径，以 / 开头）：/{tenantId}/tmp
      */
-    public static String getPicDir() {
-        return PIC_DIR;
+    public static String getTmpDir(String tenantId) {
+        return "/" + normalizeTenant(tenantId) + "/" + TMP_SEGMENT;
     }
 
     /**
-     * 获取指定组织的导出目录路径
-     *
-     * @param orgId 组织ID
-     *
-     * @return 导出目录路径
+     * 临时文件目录：/{tenantId}/tmp/{tempFileId}
      */
-    public static String getExportDir(String orgId) {
-        return Path.of(orgId, EXPORT_DIR).toString();
+    public static String getTempFileDir(String tenantId, String tempFileId) {
+        return getTmpDir(tenantId) + "/" + tempFileId;
     }
 
     /**
-     * 获取默认目录路径
-     *
-     * @return 默认目录路径
+     * 导出目录相对段（无首斜杠，便于与 {@link java.io.File} 拼接）：{tenantId}/export
      */
+    public static String getExportDir(String tenantId) {
+        return Paths.get(normalizeTenant(tenantId), EXPORT_SEGMENT).toString();
+    }
+
+    /**
+     * 转存附件目录：/{tenantId}/pic/{resourceId}/{fileId}
+     */
+    public static String getTransferFileDir(String tenantId, String resourceId, String fileId) {
+        return "/" + normalizeTenant(tenantId) + "/" + PIC_SEGMENT + "/" + resourceId + "/" + fileId;
+    }
+
     public static String getDefaultDir() {
-        return DEFAULT_DIR;
+        return repositoryRoot;
     }
 
-    /**
-     * 获取完整的临时目录路径
-     *
-     * @return 完整的临时目录路径
-     */
-    public static Path getFullTmpPath() {
-        return Paths.get(DEFAULT_DIR, TMP_DIR);
+    public static Path getFullTmpPath(String tenantId) {
+        return Paths.get(repositoryRoot, normalizeTenant(tenantId), TMP_SEGMENT);
     }
 
-    /**
-     * 获取完整的图片目录路径
-     *
-     * @return 完整的图片目录路径
-     */
-    public static Path getFullPicPath() {
-        return Paths.get(DEFAULT_DIR, PIC_DIR);
+    public static Path getFullPicPath(String tenantId) {
+        return Paths.get(repositoryRoot, normalizeTenant(tenantId), PIC_SEGMENT);
     }
 
-    /**
-     * 获取指定组织的完整导出目录路径
-     *
-     * @param orgId 组织ID
-     *
-     * @return 完整的导出目录路径
-     */
-    public static Path getFullExportPath(String orgId) {
-        return Paths.get(DEFAULT_DIR, orgId, EXPORT_DIR);
+    public static Path getFullExportPath(String tenantId) {
+        return Paths.get(repositoryRoot, normalizeTenant(tenantId), EXPORT_SEGMENT);
     }
 
-    /**
-     * 获取临时文件目录
-     *
-     * @param tempFileId 临时文件ID
-     *
-     * @return 临时文件目录
-     */
-    public static String getTempFileDir(String tempFileId) {
-        return DefaultRepositoryDir.getTmpDir() + "/" + tempFileId;
-    }
-
-    /**
-     * 获取转存文件目录
-     *
-     * @param organizationId 组织ID
-     * @param resourceId     资源ID
-     * @param fileId         文件ID
-     *
-     * @return 转存文件目录
-     */
-    public static String getTransferFileDir(String organizationId, String resourceId, String fileId) {
-        return "/" + organizationId + DefaultRepositoryDir.getPicDir() + "/" + resourceId + "/" + fileId;
+    private static String normalizeTenant(String tenantId) {
+        String t = StringUtils.trimToNull(tenantId);
+        if (t == null) {
+            throw new IllegalArgumentException("tenantId must not be null or blank for file repository paths");
+        }
+        if (t.indexOf('/') >= 0 || t.indexOf('\\') >= 0 || t.contains("..")) {
+            throw new IllegalArgumentException("Invalid tenantId: " + tenantId);
+        }
+        return t;
     }
 }

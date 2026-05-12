@@ -603,7 +603,7 @@ public class ClueService {
         return clue;
     }
 
-    @Async
+    @Async("threadPoolTaskExecutor")
     @OperationLog(module = LogModule.CLUE_POOL_INDEX, type = LogType.ADD, resourceName = "{#request.phone}")
     public void push(CluePushRequest request, String userId, String orgId) {
         try {

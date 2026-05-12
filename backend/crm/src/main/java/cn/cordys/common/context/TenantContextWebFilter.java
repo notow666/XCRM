@@ -6,8 +6,6 @@ import cn.cordys.context.TenantContext;
 import cn.cordys.common.response.handler.ResultHolder;
 import cn.cordys.common.response.result.CrmHttpResultCode;
 import cn.cordys.common.util.Translator;
-import cn.cordys.security.SessionUser;
-import cn.cordys.security.SessionUtils;
 import cn.cordys.tenant.service.TenantMetaService;
 import cn.cordys.common.util.JSON;
 import jakarta.servlet.FilterChain;
@@ -55,15 +53,30 @@ public class TenantContextWebFilter extends OncePerRequestFilter {
                 || uri.contains("/system/version") || uri.contains("/anonymous/mmba/callback"));
     }
 
+    /**
+     * 图片/附件预览为 Shiro 匿名接口，浏览器直连不会带 X-Tenant-ID，须通过查询参数 tenantId 与过滤器一致写入 {@link TenantContext}。
+     */
+    private static boolean requiresTenantForAnonymousFilePreview(String uri) {
+        if (uri == null) {
+            return false;
+        }
+        return uri.contains("/pic/preview/") || uri.contains("/attachment/preview/");
+    }
+
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain chain)
             throws ServletException, IOException {
+        String uri = request.getRequestURI();
         String tenantId = request.getHeader(CommonConstants.TENANT_ID_HEADER);
         if (StringUtils.isBlank(tenantId)) {
             tenantId = request.getParameter(TENANT_ID_KEY);
         }
 
         tenantId = StringUtils.trimToNull(tenantId);
+        if (requiresTenantForAnonymousFilePreview(uri) && tenantId == null) {
+            rejectIllegalTenant(response, "缺少租户标识 tenantId");
+            return;
+        }
         if (StringUtils.isNotBlank(tenantId)) {
             if (!tenantMetaService.existsTenantId(tenantId)) {
                 rejectIllegalTenant(response, "请求非法");

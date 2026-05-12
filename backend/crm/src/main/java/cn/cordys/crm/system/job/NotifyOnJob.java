@@ -35,7 +35,7 @@ public class NotifyOnJob {
         return TenantRedisKeyBuilder.tenantKey(rawKey);
     }
 
-    @QuartzScheduled(cron = "0 0/5 * * * ?")
+    @QuartzScheduled(cron = "0 0/30 * * * ?")
     public void onEvent() {
         tenantTaskExecutor.runForEachEnabledTenant("NotifyOnJob.onEvent", tenantId -> {
             log.info("执行公告通知定时任务，tenantId={}", tenantId);

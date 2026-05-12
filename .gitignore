@@ -86,6 +86,8 @@ qywx.json
 
 .omm
 
-/logs/
+logs
+files
+temp
 
 **/*.zip

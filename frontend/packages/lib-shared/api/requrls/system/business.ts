@@ -1,3 +1,5 @@
+import { withApiPathPrefix } from '@lib/shared/method/api-path';
+
 export const GetConfigEmailUrl = '/organization/settings/email'; // 获取邮件设置
 export const UpdateConfigEmailUrl = '/organization/settings/email/edit'; // 更新邮件设置
 export const TestConfigEmailUrl = '/organization/settings/email/test'; // 邮件设置-测试连接
@@ -45,7 +47,6 @@ export const AddApiKeyUrl = '/user/api/key/add'; // 新增 ApiKey
 // 界面设置
 export const SavePageConfigUrl = '/ui/display/save'; // 保存界面配置
 export const GetPageConfigUrl = '/ui/display/info'; // 获取界面配置
-export const GetPageConfigImagePreviewUrl = '/ui/display/preview'; // 图片预览
-export const GetTitleImgUrl = `${
-  import.meta.env.VITE_API_BASE_URL
-}${GetPageConfigImagePreviewUrl}?paramKey=ui.logoPlatform`;
+export const GetPageConfigImagePreviewUrl = '/ui/display/preview'; // 图片预览（axios 相对路径）
+/** 平台 Logo 默认图（浏览器直连需带 /front 等前缀） */
+export const GetTitleImgUrl = `${withApiPathPrefix(GetPageConfigImagePreviewUrl)}?paramKey=ui.logoPlatform`;

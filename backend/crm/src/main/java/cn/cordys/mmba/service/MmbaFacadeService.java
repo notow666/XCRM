@@ -174,7 +174,7 @@ public class MmbaFacadeService {
      * 查询设备并同步
      * @return
      */
-    @Async
+    @Async("threadPoolTaskExecutor")
     public void syncDevices(String userId) {
         List<MmbaDevice> mmbaDevices = mmbaDeviceService.syncDevices();
         if(CollectionUtils.isEmpty(mmbaDevices)) {

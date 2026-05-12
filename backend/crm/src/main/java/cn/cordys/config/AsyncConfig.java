@@ -1,6 +1,5 @@
 package cn.cordys.config;
 
-
 import cn.cordys.common.constants.MdcConstants;
 import cn.cordys.context.TenantContext;
 import lombok.extern.slf4j.Slf4j;
@@ -22,38 +21,20 @@ import java.util.concurrent.*;
 public class AsyncConfig implements AsyncConfigurer {
 
     // 核心线程数
-    private static final int CORE_POOL_SIZE = 20;
+    private static final int CORE_POOL_SIZE = 40;
     // 最大线程数
-    private static final int MAX_POOL_SIZE = 20;
+    private static final int MAX_POOL_SIZE = 240;
     // 空闲线程最大存活秒数
     private static final int KEEP_ALIVE_SECONDS = 60;
     // 关闭时最大等待秒数
     private static final int AWAIT_TERMINATION_SECONDS = 60;
 
+    private static final int QUEUE_CAPACITY = 1000;
+
     // 同时暴露默认名称，便于 @Async 自动装配
     @Bean(name = {"threadPoolTaskExecutor", "applicationTaskExecutor"})
     public Executor taskExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(CORE_POOL_SIZE);
-        executor.setMaxPoolSize(MAX_POOL_SIZE);
-        executor.setKeepAliveSeconds(KEEP_ALIVE_SECONDS);
-        executor.setAllowCoreThreadTimeOut(true);
-        executor.setThreadNamePrefix("main-async-task-");
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
-        executor.setWaitForTasksToCompleteOnShutdown(true);
-        executor.setAwaitTerminationSeconds(AWAIT_TERMINATION_SECONDS);
-        executor.setTaskDecorator(new MdcTaskDecorator());
-        return executor;
-    }
-
-    @Override
-    public Executor getAsyncExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(10);
-        executor.setMaxPoolSize(20);
-        executor.setQueueCapacity(200);
-        executor.setThreadNamePrefix("default-async-task-");
-        // 设置 MDC 传递装饰器
+        ThreadPoolTaskExecutor executor = defaultExecutor("main-async-task-");
         executor.setTaskDecorator(new MdcTaskDecorator());
         executor.initialize();
         return executor;
@@ -61,47 +42,37 @@ public class AsyncConfig implements AsyncConfigurer {
 
     @Bean("callbackMainTaskExecutor")
     public ExecutorService callbackMainTaskExecutor(){
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(CORE_POOL_SIZE);
-        executor.setMaxPoolSize(MAX_POOL_SIZE);
-        executor.setKeepAliveSeconds(KEEP_ALIVE_SECONDS);
-        executor.setAllowCoreThreadTimeOut(true);
-        executor.setThreadNamePrefix("callback-main-async-task-");
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
-        executor.setWaitForTasksToCompleteOnShutdown(true);
-        executor.setAwaitTerminationSeconds(AWAIT_TERMINATION_SECONDS);
+        ThreadPoolTaskExecutor executor = defaultExecutor("callback-main-async-task-");
         executor.initialize();
         return executor.getThreadPoolExecutor();
     }
 
     @Bean("callbackStreamTaskExecutor")
     public ExecutorService callbackStreamTaskExecutor(){
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(CORE_POOL_SIZE);
-        executor.setMaxPoolSize(MAX_POOL_SIZE);
-        executor.setKeepAliveSeconds(KEEP_ALIVE_SECONDS);
-        executor.setAllowCoreThreadTimeOut(true);
-        executor.setThreadNamePrefix("callback-stream-async-task-");
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
-        executor.setWaitForTasksToCompleteOnShutdown(true);
-        executor.setAwaitTerminationSeconds(AWAIT_TERMINATION_SECONDS);
+        ThreadPoolTaskExecutor executor = defaultExecutor("callback-stream-async-task-");
         executor.initialize();
         return executor.getThreadPoolExecutor();
     }
 
     @Bean("callbackConsumerTaskExecutor")
     public ExecutorService callbackConsumerTaskExecutor(){
+        ThreadPoolTaskExecutor executor = defaultExecutor("callback-consumer-async-task-");
+        executor.initialize();
+        return executor.getThreadPoolExecutor();
+    }
+
+    private ThreadPoolTaskExecutor defaultExecutor(String threadNamePrefixSet) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(CORE_POOL_SIZE);
         executor.setMaxPoolSize(MAX_POOL_SIZE);
         executor.setKeepAliveSeconds(KEEP_ALIVE_SECONDS);
         executor.setAllowCoreThreadTimeOut(true);
-        executor.setThreadNamePrefix("callback-consumer-async-task-");
+        executor.setThreadNamePrefix(threadNamePrefixSet);
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(AWAIT_TERMINATION_SECONDS);
-        executor.initialize();
-        return executor.getThreadPoolExecutor();
+        executor.setQueueCapacity(QUEUE_CAPACITY);
+        return executor;
     }
 
     /**

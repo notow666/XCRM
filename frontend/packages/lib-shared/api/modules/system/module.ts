@@ -116,6 +116,7 @@ import type { Result } from '@lib/shared/types/axios';
 import { FormDesignKeyEnum } from '@lib/shared/enums/formDesignEnum';
 import type { BusinessTitleItem, ContractItem, PaymentPlanItem, PaymentRecordItem } from '@lib/shared/models/contract';
 import type { OrderItem } from '@lib/shared/models/order';
+import { resolveClientTenantId } from '@lib/shared/method/tenant-url';
 
 export default function useProductApi(CDR: CordysAxios) {
   // 模块首页-导航模块列表
@@ -330,7 +331,11 @@ export default function useProductApi(CDR: CordysAxios) {
   }
 
   function previewAttachment(id: string) {
-    return CDR.get({ url: `${PreviewAttachmentUrl}/${id}` });
+    const tenantId = resolveClientTenantId();
+    return CDR.get({
+      url: `${PreviewAttachmentUrl}/${id}`,
+      ...(tenantId ? { params: { tenantId } } : {}),
+    });
   }
 
   function downloadAttachment(id: string) {
@@ -342,7 +347,11 @@ export default function useProductApi(CDR: CordysAxios) {
   }
 
   function previewPicture(id: string) {
-    return CDR.get({ url: `${PreviewPictureUrl}/${id}` });
+    const tenantId = resolveClientTenantId();
+    return CDR.get({
+      url: `${PreviewPictureUrl}/${id}`,
+      ...(tenantId ? { params: { tenantId } } : {}),
+    });
   }
 
   function downloadPicture(id: string) {

@@ -62,7 +62,7 @@
     useMessage,
   } from 'naive-ui';
 
-  import { PreviewPictureUrl } from '@lib/shared/api/requrls/system/module';
+  import { getPicturePreviewSrc } from '@lib/shared/api/requrls/system/module';
   import { FieldTypeEnum } from '@lib/shared/enums/formDesignEnum';
   import { useI18n } from '@lib/shared/hooks/useI18n';
   import type { FormConfig } from '@lib/shared/models/system/module';
@@ -202,8 +202,8 @@
           fileKeysMap.value[key] = key;
           fileList.value.push({
             id: key,
-            thumbnailUrl: `${PreviewPictureUrl}/${key}`,
-            url: `${PreviewPictureUrl}/${key}`,
+            thumbnailUrl: getPicturePreviewSrc(key),
+            url: getPicturePreviewSrc(key),
             name: key,
             status: 'finished',
             type: 'image/*',

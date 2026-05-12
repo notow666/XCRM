@@ -18,7 +18,7 @@
   import { DataTableCreateSummary, NButton, NDataTable, NImage, NImageGroup, NTooltip, useMessage } from 'naive-ui';
   import { isEqual } from 'lodash-es';
 
-  import { PreviewPictureUrl } from '@lib/shared/api/requrls/system/module';
+  import { getPicturePreviewSrc } from '@lib/shared/api/requrls/system/module';
   import { FieldRuleEnum, FieldTypeEnum, FormDesignKeyEnum } from '@lib/shared/enums/formDesignEnum';
   import { SpecialColumnEnum } from '@lib/shared/enums/tableEnum';
   import { useI18n } from '@lib/shared/hooks/useI18n';
@@ -397,7 +397,7 @@
                     {
                       default: () =>
                         (row[key] || []).map((img: string) =>
-                          h(NImage, { src: `${PreviewPictureUrl}/${img}`, class: 'w-[100px] h-[100px] mr-[8px]' })
+                          h(NImage, { src: getPicturePreviewSrc(img), class: 'w-[100px] h-[100px] mr-[8px]' })
                         ),
                     }
                   )

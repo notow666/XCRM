@@ -6,6 +6,7 @@ import cn.cordys.common.redis.MessagePublisher;
 import cn.cordys.common.util.Translator;
 import cn.cordys.crm.system.constants.ExportConstants;
 import cn.cordys.crm.system.domain.ExportTask;
+import cn.cordys.context.TenantContext;
 import cn.cordys.crm.system.dto.request.ExportTaskCenterQueryRequest;
 import cn.cordys.crm.system.mapper.ExtExportTaskMapper;
 import cn.cordys.file.engine.DefaultRepositoryDir;
@@ -92,7 +93,7 @@ public class ExportTaskCenterService {
     }
 
     private String getFilePath(ExportTask exportTask) {
-        return File.separator + DefaultRepositoryDir.getExportDir(exportTask.getOrganizationId()) + File.separator + exportTask.getFileId();
+        return File.separator + DefaultRepositoryDir.getExportDir(TenantContext.requireTenantId()) + File.separator + exportTask.getFileId();
     }
 
     public void clean() {

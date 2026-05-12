@@ -6,6 +6,7 @@ import { CompanyTypeEnum } from '@lib/shared/enums/commonEnum';
 import { ModuleConfigEnum } from '@lib/shared/enums/moduleEnum';
 import { useI18n } from '@lib/shared/hooks/useI18n';
 import { getSSE } from '@lib/shared/method';
+import { withApiPathPrefix } from '@lib/shared/method/api-path';
 import { setLocalStorage } from '@lib/shared/method/local-storage';
 import { loadScript } from '@lib/shared/method/scriptLoader';
 
@@ -414,7 +415,7 @@ const useAppStore = defineStore('app', {
               // 四个属性值为文件类型，单独处理
               this.pageConfig[key] = [
                 {
-                  url: `/ui/display/preview?paramKey=ui.${key}`,
+                  url: `${withApiPathPrefix('/ui/display/preview')}?paramKey=ui.${key}`,
                   name: e.paramValue,
                 },
               ] as any;

@@ -39,7 +39,7 @@
 <script setup lang="ts">
   import { DataTableRowKey, NImage, NImageGroup } from 'naive-ui';
 
-  import { PreviewPictureUrl } from '@lib/shared/api/requrls/system/module';
+  import { getPicturePreviewSrc } from '@lib/shared/api/requrls/system/module';
   import { FieldDataSourceTypeEnum, FieldTypeEnum, FormDesignKeyEnum } from '@lib/shared/enums/formDesignEnum';
   import { useI18n } from '@lib/shared/hooks/useI18n';
   import { transformData } from '@lib/shared/method/formCreate';
@@ -203,7 +203,7 @@
                                   ).map((_key: string) =>
                                     h(NImage, {
                                       class: 'h-[40px] w-[40px] mr-[4px]',
-                                      src: `${PreviewPictureUrl}/${_key}`,
+                                      src: getPicturePreviewSrc(_key),
                                     })
                                   )
                                 : '-',

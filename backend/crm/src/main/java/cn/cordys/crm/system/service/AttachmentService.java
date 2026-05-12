@@ -2,6 +2,8 @@ package cn.cordys.crm.system.service;
 
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.uid.IDGenerator;
+import cn.cordys.common.util.AsyncUtils;
+import cn.cordys.context.TenantContext;
 import cn.cordys.crm.system.domain.Attachment;
 import cn.cordys.crm.system.dto.request.UploadTransferRequest;
 import cn.cordys.file.engine.DefaultRepositoryDir;
@@ -28,6 +30,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -44,6 +48,8 @@ public class AttachmentService {
     @Resource
     private FileCommonService fileCommonService;
 
+    private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+
     /**
      * 上传临时附件
      *
@@ -52,9 +58,10 @@ public class AttachmentService {
     public List<String> uploadTemp(List<MultipartFile> files) {
         List<String> tempPicIds = new ArrayList<>();
         FileRequest tempRequest = new FileRequest(null, StorageType.LOCAL.name(), null);
+        String tenantId = TenantContext.requireTenantId();
         files.forEach(file -> {
             String tempPicId = IDGenerator.nextStr();
-            tempRequest.setFolder(DefaultRepositoryDir.getTempFileDir(tempPicId));
+            tempRequest.setFolder(DefaultRepositoryDir.getTempFileDir(tenantId, tempPicId));
             tempRequest.setFileName(file.getOriginalFilename());
             fileCommonService.upload(file, tempRequest);
             tempPicIds.add(tempPicId);
@@ -69,12 +76,13 @@ public class AttachmentService {
      */
     public void delete(String attachmentId) {
         Attachment attachment = attachmentMapper.selectByPrimaryKey(attachmentId);
+        String tenantId = TenantContext.requireTenantId();
         if (attachment == null) {
             // 删除临时文件目录
-            fileCommonService.deleteFolder(new FileRequest(DefaultRepositoryDir.getTempFileDir(attachmentId), StorageType.LOCAL.name(), null), true);
+            fileCommonService.deleteFolder(new FileRequest(DefaultRepositoryDir.getTempFileDir(tenantId, attachmentId), StorageType.LOCAL.name(), null), true);
         } else {
             // 删除正式文件
-            fileCommonService.deleteFolder(new FileRequest(DefaultRepositoryDir.getTransferFileDir(attachment.getOrganizationId(), attachment.getResourceId(), attachment.getId()),
+            fileCommonService.deleteFolder(new FileRequest(DefaultRepositoryDir.getTransferFileDir(tenantId, attachment.getResourceId(), attachment.getId()),
                     StorageType.LOCAL.name(), attachment.getName()), false);
         }
     }
@@ -88,13 +96,14 @@ public class AttachmentService {
      */
     public ResponseEntity<org.springframework.core.io.Resource> getResource(String attachmentId) {
         Attachment attachment = attachmentMapper.selectByPrimaryKey(attachmentId);
+        String tenantId = TenantContext.requireTenantId();
         FileRequest request;
         ResponseEntity.BodyBuilder responseBuilder = ResponseEntity.ok();
         try {
             InputStream fileStream;
             if (attachment == null) {
                 // get pic from temp dir
-                request = new FileRequest(DefaultRepositoryDir.getTempFileDir(attachmentId), StorageType.LOCAL.name(), null);
+                request = new FileRequest(DefaultRepositoryDir.getTempFileDir(tenantId, attachmentId), StorageType.LOCAL.name(), null);
                 List<File> folderFiles = fileCommonService.getFolderFiles(request);
                 if (CollectionUtils.isEmpty(folderFiles)) {
                     return null;
@@ -106,7 +115,7 @@ public class AttachmentService {
                         .contentType(isSvg(file.getName()) ? MediaType.parseMediaType("image/svg+xml") : MediaType.parseMediaType("application/octet-stream"));
             } else {
                 // get attachment from transferred dir
-                request = new FileRequest(DefaultRepositoryDir.getTransferFileDir(attachment.getOrganizationId(), attachment.getResourceId(), attachment.getId()), StorageType.LOCAL.name(), attachment.getName());
+                request = new FileRequest(DefaultRepositoryDir.getTransferFileDir(tenantId, attachment.getResourceId(), attachment.getId()), StorageType.LOCAL.name(), attachment.getName());
                 fileStream = fileCommonService.getFileInputStream(request);
                 if (fileStream == null) {
                     throw new GenericException("The file does not exist or has been deleted");
@@ -146,15 +155,16 @@ public class AttachmentService {
         queryWrapper.eq(Attachment::getResourceId, transferRequest.getResourceId());
         List<Attachment> transferredAttachments = attachmentMapper.selectListByLambda(queryWrapper);
         List<String> transferredIds = transferredAttachments.stream().map(Attachment::getId).toList();
+        String tenantId = TenantContext.requireTenantId();
         // insert new attachment
         transferRequest.getTempFileIds().stream().filter(tempFileId -> !transferredIds.contains(tempFileId)).forEach(tempFileId -> {
             // transfer new pic
-            FileRequest request = new FileRequest(DefaultRepositoryDir.getTmpDir() + "/" + tempFileId, StorageType.LOCAL.name(), null);
+            FileRequest request = new FileRequest(DefaultRepositoryDir.getTmpDir(tenantId) + "/" + tempFileId, StorageType.LOCAL.name(), null);
             List<File> folderTempFiles = fileCommonService.getFolderFiles(request);
             if (!CollectionUtils.isEmpty(folderTempFiles)) {
                 File tempFile = folderTempFiles.getFirst();
-                FileCopyRequest copyRequest = new FileCopyRequest(DefaultRepositoryDir.getTempFileDir(tempFileId),
-                        DefaultRepositoryDir.getTransferFileDir(transferRequest.getOrganizationId(), transferRequest.getResourceId(), tempFileId),
+                FileCopyRequest copyRequest = new FileCopyRequest(DefaultRepositoryDir.getTempFileDir(tenantId, tempFileId),
+                        DefaultRepositoryDir.getTransferFileDir(tenantId, transferRequest.getResourceId(), tempFileId),
                         tempFile.getName());
                 fileCommonService.copyFile(copyRequest, StorageType.LOCAL.name());
                 Attachment attachment = new Attachment();
@@ -185,7 +195,7 @@ public class AttachmentService {
             duplicateQueryWrapper.in(Attachment::getId, removedIds);
             attachmentMapper.deleteByLambda(duplicateQueryWrapper);
             removedIds.forEach(removeId -> {
-                FileRequest request = new FileRequest(DefaultRepositoryDir.getTransferFileDir(transferRequest.getOrganizationId(), transferRequest.getResourceId(), removeId), StorageType.LOCAL.name(), null);
+                FileRequest request = new FileRequest(DefaultRepositoryDir.getTransferFileDir(tenantId, transferRequest.getResourceId(), removeId), StorageType.LOCAL.name(), null);
                 fileCommonService.deleteFolder(request, true);
             });
         }
@@ -204,6 +214,7 @@ public class AttachmentService {
         List<Attachment> attachments = attachmentMapper.selectListByLambda(queryWrapper);
         Map<String, Attachment> attachmentMap = attachments.stream().collect(Collectors.toMap(Attachment::getId, Function.identity()));
         List<Attachment> newAttachments = new ArrayList<>();
+        String tenantId = TenantContext.requireTenantId();
         oldOfNewIdMap.forEach((oId, nId) -> {
             if (!attachmentMap.containsKey(oId)) {
                 return;
@@ -211,12 +222,10 @@ public class AttachmentService {
             Attachment oldAttachment = attachmentMap.get(oId);
             // 复制文件
             FileCopyRequest copyRequest = new FileCopyRequest(
-                    DefaultRepositoryDir.getTransferFileDir(oldAttachment.getOrganizationId(), oldAttachment.getResourceId(), oId),
-                    DefaultRepositoryDir.getTransferFileDir(oldAttachment.getOrganizationId(), targetId, nId),
+                    DefaultRepositoryDir.getTransferFileDir(tenantId, oldAttachment.getResourceId(), oId),
+                    DefaultRepositoryDir.getTransferFileDir(tenantId, targetId, nId),
                     oldAttachment.getName());
-            Thread.startVirtualThread(() -> {
-                fileCommonService.copyFile(copyRequest, StorageType.LOCAL.name());
-            });
+            AsyncUtils.runAsync(() -> fileCommonService.copyFile(copyRequest, StorageType.LOCAL.name()), executor);
             // 复制附件记录
             oldAttachment.setId(nId);
             oldAttachment.setResourceId(targetId);

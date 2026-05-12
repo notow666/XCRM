@@ -1,7 +1,7 @@
 import { NImage, NImageGroup } from 'naive-ui';
 import dayjs from 'dayjs';
 
-import { PreviewPictureUrl } from '@lib/shared/api/requrls/system/module';
+import { getPicturePreviewSrc } from '@lib/shared/api/requrls/system/module';
 import { FieldTypeEnum, FormDesignKeyEnum } from '@lib/shared/enums/formDesignEnum';
 import { QuotationStatusEnum } from '@lib/shared/enums/opportunityEnum';
 import { SpecialColumnEnum, TableKeyEnum } from '@lib/shared/enums/tableEnum';
@@ -1045,7 +1045,7 @@ export default async function useFormCreateTable(props: FormCreateTableProps) {
                             ? (row[key] || []).map((_key: string) =>
                                 h(NImage, {
                                   class: 'h-[40px] w-[40px] mr-[4px]',
-                                  src: `${PreviewPictureUrl}/${_key}`,
+                                  src: getPicturePreviewSrc(_key),
                                 })
                               )
                             : '-',

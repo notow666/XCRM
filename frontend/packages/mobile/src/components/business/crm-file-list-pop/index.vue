@@ -47,7 +47,7 @@
   import { showImagePreview, showToast } from 'vant';
   import dayjs from 'dayjs';
 
-  import { PreviewAttachmentUrl } from '@lib/shared/api/requrls/system/module';
+  import { getAttachmentPreviewSrc } from '@lib/shared/api/requrls/system/module';
   import { useI18n } from '@lib/shared/hooks/useI18n';
   import { isDingTalkBrowser, isLarkBrowser, isWeComBrowser } from '@lib/shared/method';
 
@@ -104,7 +104,7 @@
   function handlePreview(file: AttachmentInfo) {
     if (/(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(file.type)) {
       showImagePreview({
-        images: [`${PreviewAttachmentUrl}/${file.id}`],
+        images: [getAttachmentPreviewSrc(String(file.id))],
         closeable: true,
       });
     }

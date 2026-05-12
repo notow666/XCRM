@@ -109,7 +109,7 @@ public class LogService implements OperationLogHandler {
      *
      * @param log 日志数据传输对象
      */
-    @Async
+    @Async("threadPoolTaskExecutor")
     public void add(LogDTO log) {
         log.setTraceId(MDC.get(MdcConstants.TRACE_ID_KEY));
         log.setPath(MDC.get(MdcConstants.REQUEST_URI_KEY));
@@ -159,7 +159,7 @@ public class LogService implements OperationLogHandler {
      *
      * @param logs 日志数据传输对象列表
      */
-    @Async
+    @Async("threadPoolTaskExecutor")
     public void batchAdd(List<LogDTO> logs) {
         // 如果日志列表为空，直接返回
         if (CollectionUtils.isEmpty(logs)) {

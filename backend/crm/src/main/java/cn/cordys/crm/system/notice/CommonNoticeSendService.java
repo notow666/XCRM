@@ -49,7 +49,7 @@ public class CommonNoticeSendService {
         LocaleContextHolder.setLocale(locale);
     }
 
-    @Async
+    @Async("threadPoolTaskExecutor")
     public void sendNotice(String module, String event, List<Map> resources, String userId, String currentOrganizationId) {
         User operator = userBaseMapper.selectByPrimaryKey(userId);
         setLanguage(operator.getLanguage());

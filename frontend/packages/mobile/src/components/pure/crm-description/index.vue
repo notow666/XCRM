@@ -16,11 +16,11 @@
                       :key="img as string"
                       width="40"
                       height="40"
-                      :src="`${PreviewPictureUrl}/${img}`"
+                      :src="getPicturePreviewSrc(img)"
                       @click="
                   () => {
                     showImagePreview({
-                      images: (item.value as string[]).map((img) => `${PreviewPictureUrl}/${img}`),
+                      images: (item.value as string[]).map((img) => getPicturePreviewSrc(img)),
                       closeable: true,
                       startPosition: (item.value as string[]).findIndex((image) => image === img),
                     });
@@ -50,7 +50,7 @@
 <script setup lang="ts">
   import { showImagePreview } from 'vant';
 
-  import { PreviewPictureUrl } from '@lib/shared/api/requrls/system/module';
+  import { getPicturePreviewSrc } from '@lib/shared/api/requrls/system/module';
   import { useI18n } from '@lib/shared/hooks/useI18n';
 
   import CrmTag from '@/components/pure/crm-tag/index.vue';

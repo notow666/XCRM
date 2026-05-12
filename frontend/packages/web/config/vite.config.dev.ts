@@ -18,30 +18,12 @@ export default mergeConfig(
       fs: {
         strict: true,
       },
+      // 与生产一致：接口 / SSE / pic / attachment / ui 均走 /front，由 rewrite 去掉前缀后转发到后端
       proxy: {
-        '/sse': {
-          target: process.env.VITE_DEV_DOMAIN,
-          changeOrigin: true,
-        },
         '/front': {
           target: process.env.VITE_DEV_DOMAIN,
           changeOrigin: true,
           rewrite: (path: string) => path.replace(/^\/front/, ''),
-        },
-        '/pic': {
-          target: process.env.VITE_DEV_DOMAIN,
-          changeOrigin: true,
-          rewrite: (path: string) => path.replace(/^\/pic/, ''),
-        },
-        '/attachment': {
-          target: process.env.VITE_DEV_DOMAIN,
-          changeOrigin: true,
-          rewrite: (path: string) => path.replace(/^\/attachment/, ''),
-        },
-        '/ui': {
-          target: process.env.VITE_DEV_DOMAIN,
-          changeOrigin: true,
-          rewrite: (path: string) => path.replace(/^\/ui/, ''),
         },
       },
     },

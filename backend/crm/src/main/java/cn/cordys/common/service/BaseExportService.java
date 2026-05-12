@@ -11,6 +11,7 @@ import cn.cordys.common.resolver.field.AbstractModuleFieldResolver;
 import cn.cordys.common.resolver.field.ModuleFieldResolverFactory;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.*;
+import cn.cordys.context.TenantContext;
 import cn.cordys.crm.system.constants.ExportConstants;
 import cn.cordys.crm.system.domain.ExportTask;
 import cn.cordys.crm.system.dto.field.base.BaseField;
@@ -193,7 +194,7 @@ public abstract class BaseExportService {
         // 构建导出目录路径
         String exportDirPath = DefaultRepositoryDir.getDefaultDir()
                 + File.separator
-                + DefaultRepositoryDir.getExportDir(orgId)
+                + DefaultRepositoryDir.getExportDir(TenantContext.requireTenantId())
                 + File.separator + fileId;
 
         File dir = new File(exportDirPath);

@@ -1,7 +1,7 @@
 package cn.cordys.crm.customer.job;
 
 import cn.cordys.crm.base.BaseTest;
-import cn.cordys.crm.system.job.listener.CluePoolRecycleListener;
+//import cn.cordys.crm.system.job.listener.CluePoolRecycleListener;
 import cn.cordys.crm.system.job.listener.CustomerPoolRecycleListener;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.MethodOrderer;
@@ -21,8 +21,8 @@ public class RecycleJobTests extends BaseTest {
     @Resource
     private CustomerPoolRecycleListener customerPoolRecycleListener;
 
-    @Resource
-    private CluePoolRecycleListener cluePoolRecycleListener;
+//    @Resource
+//    private CluePoolRecycleListener cluePoolRecycleListener;
 
     @Test
     @Order(1)
@@ -36,17 +36,17 @@ public class RecycleJobTests extends BaseTest {
         customerPoolRecycleListener.recycle();
     }
 
-    @Test
-    @Order(2)
-    @Sql(scripts = {"/dml/init_clue_recycle_test.sql"},
-            config = @SqlConfig(encoding = "utf-8", transactionMode = SqlConfig.TransactionMode.ISOLATED),
-            executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = {"/dml/cleanup_clue_recycle_test.sql"},
-            config = @SqlConfig(encoding = "utf-8", transactionMode = SqlConfig.TransactionMode.ISOLATED),
-            executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    public void testClueRecycle() {
-        cluePoolRecycleListener.recycle();
-    }
+//    @Test
+//    @Order(2)
+//    @Sql(scripts = {"/dml/init_clue_recycle_test.sql"},
+//            config = @SqlConfig(encoding = "utf-8", transactionMode = SqlConfig.TransactionMode.ISOLATED),
+//            executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+//    @Sql(scripts = {"/dml/cleanup_clue_recycle_test.sql"},
+//            config = @SqlConfig(encoding = "utf-8", transactionMode = SqlConfig.TransactionMode.ISOLATED),
+//            executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+//    public void testClueRecycle() {
+//        cluePoolRecycleListener.recycle();
+//    }
 
     // 线索池分发暂不走定时任务，相关监听器与测试先停用。
 }

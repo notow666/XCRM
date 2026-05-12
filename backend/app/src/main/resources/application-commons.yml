@@ -1,3 +1,19 @@
+server:
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain,application/javascript,text/css,text/javascript,image/jpeg
+    min-response-size: 2048
+  port: 8081
+  tomcat:
+    threads:
+      min-spare: 50                     # 最小空闲线程数
+      max: 400                          # 最大工作线程数，根据服务器 CPU 核心数调整
+    accept-count: 200                   # 等待队列长度
+    max-connections: 10000              # 最大并发连接数
+    max-http-form-post-size: 20MB       # Tomcat 层 POST 限制
+    max-swallow-size: 100MB              # 出错时能吞下的最大数据量
+    connection-timeout: 600000          # 连接超时（毫秒），大文件上传建议 10 分钟
+
 spring:
   application:
     name: cordys-crm
@@ -49,8 +65,10 @@ spring:
     log-request-details: false
   servlet:
     multipart:
-      max-file-size: 1024MB
-      max-request-size: 1024MB
+      enabled: true                   # 必须显式启用，否则配置失效
+      max-file-size: 20MB             # 单个文件最大，根据业务调整
+      max-request-size: 100MB          # 总请求大小（含多文件+表单）
+      file-size-threshold: 2MB        # 超过此值写入磁盘，否则存内存
   session:
     redis:
       repository-type: indexed
@@ -58,13 +76,6 @@ spring:
   threads:
     virtual:
       enabled: true
-
-server:
-  compression:
-    enabled: true
-    mime-types: application/json,application/xml,text/html,text/xml,text/plain,application/javascript,text/css,text/javascript,image/jpeg
-    min-response-size: 2048
-  port: 8081
 
 mybatis:
   configuration:
@@ -94,3 +105,4 @@ springdoc:
       enabled: true
   swagger-ui:
     enabled: false
+

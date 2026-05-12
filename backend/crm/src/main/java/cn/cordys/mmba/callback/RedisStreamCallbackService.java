@@ -1,6 +1,5 @@
 package cn.cordys.mmba.callback;
 
-import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.JSON;
 import cn.cordys.mmba.MmbaBehaviorTypes;
 import cn.cordys.mmba.dto.MmbaAuditRequest;
@@ -15,11 +14,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import java.lang.management.ManagementFactory;
+import java.net.InetAddress;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -41,13 +43,35 @@ public class RedisStreamCallbackService implements SmartLifecycle {
     private static final String STREAM_KEY = "mmba:callback:stream";
     private static final String DLQ_KEY = "mmba:callback:dlq";
     private static final String CONSUMER_GROUP = "callback_processor";
-    private static final String CONSUMER_NAME = "processor_%s";
+    private static final String CONSUMER_NAME = "%s-%d";
 
-    // 实例唯一标识
-    private final String instanceId = "rs" + System.currentTimeMillis();
+    /** 单机进程内稳定，减少每次启动全新 consumer 名导致的孤儿 PEL */
+    private final String consumerBaseId = buildConsumerBaseId();
+    /** DLQ 元数据，区分写入实例 */
+    private final String instanceTag = consumerBaseId + "_rs" + System.currentTimeMillis();
+
+    private static final int STREAM_PARALLEL_CONSUMERS = 5;
+    private static final int READ_BATCH_COUNT = 80;
+    private static final int BATCH_FLUSH_SIZE = 32;
+    private static final long BATCH_FLUSH_TIMEOUT_MS = 500L;
+    private static final Duration READ_BLOCK = Duration.ofSeconds(3);
+    private static final long BATCH_FUTURE_WAIT_SECONDS = 120L;
+    private static final int MAX_PROCESS_ATTEMPTS = 3;
 
     private final AtomicInteger processingCount = new AtomicInteger(0);
     private final Object shutdownLock = new Object();
+
+    /**
+     * 单条消息在处理链上的 ACK 语义，供批量提交与 XACK 对齐。
+     */
+    private enum StreamMessageDisposition {
+        /** 业务处理完成，需对当前 Stream entry XACK */
+        ACK,
+        /** 退避窗口内等，不 XACK，依赖 XREADGROUP id=0 再次拉回 PEL */
+        PENDING_NO_ACK,
+        /** 已在当前逻辑分支内 XACK（DLQ、重试尾写后 ACK 原消息等） */
+        ALREADY_ACKED
+    }
 
     public RedisStreamCallbackService(@Qualifier("callbackMainTaskExecutor") ExecutorService mainExecutorService,
                                       @Qualifier("redisStreamTemplate") RedisTemplate<String, Object> redisTemplate,
@@ -65,26 +89,39 @@ public class RedisStreamCallbackService implements SmartLifecycle {
         }
     }
 
-    /**
-     * 接收回调接口 - 轻量级改造
-     */
-    public void callbackStream(JsonNode json) {
-        CompletableFuture.runAsync(() -> writeToRedisStream(json), streamService);
+    private static String buildConsumerBaseId() {
+        String host = "unknown";
+        try {
+            host = InetAddress.getLocalHost().getHostName();
+        } catch (Exception ignored) {
+            // keep default
+        }
+        host = host.replaceAll("[^a-zA-Z0-9._-]", "_");
+        String jvmId = ManagementFactory.getRuntimeMXBean().getName().replace(':', '_');
+        return host + "_" + jvmId;
     }
 
     /**
-     * 写入Redis Stream
+     * 接收回调：异步写入 Stream，HTTP 线程快速返回。
      */
+    public void callbackStream(JsonNode json) {
+        CompletableFuture.runAsync(() -> writeToRedisStream(json), streamService)
+                .whenComplete((v, ex) -> {
+                    if (ex != null) {
+                        log.error("[mmba-callback-queue] 异步写入队列任务失败（线程池拒绝或执行异常）", ex);
+                    }
+                });
+    }
+
     private void writeToRedisStream(JsonNode json) {
         try {
             String rawPayload = json == null ? null : json.toString();
             Map<String, String> stringStringMap = tenantMetaService.listEnabledTenant();
             MmbaAuditRequest dto = MmbaAuditRequest.generate(json, stringStringMap);
-            if(CollectionUtils.isEmpty(dto.getData())) {
-                log.debug("MmbaAuditRequest invalid: {}", JSON.toJSONString(json));
-            }
-            else if(MmbaBehaviorTypes.isSupported(dto.getBehaviorType())) {
-                Map<String, Object> message = new HashMap<>(6);
+            if (CollectionUtils.isEmpty(dto.getData())) {
+                log.warn("[mmba-callback-queue] 忽略无效回调（无 data）: {}", JSON.toJSONString(json));
+            } else if (MmbaBehaviorTypes.isSupported(dto.getBehaviorType())) {
+                Map<String, Object> message = new HashMap<>(8);
                 message.put(MESSAGE_DTO_FIELD, JSON.toJSONString(dto));
                 message.put(MESSAGE_RAW_PAYLOAD_FIELD, rawPayload);
                 message.put("timestamp", System.currentTimeMillis());
@@ -92,18 +129,15 @@ public class RedisStreamCallbackService implements SmartLifecycle {
                 message.put("retryCount", 0);
                 message.put("lastRetryTime", 0L);
 
-                // 使用Redis Stream
                 RecordId recordId = redisTemplate.opsForStream()
                         .add(StreamRecords.newRecord().in(STREAM_KEY).ofMap(message));
 
-                log.debug("Message added to stream: {}", recordId);
-            }
-            else {
-                log.debug("BehaviorType invalid: {}", dto.getBehaviorType());
+                log.info("[mmba-callback-queue] 已入队 streamId={}, behaviorType={}", recordId, dto.getBehaviorType());
+            } else {
+                log.warn("[mmba-callback-queue] 忽略不支持的行为类型: {}", dto.getBehaviorType());
             }
         } catch (Exception e) {
-            log.error("Failed to write to Redis Stream", e);
-            // 写入日志
+            log.error("[mmba-callback-queue] 写入 Redis Stream 失败", e);
         }
     }
 
@@ -111,8 +145,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
     public void start() {
         synchronized (lifecycleLock) {
             if (!running) {
-                log.info("Starting Redis Stream consumer service...");
-
+                log.info("Starting Redis Stream consumer service, consumerBaseId={}...", consumerBaseId);
                 try {
                     ensureStreamExists();
 
@@ -123,16 +156,16 @@ public class RedisStreamCallbackService implements SmartLifecycle {
 
                     if (!groupExists) {
                         redisTemplate.opsForStream().createGroup(STREAM_KEY, CONSUMER_GROUP);
-                        log.debug("Created consumer group: {}", CONSUMER_GROUP);
+                        log.info("[mmba-callback-queue] 已创建消费组: {}", CONSUMER_GROUP);
                     }
-                    // 启动消费者
                     startStreamConsumers();
+                    running = true;
+                    log.info("[mmba-callback-queue] Stream 消费已启动: stream={}, group={}, parallelism={}, consumerBaseId={}",
+                            STREAM_KEY, CONSUMER_GROUP, STREAM_PARALLEL_CONSUMERS, consumerBaseId);
                 } catch (Exception e) {
-                    log.error("Consumer group may already exist or Redis not ready", e);
+                    running = false;
+                    log.error("[mmba-callback-queue] 消费端启动失败（回调仍会尝试入队但不会被消费，请检查 Redis）", e);
                 }
-
-                running = true;
-                log.info("Redis Stream consumer service started");
             }
         }
     }
@@ -146,59 +179,55 @@ public class RedisStreamCallbackService implements SmartLifecycle {
     public void stop(Runnable callback) {
         synchronized (lifecycleLock) {
             if (running) {
-                log.info("Stopping Redis Stream consumer service gracefully...");
+                log.info("[mmba-callback-queue] 正在优雅停止 Stream 消费...");
                 running = false;
 
                 waitForPendingMessagesGracefully();
 
-                // 关闭调度器
                 shutdownExecutorService(mainExecutorService, "mainExecutorService", 10);
                 shutdownExecutorService(streamService, "streamService", 10);
                 shutdownExecutorService(consumerService, "consumerService", 10);
 
-                // 关闭 Redis 连接池
-                closeRedisConnectionPool();
-
-                log.info("Redis Stream consumer service stopped");
+                log.info("[mmba-callback-queue] Stream 消费已停止");
             }
             callback.run();
         }
     }
 
     private void waitForPendingMessagesGracefully() {
-        int maxWaitSeconds = 30;
-        int checkInterval = 100; // 100ms
+        final long maxWaitMs = TimeUnit.SECONDS.toMillis(60);
+        final long checkIntervalMs = 200L;
 
-        log.info("Waiting for {} pending messages to complete...", processingCount.get());
+        log.info("[mmba-callback-queue] 等待在途业务处理完成, processingCount={}", processingCount.get());
 
-        int waitedSeconds = 0;
-        while (processingCount.get() > 0 && waitedSeconds < maxWaitSeconds) {
+        long waitedMs = 0;
+        long lastLogMs = 0;
+        while (processingCount.get() > 0 && waitedMs < maxWaitMs) {
             try {
                 synchronized (shutdownLock) {
-                    shutdownLock.wait(checkInterval);
+                    shutdownLock.wait(checkIntervalMs);
                 }
-                waitedSeconds++;
-                if (processingCount.get() > 0 && waitedSeconds % 10 == 0) {
-                    log.info("Still waiting for {} messages to complete, waited {} seconds",
-                            processingCount.get(), waitedSeconds);
+                waitedMs += checkIntervalMs;
+                if (processingCount.get() > 0 && waitedMs - lastLogMs >= TimeUnit.SECONDS.toMillis(5)) {
+                    lastLogMs = waitedMs;
+                    log.info("[mmba-callback-queue] 仍在等待在途消息, count={}, waitedMs={}",
+                            processingCount.get(), waitedMs);
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                log.warn("Interrupted while waiting for pending messages");
+                log.warn("[mmba-callback-queue] 等待在途消息时被中断");
                 break;
             }
         }
 
         if (processingCount.get() > 0) {
-            log.warn("Timeout waiting for {} pending messages, forcing shutdown", processingCount.get());
+            log.warn("[mmba-callback-queue] 等待在途消息超时, 剩余 processingCount={}, 将强制关闭线程池",
+                    processingCount.get());
         } else {
-            log.info("All pending messages completed");
+            log.info("[mmba-callback-queue] 在途消息已全部结束");
         }
     }
 
-    /**
-     * 方案4：优雅关闭线程池
-     */
     private void shutdownExecutorService(ExecutorService executor, String name, int timeoutSeconds) {
         if (executor == null || executor.isShutdown()) {
             return;
@@ -211,7 +240,6 @@ public class RedisStreamCallbackService implements SmartLifecycle {
                 log.warn("{} did not terminate within {} seconds, forcing shutdown", name, timeoutSeconds);
                 executor.shutdownNow();
 
-                // 等待强制关闭后的清理
                 if (!executor.awaitTermination(2, TimeUnit.SECONDS)) {
                     log.error("{} failed to terminate", name);
                 }
@@ -223,22 +251,12 @@ public class RedisStreamCallbackService implements SmartLifecycle {
         }
     }
 
-    private void closeRedisConnectionPool() {
-        try {
-            Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection().close();
-            log.info("Redis connection pool closed");
-        } catch (Exception e) {
-            log.warn("Error closing Redis connection pool", e);
-        }
-    }
-
     @Override
     public boolean isRunning() {
         return running;
     }
 
     private void ensureStreamExists() {
-        // 检查 Stream 是否存在
         Boolean exists = redisTemplate.hasKey(STREAM_KEY);
 
         if (Boolean.FALSE.equals(exists)) {
@@ -246,52 +264,60 @@ public class RedisStreamCallbackService implements SmartLifecycle {
             message.put("init", "stream_created");
             message.put("timestamp", System.currentTimeMillis());
 
-            // 使用Redis Stream
             RecordId recordId = redisTemplate.opsForStream()
                     .add(StreamRecords.newRecord().in(STREAM_KEY).ofMap(message));
-            log.info("Created empty stream '{}' with initial message ID: {}", STREAM_KEY, recordId);
+            log.info("[mmba-callback-queue] 已创建 Stream '{}' 初始消息 id={}", STREAM_KEY, recordId);
         }
     }
 
-    /**
-     * 启动多个Stream消费者
-     */
     private void startStreamConsumers() {
-        for (int i = 0; i < 5; i++) {
-            String consumerName = String.format(CONSUMER_NAME, instanceId + "_" + i);
+        for (int i = 0; i < STREAM_PARALLEL_CONSUMERS; i++) {
+            String consumerName = String.format(CONSUMER_NAME, consumerBaseId, i);
             streamService.submit(() -> consumeStreamWithBatch(consumerName));
         }
     }
 
     private void consumeStreamWithBatch(String consumerName) {
-        log.debug("Stream consumer started: {}", consumerName);
+        log.info("[mmba-callback-queue] 消费循环启动 consumer={}", consumerName);
 
-        // 批量收集消息
         List<MapRecord<String, Object, Object>> pendingRecords = new ArrayList<>();
         long lastBatchTime = System.currentTimeMillis();
-        final long BATCH_TIMEOUT_MS = 1000; // 1秒超时
 
         while (!Thread.currentThread().isInterrupted() && running) {
             try {
-                // 1. 从Stream读取消息
-                List<MapRecord<String, Object, Object>> records = redisTemplate.opsForStream().read(
-                        Consumer.from(CONSUMER_GROUP, consumerName),
-                        StreamReadOptions.empty()
-                                .count(50)
-                                .block(Duration.ofSeconds(2)),
-                        StreamOffset.create(STREAM_KEY, ReadOffset.lastConsumed()));
+                // 先拉本 consumer 的 PEL（含退避未 ACK 的消息），避免只靠 ">" 永远拿不到
+                List<MapRecord<String, Object, Object>> pelBatch = Optional.ofNullable(
+                        redisTemplate.opsForStream().read(
+                                Consumer.from(CONSUMER_GROUP, consumerName),
+                                StreamReadOptions.empty().count(READ_BATCH_COUNT),
+                                StreamOffset.create(STREAM_KEY, ReadOffset.from("0"))))
+                        .orElse(Collections.emptyList());
 
-                // 2. 如果有消息，添加到批量队列
+                if (!CollectionUtils.isEmpty(pelBatch)) {
+                    pendingRecords.addAll(pelBatch);
+                    lastBatchTime = System.currentTimeMillis();
+                    log.debug("[mmba-callback-queue] 自 PEL 拉取 {} 条 consumer={}", pelBatch.size(), consumerName);
+                }
+
+                List<MapRecord<String, Object, Object>> records = Optional.ofNullable(
+                        redisTemplate.opsForStream().read(
+                                Consumer.from(CONSUMER_GROUP, consumerName),
+                                StreamReadOptions.empty()
+                                        .count(READ_BATCH_COUNT)
+                                        .block(READ_BLOCK),
+                                StreamOffset.create(STREAM_KEY, ReadOffset.lastConsumed())))
+                        .orElse(Collections.emptyList());
+
                 if (!CollectionUtils.isEmpty(records)) {
                     pendingRecords.addAll(records);
                     lastBatchTime = System.currentTimeMillis();
-                    log.debug("Collected {} records, total pending: {}", records.size(), pendingRecords.size());
+                    log.debug("[mmba-callback-queue] 自新消息拉取 {} 条 consumer={}", records.size(), consumerName);
                 }
 
-                // 3. 达到批量大小或超时，批量处理
                 long now = System.currentTimeMillis();
-                boolean shouldProcess = !pendingRecords.isEmpty() &&
-                        (pendingRecords.size() >= 20 || (now - lastBatchTime) >= BATCH_TIMEOUT_MS);
+                boolean shouldProcess = !pendingRecords.isEmpty()
+                        && (pendingRecords.size() >= BATCH_FLUSH_SIZE
+                        || (now - lastBatchTime) >= BATCH_FLUSH_TIMEOUT_MS);
 
                 if (shouldProcess) {
                     batchProcessRecords(pendingRecords, consumerName);
@@ -299,17 +325,13 @@ public class RedisStreamCallbackService implements SmartLifecycle {
                     lastBatchTime = now;
                 }
 
-                // 短暂休眠避免空转
-                if (CollectionUtils.isEmpty(records) && pendingRecords.isEmpty()) {
-                    Thread.sleep(100);
-                }
-
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.info("Stream consumer {} interrupted", consumerName);
-                break;
             } catch (Exception e) {
-                log.error("Stream consumer error", e);
+                if (e instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                    log.info("[mmba-callback-queue] 消费线程被中断 consumer={}", consumerName);
+                    break;
+                }
+                log.error("[mmba-callback-queue] 消费循环异常 consumer={}", consumerName, e);
                 try {
                     Thread.sleep(2000);
                 } catch (InterruptedException ie) {
@@ -319,21 +341,14 @@ public class RedisStreamCallbackService implements SmartLifecycle {
             }
         }
 
-        // 处理剩余的消息
         if (!pendingRecords.isEmpty()) {
             batchProcessRecords(pendingRecords, consumerName);
         }
 
-        log.debug("Stream consumer stopped: {}", consumerName);
+        log.info("[mmba-callback-queue] 消费循环结束 consumer={}", consumerName);
     }
 
-    /**
-     * 批量处理记录
-     */
     private void batchProcessRecords(List<MapRecord<String, Object, Object>> records, String consumerName) {
-        log.debug("Batch processing {} records", records.size());
-
-        // 过滤掉无效记录
         List<MapRecord<String, Object, Object>> validRecords = records.stream()
                 .filter(record -> {
                     Map<Object, Object> value = record.getValue();
@@ -342,68 +357,72 @@ public class RedisStreamCallbackService implements SmartLifecycle {
                 .collect(Collectors.toList());
 
         if (validRecords.isEmpty()) {
-            // 确认所有记录（包括init消息）
             acknowledgeRecords(records);
             return;
         }
 
-        // 批量提交任务
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-        Map<MapRecord<String, Object, Object>, CompletableFuture<Void>> recordFutureMap = new HashMap<>();
-
+        Map<MapRecord<String, Object, Object>, CompletableFuture<StreamMessageDisposition>> futureByRecord =
+                new LinkedHashMap<>(validRecords.size());
         for (MapRecord<String, Object, Object> record : validRecords) {
-            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-                processStreamRecordSync(record, consumerName);
-            }, consumerService);
-            futures.add(future);
-            recordFutureMap.put(record, future);
+            futureByRecord.put(record, CompletableFuture.supplyAsync(
+                    () -> processStreamRecord(record, consumerName),
+                    consumerService));
         }
 
-        // 等待所有任务完成或超时
+        CompletableFuture<?>[] all = futureByRecord.values().toArray(new CompletableFuture[0]);
         try {
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                    .get(30, TimeUnit.SECONDS);
-
-            // 所有任务成功，批量确认
-            acknowledgeRecords(validRecords);
-
+            CompletableFuture.allOf(all).get(BATCH_FUTURE_WAIT_SECONDS, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            log.warn("[mmba-callback-queue] 批次等待超时（{}s），按单条完成情况决定 ACK, consumer={}, batchSize={}",
+                    BATCH_FUTURE_WAIT_SECONDS, consumerName, validRecords.size(), e);
         } catch (Exception e) {
-            log.error("Batch processing failed, checking individual records", e);
+            log.error("[mmba-callback-queue] 批次等待异常 consumer={}", consumerName, e);
+        }
 
-            // 部分失败，逐个检查并确认成功的消息
-            for (MapRecord<String, Object, Object> record : validRecords) {
-                CompletableFuture<Void> future = recordFutureMap.get(record);
-                if (future != null && future.isDone() && !future.isCompletedExceptionally()) {
-                    // 任务成功完成，确认消息
-                    acknowledgeRecord(record);
-                } else {
-                    // 任务失败，不确认，等待重试
-                    log.warn("Record processing failed, will retry: {}", record.getId().getValue());
+        int acked = 0;
+        int pendingNoAck = 0;
+        for (Map.Entry<MapRecord<String, Object, Object>, CompletableFuture<StreamMessageDisposition>> e
+                : futureByRecord.entrySet()) {
+            MapRecord<String, Object, Object> record = e.getKey();
+            CompletableFuture<StreamMessageDisposition> future = e.getValue();
+            try {
+                if (!future.isDone()) {
+                    log.warn("[mmba-callback-queue] 任务未完成不 ACK: streamId={}", record.getId().getValue());
+                    continue;
                 }
+                if (future.isCompletedExceptionally()) {
+                    log.warn("[mmba-callback-queue] 任务异常完成不 ACK: streamId={}", record.getId().getValue());
+                    continue;
+                }
+                StreamMessageDisposition disposition = future.join();
+                if (disposition == StreamMessageDisposition.ACK) {
+                    acknowledgeRecord(record);
+                    acked++;
+                } else if (disposition == StreamMessageDisposition.PENDING_NO_ACK) {
+                    pendingNoAck++;
+                }
+            } catch (Exception ex) {
+                log.warn("[mmba-callback-queue] 解析单条处理结果失败不 ACK: streamId={}", record.getId().getValue(), ex);
             }
         }
 
-        // 确认非业务消息（如init消息）
+        log.info("[mmba-callback-queue] 批次处理结束 consumer={}, valid={}, acked={}, pendingNoAck={}",
+                consumerName, validRecords.size(), acked, pendingNoAck);
+
         records.stream()
                 .filter(record -> !validRecords.contains(record))
                 .forEach(this::acknowledgeRecord);
     }
 
-    /**
-     * 单个确认消息
-     */
     private void acknowledgeRecord(MapRecord<String, Object, Object> record) {
         try {
             redisTemplate.opsForStream()
                     .acknowledge(STREAM_KEY, CONSUMER_GROUP, record.getId());
         } catch (Exception e) {
-            log.error("Failed to acknowledge record: {}", record.getId().getValue(), e);
+            log.error("[mmba-callback-queue] XACK 失败 streamId={}", record.getId().getValue(), e);
         }
     }
 
-    /**
-     * 批量确认消息
-     */
     private void acknowledgeRecords(List<MapRecord<String, Object, Object>> records) {
         if (records.isEmpty()) {
             return;
@@ -415,41 +434,43 @@ public class RedisStreamCallbackService implements SmartLifecycle {
                     .toArray(RecordId[]::new);
             redisTemplate.opsForStream()
                     .acknowledge(STREAM_KEY, CONSUMER_GROUP, recordIds);
-            log.debug("Acknowledged {} records", recordIds.length);
+            log.debug("[mmba-callback-queue] 批量 XACK {} 条", recordIds.length);
         } catch (Exception e) {
-            log.error("Failed to batch acknowledge records", e);
-            // 失败时逐个确认
+            log.error("[mmba-callback-queue] 批量 XACK 失败，改为逐条", e);
             records.forEach(this::acknowledgeRecord);
         }
     }
 
     /**
-     * 同步处理Stream记录（支持重试）
+     * 处理单条 Stream 记录；不在 CompletableFuture 中向外抛异常，避免 allOf 语义混乱。
      */
-    private void processStreamRecordSync(MapRecord<String, Object, Object> record, String consumerName) {
-        // 增加处理计数
+    private StreamMessageDisposition processStreamRecord(MapRecord<String, Object, Object> record, String consumerName) {
         processingCount.incrementAndGet();
-
         String messageId = record.getId().getValue();
-        Map<Object, Object> value = record.getValue();
-
         try {
-            // 解析消息
+            Map<Object, Object> value = record.getValue();
             String dataJson = String.valueOf(value.get(MESSAGE_DTO_FIELD));
             String rawPayload = value.containsKey(MESSAGE_RAW_PAYLOAD_FIELD)
                     ? String.valueOf(value.get(MESSAGE_RAW_PAYLOAD_FIELD))
                     : null;
 
-            if(!StringUtils.hasText(dataJson)){
-                log.warn("Empty data in message: {}", messageId);
-                return;
+            if (!StringUtils.hasText(dataJson)) {
+                log.warn("[mmba-callback-queue] 无业务载荷，送入 DLQ: streamId={}", messageId);
+                handleFailedMessage(record, new IllegalArgumentException("empty ZZYAuditReceipt"));
+                return StreamMessageDisposition.ALREADY_ACKED;
             }
 
-            MmbaAuditRequest dto = JSON.parseObject(dataJson, MmbaAuditRequest.class);
-            dto.setRawPayload(rawPayload);
-            dto.hydrateDataRawPayload();
+            MmbaAuditRequest dto;
+            try {
+                dto = JSON.parseObject(dataJson, MmbaAuditRequest.class);
+                dto.setRawPayload(rawPayload);
+                dto.hydrateDataRawPayload();
+            } catch (Exception parseEx) {
+                log.error("[mmba-callback-queue] 反序列化失败，送入 DLQ: streamId={}", messageId, parseEx);
+                handleFailedMessage(record, parseEx);
+                return StreamMessageDisposition.ALREADY_ACKED;
+            }
 
-            // 获取重试信息
             int retryCount = 0;
             if (value.containsKey("retryCount")) {
                 retryCount = Integer.parseInt(String.valueOf(value.get("retryCount")));
@@ -460,33 +481,36 @@ public class RedisStreamCallbackService implements SmartLifecycle {
                 lastRetryTime = Long.parseLong(String.valueOf(value.get("lastRetryTime")));
             }
 
-            // 检查是否达到最大重试次数
-            int maxRetries = 3;
-            if (retryCount >= maxRetries) {
-                log.error("Message exceeded max retries ({}): {}", maxRetries, messageId);
+            if (retryCount >= MAX_PROCESS_ATTEMPTS) {
+                log.error("[mmba-callback-queue] 超过最大重试次数，送入 DLQ: streamId={}, retryCount={}",
+                        messageId, retryCount);
                 handleFailedMessage(record, new Exception("Max retries exceeded"));
-                return;
+                return StreamMessageDisposition.ALREADY_ACKED;
             }
 
-            // 检查延迟重试时间（指数退避）
             if (retryCount > 0 && lastRetryTime > 0) {
                 long delay = calculateBackoffDelay(retryCount);
                 long elapsed = System.currentTimeMillis() - lastRetryTime;
                 if (elapsed < delay) {
-                    log.debug("Message {} in retry delay, remaining: {}ms", messageId, delay - elapsed);
-                    return; // 未到重试时间，稍后处理
+                    log.info("[mmba-callback-queue] 退避中不 ACK，待 PEL 再次拉回: streamId={}, remainingMs={}, consumer={}",
+                            messageId, delay - elapsed, consumerName);
+                    return StreamMessageDisposition.PENDING_NO_ACK;
                 }
             }
 
-            // 先执行业务逻辑，成功后再确认（在批量处理中确认）
-            executeWithTenantContext(messageId, dto, retryCount);
-
+            try {
+                executeWithTenantContext(messageId, dto, retryCount);
+                log.debug("[mmba-callback-queue] 消费成功: streamId={}, behaviorType={}, consumer={}",
+                        messageId, dto.getBehaviorType(), consumerName);
+                return StreamMessageDisposition.ACK;
+            } catch (Exception businessEx) {
+                log.warn("[mmba-callback-queue] 业务失败，将重试或 DLQ: streamId={}", messageId, businessEx);
+                return handleProcessingFailureDisposition(record, businessEx);
+            }
         } catch (Exception e) {
-            log.error("Process stream record failed: {}", messageId, e);
-            // 处理失败，更新重试信息
-            handleProcessingFailure(record, e);
+            log.error("[mmba-callback-queue] 处理异常: streamId={}", messageId, e);
+            return handleProcessingFailureDisposition(record, e);
         } finally {
-            // 减少处理计数并通知
             int remaining = processingCount.decrementAndGet();
             synchronized (shutdownLock) {
                 if (remaining == 0 && !running) {
@@ -496,18 +520,12 @@ public class RedisStreamCallbackService implements SmartLifecycle {
         }
     }
 
-    /**
-     * 计算指数退避延迟时间
-     */
     private long calculateBackoffDelay(int retryCount) {
-        // 指数退避：1s, 2s, 4s, 8s
         return (long) Math.pow(2, retryCount - 1) * 1000;
     }
 
-    /**
-     * 处理失败，更新重试信息到Stream
-     */
-    private void handleProcessingFailure(MapRecord<String, Object, Object> record, Exception e) {
+    private StreamMessageDisposition handleProcessingFailureDisposition(MapRecord<String, Object, Object> record,
+                                                                          Exception e) {
         String messageId = record.getId().getValue();
         Map<Object, Object> value = record.getValue();
 
@@ -516,10 +534,8 @@ public class RedisStreamCallbackService implements SmartLifecycle {
             if (value.containsKey("retryCount")) {
                 retryCount = Integer.parseInt(String.valueOf(value.get("retryCount")));
             }
-
             retryCount++;
 
-            // 方案2：构建更新后的消息
             Map<String, Object> updatedMessage = new HashMap<>();
             for (Map.Entry<Object, Object> entry : value.entrySet()) {
                 updatedMessage.put(String.valueOf(entry.getKey()), entry.getValue());
@@ -528,69 +544,51 @@ public class RedisStreamCallbackService implements SmartLifecycle {
             updatedMessage.put("lastRetryTime", System.currentTimeMillis());
             updatedMessage.put("lastError", e.getMessage());
 
-            // 添加新消息到Stream（保留原消息，通过重试次数控制）
             RecordId newRecordId = redisTemplate.opsForStream()
                     .add(StreamRecords.newRecord().in(STREAM_KEY).ofMap(updatedMessage));
 
-            log.info("Message {} retry scheduled (attempt {}), new id: {}",
-                    messageId, retryCount, newRecordId);
+            acknowledgeRecord(record);
 
-            // 方案2：删除原消息或等待超时自动清理
-            // 注意：这里不删除原消息，让它在超时后重新投递
-
+            log.info("[mmba-callback-queue] 已写重试尾消息并 XACK 原消息: oldId={}, newId={}, attempt={}",
+                    messageId, newRecordId != null ? newRecordId.getValue() : "null", retryCount);
+            return StreamMessageDisposition.ALREADY_ACKED;
         } catch (Exception ex) {
-            log.error("Failed to update retry info for message: {}", messageId, ex);
-            // 方案2：更新失败，记录到死信队列
+            log.error("[mmba-callback-queue] 调度重试失败，转入 DLQ: streamId={}", messageId, ex);
             handleFailedMessage(record, e);
+            return StreamMessageDisposition.ALREADY_ACKED;
         }
     }
 
-    /**
-     * 方案1：在租户上下文中执行业务逻辑
-     */
     private void executeWithTenantContext(String messageId, MmbaAuditRequest dto, int retryCount) {
-        try {
-            // 执行业务逻辑
-            ZZYConsumerService consumer = abstractZZYConsumerMap.get(
-                    MmbaBehaviorTypes.SUPPORTED.get(dto.getBehaviorType()));
-            if (consumer != null) {
-                consumer.mainProcess(dto);
-                log.debug("Message processed successfully: {}, retryCount: {}", messageId, retryCount);
-            } else {
-                log.warn("No consumer found for behavior type: {}", dto.getBehaviorType());
-            }
-        } catch (Exception e) {
-            log.error("Business logic failed: {}", messageId, e);
-            throw new RuntimeException("Business logic execution failed", e);
+        ZZYConsumerService consumer = abstractZZYConsumerMap.get(
+                MmbaBehaviorTypes.SUPPORTED.get(dto.getBehaviorType()));
+        if (consumer != null) {
+            consumer.mainProcess(dto);
+            log.debug("[mmba-callback-queue] 业务处理结束: streamId={}, retryCount={}", messageId, retryCount);
+        } else {
+            log.warn("[mmba-callback-queue] 无对应消费者仍确认消息（避免阻塞通道）: streamId={}, behaviorType={}",
+                    messageId, dto.getBehaviorType());
         }
     }
 
-    /**
-     * 处理失败的消息（死信队列）
-     */
     private void handleFailedMessage(MapRecord<String, Object, Object> record, Exception e) {
         try {
             Map<Object, Object> value = record.getValue();
             String messageId = record.getId().getValue();
 
-            log.error("Moving message to DLQ: id={}, error={}", messageId, e.getMessage());
-
-            // 写入死信Stream
             Map<String, Object> dlqMessage = new HashMap<>();
-            value.forEach((key, val) -> {
-                dlqMessage.put(String.valueOf(key), val);
-            });
+            value.forEach((key, val) -> dlqMessage.put(String.valueOf(key), val));
             dlqMessage.put("error", e.getMessage());
             dlqMessage.put("failedAt", System.currentTimeMillis());
-            dlqMessage.put("failedFrom", instanceId);
+            dlqMessage.put("failedFrom", instanceTag);
 
-            redisTemplate.opsForStream().add(DLQ_KEY, dlqMessage);
-
-            // 确认原消息，避免无限重试
+            RecordId dlqId = redisTemplate.opsForStream().add(DLQ_KEY, dlqMessage);
             acknowledgeRecord(record);
 
+            log.error("[mmba-callback-queue] 已进入死信: streamId={}, dlqId={}, err={}",
+                    messageId, dlqId != null ? dlqId.getValue() : "null", e.getMessage());
         } catch (Exception ex) {
-            log.error("Handle failed message error", ex);
+            log.error("[mmba-callback-queue] 写入死信失败 streamId={}", record.getId().getValue(), ex);
         }
     }
 }

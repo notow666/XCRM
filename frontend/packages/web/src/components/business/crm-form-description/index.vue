@@ -16,7 +16,7 @@
       <template #image="{ item }">
         <n-image-group>
           <n-space :class="`${props.valueAlign ?? '!justify-end'}`">
-            <n-image v-for="img in item.value" :key="img" :src="`${PreviewPictureUrl}/${img}`" width="40" height="40" />
+            <n-image v-for="img in item.value" :key="img" :src="getPicturePreviewSrc(img)" width="40" height="40" />
           </n-space>
         </n-image-group>
       </template>
@@ -197,7 +197,7 @@
 <script setup lang="ts">
   import { NButton, NImage, NImageGroup, NSpace, NSpin, NTooltip, useMessage } from 'naive-ui';
 
-  import { PreviewPictureUrl } from '@lib/shared/api/requrls/system/module';
+  import { getPicturePreviewSrc } from '@lib/shared/api/requrls/system/module';
   import { FieldDataSourceTypeEnum, FieldTypeEnum, FormDesignKeyEnum } from '@lib/shared/enums/formDesignEnum';
   import { useI18n } from '@lib/shared/hooks/useI18n';
   import { CollaborationType } from '@lib/shared/models/customer';
