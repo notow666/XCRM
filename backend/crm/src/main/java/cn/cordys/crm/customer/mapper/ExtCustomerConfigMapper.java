@@ -20,6 +20,8 @@ public interface ExtCustomerConfigMapper {
 
     List<CustomerFollowWayConfig> getFollowWayList(@Param("orgId") String orgId);
 
+    CustomerFollowWayConfig findFollowWayByName(@Param("name") String name);
+
     void insertFollowWay(@Param("config") CustomerFollowWayConfig config);
 
     void updateFollowWay(@Param("config") CustomerFollowWayConfig config);

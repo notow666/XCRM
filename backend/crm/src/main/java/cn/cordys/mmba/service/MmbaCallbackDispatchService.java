@@ -58,6 +58,8 @@ public class MmbaCallbackDispatchService {
     private CustomerCallStatusService customerCallStatusService;
     @Resource
     private CustomerWechatFriendStatusService customerWechatFriendStatusService;
+    @Resource
+    private MmbaAutoCustomerFollowService mmbaAutoCustomerFollowService;
 
     /**
      * 审计类回调分发。
@@ -68,14 +70,24 @@ public class MmbaCallbackDispatchService {
                     callbackRecord.getId(), dto.getBehaviorType(), data.getReqId(), data.getEsId(), data.getTenantId());
             switch (dto.getBehaviorType()) {
                 case MmbaBehaviorTypes.CALL_RECORD_AUDIT -> {
+                    MmbaCallRecordAudit previousCallAudit = mmbaAuditPersistenceService.findCallAuditByEsId(data.getEsId());
                     MmbaCallRecordAudit callAudit = mmbaAuditPersistenceService.saveOrUpdateCallAudit(
                             buildCallAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER
                     );
                     upgradeCustomerCallStatus(callAudit.getCustomerId(), callAudit.getCustomerTel(), callAudit.getUm(),
                             resolveAuditCustomerCallStatus(callAudit), callbackRecord.getId());
+                    mmbaAutoCustomerFollowService.handleConnectedCall(previousCallAudit, callAudit);
                 }
-                case MmbaBehaviorTypes.SMS_RECORD_AUDIT -> mmbaAuditPersistenceService.saveOrUpdateSmsAudit(buildSmsAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
-                case MmbaBehaviorTypes.WX_CHAT_AUDIT -> mmbaAuditPersistenceService.saveOrUpdateWxChatAudit(buildWxChatAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
+                case MmbaBehaviorTypes.SMS_RECORD_AUDIT -> {
+                    MmbaSmsRecordAudit previousSmsAudit = mmbaAuditPersistenceService.findSmsAuditByEsId(data.getEsId());
+                    MmbaSmsRecordAudit smsAudit = mmbaAuditPersistenceService.saveOrUpdateSmsAudit(buildSmsAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
+                    mmbaAutoCustomerFollowService.handleSmsDelivered(previousSmsAudit, smsAudit);
+                }
+                case MmbaBehaviorTypes.WX_CHAT_AUDIT -> {
+                    MmbaWxChatAudit previousWxChatAudit = mmbaAuditPersistenceService.findWxChatAuditByEsId(data.getEsId());
+                    MmbaWxChatAudit wxChatAudit = mmbaAuditPersistenceService.saveOrUpdateWxChatAudit(buildWxChatAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
+                    mmbaAutoCustomerFollowService.handleWxChatSuccess(previousWxChatAudit, wxChatAudit);
+                }
                 case MmbaBehaviorTypes.WX_FRIEND_CHANGE_AUDIT -> {
                     mmbaAuditPersistenceService.saveOrUpdateWxFriendChangeAudit(buildWxFriendChangeAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
                     customerWechatFriendStatusService.handleFriendChangeAudit(
@@ -109,7 +121,9 @@ public class MmbaCallbackDispatchService {
         for (ZzyData data : dto.getData()) {
             log.info("MMBA结果回调分发 callbackRecordId={} behaviorType={} reqId={} tenantId={}",
                     callbackRecord.getId(), dto.getBehaviorType(), data.getReqId(), data.getTenantId());
-            mmbaCommandResultService.saveOrUpdate(buildCommandResult(dto.getBehaviorType(), data, callbackRecord), MmbaConstants.SYSTEM_USER);
+            MmbaCommandResult commandResult = mmbaCommandResultService.saveOrUpdate(
+                    buildCommandResult(dto.getBehaviorType(), data, callbackRecord), MmbaConstants.SYSTEM_USER
+            );
             if (dto.getBehaviorType() == MmbaBehaviorTypes.DIAL_FAIL_RECEIPT) {
                 upgradeCustomerCallStatus(resolveCustomerId(data.getBizExtInfo()), data.getCustomerTel(), data.getUm(),
                         CustomerCallStatusService.DIALED_NOT_CONNECTED, callbackRecord.getId());
@@ -181,6 +195,7 @@ public class MmbaCallbackDispatchService {
         record.setCardSlotNum(data.getCardSlotNum());
         record.setDirection(toInteger(data.getDirection()));
         record.setType(toInteger(data.getType()));
+        record.setSentStatus(toInteger(firstNotBlank(data.getSentStatus(), data.getStatus())));
         record.setCreateTime(data.getCreateTime());
         record.setTimestamp(data.getTimestamp());
         record.setInsertTime(data.getInsertTime());

@@ -45,8 +45,20 @@ public class MmbaAuditPersistenceService {
         return saveOrReplaceByEsId(record, mmbaCallRecordAuditMapper);
     }
 
+    public MmbaCallRecordAudit findCallAuditByEsId(String esId) {
+        return esId == null ? null : mmbaCallRecordAuditMapper.selectByPrimaryKey(esId);
+    }
+
     public MmbaSmsRecordAudit saveOrUpdateSmsAudit(MmbaSmsRecordAudit record, String userId) {
         return saveOrReplaceByEsId(record, mmbaSmsRecordAuditMapper);
+    }
+
+    public MmbaSmsRecordAudit findSmsAuditByEsId(String esId) {
+        return esId == null ? null : mmbaSmsRecordAuditMapper.selectByPrimaryKey(esId);
+    }
+
+    public MmbaWxChatAudit findWxChatAuditByEsId(String esId) {
+        return esId == null ? null : mmbaWxChatAuditMapper.selectByPrimaryKey(esId);
     }
 
     public MmbaWxAccountAudit saveOrUpdateWxAccountAudit(MmbaWxAccountAudit record, String userId) {

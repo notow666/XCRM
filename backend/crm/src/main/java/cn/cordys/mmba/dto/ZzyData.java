@@ -398,6 +398,10 @@ public class ZzyData implements Serializable {
      */
     private String type;
     /**
+     * 短信送达状态：1-已送达，2-未知，-1-无送达状态
+     */
+    private String sentStatus;
+    /**
      * 微信消息类型
      */
     private String msgType;

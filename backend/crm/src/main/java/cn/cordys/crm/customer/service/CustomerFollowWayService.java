@@ -42,6 +42,10 @@ public class CustomerFollowWayService {
         }).toList();
     }
 
+    public CustomerFollowWayConfig findByName(String name) {
+        return extCustomerConfigMapper.findFollowWayByName(name);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void add(CustomerFollowWayAddRequest request, String userId, String orgId) {
         List<CustomerFollowWayConfig> existingList = extCustomerConfigMapper.getFollowWayList(orgId);

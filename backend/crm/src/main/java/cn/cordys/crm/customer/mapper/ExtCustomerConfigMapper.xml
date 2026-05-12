@@ -40,6 +40,14 @@
         ORDER BY pos ASC
     </select>
 
+    <select id="findFollowWayByName" resultType="cn.cordys.crm.customer.domain.CustomerFollowWayConfig">
+        SELECT *
+        FROM customer_follow_way_config
+        WHERE name = #{name}
+        ORDER BY update_time DESC, create_time DESC
+        LIMIT 1
+    </select>
+
     <insert id="insertFollowWay" parameterType="cn.cordys.crm.customer.domain.CustomerFollowWayConfig">
         INSERT INTO customer_follow_way_config (id, name, pos, organization_id, create_time, update_time, create_user, update_user)
         VALUES (#{config.id}, #{config.name}, #{config.pos}, #{config.organizationId}, #{config.createTime}, #{config.updateTime}, #{config.createUser}, #{config.updateUser})

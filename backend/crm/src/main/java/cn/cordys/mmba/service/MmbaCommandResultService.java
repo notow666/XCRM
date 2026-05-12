@@ -51,6 +51,16 @@ public class MmbaCommandResultService {
         return record;
     }
 
+//    public MmbaCommandResult findByReqIdAndBehaviorType(String reqId, Integer behaviorType) {
+//        if (StringUtils.isBlank(reqId) || behaviorType == null) {
+//            return null;
+//        }
+//        MmbaCommandResult query = new MmbaCommandResult();
+//        query.setReqId(reqId);
+//        query.setBehaviorType(behaviorType);
+//        return mmbaCommandResultMapper.selectOne(query);
+//    }
+
     /**
      * 初始化新增记录的通用审计字段。
      */

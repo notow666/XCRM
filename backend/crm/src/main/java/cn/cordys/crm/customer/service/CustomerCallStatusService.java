@@ -37,7 +37,7 @@ public class CustomerCallStatusService {
         if (targetStatus == null || targetStatus < DIALED_NOT_CONNECTED) {
             return;
         }
-        Customer customer = findCustomer(customerId, customerTel, um);
+        Customer customer = findCustomer(customerTel, um);
         if (customer == null) {
             log.warn("客户拨打状态更新跳过，未找到客户 customerId={} customerTel={} um={} targetStatus={}",
                     customerId, customerTel, um, targetStatus);
@@ -52,10 +52,7 @@ public class CustomerCallStatusService {
                 customer.getId(), customer.getMobile(), currentStatus, targetStatus);
     }
 
-    private Customer findCustomer(String customerId, String customerTel, String um) {
-        if (StringUtils.isNotBlank(customerId)) {
-            return customerMapper.selectByPrimaryKey(customerId);
-        }
+    private Customer findCustomer(String customerTel, String um) {
         String mobile = StringUtils.trimToNull(customerTel);
         String normalizedUm = StringUtils.trimToNull(um);
         if (mobile == null || normalizedUm == null) {
