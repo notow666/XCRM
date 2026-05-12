@@ -1,5 +1,6 @@
 package cn.cordys.crm.customer.service;
 
+import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.dto.OptionDTO;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.crm.customer.domain.CustomerFollowWayConfig;
@@ -12,12 +13,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Set;
 import java.util.List;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class CustomerFollowWayService {
+
+    private static final Set<String> BUILT_IN_FOLLOW_WAY_NAMES = Set.of("电话", "短信", "微信", "接待");
 
     private final ExtCustomerConfigMapper extCustomerConfigMapper;
 
@@ -69,6 +73,9 @@ public class CustomerFollowWayService {
 
     @Transactional(rollbackFor = Exception.class)
     public void update(CustomerFollowWayUpdateRequest request, String userId, String orgId) {
+        CustomerFollowWayConfig configInDb = getConfigById(request.getId(), orgId);
+        validateBuiltInFollowWay(configInDb);
+
         CustomerFollowWayConfig config = new CustomerFollowWayConfig();
         config.setId(request.getId());
         config.setName(request.getName());
@@ -81,6 +88,21 @@ public class CustomerFollowWayService {
 
     @Transactional(rollbackFor = Exception.class)
     public void delete(String id, String orgId) {
+        CustomerFollowWayConfig configInDb = getConfigById(id, orgId);
+        validateBuiltInFollowWay(configInDb);
         extCustomerConfigMapper.deleteFollowWay(id, orgId);
+    }
+
+    private CustomerFollowWayConfig getConfigById(String id, String orgId) {
+        return extCustomerConfigMapper.getFollowWayList(orgId).stream()
+                .filter(config -> id.equals(config.getId()))
+                .findFirst()
+                .orElseThrow(() -> new GenericException("跟进方式不存在"));
+    }
+
+    private void validateBuiltInFollowWay(CustomerFollowWayConfig config) {
+        if (BUILT_IN_FOLLOW_WAY_NAMES.contains(config.getName())) {
+            throw new GenericException("电话、短信、微信、接待为系统默认跟进方式，不允许编辑或删除");
+        }
     }
 }

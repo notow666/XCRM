@@ -25,6 +25,7 @@
           draggable
           :disabled-add="form.list.length >= 50"
           :pop-confirm-props="getConfirmPropsFun"
+          :can-edit="(element) => !isReadonlyFollowWay(element)"
           @delete-row="handleDelete"
           @save-row="handleSave"
           @drag="dragEnd"
@@ -69,6 +70,7 @@
   });
 
   const title = computed(() => props.title);
+  const readonlyFollowWayNames = new Set(['电话', '短信', '微信', '接待']);
 
   const addText = computed(() =>
     props.type === 'failReason' ? t('crmReasonDrawer.addFailReason') : t('crmReasonDrawer.addFollowWay')
@@ -82,6 +84,10 @@
   const addApi = computed(() => (props.type === 'failReason' ? addCustomerFailReason : addCustomerFollowWay));
   const updateApi = computed(() => (props.type === 'failReason' ? updateCustomerFailReason : updateCustomerFollowWay));
   const deleteApi = computed(() => (props.type === 'failReason' ? deleteCustomerFailReason : deleteCustomerFollowWay));
+
+  function isReadonlyFollowWay(element: Record<string, any>) {
+    return props.type === 'followWay' && readonlyFollowWayNames.has(element.name);
+  }
 
   const formItemModel = ref([
     {
@@ -107,7 +113,7 @@
       title: t('crmReasonDrawer.deleteTitleTip', { title: props.title }),
       content: t('crmReasonDrawer.deleteContentTip'),
       positiveText: t('common.remove'),
-      disabled: form.value.list.length === 1 && i === 0,
+      disabled: (form.value.list.length === 1 && i === 0) || isReadonlyFollowWay(form.value.list[i] ?? {}),
       loading: popConfirmLoading.value,
     };
   }

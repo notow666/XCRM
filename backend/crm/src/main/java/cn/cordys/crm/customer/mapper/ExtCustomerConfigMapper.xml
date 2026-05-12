@@ -56,7 +56,9 @@
     <update id="updateFollowWay" parameterType="cn.cordys.crm.customer.domain.CustomerFollowWayConfig">
         UPDATE customer_follow_way_config
         SET name = #{config.name},
-            pos = #{config.pos},
+            <if test="config.pos != null">
+                pos = #{config.pos},
+            </if>
             update_time = #{config.updateTime},
             update_user = #{config.updateUser}
         WHERE id = #{config.id} AND organization_id = #{config.organizationId}
