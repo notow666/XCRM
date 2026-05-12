@@ -72,6 +72,9 @@ public final class MmbaDeviceImportDict {
     }
 
     public static String parseDeviceStatus(Integer raw) {
+        if (raw == null) {
+            return "";
+        }
         if (!DEVICE_STATUS_CODES.contains(raw)) {
             return "";
         }
