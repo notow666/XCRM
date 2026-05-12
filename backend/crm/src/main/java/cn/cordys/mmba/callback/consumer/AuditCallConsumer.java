@@ -35,8 +35,9 @@ public class AuditCallConsumer extends AbstractZZYConsumer {
 
     @Override
     public void process(MmbaAuditRequest dto) {
-        log.info("MMBA审计回调开始消费 behaviorType={} tenancyName={} contextTenantId={} count={}",
-                dto.getBehaviorType(), dto.getTenancyName(), TenantContext.getTenantId(), dto.getData() == null ? 0 : dto.getData().size());
+        log.info("MMBA审计回调开始消费 streamId={} consumer={} behaviorType={} tenancyName={} contextTenantId={} count={}",
+                dto.getStreamId(), dto.getStreamConsumer(), dto.getBehaviorType(), dto.getTenancyName(),
+                TenantContext.getTenantId(), dto.getData() == null ? 0 : dto.getData().size());
         log.debug("AuditCallConsumer payload={}", dto.getRawPayload());
         for (Map.Entry<String, List<ZzyData>> entry : groupByTenant(dto).entrySet()) {
             String previousTenantId = TenantContext.getTenantId();
@@ -50,15 +51,18 @@ public class AuditCallConsumer extends AbstractZZYConsumer {
                     continue;
                 }
                 MmbaCallbackRecord callbackRecord = prepareResult.getCallbackRecord();
-                log.info("MMBA审计回调切换租户 callbackRecordId={} behaviorType={} tenantId={} recordCount={}",
-                        callbackRecord.getId(), dto.getBehaviorType(), tenantId, entry.getValue().size());
+                log.info("MMBA审计回调切换租户 streamId={} consumer={} callbackRecordId={} behaviorType={} tenantId={} recordCount={} reqId={} esId={}",
+                        tenantDto.getStreamId(), tenantDto.getStreamConsumer(), callbackRecord.getId(),
+                        dto.getBehaviorType(), tenantId, entry.getValue().size(),
+                        firstReqId(entry.getValue()), firstEsId(entry.getValue()));
                 mmbaCallbackDispatchService.dispatchAudit(tenantDto, callbackRecord);
-                mmbaCallbackProcessService.markSuccess(callbackRecord);
+                mmbaCallbackProcessService.markSuccess(callbackRecord, tenantDto);
             } catch (Exception e) {
-                log.error("审计回调数据处理异常 contextTenantId={} message={} dto={}",
+                log.error("审计回调数据处理异常 streamId={} consumer={} contextTenantId={} message={} dto={}",
+                        tenantDto.getStreamId(), tenantDto.getStreamConsumer(),
                         TenantContext.getTenantId(), e.getMessage(), JSON.toJSONString(tenantDto), e);
                 if (prepareResult != null && prepareResult.shouldProcess()) {
-                    mmbaCallbackProcessService.markFailed(prepareResult.getCallbackRecord(), e);
+                    mmbaCallbackProcessService.markFailed(prepareResult.getCallbackRecord(), tenantDto, e);
                 }
                 throw e;
             } finally {
@@ -80,5 +84,13 @@ public class AuditCallConsumer extends AbstractZZYConsumer {
             tenantDataMap.computeIfAbsent(zzy.getTenantId(), key -> new ArrayList<>()).add(zzy);
         }
         return tenantDataMap;
+    }
+
+    private String firstReqId(List<ZzyData> dataList) {
+        return dataList == null || dataList.isEmpty() ? null : dataList.get(0).getReqId();
+    }
+
+    private String firstEsId(List<ZzyData> dataList) {
+        return dataList == null || dataList.isEmpty() ? null : dataList.get(0).getEsId();
     }
 }

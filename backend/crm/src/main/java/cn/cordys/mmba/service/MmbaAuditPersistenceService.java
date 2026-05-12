@@ -11,6 +11,8 @@ import cn.cordys.mmba.domain.MmbaWxFriendListAudit;
 import cn.cordys.mmba.domain.MmbaWxLoginAudit;
 import cn.cordys.mybatis.BaseMapper;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
  * 1. call/sms/wx* 这几张表直接按 esId 做主键和幂等；
  * 2. deviceInfo/deviceStatus/wxLogin 保留本地 id，但不再依赖 BaseModel 或 organization_id。
  */
+@Slf4j
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class MmbaAuditPersistenceService {
@@ -109,10 +112,16 @@ public class MmbaAuditPersistenceService {
     }
 
     private <T> T saveOrReplaceByEsId(T record, BaseMapper<T> mapper) {
-        Object esId = readEsId(record);
-        T db = mapper.selectByPrimaryKey((String) esId);
+        String esId = (String) readEsId(record);
+        T db = mapper.selectByPrimaryKey(esId);
         if (db == null) {
-            mapper.insert(record);
+            try {
+                mapper.insert(record);
+            } catch (DuplicateKeyException e) {
+                // 并发消费同一 esId 时，其他线程可能已经完成插入，这里直接转更新即可。
+                log.info("MMBA审计并发幂等转更新 esId={} entity={}", esId, record.getClass().getSimpleName());
+                mapper.update(record);
+            }
             return record;
         }
         mapper.update(record);

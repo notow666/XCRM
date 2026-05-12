@@ -33,13 +33,15 @@ public class MmbaAuditRequest implements Serializable {
     private String tenancyName;
     private List<ZzyData> data;
     private transient String rawPayload;
+    private transient String streamId;
+    private transient String streamConsumer;
 
     public MmbaAuditRequest withSingleData(ZzyData singleData) {
         return copyWithData(Collections.singletonList(singleData));
     }
 
     public MmbaAuditRequest copyWithData(List<ZzyData> newData) {
-        MmbaAuditRequest request = new MmbaAuditRequest(behaviorType, tenancyName, newData, null);
+        MmbaAuditRequest request = new MmbaAuditRequest(behaviorType, tenancyName, newData, null, streamId, streamConsumer);
         request.setRawPayload(buildPayloadRaw(newData));
         return request;
     }
@@ -89,7 +91,7 @@ public class MmbaAuditRequest implements Serializable {
 
     public String buildPayloadRaw(List<ZzyData> selectedData) {
         if (!StringUtils.hasText(rawPayload)) {
-            return JSON.toJSONString(new MmbaAuditRequest(behaviorType, tenancyName, selectedData, null));
+            return JSON.toJSONString(new MmbaAuditRequest(behaviorType, tenancyName, selectedData, null, null, null));
         }
         JsonNode root = JSON.parseObject(rawPayload, JsonNode.class);
         if (!(root instanceof ObjectNode)) {

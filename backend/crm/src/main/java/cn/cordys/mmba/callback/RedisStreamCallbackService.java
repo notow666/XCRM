@@ -280,7 +280,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
     private void consumeStreamWithBatch(String consumerName) {
         log.info("[mmba-callback-queue] 消费循环启动 consumer={}", consumerName);
 
-        List<MapRecord<String, Object, Object>> pendingRecords = new ArrayList<>();
+        LinkedHashMap<String, MapRecord<String, Object, Object>> pendingRecordMap = new LinkedHashMap<>();
         long lastBatchTime = System.currentTimeMillis();
 
         while (!Thread.currentThread().isInterrupted() && running) {
@@ -294,7 +294,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
                         .orElse(Collections.emptyList());
 
                 if (!CollectionUtils.isEmpty(pelBatch)) {
-                    pendingRecords.addAll(pelBatch);
+                    mergePendingRecords(pendingRecordMap, pelBatch, consumerName, "PEL");
                     lastBatchTime = System.currentTimeMillis();
                     log.debug("[mmba-callback-queue] 自 PEL 拉取 {} 条 consumer={}", pelBatch.size(), consumerName);
                 }
@@ -309,19 +309,19 @@ public class RedisStreamCallbackService implements SmartLifecycle {
                         .orElse(Collections.emptyList());
 
                 if (!CollectionUtils.isEmpty(records)) {
-                    pendingRecords.addAll(records);
+                    mergePendingRecords(pendingRecordMap, records, consumerName, "NEW");
                     lastBatchTime = System.currentTimeMillis();
                     log.debug("[mmba-callback-queue] 自新消息拉取 {} 条 consumer={}", records.size(), consumerName);
                 }
 
                 long now = System.currentTimeMillis();
-                boolean shouldProcess = !pendingRecords.isEmpty()
-                        && (pendingRecords.size() >= BATCH_FLUSH_SIZE
+                boolean shouldProcess = !pendingRecordMap.isEmpty()
+                        && (pendingRecordMap.size() >= BATCH_FLUSH_SIZE
                         || (now - lastBatchTime) >= BATCH_FLUSH_TIMEOUT_MS);
 
                 if (shouldProcess) {
-                    batchProcessRecords(pendingRecords, consumerName);
-                    pendingRecords.clear();
+                    batchProcessRecords(new ArrayList<>(pendingRecordMap.values()), consumerName);
+                    pendingRecordMap.clear();
                     lastBatchTime = now;
                 }
 
@@ -341,11 +341,25 @@ public class RedisStreamCallbackService implements SmartLifecycle {
             }
         }
 
-        if (!pendingRecords.isEmpty()) {
-            batchProcessRecords(pendingRecords, consumerName);
+        if (!pendingRecordMap.isEmpty()) {
+            batchProcessRecords(new ArrayList<>(pendingRecordMap.values()), consumerName);
         }
 
         log.info("[mmba-callback-queue] 消费循环结束 consumer={}", consumerName);
+    }
+
+    private void mergePendingRecords(LinkedHashMap<String, MapRecord<String, Object, Object>> pendingRecordMap,
+                                     List<MapRecord<String, Object, Object>> sourceRecords,
+                                     String consumerName,
+                                     String sourceType) {
+        for (MapRecord<String, Object, Object> record : sourceRecords) {
+            String streamId = record.getId().getValue();
+            MapRecord<String, Object, Object> previous = pendingRecordMap.putIfAbsent(streamId, record);
+            if (previous != null) {
+                log.info("[mmba-callback-queue] 批次内命中重复消息，已跳过 streamId={}, consumer={}, source={}",
+                        streamId, consumerName, sourceType);
+            }
+        }
     }
 
     private void batchProcessRecords(List<MapRecord<String, Object, Object>> records, String consumerName) {
@@ -464,6 +478,8 @@ public class RedisStreamCallbackService implements SmartLifecycle {
             try {
                 dto = JSON.parseObject(dataJson, MmbaAuditRequest.class);
                 dto.setRawPayload(rawPayload);
+                dto.setStreamId(messageId);
+                dto.setStreamConsumer(consumerName);
                 dto.hydrateDataRawPayload();
             } catch (Exception parseEx) {
                 log.error("[mmba-callback-queue] 反序列化失败，送入 DLQ: streamId={}", messageId, parseEx);
@@ -499,6 +515,9 @@ public class RedisStreamCallbackService implements SmartLifecycle {
             }
 
             try {
+                log.info("[mmba-callback-queue] 准备执行业务 streamId={}, consumer={}, behaviorType={}, retryCount={}, dataCount={}",
+                        messageId, consumerName, dto.getBehaviorType(), retryCount,
+                        dto.getData() == null ? 0 : dto.getData().size());
                 executeWithTenantContext(messageId, dto, retryCount);
                 log.debug("[mmba-callback-queue] 消费成功: streamId={}, behaviorType={}, consumer={}",
                         messageId, dto.getBehaviorType(), consumerName);
@@ -563,6 +582,8 @@ public class RedisStreamCallbackService implements SmartLifecycle {
         ZZYConsumerService consumer = abstractZZYConsumerMap.get(
                 MmbaBehaviorTypes.SUPPORTED.get(dto.getBehaviorType()));
         if (consumer != null) {
+            log.info("[mmba-callback-queue] 分发消费者 streamId={}, consumer={}, group={}, behaviorType={}, retryCount={}",
+                    messageId, dto.getStreamConsumer(), consumer.group(), dto.getBehaviorType(), retryCount);
             consumer.mainProcess(dto);
             log.debug("[mmba-callback-queue] 业务处理结束: streamId={}, retryCount={}", messageId, retryCount);
         } else {
