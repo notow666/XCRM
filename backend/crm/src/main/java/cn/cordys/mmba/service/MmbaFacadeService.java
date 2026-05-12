@@ -6,6 +6,7 @@ import cn.cordys.common.util.JSON;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.context.TenantContext;
+import cn.cordys.crm.customer.domain.Customer;
 import cn.cordys.crm.system.domain.User;
 import cn.cordys.mmba.MmbaApiPaths;
 import cn.cordys.mmba.MmbaBizTypes;
@@ -60,6 +61,8 @@ public class MmbaFacadeService {
     private MmbaDeviceService mmbaDeviceService;
     @Resource
     private BaseMapper<User> userBaseMapper;
+    @Resource
+    private BaseMapper<Customer> customerMapper;
 
     /**
      * 拨打电话。
@@ -110,7 +113,7 @@ public class MmbaFacadeService {
         return executeJson(
                 MmbaBizTypes.WX_FRIEND_ADD,
                 MmbaApiPaths.IM_ADD_FRIEND,
-                enrichAddWxFriendRequest(request, userId),
+                enrichAddWxFriendRequest(request, userId, organizationId),
                 userId,
                 organizationId,
                 mmbaIntegrationService::addWxFriend
@@ -350,6 +353,13 @@ public class MmbaFacadeService {
         if (cardSlotNum != null) {
             ensureCardSlotAvailable(um, cardSlotNum, userId, organizationId, "拨打电话");
         }
+        String customerId = payload.path("bizExtInfo").path("customerId").asText(null);
+        if (StringUtils.isNotBlank(customerId)) {
+            Customer customer = customerMapper.selectByPrimaryKey(customerId);
+            if (customer != null && StringUtils.isNotBlank(customer.getMobile())) {
+                payload.put("toPhone", customer.getMobile());
+            }
+        }
         return payload;
     }
 
@@ -363,6 +373,13 @@ public class MmbaFacadeService {
         Integer cardSlotNum = readCardSlotNum(payload, "发送短信");
         if (cardSlotNum != null) {
             ensureCardSlotAvailable(um, cardSlotNum, userId, organizationId, "发送短信");
+        }
+        String customerId = payload.path("bizExtInfo").path("customerId").asText(null);
+        if (StringUtils.isNotBlank(customerId)) {
+            Customer customer = customerMapper.selectByPrimaryKey(customerId);
+            if (customer != null && StringUtils.isNotBlank(customer.getMobile())) {
+                payload.put("toPhone", customer.getMobile());
+            }
         }
         return payload;
     }
@@ -408,8 +425,16 @@ public class MmbaFacadeService {
         return StringUtils.isNotBlank(device.getPhone2()) || StringUtils.isNotBlank(device.getIccid2());
     }
 
-    private ObjectNode enrichAddWxFriendRequest(JsonNode request, String userId) {
+    private ObjectNode enrichAddWxFriendRequest(JsonNode request, String userId, String organizationId) {
         ObjectNode payload = normalizeRequest(request);
+        String customerId = payload.path("bizExtInfo").path("customerId").asText(null);
+        if (StringUtils.isNotBlank(customerId)) {
+            Customer customer = customerMapper.selectByPrimaryKey(customerId);
+            if (customer != null && StringUtils.isNotBlank(customer.getMobile())) {
+                payload.put("friendPhone", customer.getMobile());
+                payload.put("friendSearch", customer.getMobile());
+            }
+        }
         if (StringUtils.isBlank(payload.path("friendSearch").asText(null))) {
             String friendPhone = StringUtils.trimToNull(payload.path("friendPhone").asText(null));
             if (StringUtils.isNotBlank(friendPhone)) {
