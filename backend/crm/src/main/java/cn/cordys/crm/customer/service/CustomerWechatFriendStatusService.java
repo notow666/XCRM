@@ -3,7 +3,6 @@ package cn.cordys.crm.customer.service;
 import cn.cordys.crm.customer.domain.Customer;
 import cn.cordys.crm.customer.mapper.ExtCustomerMapper;
 import cn.cordys.crm.system.domain.User;
-import cn.cordys.mmba.dto.CustomerWxFriendStatusDTO;
 import cn.cordys.mmba.mapper.ExtMmbaAuditMapper;
 import cn.cordys.mmba.service.MmbaDeviceService;
 import cn.cordys.mybatis.BaseMapper;
@@ -16,8 +15,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -99,11 +101,7 @@ public class CustomerWechatFriendStatusService {
         if (StringUtils.isBlank(customerId)) {
             return;
         }
-        Customer customer = customerMapper.selectByPrimaryKey(customerId);
-        if (customer == null) {
-            return;
-        }
-        updateStatus(customer, calculateStatus(customer), userId);
+        recalculateCustomers(List.of(customerId), userId);
     }
 
     public void recalculateCustomers(Collection<String> customerIds, String userId) {
@@ -114,9 +112,7 @@ public class CustomerWechatFriendStatusService {
         if (CollectionUtils.isEmpty(customers)) {
             return;
         }
-        for (Customer customer : customers) {
-            updateStatus(customer, calculateStatus(customer), userId);
-        }
+        recalculateCustomers(customers, userId);
     }
 
     public void recalculateByUm(String um, String userId) {
@@ -131,37 +127,139 @@ public class CustomerWechatFriendStatusService {
         if (CollectionUtils.isEmpty(customers)) {
             return;
         }
-        for (Customer customer : customers) {
-            updateStatus(customer, calculateStatus(customer), userId);
-        }
+        recalculateCustomers(customers, userId);
     }
 
-    private int calculateStatus(Customer customer) {
-        String mobile = customer == null ? null : StringUtils.trimToNull(customer.getMobile());
-        if (mobile == null) {
-            return NOT_ADDED;
+    private void recalculateCustomers(List<Customer> customers, String userId) {
+        Map<String, Integer> targetStatusMap = calculateTargetStatusMap(customers);
+        applyTargetStatuses(customers, targetStatusMap, userId);
+    }
+
+    private Map<String, Integer> calculateTargetStatusMap(List<Customer> customers) {
+        Map<String, Integer> targetStatusMap = new HashMap<>();
+        Map<String, List<Customer>> customersByOwner = new HashMap<>();
+        Set<String> ownerIds = new HashSet<>();
+
+        for (Customer customer : customers) {
+            if (customer == null || StringUtils.isBlank(customer.getId())) {
+                continue;
+            }
+            if (Boolean.TRUE.equals(customer.getInSharedPool())) {
+                targetStatusMap.put(customer.getId(), NOT_ADDED);
+                continue;
+            }
+            String mobile = StringUtils.trimToNull(customer.getMobile());
+            String ownerId = StringUtils.trimToNull(customer.getOwner());
+            if (mobile == null || ownerId == null) {
+                targetStatusMap.put(customer.getId(), NOT_ADDED);
+                continue;
+            }
+            customersByOwner.computeIfAbsent(ownerId, key -> new java.util.ArrayList<>()).add(customer);
+            ownerIds.add(ownerId);
         }
-        String ownerUm = readOwnerUm(customer.getOwner());
-        if (ownerUm == null) {
-            return NOT_ADDED;
+
+        // 先按负责人分组聚合上下文，避免同一 owner 下重复查询 UM 和激活微信号映射。
+        Map<String, String> ownerUmMap = buildOwnerUmMap(ownerIds);
+        Map<String, List<String>> activeWxIdsByUm = new HashMap<>();
+
+        for (Map.Entry<String, List<Customer>> entry : customersByOwner.entrySet()) {
+            String ownerId = entry.getKey();
+            List<Customer> ownerCustomers = entry.getValue();
+            String ownerUm = ownerUmMap.get(ownerId);
+            if (ownerUm == null) {
+                ownerCustomers.forEach(customer -> targetStatusMap.put(customer.getId(), NOT_ADDED));
+                continue;
+            }
+
+            List<String> activeWxIds = activeWxIdsByUm.computeIfAbsent(ownerUm, this::listActiveWxIdsByUm);
+            if (CollectionUtils.isEmpty(activeWxIds)) {
+                ownerCustomers.forEach(customer -> targetStatusMap.put(customer.getId(), NOT_ADDED));
+                continue;
+            }
+
+            List<String> mobiles = ownerCustomers.stream()
+                    .map(Customer::getMobile)
+                    .map(StringUtils::trimToNull)
+                    .filter(StringUtils::isNotBlank)
+                    .distinct()
+                    .toList();
+            if (CollectionUtils.isEmpty(mobiles)) {
+                ownerCustomers.forEach(customer -> targetStatusMap.put(customer.getId(), NOT_ADDED));
+                continue;
+            }
+
+            // 同一负责人下的手机号批量查询“已加好友”和“待添加”集合，再在内存中归并目标状态。
+            Set<String> addedPhones = new HashSet<>(extMmbaAuditMapper.listAddedFriendPhones(mobiles, ownerUm, activeWxIds));
+            Set<String> pendingPhones = new HashSet<>(extMmbaAuditMapper.listPendingAddFriendPhones(mobiles, ownerUm, activeWxIds));
+
+            for (Customer customer : ownerCustomers) {
+                String mobile = StringUtils.trimToNull(customer.getMobile());
+                if (mobile == null) {
+                    targetStatusMap.put(customer.getId(), NOT_ADDED);
+                    continue;
+                }
+                if (addedPhones.contains(mobile)) {
+                    targetStatusMap.put(customer.getId(), ADDED);
+                } else if (pendingPhones.contains(mobile)) {
+                    targetStatusMap.put(customer.getId(), PENDING);
+                } else {
+                    targetStatusMap.put(customer.getId(), NOT_ADDED);
+                }
+            }
         }
-        List<String> activeWxIds = mmbaDeviceService.listMappingsByUm(ownerUm).stream()
+        return targetStatusMap;
+    }
+
+    private Map<String, String> buildOwnerUmMap(Set<String> ownerIds) {
+        if (CollectionUtils.isEmpty(ownerIds)) {
+            return Map.of();
+        }
+        List<User> users = userBaseMapper.selectByIds(ownerIds.toArray(new String[0]));
+        if (CollectionUtils.isEmpty(users)) {
+            return Map.of();
+        }
+        Map<String, String> ownerUmMap = new HashMap<>();
+        for (User user : users) {
+            if (user == null || StringUtils.isBlank(user.getId())) {
+                continue;
+            }
+            ownerUmMap.put(user.getId(), StringUtils.trimToNull(user.getUm()));
+        }
+        return ownerUmMap;
+    }
+
+    private List<String> listActiveWxIdsByUm(String um) {
+        return mmbaDeviceService.listMappingsByUm(um).stream()
                 .filter(mapping -> StringUtils.equals("ACTIVE", mapping.getMappingStatus()))
                 .map(mapping -> StringUtils.trimToNull(mapping.getWxid()))
                 .filter(StringUtils::isNotBlank)
                 .distinct()
                 .toList();
-        if (CollectionUtils.isEmpty(activeWxIds)) {
-            return NOT_ADDED;
+    }
+
+    private void applyTargetStatuses(List<Customer> customers, Map<String, Integer> targetStatusMap, String userId) {
+        Map<Integer, List<String>> idsByTargetStatus = new HashMap<>();
+        for (Customer customer : customers) {
+            if (customer == null || StringUtils.isBlank(customer.getId())) {
+                continue;
+            }
+            Integer targetStatus = targetStatusMap.get(customer.getId());
+            if (targetStatus == null) {
+                continue;
+            }
+            int currentStatus = normalizeStatus(customer.getWechatFriendStatus());
+            if (currentStatus == targetStatus) {
+                continue;
+            }
+            idsByTargetStatus.computeIfAbsent(targetStatus, key -> new java.util.ArrayList<>()).add(customer.getId());
+            customer.setWechatFriendStatus(targetStatus);
         }
-        List<CustomerWxFriendStatusDTO> friendStatuses = extMmbaAuditMapper
-                .listCustomerWxFriendStatus(List.of(mobile), ownerUm, activeWxIds);
-        if (CollectionUtils.isNotEmpty(friendStatuses)) {
-            Integer wxFriendAdded = friendStatuses.getFirst().getWxFriendAdded();
-            return Objects.equals(wxFriendAdded, 1) ? ADDED : NOT_ADDED;
+
+        // 目标状态只有 0/1/2 三种，按状态分桶后批量更新。
+        for (Map.Entry<Integer, List<String>> entry : idsByTargetStatus.entrySet()) {
+            extCustomerMapper.batchUpdateWechatFriendStatusByIds(entry.getValue(), entry.getKey());
+            log.info("客户微信好友状态批量更新 targetStatus={} count={}", entry.getKey(), entry.getValue().size());
         }
-        Boolean pending = extMmbaAuditMapper.existsPendingAddFriendReceipt(ownerUm, mobile, activeWxIds);
-        return Boolean.TRUE.equals(pending) ? PENDING : NOT_ADDED;
     }
 
     private List<Customer> listOwnedCustomers(String um, String friendPhone) {
@@ -192,14 +290,6 @@ public class CustomerWechatFriendStatusService {
                 .filter(StringUtils::isNotBlank)
                 .distinct()
                 .toList();
-    }
-
-    private String readOwnerUm(String ownerId) {
-        if (StringUtils.isBlank(ownerId)) {
-            return null;
-        }
-        User owner = userBaseMapper.selectByPrimaryKey(ownerId);
-        return owner == null ? null : StringUtils.trimToNull(owner.getUm());
     }
 
     private int normalizeStatus(Integer status) {

@@ -136,6 +136,8 @@ public interface ExtCustomerMapper {
 
     void updateWechatFriendStatusById(@Param("id") String id, @Param("wechatFriendStatus") Integer wechatFriendStatus);
 
+    void batchUpdateWechatFriendStatusByIds(@Param("ids") List<String> ids, @Param("wechatFriendStatus") Integer wechatFriendStatus);
+
     void updateCallStatusById(@Param("id") String id, @Param("callStatus") Integer callStatus);
 
 }

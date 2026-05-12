@@ -8,6 +8,15 @@
         where id = #{id}
     </update>
 
+    <update id="batchUpdateWechatFriendStatusByIds">
+        update customer
+        set wechat_friend_status = #{wechatFriendStatus}
+        where id in
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </update>
+
     <update id="updateCallStatusById">
         update customer
         set call_status = #{callStatus}

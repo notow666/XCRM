@@ -46,6 +46,35 @@
         group by latest.friend_phone
     </select>
 
+    <select id="listAddedFriendPhones" resultType="java.lang.String">
+        select latest.friend_phone
+        from (
+            select friend_phone,
+                   staff_id_in_app,
+                   max(`timestamp`) as latest_timestamp
+            from mmba_wx_friend_change_audit
+            where behavior_type = 60
+              and um = #{um}
+              and friend_phone in
+            <foreach collection="friendPhones" item="friendPhone" open="(" close=")" separator=",">
+                #{friendPhone}
+            </foreach>
+              and staff_id_in_app in
+            <foreach collection="staffIdInApps" item="staffIdInApp" open="(" close=")" separator=",">
+                #{staffIdInApp}
+            </foreach>
+            group by friend_phone, staff_id_in_app
+        ) latest
+        join mmba_wx_friend_change_audit current_audit
+          on current_audit.friend_phone = latest.friend_phone
+         and current_audit.staff_id_in_app = latest.staff_id_in_app
+         and current_audit.`timestamp` = latest.latest_timestamp
+        where current_audit.behavior_type = 60
+          and current_audit.um = #{um}
+          and current_audit.is_friend = '1'
+        group by latest.friend_phone
+    </select>
+
     <select id="existsPendingAddFriendReceipt" resultType="java.lang.Boolean">
         select exists(
             select 1
@@ -71,6 +100,35 @@
              and ifnull(current_result.timestamp_value, ifnull(current_result.insert_time_value, current_result.update_time)) = latest.latest_sort_time
             where current_result.process_status = 4
         )
+    </select>
+
+    <select id="listPendingAddFriendPhones" resultType="java.lang.String">
+        select latest.friend_phone
+        from (
+            select result.friend_phone,
+                   result.um_wxid,
+                   max(ifnull(result.timestamp_value, ifnull(result.insert_time_value, result.update_time))) as latest_sort_time
+            from mmba_command_result result
+            where result.behavior_type = 50
+              and result.um = #{um}
+              and result.friend_phone in
+            <foreach collection="friendPhones" item="friendPhone" open="(" close=")" separator=",">
+                #{friendPhone}
+            </foreach>
+              and result.um_wxid in
+            <foreach collection="umWxids" item="umWxid" open="(" close=")" separator=",">
+                #{umWxid}
+            </foreach>
+            group by result.friend_phone, result.um_wxid
+        ) latest
+        join mmba_command_result current_result
+          on current_result.behavior_type = 50
+         and current_result.um = #{um}
+         and current_result.friend_phone = latest.friend_phone
+         and current_result.um_wxid = latest.um_wxid
+         and ifnull(current_result.timestamp_value, ifnull(current_result.insert_time_value, current_result.update_time)) = latest.latest_sort_time
+        where current_result.process_status = 4
+        group by latest.friend_phone
     </select>
 
     <select id="getCustomerWxSendRoute" resultType="cn.cordys.mmba.dto.CustomerWxSendRouteDTO">
