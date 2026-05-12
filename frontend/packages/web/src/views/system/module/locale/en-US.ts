@@ -121,6 +121,7 @@ export default {
   'module.contract': 'Contract',
   'module.order': 'Order',
   'module.task': 'Tasks',
+  'module.report': 'Reports',
   'module.mmbaAudit': 'MMBA Audit',
   'module.order.stateFlow': 'Order Status Flow',
   'module.order.state': 'Order Status',

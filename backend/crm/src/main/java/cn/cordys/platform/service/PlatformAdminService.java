@@ -98,6 +98,7 @@ public class PlatformAdminService {
         if (tenantUpdated <= 0) {
             throw new GenericException("租户不存在");
         }
+        tenantMetaService.evictEnabledTenantOrgMapCache();
         if (!enabled) {
             tenantRoutingDataSource.unregisterTenantDataSource(tenantId);
             managementLog.info(LogModule.MANAGEMENT_MARKER,"[MANAGEMENT_CENTER][TENANT_FREEZE] tenantId={}, operator={}", tenantId, operatorId);
@@ -272,6 +273,7 @@ public class PlatformAdminService {
         if (updated <= 0) {
             throw new GenericException("租户不存在");
         }
+        tenantMetaService.evictEnabledTenantOrgMapCache();
         recordAudit(operatorId, "TENANT_ORG_ID_UPDATE", tenantId, "SUCCESS", "orgId=" + normalizedOrgId, 0L);
     }
 

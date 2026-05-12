@@ -73,7 +73,7 @@
     <select id="listEnabledTenantWithOrgId" resultType="map">
         SELECT id, org_id
         FROM tenant
-        WHERE status = 'ACTIVE'
+        WHERE 1 = 1
           AND org_id IS NOT NULL
           AND org_id != ''
     </select>

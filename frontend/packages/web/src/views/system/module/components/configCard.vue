@@ -548,6 +548,13 @@
     //   enable: true,
     // },
     {
+      label: t('module.report'),
+      key: ModuleConfigEnum.REPORT,
+      icon: 'iconicon_data_plan',
+      groupList: [],
+      enable: true,
+    },
+    {
       label: t('module.mmbaAudit'),
       key: ModuleConfigEnum.MMBA_AUDIT,
       icon: 'iconicon_dashboard1',

@@ -83,6 +83,16 @@ export enum TaskRouteEnum {
   TASK_INDEX = 'taskIndex',
 }
 
+export enum ReportRouteEnum {
+  REPORT = 'report',
+  /** 报表-员工分析（分组） */
+  REPORT_EMPLOYEE = 'reportEmployee',
+  /** 报表-员工跟进分析 */
+  REPORT_EMPLOYEE_FOLLOW_UP = 'reportEmployeeFollowUp',
+  /** 报表-合同分析 */
+  REPORT_CONTRACT = 'reportContract',
+}
+
 export enum MMBAAuditRouteEnum {
   MMBA_AUDIT = 'mmbaAudit',
   /** 审计-微信 */
@@ -121,6 +131,7 @@ export const AppRouteEnum = {
   ...OrderRouteEnum,
   ...TenderRouteEnum,
   ...TaskRouteEnum,
+  ...ReportRouteEnum,
   ...MMBAAuditRouteEnum,
   ...ManagementCenterRouteEnum,
 };

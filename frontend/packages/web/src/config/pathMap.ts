@@ -132,6 +132,30 @@ export const pathMap: PathMapItem[] = [
     ],
   },
   {
+    key: 'REPORT',
+    route: AppRouteEnum.REPORT,
+    locale: 'menu.report',
+    children: [
+      {
+        key: 'REPORT_EMPLOYEE',
+        route: AppRouteEnum.REPORT_EMPLOYEE,
+        locale: 'menu.report.employee',
+        children: [
+          {
+            key: 'REPORT_EMPLOYEE_FOLLOW_UP',
+            route: AppRouteEnum.REPORT_EMPLOYEE_FOLLOW_UP,
+            locale: 'menu.report.employeeFollowUp',
+          },
+        ],
+      },
+      {
+        key: 'REPORT_CONTRACT',
+        route: AppRouteEnum.REPORT_CONTRACT,
+        locale: 'menu.report.contract',
+      },
+    ],
+  },
+  {
     key: 'MMBA_AUDIT',
     route: AppRouteEnum.MMBA_AUDIT,
     locale: 'menu.mmbaAudit',

@@ -38,6 +38,9 @@ export enum ModuleConfigEnum {
   /** 任务（跟进计划待办） */
   TASK = 'task',
 
+  /** 报表 */
+  REPORT = 'report',
+
   /** MMBA审计 */
   MMBA_AUDIT = 'mmbaAudit',
 }

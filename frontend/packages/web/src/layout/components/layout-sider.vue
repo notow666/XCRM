@@ -23,11 +23,11 @@
         <n-menu
           v-model:value="menuValue"
           v-model:expanded-keys="expandedKeys"
-          :root-indent="24"
-          :indent="appStore.getMenuIconStatus ? 38 : 8"
+          :root-indent="15"
+          :indent="appStore.getMenuIconStatus ? 28 : 8"
           :collapsed-width="appStore.collapsedWidth"
-          :icon-size="18"
-          :collapsed-icon-size="28"
+          :icon-size="15"
+          :collapsed-icon-size="25"
           :options="menuOptions"
           :render-label="renderLabel"
           accordion
@@ -331,13 +331,14 @@
   });
 
   function setExpandedKeysByRoute(_route: RouteLocationNormalizedGeneric) {
-    const parentRouteName = _route.matched[0]?.name as string | undefined;
-    // Keep parent menu expanded while browsing nested menu pages.
-    if (_route.matched.length > 1 && parentRouteName) {
-      expandedKeys.value = [parentRouteName];
+    if (_route.matched.length <= 1) {
+      expandedKeys.value = [];
       return;
     }
-    expandedKeys.value = [];
+    expandedKeys.value = _route.matched
+      .slice(0, -1)
+      .map((m) => m.name as string)
+      .filter((name) => name != null && name !== '');
   }
 
   function setMenuValue(_route: RouteLocationNormalizedGeneric) {

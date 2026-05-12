@@ -11,6 +11,7 @@ public class ModuleConstants {
             ModuleKey.CUSTOMER.getKey(),
             "task",
             "contract",
+            "report",
             "mmbaAudit",
             ModuleKey.SETTING.getKey()
     );

@@ -5,10 +5,12 @@ import {
   ClueRouteEnum,
   ContractRouteEnum,
   CustomerRouteEnum,
-  DashboardRouteEnum, MMBAAuditRouteEnum,
+  DashboardRouteEnum,
+  MMBAAuditRouteEnum,
   OpportunityRouteEnum,
   OrderRouteEnum,
   ProductRouteEnum,
+  ReportRouteEnum,
   SystemRouteEnum,
   TaskRouteEnum,
   TenderRouteEnum,
@@ -60,6 +62,7 @@ export const featureRouteMap: Record<string, any> = {
   [AgentRouteEnum.AGENT]: ModuleConfigEnum.AGENT,
   [TenderRouteEnum.TENDER]: ModuleConfigEnum.TENDER,
   [TaskRouteEnum.TASK]: ModuleConfigEnum.TASK,
+  [ReportRouteEnum.REPORT]: ModuleConfigEnum.REPORT,
   [MMBAAuditRouteEnum.MMBA_AUDIT]: ModuleConfigEnum.MMBA_AUDIT,
 };
 
