@@ -256,7 +256,6 @@ public class MmbaDeviceService {
         target.setQq(firstNotBlank(source.getQq(), target.getQq()));
         target.setMappingStatus(firstNotBlank(source.getMappingStatus(), target.getMappingStatus()));
         target.setLastSyncTime(source.getLastSyncTime() == null ? target.getLastSyncTime() : source.getLastSyncTime());
-        target.setRawData(firstNotBlank(source.getRawData(), target.getRawData()));
     }
 
     private void mergeDevice(MmbaDevice target, MmbaDevice source) {
@@ -292,7 +291,6 @@ public class MmbaDeviceService {
         target.setLoginStatus(source.getLoginStatus() == null ? target.getLoginStatus() : source.getLoginStatus());
         target.setLastBehaviorType(source.getLastBehaviorType() == null ? target.getLastBehaviorType() : source.getLastBehaviorType());
         target.setLastAuditTime(source.getLastAuditTime() == null ? target.getLastAuditTime() : source.getLastAuditTime());
-        target.setRawData(firstNotBlank(source.getRawData(), target.getRawData()));
     }
 
     /**

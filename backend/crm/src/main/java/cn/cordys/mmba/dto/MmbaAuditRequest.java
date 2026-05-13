@@ -1,15 +1,14 @@
 package cn.cordys.mmba.dto;
 
-import cn.cordys.aspectj.constants.LogModule;
 import cn.cordys.common.util.JSON;
+import cn.cordys.mmba.MmbaBehaviorTypes;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -23,11 +22,10 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
+@Slf4j
 public class MmbaAuditRequest implements Serializable {
     @Serial
     private static final long serialVersionUID = -8678428122164917085L;
-
-    private static final Logger logger = LoggerFactory.getLogger(LogModule.PLATFORM_TENANT_CENTER);
 
     private int behaviorType;
     private String tenancyName;
@@ -36,10 +34,6 @@ public class MmbaAuditRequest implements Serializable {
     private transient String streamId;
     private transient String streamConsumer;
 
-    public MmbaAuditRequest withSingleData(ZzyData singleData) {
-        return copyWithData(Collections.singletonList(singleData));
-    }
-
     public MmbaAuditRequest copyWithData(List<ZzyData> newData) {
         MmbaAuditRequest request = new MmbaAuditRequest(behaviorType, tenancyName, newData, null, streamId, streamConsumer);
         request.setRawPayload(buildPayloadRaw(newData));
@@ -47,15 +41,18 @@ public class MmbaAuditRequest implements Serializable {
     }
 
     public static MmbaAuditRequest generate(JsonNode json, Map<String, String> tenant) {
-        MmbaAuditRequest mmbaAuditRequest = JSON.parseObject(JSON.toJSONString(json), MmbaAuditRequest.class);
-        mmbaAuditRequest.setRawPayload(json == null ? null : JSON.toJSONString(json));
+        String jsonString = JSON.toJSONString(json);
+        MmbaAuditRequest mmbaAuditRequest = JSON.parseObject(jsonString, MmbaAuditRequest.class);
+        if (!MmbaBehaviorTypes.isSupported(mmbaAuditRequest.getBehaviorType())){
+            log.warn("[mmba-callback-queue] 忽略不支持的行为类型: {}", mmbaAuditRequest.getBehaviorType());
+            return null;
+        }
+        mmbaAuditRequest.setRawPayload(json == null ? null : jsonString);
         List<ZzyData> sourceData = mmbaAuditRequest.getData() == null ? Collections.emptyList() : mmbaAuditRequest.getData();
-        JsonNode rawDataNode = json == null ? null : json.get("data");
         List<ZzyData> _new = new ArrayList<>(sourceData.size());
         List<ZzyData> invalid = new ArrayList<>();
         for (int i = 0; i < sourceData.size(); i++) {
             ZzyData zzy = sourceData.get(i);
-            zzy.setRawPayload(extractRawData(rawDataNode, i, zzy));
             if (!StringUtils.hasText(zzy.getDeptIdPath())) {
                 invalid.add(zzy);
                 continue;
@@ -82,9 +79,14 @@ public class MmbaAuditRequest implements Serializable {
                 invalid.add(zzy);
             }
         }
-        mmbaAuditRequest.setData(_new);
+        if (CollectionUtils.isEmpty(_new)) {
+            log.warn("[mmba-callback-queue] 忽略无效回调（无 data）: {}", jsonString);
+            return null;
+        }else{
+            mmbaAuditRequest.setData(_new);
+        }
         if(!CollectionUtils.isEmpty(invalid)){
-            logger.error(LogModule.TENANT_MARKER, "[TENANT_CENTER] 无效mmba审计数据(无TenantId) => [{}]", JSON.toJSONString(invalid));
+            log.warn("无效mmba审计数据(无TenantId) => [{}]", JSON.toJSONString(invalid));
         }
         return mmbaAuditRequest;
     }
@@ -101,34 +103,9 @@ public class MmbaAuditRequest implements Serializable {
         ArrayNode arrayNode = objectNode.putArray("data");
         if (selectedData != null) {
             for (ZzyData zzyData : selectedData) {
-                if (StringUtils.hasText(zzyData.getRawPayload())) {
-                    arrayNode.add(JSON.parseObject(zzyData.getRawPayload(), JsonNode.class));
-                } else {
-                    arrayNode.add(JSON.parseObject(JSON.toJSONString(zzyData), JsonNode.class));
-                }
+                arrayNode.add(JSON.parseObject(JSON.toJSONString(zzyData), JsonNode.class));
             }
         }
         return JSON.toJSONString(objectNode);
-    }
-
-    public void hydrateDataRawPayload() {
-        JsonNode root = StringUtils.hasText(rawPayload) ? JSON.parseObject(rawPayload, JsonNode.class) : null;
-        JsonNode rawDataNode = root == null ? null : root.get("data");
-        if (data == null) {
-            return;
-        }
-        for (int i = 0; i < data.size(); i++) {
-            data.get(i).setRawPayload(extractRawData(rawDataNode, i, data.get(i)));
-        }
-    }
-
-    private static String extractRawData(JsonNode rawDataNode, int index, ZzyData zzy) {
-        if (rawDataNode != null && rawDataNode.isArray() && rawDataNode.size() > index) {
-            JsonNode item = rawDataNode.get(index);
-            if (item != null) {
-                return JSON.toJSONString(item);
-            }
-        }
-        return JSON.toJSONString(zzy);
     }
 }

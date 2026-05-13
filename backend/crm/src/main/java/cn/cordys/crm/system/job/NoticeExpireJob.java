@@ -86,8 +86,8 @@ public class NoticeExpireJob {
 
     private void doOnEvent() {
         try {
-            this.quotationExpiringRemind();
-            this.quotationExpiredRemind();
+//            this.quotationExpiringRemind();
+//            this.quotationExpiredRemind();
             this.contractPaymentPlanExpiringRemind();
             this.contractPaymentPlanExpiredRemind();
             this.contractExpiringRemind();

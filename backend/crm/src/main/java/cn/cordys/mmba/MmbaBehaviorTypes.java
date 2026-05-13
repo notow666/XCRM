@@ -107,7 +107,6 @@ public final class MmbaBehaviorTypes {
     private static Map<Integer, String> init() {
         Map<Integer, String> groups = new HashMap<>(16);
         groups.put(CALL_RECORD_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
-        groups.put(CALL_RECORD_DELETE_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
         groups.put(DIAL_FAIL_RECEIPT, MmbaConstants.GROUP_BY_COMMAND);
         groups.put(SMS_RECORD_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
         groups.put(SMS_FAIL_RECEIPT, MmbaConstants.GROUP_BY_COMMAND);

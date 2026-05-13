@@ -1,6 +1,5 @@
 package cn.cordys.mmba.service;
 
-import cn.cordys.common.util.JSON;
 import cn.cordys.mmba.domain.MmbaDeviceMapping;
 import cn.cordys.mmba.dto.ZzyData;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -42,8 +41,7 @@ public class MmbaWxMappingSyncService {
                 data.getStaffImNickName(),
                 data.getStaffImAppHeaderPic(),
                 data.getQq(),
-                data.getTimestamp(),
-                JSON.toJSONString(data)
+                data.getTimestamp()
         );
         saveMapping(mapping, userId, data.getTenantId(), data.getReqId(), data.getEsId());
     }
@@ -79,8 +77,7 @@ public class MmbaWxMappingSyncService {
                     firstNotBlank(textValue(record, "nickName"), textValue(record, "staffImNickName")),
                     firstNotBlank(textValue(record, "headerPic"), textValue(record, "staffImAppHeaderPic")),
                     textValue(record, "qq"),
-                    longValue(record, "timestamp"),
-                    JSON.toJSONString(record)
+                    longValue(record, "timestamp")
             );
             saveMapping(mapping, userId, textValue(record, "tenantId"), textValue(record, "reqId"), textValue(record, "esId"));
         }
@@ -127,7 +124,7 @@ public class MmbaWxMappingSyncService {
     private MmbaDeviceMapping buildMapping(String um, String staffName, String deviceId,
                                            String imei, String imei2, String iccid, String wxid, String wxAccount,
                                            String wxPhone, String wxNickName, String wxHeaderPic, String qq,
-                                           Long lastSyncTime, String rawData) {
+                                           Long lastSyncTime) {
         MmbaDeviceMapping mapping = new MmbaDeviceMapping();
         mapping.setUm(um);
         mapping.setStaffName(staffName);
@@ -143,7 +140,6 @@ public class MmbaWxMappingSyncService {
         mapping.setQq(qq);
         mapping.setMappingStatus("ACTIVE");
         mapping.setLastSyncTime(lastSyncTime == null ? System.currentTimeMillis() : lastSyncTime);
-        mapping.setRawData(rawData);
         return mapping;
     }
 

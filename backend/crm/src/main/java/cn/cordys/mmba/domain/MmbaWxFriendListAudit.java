@@ -37,6 +37,5 @@ public class MmbaWxFriendListAudit {
     private String tenancyName;
     private Long timestamp;
     private String um;
-    private String rawData;
     private String callbackRecordId;
 }

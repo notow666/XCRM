@@ -65,7 +65,6 @@ public class MmbaCallbackRetryScheduleService {
                 return;
             }
             request.setRawPayload(record.getPayloadRaw());
-            request.hydrateDataRawPayload();
             hydrateTenantId(request, tenantId);
             String group = MmbaBehaviorTypes.SUPPORTED.get(request.getBehaviorType());
             if (MmbaConstants.GROUP_BY_AUDIT.equals(group)) {

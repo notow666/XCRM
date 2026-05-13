@@ -25,6 +25,5 @@ public class MmbaWxLoginAudit {
     private String staffName;
     private String tenancyName;
     private String um;
-    private String rawData;
     private String callbackRecordId;
 }

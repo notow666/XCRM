@@ -101,13 +101,13 @@ public class PlatformAdminService {
         tenantMetaService.evictEnabledTenantOrgMapCache();
         if (!enabled) {
             tenantRoutingDataSource.unregisterTenantDataSource(tenantId);
-            managementLog.info(LogModule.MANAGEMENT_MARKER,"[MANAGEMENT_CENTER][TENANT_FREEZE] tenantId={}, operator={}", tenantId, operatorId);
+            managementLog.info(LogModule.MANAGEMENT_MARKER,"[TENANT_FREEZE] tenantId={}, operator={}", tenantId, operatorId);
         } else {
             TenantDbConfigDTO cfg = tenantMetaService.getTenantDbConfig(tenantId);
             if (cfg != null && !tenantRoutingDataSource.hasTenantDataSource(tenantId)) {
                 tenantRoutingDataSource.registerTenantDataSource(tenantId, Objects.requireNonNull(createDataSource(cfg)));
             }
-            managementLog.info(LogModule.MANAGEMENT_MARKER,"[MANAGEMENT_CENTER][TENANT_UNFREEZE] tenantId={}, operator={}", tenantId, operatorId);
+            managementLog.info(LogModule.MANAGEMENT_MARKER,"[TENANT_UNFREEZE] tenantId={}, operator={}", tenantId, operatorId);
         }
         recordAudit(operatorId, enabled ? "TENANT_UNFREEZE" : "TENANT_FREEZE", tenantId, "SUCCESS", "", 0L);
     }
@@ -120,7 +120,7 @@ public class PlatformAdminService {
         }
         PlatformTenantProvisionTaskResponse latest = findLatestRunningProvisionTask(normalizedTenantId);
         if (latest != null) {
-            managementLog.info(LogModule.MANAGEMENT_MARKER,"[MANAGEMENT_CENTER][TENANT_PROVISION_DEDUP] tenantId={}, taskId={}",
+            managementLog.info(LogModule.MANAGEMENT_MARKER,"[TENANT_PROVISION_DEDUP] tenantId={}, taskId={}",
                     normalizedTenantId, latest.getTaskId());
             return latest;
         }
@@ -138,7 +138,7 @@ public class PlatformAdminService {
         task.setUpdateTime(now);
         task.setOperatorId(operatorId);
         extTenantOpsTaskMapper.insertTask(task);
-        managementLog.info(LogModule.MANAGEMENT_MARKER,"[MANAGEMENT_CENTER][TENANT_PROVISION_SUBMITTED] taskId={}, tenantId={}, operator={}",
+        managementLog.info(LogModule.MANAGEMENT_MARKER,"[TENANT_PROVISION_SUBMITTED] taskId={}, tenantId={}, operator={}",
                 taskId, normalizedTenantId, operatorId);
 
         return getTenantProvisionTask(taskId);
@@ -156,7 +156,7 @@ public class PlatformAdminService {
                                              List<String> initialUserIds, String orgId) {
         long start = System.currentTimeMillis();
         updateTaskStatus(taskId, "RUNNING", "provision running");
-        managementLog.info(LogModule.MANAGEMENT_MARKER,"[MANAGEMENT_CENTER][TENANT_PROVISION_START] taskId={}, tenantId={}, operator={}",
+        managementLog.info(LogModule.MANAGEMENT_MARKER,"[TENANT_PROVISION_START] taskId={}, tenantId={}, operator={}",
                 taskId, tenantCode, operatorId);
         try {
             TenantProvisionResponse response = tenantProvisioningService.provision(tenantCode, tenantName, operatorId, initialUserIds, orgId);
@@ -164,14 +164,14 @@ public class PlatformAdminService {
             updateTaskStatus(taskId, "SUCCESS", detail);
             recordAudit(operatorId, "TENANT_PROVISION", response.getTenantId(), "SUCCESS", detail,
                     System.currentTimeMillis() - start);
-            managementLog.info(LogModule.MANAGEMENT_MARKER,"[MANAGEMENT_CENTER][TENANT_PROVISION_SUCCESS] taskId={}, tenantId={}",
+            managementLog.info(LogModule.MANAGEMENT_MARKER,"[TENANT_PROVISION_SUCCESS] taskId={}, tenantId={}",
                     taskId, response.getTenantId());
         } catch (Exception e) {
             String detail = safeError(e);
             updateTaskStatus(taskId, "FAILED", detail);
             recordAudit(operatorId, "TENANT_PROVISION", tenantCode, "FAILED", detail,
                     System.currentTimeMillis() - start);
-            managementLog.error(LogModule.MANAGEMENT_MARKER,"[MANAGEMENT_CENTER][TENANT_PROVISION_FAILED] taskId={}, tenantId={}, error={}",
+            managementLog.error(LogModule.MANAGEMENT_MARKER,"[TENANT_PROVISION_FAILED] taskId={}, tenantId={}, error={}",
                     taskId, tenantCode, detail, e);
         }
     }

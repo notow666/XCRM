@@ -31,5 +31,5 @@ public class User extends BaseModel {
     private String lastOrganizationId;
 
     @Schema(description = "MMBA用户唯一标识")
-    private String um = "";
+    private String um;
 }

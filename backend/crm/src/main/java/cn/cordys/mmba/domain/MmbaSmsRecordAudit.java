@@ -37,6 +37,5 @@ public class MmbaSmsRecordAudit {
     private Long timestamp;
     private Integer type;
     private String um;
-    private String rawData;
     private String callbackRecordId;
 }

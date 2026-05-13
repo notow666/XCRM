@@ -95,8 +95,4 @@ public class MmbaDevice extends BaseModel {
      *
      */
     private Long lastAuditTime;
-    /**
-     *
-     */
-    private String rawData;
 }

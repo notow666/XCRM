@@ -47,7 +47,7 @@ export default {
     'menu.reportCollapsed': '报表',
     'menu.report.employee': '员工分析',
     'menu.report.contract': '合同分析',
-    'menu.report.employeeFollowUp': '员工跟进分析',
+    'menu.report.employeeFollowUp': '员工跟进',
     'menu.mmbaAudit': '审计',
     'menu.mmbaAuditCollapsed': '审计',
     'navbar.action.locale': '切换为中文',
