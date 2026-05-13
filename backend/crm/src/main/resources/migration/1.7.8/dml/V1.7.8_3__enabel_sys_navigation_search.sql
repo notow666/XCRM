@@ -1,0 +1,1 @@
+UPDATE `sys_navigation` SET `enable` = b'0' WHERE `navigation_key` = 'search';

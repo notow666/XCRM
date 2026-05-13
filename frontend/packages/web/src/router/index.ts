@@ -45,6 +45,22 @@ const router = createRouter({
         requiresAuth: false,
       },
     },
+    {
+      path: '/data-specialist/login',
+      name: 'dataSpecialistLogin',
+      component: () => import('../views/data-specialist/login/index.vue'),
+      meta: {
+        requiresAuth: false,
+      },
+    },
+    {
+      path: '/data-specialist/import',
+      name: 'dataSpecialistImport',
+      component: () => import('../views/data-specialist/import/index.vue'),
+      meta: {
+        requiresAuth: false,
+      },
+    },
     ...appRoutes,
     NOT_FOUND_ROUTE,
     NO_RESOURCE_ROUTE,

@@ -34,8 +34,16 @@ export const PLATFORM_LOGIN = {
   },
 };
 
+export const DATA_SPECIALIST_LOGIN = {
+  name: 'dataSpecialistLogin',
+  path: '/data-specialist/login',
+  meta: {
+    requiresAuth: false,
+  },
+};
+
 // 路由白名单，无需校验权限与登录状态
-export const WHITE_LIST = [NOT_FOUND, PLATFORM_LOGIN];
+export const WHITE_LIST = [NOT_FOUND, PLATFORM_LOGIN, DATA_SPECIALIST_LOGIN];
 
 // 重定向中转站路由
 export const REDIRECT_ROUTE_NAME = 'Redirect';

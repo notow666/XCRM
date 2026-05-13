@@ -40,7 +40,7 @@
         v-model:file-list="fileList"
         :is-all-screen="true"
         accept="excel"
-        :max-size="100"
+        :max-size="10"
         size-unit="MB"
         directory-dnd
         :file-type-tip="t('crmImportButton.onlyAllowFileTypeTip')"

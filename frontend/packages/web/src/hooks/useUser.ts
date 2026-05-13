@@ -1,8 +1,8 @@
 import { useI18n } from '@lib/shared/hooks/useI18n';
 
-import { platformLogout } from '@/api/modules';
+import { dataSpecialistLogout, platformLogout } from '@/api/modules';
 import router from '@/router';
-import { WHITE_LIST } from '@/router/constants';
+import { WHITE_LIST_NAME } from '@/router/constants';
 import useAppStore from '@/store/modules/app';
 import useUserStore from '@/store/modules/user';
 
@@ -24,14 +24,29 @@ export default function useUser() {
         return typeof routeTenantId === 'string' && routeTenantId.trim() ? routeTenantId : '';
       })();
       const isPlatformUser = userStore.userInfo.source === 'PLATFORM';
+      const isDataSpecialist = userStore.userInfo.source === 'DATA_SPECIALIST';
       if (isPlatformUser) {
         try {
           await platformLogout();
+        } catch {
+          // 服务端登出失败仍清理本地会话并跳转
+        } finally {
+          userStore.logoutCallBack();
+        }
+      } else if (isDataSpecialist) {
+        try {
+          await dataSpecialistLogout();
+        } catch {
+          // 服务端登出失败仍清理本地会话并跳转
         } finally {
           userStore.logoutCallBack();
         }
       } else {
-        await userStore.logout();
+        try {
+          await userStore.logout(silence);
+        } catch {
+          // userStore.logout 的 finally 已执行 logoutCallBack；忽略 signout 失败
+        }
       }
 
       // 登出后保留当前租户ID，避免登录页 /get-key、/is-login 请求头丢失租户
@@ -45,6 +60,8 @@ export default function useUser() {
         let targetName = 'login';
         if (logoutTo && typeof logoutTo === 'string') {
           targetName = logoutTo;
+        } else if (isDataSpecialist) {
+          targetName = 'dataSpecialistLogin';
         } else if (isPlatformUser) {
           targetName = 'platformLogin';
         }
@@ -55,12 +72,13 @@ export default function useUser() {
         router.push({
           name: targetName,
           params: targetName === 'login' ? { tenantId: tenantIdToRedirect } : undefined,
-          query: noRedirect
-            ? {}
-            : {
-                ...router.currentRoute.value.query,
-                redirect: currentRoute.name as string,
-              },
+          query:
+            noRedirect || targetName === 'dataSpecialistLogin' || targetName === 'platformLogin'
+              ? {}
+              : {
+                  ...router.currentRoute.value.query,
+                  redirect: currentRoute.name as string,
+                },
         });
       }
     } catch (error) {
@@ -73,9 +91,12 @@ export default function useUser() {
     return window.location.hash.indexOf('login') > -1;
   };
 
-  const isWhiteListPage = () => {
-    const currentRoute = router.currentRoute.value;
-    return WHITE_LIST.some((e) => e.path.includes(currentRoute.path));
+  const isWhiteListPage = (route = router.currentRoute.value) => {
+    const { name } = route;
+    if (name == null || typeof name !== 'string') {
+      return false;
+    }
+    return WHITE_LIST_NAME.includes(name);
   };
 
   const goUserHasPermissionPage = () => {

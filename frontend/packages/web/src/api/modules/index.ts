@@ -602,6 +602,7 @@ export const {
   getTenderConfig,
 } = businessApi;
 
+export * from './data-specialist';
 export * from './platform';
 
 export const {

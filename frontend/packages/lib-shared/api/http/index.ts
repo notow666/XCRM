@@ -105,6 +105,7 @@ export default function createAxios(opt: Partial<CreateAxiosOptions>) {
       const requestUrl = String(config.url || '');
       const isPlatformApi = requestUrl.includes('/platform/');
       const isSystemVersionApi = requestUrl.includes('/system/version');
+      const isDataSpecialistApi = requestUrl.includes('/data-specialist/');
 
       const token = getToken();
       if (token && (config as Recordable)?.requestOptions?.withToken !== false) {
@@ -116,7 +117,7 @@ export default function createAxios(opt: Partial<CreateAxiosOptions>) {
           'CSRF-TOKEN': csrfToken,
           'Accept-Language': currentLocale,
         };
-        if (!isPlatformApi && !isSystemVersionApi) {
+        if (!isPlatformApi && !isSystemVersionApi && !isDataSpecialistApi) {
           const routeTenantId = resolveTenantIdFromHash();
           headers['X-Tenant-ID'] = routeTenantId || app?.tenantId;
           headers['Organization-Id'] = app?.orgId;

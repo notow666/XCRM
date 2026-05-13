@@ -77,6 +77,7 @@ public final class ShiroFilter {
         FILTER_CHAIN_DEFINITION_MAP.put("/is-login", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/get-key", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/platform/auth/**", "anon");
+        FILTER_CHAIN_DEFINITION_MAP.put("/data-specialist/auth/**", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/403", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/sso/callback/**", "anon");
     }

@@ -13,7 +13,15 @@ export default function setupPermissionGuard(router: Router) {
     const appStore = useAppStore();
     const userStore = useUserStore();
     const isPlatformUser = userStore.userInfo.source === 'PLATFORM';
+    const isDataSpecialistUser = userStore.userInfo.source === 'DATA_SPECIALIST';
     const isPlatformScope = to.path.startsWith('/management-center') || to.path.startsWith('/platform');
+    const isDataSpecialistScope = to.path.startsWith('/data-specialist');
+
+    if (isDataSpecialistUser && !isDataSpecialistScope) {
+      next({ name: 'dataSpecialistImport' });
+      NProgress.done();
+      return;
+    }
 
     if (isPlatformUser && !isPlatformScope) {
       next({ name: 'managementCenterOverview' });
@@ -24,6 +32,12 @@ export default function setupPermissionGuard(router: Router) {
       next({
         name: NO_RESOURCE_ROUTE_NAME,
       });
+      NProgress.done();
+      return;
+    }
+
+    if (isDataSpecialistScope) {
+      next();
       NProgress.done();
       return;
     }
