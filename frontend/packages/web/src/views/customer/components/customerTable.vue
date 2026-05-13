@@ -781,7 +781,8 @@
 
   async function handleDialCustomer(row: any, cardSlotNum: number) {
     await dialCustomerPhone({
-      toPhone: row.mobile,
+      // 统一让后端按 customerId 回填真实手机号，避免列表脱敏值误传给 MMBA。
+      toPhone: '',
       cardSlotNum,
       bizExtInfo: {
         customerId: row.id,
@@ -876,7 +877,8 @@
       if (reachModal.value.mode === 'sms') {
         await sendCustomerSms({
           cardSlotNum: reachModal.value.cardSlotNum,
-          toPhone: reachModal.value.mobile,
+          // 统一让后端按 customerId 回填真实手机号，避免列表脱敏值误传给 MMBA。
+          toPhone: '',
           msg: payload.msg,
           bizExtInfo: {
             customerId: reachModal.value.sourceId,
@@ -901,8 +903,9 @@
         vinfo: payload.msg,
         note: payload.note || undefined,
         description: payload.description || undefined,
-        friendPhone: reachModal.value.mobile,
-        friendSearch: reachModal.value.mobile,
+        // 统一让后端按 customerId 回填真实手机号，避免列表脱敏值误传给 MMBA。
+        friendPhone: '',
+        friendSearch: '',
         umPhone: payload.selectedWechat.wxPhone,
         umWxid: payload.selectedWechat.wxId,
         bizExtInfo: {

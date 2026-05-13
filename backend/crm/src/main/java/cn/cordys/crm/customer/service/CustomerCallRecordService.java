@@ -4,8 +4,8 @@ import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.pager.PageUtils;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.common.util.JSON;
+import cn.cordys.crm.customer.domain.Customer;
 import cn.cordys.crm.customer.dto.request.CustomerCallRecordPageRequest;
-import cn.cordys.crm.customer.dto.response.CustomerGetResponse;
 import cn.cordys.crm.customer.dto.response.CustomerCallRecordListResponse;
 import cn.cordys.crm.system.domain.User;
 import cn.cordys.crm.customer.mapper.ExtCustomerCallRecordMapper;
@@ -50,9 +50,15 @@ public class CustomerCallRecordService {
     private BaseMapper<MmbaCallRecordAudit> mmbaCallRecordAuditBaseMapper;
     @Resource
     private BaseMapper<User> userBaseMapper;
+    @Resource
+    private BaseMapper<Customer> customerBaseMapper;
 
     public Pager<List<CustomerCallRecordListResponse>> list(CustomerCallRecordPageRequest request, String userId, String orgId) {
-        CustomerGetResponse customer = customerService.getWithDataPermissionCheck(request.getSourceId(), userId, orgId);
+        customerService.getWithDataPermissionCheck(request.getSourceId(), userId, orgId);
+        Customer customer = customerBaseMapper.selectByPrimaryKey(request.getSourceId());
+        if (customer == null) {
+            throw new GenericException("客户不存在");
+        }
         String customerTel = StringUtils.trimToNull(customer.getMobile());
         String um = readUmByUserId(customer.getOwner());
         Long collectionTime = customer.getCollectionTime();
