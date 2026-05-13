@@ -27,7 +27,7 @@
             <n-select v-model:value="form.dimension" class="w-full min-w-[200px]" :options="dimensionOptions" />
           </n-form-item>
           <n-form-item :show-label="false">
-            <n-button ghost class="mr-[12px]" type="primary" @click="handleQuery">
+            <n-button ghost class="mr-[12px]" type="primary" :loading="loading" @click="handleQuery">
               {{ t('report.action.query') }}
             </n-button>
             <n-button type="default" class="outline--secondary" @click="handleReset">
@@ -40,7 +40,7 @@
             <span class="whitespace-nowrap text-[14px] leading-none text-[var(--text-n1)]">
               {{ t('report.toolbar.showEmptyItems') }}
             </span>
-            <n-switch v-model:value="showEmptyItems" />
+            <n-switch v-model:value="showEmptyItems" @update:value="handleShowEmptyItemsChange" />
           </div>
           <n-button type="primary" secondary @click="handleExport">
             {{ t('common.export') }}
@@ -50,12 +50,33 @@
     </CrmCard>
 
     <CrmCard no-content-bottom-padding hide-footer class="min-w-[1000px]">
-      <n-data-table :columns="columns" :data="displayTableData" :bordered="false" :scroll-x="tableScrollX" />
+      <n-data-table
+        :columns="columns"
+        :data="tableData"
+        :loading="loading"
+        :bordered="false"
+        :scroll-x="tableScrollX"
+      />
     </CrmCard>
   </n-scrollbar>
+
+  <drilldown-modal
+    v-model:show="drilldownState.visible"
+    :title="drilldownTitle"
+    :loading="drilldownState.loading"
+    :data="drilldownState.list"
+    :columns="drilldownColumns"
+    :total="drilldownState.total"
+    :current="drilldownState.current"
+    :page-size="drilldownState.pageSize"
+    :scroll-x="drilldownScrollX"
+    @page-change="handleDrilldownPageChange"
+    @page-size-change="handleDrilldownPageSizeChange"
+  />
 </template>
 
 <script lang="ts" setup>
+  import { computed, h, onMounted, reactive, ref } from 'vue';
   import {
     type DataTableColumns,
     NButton,
@@ -66,18 +87,26 @@
     NScrollbar,
     NSelect,
     NSwitch,
+    type SelectOption,
     useMessage,
   } from 'naive-ui';
+  import dayjs from 'dayjs';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
+  import type {
+    EmployeeFollowAnalysisDrilldownItem,
+    EmployeeFollowAnalysisDrilldownParams,
+    EmployeeFollowAnalysisSummaryItem,
+    EmployeeFollowAnalysisSummaryParams,
+  } from '@lib/shared/models/report/employeeFollowAnalysis';
 
   import CrmCard from '@/components/pure/crm-card/index.vue';
+  import DrilldownModal from './components/drilldownModal.vue';
+
+  import { getEmployeeFollowAnalysisDrilldown, getEmployeeFollowAnalysisSummary } from '@/api/modules';
 
   const { t } = useI18n();
   const message = useMessage();
-
-  /** 默认打开：展示指标全为 0 的维度行 */
-  const showEmptyItems = ref(true);
 
   const TimePreset = {
     TODAY: 'today',
@@ -99,18 +128,23 @@
 
   type DimensionValue = (typeof Dimension)[keyof typeof Dimension];
 
-  interface FollowUpRow {
-    dimensionValue: string;
-    inboundCustomerCount: number;
-    contactedCustomerCount: number;
-    newWechatFriends: number;
-    dialCount: number;
-    connectedCount: number;
-    callOver1Min: number;
-    callOver3Min: number;
-    callDurationSec: number;
-    avgCallDurationSec: number;
-  }
+  const MetricType = {
+    INBOUND_CUSTOMER: 'inboundCustomer',
+    CONTACTED_CUSTOMER: 'contactedCustomer',
+    NEW_WECHAT_FRIENDS: 'newWechatFriends',
+    DIAL_COUNT: 'dialCount',
+    CONNECTED_COUNT: 'connectedCount',
+    CALL_OVER_1MIN: 'callOver1Min',
+    CALL_OVER_3MIN: 'callOver3Min',
+  } as const;
+
+  type MetricTypeValue = (typeof MetricType)[keyof typeof MetricType];
+
+  type FollowUpRow = EmployeeFollowAnalysisSummaryItem;
+
+  const loading = ref(false);
+  const showEmptyItems = ref(true);
+  const tableData = ref<FollowUpRow[]>([]);
 
   const form = reactive({
     timePreset: TimePreset.TODAY as TimePresetValue,
@@ -118,7 +152,20 @@
     dimension: Dimension.EMPLOYEE_NAME as DimensionValue,
   });
 
-  const timePresetOptions = computed(() => [
+  const drilldownState = reactive({
+    visible: false,
+    loading: false,
+    metricType: '' as MetricTypeValue | '',
+    title: '',
+    dimensionKey: '',
+    list: [] as EmployeeFollowAnalysisDrilldownItem[],
+    total: 0,
+    current: 1,
+    pageSize: 10,
+  });
+
+  // 页面筛选项直接映射后端枚举值，便于和汇总/下钻接口保持一套口径。
+  const timePresetOptions = computed<SelectOption[]>(() => [
     { label: t('report.filter.statTime.today'), value: TimePreset.TODAY },
     { label: t('report.filter.statTime.yesterday'), value: TimePreset.YESTERDAY },
     { label: t('report.filter.statTime.week'), value: TimePreset.WEEK },
@@ -126,13 +173,268 @@
     { label: t('report.filter.statTime.custom'), value: TimePreset.CUSTOM },
   ]);
 
-  const dimensionOptions = computed(() => [
+  const dimensionOptions = computed<SelectOption[]>(() => [
     { label: t('report.dimension.employeeName'), value: Dimension.EMPLOYEE_NAME },
     { label: t('report.dimension.employeeDept'), value: Dimension.EMPLOYEE_DEPT },
     { label: t('report.dimension.customerSource'), value: Dimension.CUSTOMER_SOURCE },
     { label: t('report.dimension.statDay'), value: Dimension.STAT_DAY },
     { label: t('report.dimension.statMonth'), value: Dimension.STAT_MONTH },
   ]);
+
+  function formatDuration(sec: number) {
+    const value = Math.max(0, Math.floor(sec));
+    const hours = Math.floor(value / 3600);
+    const minutes = Math.floor((value % 3600) / 60);
+    const seconds = value % 60;
+    const pad = (num: number) => String(num).padStart(2, '0');
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  }
+
+  function formatDateTime(value?: number) {
+    if (!value) {
+      return '-';
+    }
+    return dayjs(value).format('YYYY-MM-DD HH:mm:ss');
+  }
+
+  function isCallMetric(metricType: string) {
+    return (
+      metricType === MetricType.DIAL_COUNT ||
+      metricType === MetricType.CONNECTED_COUNT ||
+      metricType === MetricType.CALL_OVER_1MIN ||
+      metricType === MetricType.CALL_OVER_3MIN
+    );
+  }
+
+  function validateRange() {
+    if (form.timePreset === TimePreset.CUSTOM && (!form.customRange || form.customRange.length !== 2)) {
+      message.warning(t('common.notNull', { value: t('report.filter.customRange') }));
+      return false;
+    }
+    return true;
+  }
+
+  function buildDrilldownParams(): EmployeeFollowAnalysisDrilldownParams {
+    return {
+      timePreset: form.timePreset,
+      startTime: form.customRange?.[0],
+      endTime: form.customRange?.[1],
+      dimensionType: form.dimension,
+      dimensionKey: drilldownState.dimensionKey,
+      metricType: drilldownState.metricType,
+      current: drilldownState.current,
+      pageSize: drilldownState.pageSize,
+    };
+  }
+
+  function resolveDrilldownTitle(metricType: MetricTypeValue) {
+    const titleMap: Record<MetricTypeValue, string> = {
+      [MetricType.INBOUND_CUSTOMER]: t('report.drilldown.inboundCustomer'),
+      [MetricType.CONTACTED_CUSTOMER]: t('report.drilldown.contactedCustomer'),
+      [MetricType.NEW_WECHAT_FRIENDS]: t('report.drilldown.newWechatFriends'),
+      [MetricType.DIAL_COUNT]: t('report.drilldown.dialCount'),
+      [MetricType.CONNECTED_COUNT]: t('report.drilldown.connectedCount'),
+      [MetricType.CALL_OVER_1MIN]: t('report.drilldown.callOver1Min'),
+      [MetricType.CALL_OVER_3MIN]: t('report.drilldown.callOver3Min'),
+    };
+    return titleMap[metricType];
+  }
+
+  async function fetchDrilldown() {
+    drilldownState.loading = true;
+    try {
+      const result = await getEmployeeFollowAnalysisDrilldown(buildDrilldownParams());
+      drilldownState.list = result.list;
+      drilldownState.total = result.total;
+    } finally {
+      drilldownState.loading = false;
+    }
+  }
+
+  async function openDrilldown(metricType: MetricTypeValue, row: FollowUpRow) {
+    if (!validateRange()) {
+      return;
+    }
+    drilldownState.metricType = metricType;
+    drilldownState.dimensionKey = row.dimensionKey;
+    drilldownState.title = resolveDrilldownTitle(metricType);
+    drilldownState.current = 1;
+    drilldownState.pageSize = 10;
+    drilldownState.visible = true;
+    await fetchDrilldown();
+  }
+
+  function renderMetricCell(row: FollowUpRow, value: number, metricType: MetricTypeValue) {
+    const canClick = value > 0;
+    if (!canClick) {
+      return value;
+    }
+    // 只有 7 个支持下钻的指标会渲染成可点击按钮，时长类保持纯展示。
+    return h(
+      NButton,
+      {
+        type: 'primary',
+        text: true,
+        onClick: () => openDrilldown(metricType, row),
+      },
+      { default: () => String(value) }
+    );
+  }
+
+  function buildMetricColumn(
+    title: string,
+    key: keyof FollowUpRow,
+    metricType: MetricTypeValue
+  ): DataTableColumns<FollowUpRow>[number] {
+    return {
+      title,
+      key,
+      width: 140,
+      render: (row) => renderMetricCell(row, Number(row[key] ?? 0), metricType),
+    };
+  }
+
+  const dimensionColumnTitle = computed(() => {
+    const titleMap: Record<DimensionValue, string> = {
+      [Dimension.EMPLOYEE_NAME]: t('report.dimension.employeeName'),
+      [Dimension.EMPLOYEE_DEPT]: t('report.dimension.employeeDept'),
+      [Dimension.CUSTOMER_SOURCE]: t('report.dimension.customerSource'),
+      [Dimension.STAT_DAY]: t('report.dimension.statDay'),
+      [Dimension.STAT_MONTH]: t('report.dimension.statMonth'),
+    };
+    return titleMap[form.dimension];
+  });
+
+  const tableScrollX = 1480;
+  const drilldownTitle = computed(() => drilldownState.title);
+
+  const columns = computed<DataTableColumns<FollowUpRow>>(() => [
+    {
+      title: dimensionColumnTitle.value,
+      key: 'dimensionLabel',
+      width: 180,
+      fixed: 'left',
+      ellipsis: { tooltip: true },
+    },
+    buildMetricColumn(t('report.followUp.col.inboundCustomer'), 'inboundCustomerCount', MetricType.INBOUND_CUSTOMER),
+    buildMetricColumn(
+      t('report.followUp.col.contactedCustomer'),
+      'contactedCustomerCount',
+      MetricType.CONTACTED_CUSTOMER
+    ),
+    buildMetricColumn(t('report.followUp.col.newWechatFriends'), 'newWechatFriendCount', MetricType.NEW_WECHAT_FRIENDS),
+    buildMetricColumn(t('report.followUp.col.dialCount'), 'dialCount', MetricType.DIAL_COUNT),
+    buildMetricColumn(t('report.followUp.col.connectedCount'), 'connectedCount', MetricType.CONNECTED_COUNT),
+    buildMetricColumn(t('report.followUp.col.callOver1Min'), 'callOver1MinCount', MetricType.CALL_OVER_1MIN),
+    buildMetricColumn(t('report.followUp.col.callOver3Min'), 'callOver3MinCount', MetricType.CALL_OVER_3MIN),
+    {
+      title: t('report.followUp.col.callDuration'),
+      key: 'callDurationSec',
+      width: 140,
+      render: (row) => formatDuration(row.callDurationSec),
+    },
+    {
+      title: t('report.followUp.col.avgCallDuration'),
+      key: 'avgCallDurationSec',
+      width: 140,
+      render: (row) => formatDuration(row.avgCallDurationSec),
+    },
+  ]);
+
+  const drilldownColumns = computed<DataTableColumns<EmployeeFollowAnalysisDrilldownItem>>(() => {
+    // 下钻弹窗按指标类型切三套列：客户类、微信好友审计类、通话审计类。
+    if (drilldownState.metricType === MetricType.NEW_WECHAT_FRIENDS) {
+      return [
+        { title: t('report.drilldown.col.customerName'), key: 'customerName', width: 140 },
+        { title: t('report.drilldown.col.mobile'), key: 'mobile', width: 130 },
+        { title: t('report.drilldown.col.ownerName'), key: 'ownerName', width: 120 },
+        { title: t('report.drilldown.col.departmentName'), key: 'departmentName', width: 140 },
+        { title: t('report.drilldown.col.customerSource'), key: 'customerSource', width: 140 },
+        { title: t('report.drilldown.col.friendPhone'), key: 'friendPhone', width: 130 },
+        { title: t('report.drilldown.col.friendNickName'), key: 'contactImAppNickName', width: 140 },
+        { title: t('report.drilldown.col.friendAccount'), key: 'contactImAppAccount', width: 140 },
+        { title: t('report.drilldown.col.friendNote'), key: 'contactImAppNote', width: 140 },
+        { title: t('report.drilldown.col.staffName'), key: 'staffName', width: 120 },
+        {
+          title: t('report.drilldown.col.eventTime'),
+          key: 'eventTime',
+          width: 180,
+          render: (row) => formatDateTime(row.eventTime),
+        },
+      ];
+    }
+    if (isCallMetric(drilldownState.metricType)) {
+      return [
+        { title: t('report.drilldown.col.customerName'), key: 'customerName', width: 140 },
+        { title: t('report.drilldown.col.mobile'), key: 'mobile', width: 130 },
+        { title: t('report.drilldown.col.ownerName'), key: 'ownerName', width: 120 },
+        { title: t('report.drilldown.col.departmentName'), key: 'departmentName', width: 140 },
+        { title: t('report.drilldown.col.customerSource'), key: 'customerSource', width: 140 },
+        { title: t('report.drilldown.col.staffName'), key: 'staffName', width: 120 },
+        { title: t('report.drilldown.col.beginTime'), key: 'beginTime', width: 160 },
+        { title: t('report.drilldown.col.endTime'), key: 'endTime', width: 160 },
+        {
+          title: t('report.drilldown.col.duration'),
+          key: 'duration',
+          width: 110,
+          render: (row) => formatDuration(row.duration ?? 0),
+        },
+        {
+          title: t('report.drilldown.col.isConnected'),
+          key: 'isConnected',
+          width: 110,
+          render: (row) => (row.isConnected === 1 ? t('common.yes') : t('common.no')),
+        },
+      ];
+    }
+    return [
+      { title: t('report.drilldown.col.customerName'), key: 'customerName', width: 160 },
+      { title: t('report.drilldown.col.mobile'), key: 'mobile', width: 130 },
+      { title: t('report.drilldown.col.ownerName'), key: 'ownerName', width: 120 },
+      { title: t('report.drilldown.col.departmentName'), key: 'departmentName', width: 140 },
+      { title: t('report.drilldown.col.customerSource'), key: 'customerSource', width: 140 },
+      {
+        title: t('report.drilldown.col.eventTime'),
+        key: 'eventTime',
+        width: 180,
+        render: (row) => formatDateTime(row.eventTime),
+      },
+    ];
+  });
+
+  const drilldownScrollX = computed(() => {
+    if (drilldownState.metricType === MetricType.NEW_WECHAT_FRIENDS) {
+      return 1560;
+    }
+    if (isCallMetric(drilldownState.metricType)) {
+      return 1480;
+    }
+    return 980;
+  });
+
+  function buildSummaryParams(): EmployeeFollowAnalysisSummaryParams {
+    return {
+      timePreset: form.timePreset,
+      startTime: form.customRange?.[0],
+      endTime: form.customRange?.[1],
+      dimensionType: form.dimension,
+      showEmptyItems: showEmptyItems.value,
+    };
+  }
+
+  async function fetchSummary() {
+    if (!validateRange()) {
+      return;
+    }
+    loading.value = true;
+    try {
+      // 汇总接口返回的 dimensionKey 是后续下钻时回传给后端的唯一维度键。
+      const data = buildSummaryParams();
+      tableData.value = await getEmployeeFollowAnalysisSummary(data);
+    } finally {
+      loading.value = false;
+    }
+  }
 
   function onTimePresetChange(val: TimePresetValue) {
     if (val !== TimePreset.CUSTOM) {
@@ -144,223 +446,38 @@
     form.timePreset = TimePreset.TODAY;
     form.customRange = null;
     form.dimension = Dimension.EMPLOYEE_NAME;
+    showEmptyItems.value = true;
   }
 
-  /** Demo formatting: HH:MM:SS */
-  function formatDuration(sec: number) {
-    const s = Math.max(0, Math.floor(sec));
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const r = s % 60;
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${pad(h)}:${pad(m)}:${pad(r)}`;
+  async function handleQuery() {
+    await fetchSummary();
   }
 
-  const dimensionColumnTitle = computed(() => {
-    const map: Record<DimensionValue, string> = {
-      [Dimension.EMPLOYEE_NAME]: t('report.dimension.employeeName'),
-      [Dimension.EMPLOYEE_DEPT]: t('report.dimension.employeeDept'),
-      [Dimension.CUSTOMER_SOURCE]: t('report.dimension.customerSource'),
-      [Dimension.STAT_DAY]: t('report.dimension.statDay'),
-      [Dimension.STAT_MONTH]: t('report.dimension.statMonth'),
-    };
-    return map[form.dimension];
-  });
-
-  const dimensionValueSamples: Record<DimensionValue, string[]> = {
-    [Dimension.EMPLOYEE_NAME]: ['张三', '李四', '王五', '赵六', '钱七'],
-    [Dimension.EMPLOYEE_DEPT]: ['销售一部', '销售二部', '市场部', '客服组', '运营组'],
-    [Dimension.CUSTOMER_SOURCE]: ['线上推广', '老客户介绍', '展会', '地推', '电销'],
-    [Dimension.STAT_DAY]: ['2026-05-10', '2026-05-11', '2026-05-12', '2026-05-13', '2026-05-14'],
-    [Dimension.STAT_MONTH]: ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05'],
-  };
-
-  const emptyMetricRow: Omit<FollowUpRow, 'dimensionValue'> = {
-    inboundCustomerCount: 0,
-    contactedCustomerCount: 0,
-    newWechatFriends: 0,
-    dialCount: 0,
-    connectedCount: 0,
-    callOver1Min: 0,
-    callOver3Min: 0,
-    callDurationSec: 0,
-    avgCallDurationSec: 0,
-  };
-
-  const metricTemplates: FollowUpRow[] = [
-    {
-      dimensionValue: '张三',
-      inboundCustomerCount: 12,
-      contactedCustomerCount: 9,
-      newWechatFriends: 4,
-      dialCount: 28,
-      connectedCount: 19,
-      callOver1Min: 11,
-      callOver3Min: 5,
-      callDurationSec: 3720,
-      avgCallDurationSec: 196,
-    },
-    {
-      dimensionValue: '李四',
-      inboundCustomerCount: 8,
-      contactedCustomerCount: 6,
-      newWechatFriends: 2,
-      dialCount: 15,
-      connectedCount: 10,
-      callOver1Min: 6,
-      callOver3Min: 2,
-      callDurationSec: 2100,
-      avgCallDurationSec: 210,
-    },
-    {
-      dimensionValue: '王五',
-      inboundCustomerCount: 5,
-      contactedCustomerCount: 4,
-      newWechatFriends: 1,
-      dialCount: 9,
-      connectedCount: 5,
-      callOver1Min: 3,
-      callOver3Min: 1,
-      callDurationSec: 960,
-      avgCallDurationSec: 192,
-    },
-    {
-      dimensionValue: '赵六',
-      ...emptyMetricRow,
-    },
-    {
-      dimensionValue: '钱七',
-      ...emptyMetricRow,
-    },
-  ];
-
-  const tableData = ref<FollowUpRow[]>([]);
-
-  function rebuildDemoTable() {
-    const samples = dimensionValueSamples[form.dimension];
-    tableData.value = metricTemplates.map((row, i) => ({
-      ...row,
-      dimensionValue: samples[i] ?? row.dimensionValue,
-    }));
-  }
-
-  function handleReset() {
+  async function handleReset() {
     defaultForm();
-    rebuildDemoTable();
+    await fetchSummary();
   }
 
-  onMounted(() => {
-    rebuildDemoTable();
-  });
-
-  function rowHasMetricData(row: FollowUpRow) {
-    return (
-      row.inboundCustomerCount > 0 ||
-      row.contactedCustomerCount > 0 ||
-      row.newWechatFriends > 0 ||
-      row.dialCount > 0 ||
-      row.connectedCount > 0 ||
-      row.callOver1Min > 0 ||
-      row.callOver3Min > 0 ||
-      row.callDurationSec > 0 ||
-      row.avgCallDurationSec > 0
-    );
+  async function handleShowEmptyItemsChange() {
+    await fetchSummary();
   }
-
-  const displayTableData = computed(() => {
-    if (showEmptyItems.value) {
-      return tableData.value;
-    }
-    return tableData.value.filter((row) => rowHasMetricData(row));
-  });
-
-  const tableScrollX = 1400;
-
-  const columns = computed<DataTableColumns<FollowUpRow>>(() => [
-    {
-      title: dimensionColumnTitle.value,
-      key: 'dimensionValue',
-      width: 160,
-      align: 'left',
-      titleAlign: 'left',
-      ellipsis: { tooltip: true },
-      fixed: 'left',
-    },
-    {
-      title: t('report.followUp.col.inboundCustomer'),
-      key: 'inboundCustomerCount',
-      width: 120,
-      align: 'left',
-      titleAlign: 'left',
-    },
-    {
-      title: t('report.followUp.col.contactedCustomer'),
-      key: 'contactedCustomerCount',
-      width: 120,
-      align: 'left',
-      titleAlign: 'left',
-    },
-    {
-      title: t('report.followUp.col.newWechatFriends'),
-      key: 'newWechatFriends',
-      width: 140,
-      align: 'left',
-      titleAlign: 'left',
-    },
-    {
-      title: t('report.followUp.col.dialCount'),
-      key: 'dialCount',
-      width: 120,
-      align: 'left',
-      titleAlign: 'left',
-    },
-    {
-      title: t('report.followUp.col.connectedCount'),
-      key: 'connectedCount',
-      width: 120,
-      align: 'left',
-      titleAlign: 'left',
-    },
-    {
-      title: t('report.followUp.col.callOver1Min'),
-      key: 'callOver1Min',
-      width: 160,
-      align: 'left',
-      titleAlign: 'left',
-    },
-    {
-      title: t('report.followUp.col.callOver3Min'),
-      key: 'callOver3Min',
-      width: 160,
-      align: 'left',
-      titleAlign: 'left',
-    },
-    {
-      title: t('report.followUp.col.callDuration'),
-      key: 'callDurationSec',
-      width: 140,
-      align: 'left',
-      titleAlign: 'left',
-      render: (row) => formatDuration(row.callDurationSec),
-    },
-    {
-      title: t('report.followUp.col.avgCallDuration'),
-      key: 'avgCallDurationSec',
-      width: 140,
-      align: 'left',
-      titleAlign: 'left',
-      render: (row) => formatDuration(row.avgCallDurationSec),
-    },
-  ]);
 
   function handleExport() {
     message.info(t('report.exportSoon'));
   }
 
-  function handleQuery() {
-    // v1: demo refresh; replace with API using timePreset, customRange, dimension
-    rebuildDemoTable();
+  async function handleDrilldownPageChange(page: number) {
+    drilldownState.current = page;
+    await fetchDrilldown();
   }
 
-  watch(() => form.dimension, rebuildDemoTable);
+  async function handleDrilldownPageSizeChange(pageSize: number) {
+    drilldownState.pageSize = pageSize;
+    drilldownState.current = 1;
+    await fetchDrilldown();
+  }
+
+  onMounted(() => {
+    fetchSummary();
+  });
 </script>

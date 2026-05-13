@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.mapper.EmployeeFollowAnalysisMapper">
+
+    <select id="listFactRows" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisMetricRow">
+        <!--
+            历史汇总查询入口：
+            1. 入库客户数 -> inbound_customer_flag
+            2. 联系客户数 -> contacted_customer_flag
+            3. 新增微信好友数 -> new_wechat_friend_flag
+            4. 拨打电话数 -> dial_count
+            5. 拨打接通数 -> connected_count
+            6. 一分钟以上通话数 -> call_over_1min_count
+            7. 三分钟以上通话数 -> call_over_3min_count
+            8. 通话时长 -> call_duration_sec
+            9. 平均通话时长 -> 不落库，在 Service 层用 call_duration_sec / connected_count 计算
+        -->
+        select date_format(stat_date, '%Y-%m-%d') as statDate,
+               customer_id as customerId,
+               operator_user_id as operatorUserId,
+               inbound_customer_flag as inboundCustomerFlag,
+               contacted_customer_flag as contactedCustomerFlag,
+               new_wechat_friend_flag as newWechatFriendFlag,
+               dial_count as dialCount,
+               connected_count as connectedCount,
+               call_over_1min_count as callOver1minCount,
+               call_over_3min_count as callOver3minCount,
+               call_duration_sec as callDurationSec
+        from report_employee_follow_analysis_fact_day
+        where stat_date between #{startDate} and #{endDate}
+        order by stat_date asc, customer_id asc, operator_user_id asc
+    </select>
+
+    <select id="listInboundRows" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisMetricRow">
+        <!--
+            入库客户数计算位置：
+            - 来源表：customer
+            - 时间口径：collection_time
+            - 统计规则：命中时间窗口的客户，每条返回 inboundCustomerFlag = 1
+            - 后续在 Service 层按 customer_id 去重计数
+        -->
+        select date_format(from_unixtime(c.collection_time / 1000), '%Y-%m-%d') as statDate,
+               c.id as customerId,
+               c.owner as operatorUserId,
+               1 as inboundCustomerFlag,
+               0 as contactedCustomerFlag,
+               0 as newWechatFriendFlag,
+               0 as dialCount,
+               0 as connectedCount,
+               0 as callOver1minCount,
+               0 as callOver3minCount,
+               0 as callDurationSec
+        from customer c
+        where c.in_shared_pool is false
+          and c.collection_time is not null
+          and c.collection_time between #{startTime} and #{endTime}
+    </select>
+
+    <select id="listContactedRows" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisMetricRow">
+        <!--
+            联系客户数计算位置：
+            - 来源表：follow_up_record
+            - 时间口径：follow_time
+            - 统计规则：先按 统计日 + customer_id + owner 分组去重，再返回 contactedCustomerFlag = 1
+            - 后续在 Service 层按 customer_id 去重计数
+        -->
+        select t.statDate,
+               t.customerId,
+               t.operatorUserId,
+               0 as inboundCustomerFlag,
+               1 as contactedCustomerFlag,
+               0 as newWechatFriendFlag,
+               0 as dialCount,
+               0 as connectedCount,
+               0 as callOver1minCount,
+               0 as callOver3minCount,
+               0 as callDurationSec
+        from (
+            select date_format(from_unixtime(f.follow_time / 1000), '%Y-%m-%d') as statDate,
+                   f.customer_id as customerId,
+                   f.owner as operatorUserId
+            from follow_up_record f
+            join customer c on c.id = f.customer_id
+            where c.in_shared_pool is false
+              and f.follow_time is not null
+              and f.follow_time between #{startTime} and #{endTime}
+            group by date_format(from_unixtime(f.follow_time / 1000), '%Y-%m-%d'),
+                     f.customer_id,
+                     f.owner
+        ) t
+    </select>
+
+    <select id="listCallRows" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisMetricRow">
+        <!--
+            通话类 5 个指标都在这里算：
+            - 拨打电话数：count(1)
+            - 拨打接通数：is_connected = 1 的数量
+            - 一分钟以上通话数：is_connected = 1 且 duration >= 60 的数量
+            - 三分钟以上通话数：is_connected = 1 且 duration >= 180 的数量
+            - 通话时长：is_connected = 1 的 duration 求和
+
+            过滤口径：
+            - 统一按电话拨打时间 begin_timestamp 归属统计日
+            - 只统计外呼：direction = 0
+            - 通过 cra.um -> sys_user.um 找员工
+            - 通过 cra.customer_tel = customer.mobile 找客户
+            - 只统计 customer.owner = 当前员工 且 in_shared_pool = false 的客户
+        -->
+        select date_format(from_unixtime(cra.begin_timestamp / 1000), '%Y-%m-%d') as statDate,
+               c.id as customerId,
+               su.id as operatorUserId,
+               0 as inboundCustomerFlag,
+               0 as contactedCustomerFlag,
+               0 as newWechatFriendFlag,
+               <!-- 拨打电话数 -->
+               count(1) as dialCount,
+               <!-- 拨打接通数 -->
+               sum(case when ifnull(cra.is_connected, 0) = 1 then 1 else 0 end) as connectedCount,
+               <!-- 一分钟以上通话数 -->
+               sum(case when ifnull(cra.is_connected, 0) = 1 and ifnull(cra.duration, 0) &gt;= 60 then 1 else 0 end) as callOver1minCount,
+               <!-- 三分钟以上通话数 -->
+               sum(case when ifnull(cra.is_connected, 0) = 1 and ifnull(cra.duration, 0) &gt;= 180 then 1 else 0 end) as callOver3minCount,
+               <!-- 通话时长 -->
+               sum(case when ifnull(cra.is_connected, 0) = 1 then ifnull(cra.duration, 0) else 0 end) as callDurationSec
+        from mmba_call_record_audit cra
+        join sys_user su on su.um = cra.um
+        join customer c on c.mobile = cra.customer_tel
+                       and c.owner = su.id
+                       and c.in_shared_pool is false
+        where cra.begin_timestamp between #{startTime} and #{endTime}
+          and cra.direction = 0
+          and cra.customer_tel is not null
+          and cra.customer_tel != ''
+        group by date_format(from_unixtime(cra.begin_timestamp / 1000), '%Y-%m-%d'),
+                 c.id,
+                 su.id
+    </select>
+
+    <select id="listWechatRows" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisMetricRow">
+        <!--
+            新增微信好友数计算位置：
+            - 来源表：mmba_wx_friend_change_audit
+            - 时间口径：timestamp
+            - 统计规则：is_friend = '1' 的成功记录，按 统计日 + customer_id + operator_user_id 分组去重
+            - 客户映射：friend_phone = customer.mobile，且 customer.owner = 当前员工
+            - 返回 newWechatFriendFlag = 1，后续在 Service 层按 customer_id 去重计数
+        -->
+        select date_format(from_unixtime(a.`timestamp` / 1000), '%Y-%m-%d') as statDate,
+               c.id as customerId,
+               su.id as operatorUserId,
+               0 as inboundCustomerFlag,
+               0 as contactedCustomerFlag,
+               1 as newWechatFriendFlag,
+               0 as dialCount,
+               0 as connectedCount,
+               0 as callOver1minCount,
+               0 as callOver3minCount,
+               0 as callDurationSec
+        from mmba_wx_friend_change_audit a
+        join sys_user su on su.um = a.um
+        join customer c on c.mobile = a.friend_phone
+                       and c.owner = su.id
+                       and c.in_shared_pool is false
+        where a.`timestamp` between #{startTime} and #{endTime}
+          and a.is_friend = '1'
+          and a.friend_phone is not null
+          and a.friend_phone != ''
+        group by date_format(from_unixtime(a.`timestamp` / 1000), '%Y-%m-%d'),
+                 c.id,
+                 su.id
+    </select>
+
+    <select id="listCurrentEmployees" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisEmployeeDimensionRow">
+        select sou.user_id as operatorUserId,
+               su.name as employeeName,
+               sou.department_id as departmentId,
+               sd.name as departmentName
+        from sys_organization_user sou
+        join sys_user su on su.id = sou.user_id
+        left join sys_department sd on sd.id = sou.department_id
+        where sou.organization_id = #{orgId}
+          and ifnull(sou.enable, true) = true
+        order by ifnull(sd.pos, 0) asc, su.name asc
+    </select>
+
+    <select id="listCurrentDepartments" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisDepartmentDimensionRow">
+        select sd.id as departmentId,
+               sd.name as departmentName
+        from sys_department sd
+        where sd.organization_id = #{orgId}
+        order by ifnull(sd.pos, 0) asc, sd.name asc
+    </select>
+
+    <select id="listCustomerContexts" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisCustomerContextRow">
+        select c.id as customerId,
+               c.name as customerName,
+               c.mobile,
+               c.owner as ownerId,
+               su.name as ownerName,
+               sou.department_id as departmentId,
+               sd.name as departmentName,
+               cf.field_value as customerSource
+        from customer c
+        left join sys_user su on su.id = c.owner
+        left join sys_organization_user sou
+               on sou.organization_id = #{orgId}
+              and sou.user_id = c.owner
+        left join sys_department sd on sd.id = sou.department_id
+        left join customer_field cf
+               on cf.resource_id = c.id
+              and cf.field_id = (
+                  select mf.id
+                  from sys_module_field mf
+                  join sys_module_form form on mf.form_id = form.id
+                  where form.organization_id = #{orgId}
+                    and form.form_key = 'customer'
+                    and mf.internal_key = 'customerSource'
+                  limit 1
+              )
+        where c.id in
+        <foreach collection="customerIds" item="customerId" open="(" close=")" separator=",">
+            #{customerId}
+        </foreach>
+    </select>
+
+    <select id="listInboundCustomerDrilldown" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisDrilldownItemResponse">
+        <!-- 入库客户数下钻：返回 customer 明细，eventTime = collection_time -->
+        select c.id as customerId,
+               c.name as customerName,
+               c.mobile,
+               su.name as ownerName,
+               sd.name as departmentName,
+               cf.field_value as customerSource,
+               c.collection_time as eventTime
+        from customer c
+        left join sys_user su on su.id = c.owner
+        left join sys_organization_user sou
+               on sou.organization_id = #{orgId}
+              and sou.user_id = c.owner
+        left join sys_department sd on sd.id = sou.department_id
+        left join customer_field cf
+               on cf.resource_id = c.id
+              and cf.field_id = (
+                  select mf.id
+                  from sys_module_field mf
+                  join sys_module_form form on mf.form_id = form.id
+                  where form.organization_id = #{orgId}
+                    and form.form_key = 'customer'
+                    and mf.internal_key = 'customerSource'
+                  limit 1
+              )
+        where c.in_shared_pool is false
+          and c.collection_time between #{request.startTime} and #{request.endTime}
+          <if test="request.dimensionType == 'employeeName'">
+              and c.owner = #{request.dimensionKey}
+          </if>
+          <if test="request.dimensionType == 'employeeDept'">
+              and sou.department_id = #{request.dimensionKey}
+          </if>
+          <if test="request.dimensionType == 'customerSource'">
+              and ifnull(cf.field_value, '') = #{request.dimensionKey}
+          </if>
+          <if test="request.dimensionType == 'statDay'">
+              and date_format(from_unixtime(c.collection_time / 1000), '%Y-%m-%d') = #{request.dimensionKey}
+          </if>
+          <if test="request.dimensionType == 'statMonth'">
+              and date_format(from_unixtime(c.collection_time / 1000), '%Y-%m') = #{request.dimensionKey}
+          </if>
+        order by c.collection_time desc, c.id desc
+    </select>
+
+    <select id="listContactedCustomerDrilldown" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisDrilldownItemResponse">
+        <!-- 联系客户数下钻：返回去重后的客户列表，eventTime 取统计期内最后一次 follow_time -->
+        select c.id as customerId,
+               c.name as customerName,
+               c.mobile,
+               owner_user.name as ownerName,
+               owner_dept.name as departmentName,
+               cf.field_value as customerSource,
+               max(f.follow_time) as eventTime
+        from follow_up_record f
+        join customer c on c.id = f.customer_id
+        left join sys_user owner_user on owner_user.id = c.owner
+        left join sys_organization_user owner_sou
+               on owner_sou.organization_id = #{orgId}
+              and owner_sou.user_id = c.owner
+        left join sys_department owner_dept on owner_dept.id = owner_sou.department_id
+        left join customer_field cf
+               on cf.resource_id = c.id
+              and cf.field_id = (
+                  select mf.id
+                  from sys_module_field mf
+                  join sys_module_form form on mf.form_id = form.id
+                  where form.organization_id = #{orgId}
+                    and form.form_key = 'customer'
+                    and mf.internal_key = 'customerSource'
+                  limit 1
+              )
+        left join sys_organization_user action_sou
+               on action_sou.organization_id = #{orgId}
+              and action_sou.user_id = f.owner
+        where c.in_shared_pool is false
+          and f.follow_time between #{request.startTime} and #{request.endTime}
+          <if test="request.dimensionType == 'employeeName'">
+              and f.owner = #{request.dimensionKey}
+          </if>
+          <if test="request.dimensionType == 'employeeDept'">
+              and action_sou.department_id = #{request.dimensionKey}
+          </if>
+          <if test="request.dimensionType == 'customerSource'">
+              and ifnull(cf.field_value, '') = #{request.dimensionKey}
+          </if>
+          <if test="request.dimensionType == 'statDay'">
+              and date_format(from_unixtime(f.follow_time / 1000), '%Y-%m-%d') = #{request.dimensionKey}
+          </if>
+          <if test="request.dimensionType == 'statMonth'">
+              and date_format(from_unixtime(f.follow_time / 1000), '%Y-%m') = #{request.dimensionKey}
+          </if>
+        group by c.id, c.name, c.mobile, owner_user.name, owner_dept.name, cf.field_value
+        order by max(f.follow_time) desc, c.id desc
+    </select>
+
+    <select id="listWechatFriendDrilldown" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisDrilldownItemResponse">
+        <!-- 新增微信好友数下钻：返回参与计数的微信好友审计记录 -->
+        select current_audit.es_id as auditId,
+               latest.customerId,
+               latest.customerName,
+               latest.mobile,
+               latest.ownerName,
+               latest.departmentName,
+               latest.customerSource,
+               current_audit.friend_phone as friendPhone,
+               current_audit.contact_im_app_nick_name as contactImAppNickName,
+               current_audit.contact_im_app_account as contactImAppAccount,
+               current_audit.contact_im_app_note as contactImAppNote,
+               current_audit.staff_name as staffName,
+               current_audit.`timestamp` as eventTime
+        from (
+            select date_format(from_unixtime(a.`timestamp` / 1000), '%Y-%m-%d') as statDate,
+                   c.id as customerId,
+                   c.name as customerName,
+                   c.mobile,
+                   owner_user.name as ownerName,
+                   owner_dept.name as departmentName,
+                   cf.field_value as customerSource,
+                   su.id as operatorUserId,
+                   max(a.`timestamp`) as latestTimestamp
+            from mmba_wx_friend_change_audit a
+            join sys_user su on su.um = a.um
+            join customer c on c.mobile = a.friend_phone
+                           and c.owner = su.id
+                           and c.in_shared_pool is false
+            left join sys_user owner_user on owner_user.id = c.owner
+            left join sys_organization_user owner_sou
+                   on owner_sou.organization_id = #{orgId}
+                  and owner_sou.user_id = c.owner
+            left join sys_department owner_dept on owner_dept.id = owner_sou.department_id
+            left join customer_field cf
+                   on cf.resource_id = c.id
+                  and cf.field_id = (
+                      select mf.id
+                      from sys_module_field mf
+                      join sys_module_form form on mf.form_id = form.id
+                      where form.organization_id = #{orgId}
+                        and form.form_key = 'customer'
+                        and mf.internal_key = 'customerSource'
+                      limit 1
+                  )
+            left join sys_organization_user action_sou
+                   on action_sou.organization_id = #{orgId}
+                  and action_sou.user_id = su.id
+            where a.is_friend = '1'
+              and a.`timestamp` between #{request.startTime} and #{request.endTime}
+              and a.friend_phone is not null
+              and a.friend_phone != ''
+              <if test="request.dimensionType == 'employeeName'">
+                  and su.id = #{request.dimensionKey}
+              </if>
+              <if test="request.dimensionType == 'employeeDept'">
+                  and action_sou.department_id = #{request.dimensionKey}
+              </if>
+              <if test="request.dimensionType == 'customerSource'">
+                  and ifnull(cf.field_value, '') = #{request.dimensionKey}
+              </if>
+              <if test="request.dimensionType == 'statDay'">
+                  and date_format(from_unixtime(a.`timestamp` / 1000), '%Y-%m-%d') = #{request.dimensionKey}
+              </if>
+              <if test="request.dimensionType == 'statMonth'">
+                  and date_format(from_unixtime(a.`timestamp` / 1000), '%Y-%m') = #{request.dimensionKey}
+              </if>
+            group by date_format(from_unixtime(a.`timestamp` / 1000), '%Y-%m-%d'),
+                     c.id,
+                     c.name,
+                     c.mobile,
+                     owner_user.name,
+                     owner_dept.name,
+                     cf.field_value,
+                     su.id
+        ) latest
+        join sys_user operator_user on operator_user.id = latest.operatorUserId
+        join mmba_wx_friend_change_audit current_audit
+          on current_audit.um = operator_user.um
+         and current_audit.friend_phone = latest.mobile
+         and current_audit.`timestamp` = latest.latestTimestamp
+         and current_audit.is_friend = '1'
+        order by current_audit.`timestamp` desc, current_audit.es_id desc
+    </select>
+
+    <select id="listCallDrilldown" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisDrilldownItemResponse">
+        <!--
+            通话类下钻：
+            - 统一按电话拨打时间 begin_timestamp 过滤和排序
+            - 拨打电话数：只过滤 direction = 0
+            - 拨打接通数：额外过滤 is_connected = 1
+            - 一分钟以上通话数：额外过滤 is_connected = 1 且 duration >= 60
+            - 三分钟以上通话数：额外过滤 is_connected = 1 且 duration >= 180
+        -->
+        select cra.es_id as auditId,
+               c.id as customerId,
+               c.name as customerName,
+               c.mobile,
+               owner_user.name as ownerName,
+               owner_dept.name as departmentName,
+               cf.field_value as customerSource,
+               cra.staff_name as staffName,
+               cra.begin_timestamp as eventTime,
+               cra.begin_time as beginTime,
+               cra.end_time as endTime,
+               cra.duration,
+               cra.is_connected as isConnected,
+               cra.direction
+        from mmba_call_record_audit cra
+        join sys_user su on su.um = cra.um
+        join customer c on c.mobile = cra.customer_tel
+                       and c.owner = su.id
+                       and c.in_shared_pool is false
+        left join sys_user owner_user on owner_user.id = c.owner
+        left join sys_organization_user owner_sou
+               on owner_sou.organization_id = #{orgId}
+              and owner_sou.user_id = c.owner
+        left join sys_department owner_dept on owner_dept.id = owner_sou.department_id
+        left join customer_field cf
+               on cf.resource_id = c.id
+              and cf.field_id = (
+                  select mf.id
+                  from sys_module_field mf
+                  join sys_module_form form on mf.form_id = form.id
+                  where form.organization_id = #{orgId}
+                    and form.form_key = 'customer'
+                    and mf.internal_key = 'customerSource'
+                  limit 1
+              )
+        left join sys_organization_user action_sou
+               on action_sou.organization_id = #{orgId}
+              and action_sou.user_id = su.id
+        where cra.begin_timestamp between #{request.startTime} and #{request.endTime}
+          and cra.direction = 0
+          and cra.customer_tel is not null
+          and cra.customer_tel != ''
+          <if test="request.metricType == 'connectedCount'">
+              and ifnull(cra.is_connected, 0) = 1
+          </if>
+          <if test="request.metricType == 'callOver1Min'">
+              and ifnull(cra.is_connected, 0) = 1
+              and ifnull(cra.duration, 0) &gt;= 60
+          </if>
+          <if test="request.metricType == 'callOver3Min'">
+              and ifnull(cra.is_connected, 0) = 1
+              and ifnull(cra.duration, 0) &gt;= 180
+          </if>
+          <if test="request.dimensionType == 'employeeName'">
+              and su.id = #{request.dimensionKey}
+          </if>
+          <if test="request.dimensionType == 'employeeDept'">
+              and action_sou.department_id = #{request.dimensionKey}
+          </if>
+          <if test="request.dimensionType == 'customerSource'">
+              and ifnull(cf.field_value, '') = #{request.dimensionKey}
+          </if>
+          <if test="request.dimensionType == 'statDay'">
+              and date_format(from_unixtime(cra.begin_timestamp / 1000), '%Y-%m-%d') = #{request.dimensionKey}
+          </if>
+          <if test="request.dimensionType == 'statMonth'">
+              and date_format(from_unixtime(cra.begin_timestamp / 1000), '%Y-%m') = #{request.dimensionKey}
+          </if>
+        order by cra.begin_timestamp desc, cra.es_id desc
+    </select>
+
+</mapper>

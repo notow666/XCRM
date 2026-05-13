@@ -10,6 +10,7 @@ import useMmbaDeviceApi from '@lib/shared/api/modules/mmba/device';
 import useOpportunityApi from '@lib/shared/api/modules/opportunity';
 import useOrderApi from '@lib/shared/api/modules/order';
 import useProductApi from '@lib/shared/api/modules/product';
+import useEmployeeFollowAnalysisApi from '@lib/shared/api/modules/report/employeeFollowAnalysis';
 import useSysApi from '@lib/shared/api/modules/sys';
 import useLicenseApi from '@lib/shared/api/modules/system/authorizedManagement';
 import useBusinessApi from '@lib/shared/api/modules/system/business';
@@ -49,6 +50,7 @@ const opportunityApi = useOpportunityApi(CDR);
 const contractApi = useContractApi(CDR);
 const orderApi = useOrderApi(CDR);
 const mmbaDeviceApi = useMmbaDeviceApi(CDR);
+const employeeFollowAnalysisApi = useEmployeeFollowAnalysisApi(CDR);
 
 export const {
   getOrderFormConfig,
@@ -632,6 +634,8 @@ export const {
   getMmbaDeviceOptionList,
   syncMmbaDevices,
 } = mmbaDeviceApi;
+
+export const { getEmployeeFollowAnalysisSummary, getEmployeeFollowAnalysisDrilldown } = employeeFollowAnalysisApi;
 
 export const {
   addReason,
