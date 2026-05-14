@@ -70,22 +70,32 @@ public class MmbaCallbackDispatchService {
                     callbackRecord.getId(), dto.getBehaviorType(), data.getReqId(), data.getEsId(), data.getTenantId());
             switch (dto.getBehaviorType()) {
                 case MmbaBehaviorTypes.CALL_RECORD_AUDIT -> {
-                    MmbaCallRecordAudit previousCallAudit = mmbaAuditPersistenceService.findCallAuditByEsId(data.getEsId());
-                    MmbaCallRecordAudit callAudit = mmbaAuditPersistenceService.saveOrUpdateCallAudit(
+                    MmbaAuditPersistenceService.SaveOrUpdateResult<MmbaCallRecordAudit> callAuditResult =
+                            mmbaAuditPersistenceService.saveOrUpdateCallAuditWithResult(
                             buildCallAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER
                     );
+                    MmbaCallRecordAudit previousCallAudit = callAuditResult.getPrevious();
+                    MmbaCallRecordAudit callAudit = callAuditResult.getCurrent();
                     upgradeCustomerCallStatus(callAudit.getCustomerId(), callAudit.getCustomerTel(), callAudit.getUm(),
                             resolveAuditCustomerCallStatus(callAudit), callbackRecord.getId());
                     mmbaAutoCustomerFollowService.handleConnectedCall(previousCallAudit, callAudit);
                 }
                 case MmbaBehaviorTypes.SMS_RECORD_AUDIT -> {
-                    MmbaSmsRecordAudit previousSmsAudit = mmbaAuditPersistenceService.findSmsAuditByEsId(data.getEsId());
-                    MmbaSmsRecordAudit smsAudit = mmbaAuditPersistenceService.saveOrUpdateSmsAudit(buildSmsAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
+                    MmbaAuditPersistenceService.SaveOrUpdateResult<MmbaSmsRecordAudit> smsAuditResult =
+                            mmbaAuditPersistenceService.saveOrUpdateSmsAuditWithResult(
+                                    buildSmsAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER
+                            );
+                    MmbaSmsRecordAudit previousSmsAudit = smsAuditResult.getPrevious();
+                    MmbaSmsRecordAudit smsAudit = smsAuditResult.getCurrent();
                     mmbaAutoCustomerFollowService.handleSmsDelivered(previousSmsAudit, smsAudit);
                 }
                 case MmbaBehaviorTypes.WX_CHAT_AUDIT -> {
-                    MmbaWxChatAudit previousWxChatAudit = mmbaAuditPersistenceService.findWxChatAuditByEsId(data.getEsId());
-                    MmbaWxChatAudit wxChatAudit = mmbaAuditPersistenceService.saveOrUpdateWxChatAudit(buildWxChatAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
+                    MmbaAuditPersistenceService.SaveOrUpdateResult<MmbaWxChatAudit> wxChatAuditResult =
+                            mmbaAuditPersistenceService.saveOrUpdateWxChatAuditWithResult(
+                                    buildWxChatAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER
+                            );
+                    MmbaWxChatAudit previousWxChatAudit = wxChatAuditResult.getPrevious();
+                    MmbaWxChatAudit wxChatAudit = wxChatAuditResult.getCurrent();
                     mmbaAutoCustomerFollowService.handleWxChatSuccess(previousWxChatAudit, wxChatAudit);
                 }
                 case MmbaBehaviorTypes.WX_FRIEND_CHANGE_AUDIT -> {

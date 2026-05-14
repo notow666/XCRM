@@ -27,6 +27,30 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(rollbackFor = Exception.class)
 public class MmbaAuditPersistenceService {
 
+    public static final class SaveOrUpdateResult<T> {
+        private final T previous;
+        private final T current;
+        private final boolean inserted;
+
+        public SaveOrUpdateResult(T previous, T current, boolean inserted) {
+            this.previous = previous;
+            this.current = current;
+            this.inserted = inserted;
+        }
+
+        public T getPrevious() {
+            return previous;
+        }
+
+        public T getCurrent() {
+            return current;
+        }
+
+        public boolean isInserted() {
+            return inserted;
+        }
+    }
+
     @Resource
     private BaseMapper<MmbaCallRecordAudit> mmbaCallRecordAuditMapper;
     @Resource
@@ -48,12 +72,20 @@ public class MmbaAuditPersistenceService {
         return saveOrReplaceByEsId(record, mmbaCallRecordAuditMapper);
     }
 
+    public SaveOrUpdateResult<MmbaCallRecordAudit> saveOrUpdateCallAuditWithResult(MmbaCallRecordAudit record, String userId) {
+        return saveOrReplaceByEsIdWithResult(record, mmbaCallRecordAuditMapper);
+    }
+
     public MmbaCallRecordAudit findCallAuditByEsId(String esId) {
         return esId == null ? null : mmbaCallRecordAuditMapper.selectByPrimaryKey(esId);
     }
 
     public MmbaSmsRecordAudit saveOrUpdateSmsAudit(MmbaSmsRecordAudit record, String userId) {
         return saveOrReplaceByEsId(record, mmbaSmsRecordAuditMapper);
+    }
+
+    public SaveOrUpdateResult<MmbaSmsRecordAudit> saveOrUpdateSmsAuditWithResult(MmbaSmsRecordAudit record, String userId) {
+        return saveOrReplaceByEsIdWithResult(record, mmbaSmsRecordAuditMapper);
     }
 
     public MmbaSmsRecordAudit findSmsAuditByEsId(String esId) {
@@ -70,6 +102,10 @@ public class MmbaAuditPersistenceService {
 
     public MmbaWxChatAudit saveOrUpdateWxChatAudit(MmbaWxChatAudit record, String userId) {
         return saveOrReplaceByEsId(record, mmbaWxChatAuditMapper);
+    }
+
+    public SaveOrUpdateResult<MmbaWxChatAudit> saveOrUpdateWxChatAuditWithResult(MmbaWxChatAudit record, String userId) {
+        return saveOrReplaceByEsIdWithResult(record, mmbaWxChatAuditMapper);
     }
 
     public MmbaWxFriendChangeAudit saveOrUpdateWxFriendChangeAudit(MmbaWxFriendChangeAudit record, String userId) {
@@ -112,20 +148,26 @@ public class MmbaAuditPersistenceService {
     }
 
     private <T> T saveOrReplaceByEsId(T record, BaseMapper<T> mapper) {
+        return saveOrReplaceByEsIdWithResult(record, mapper).getCurrent();
+    }
+
+    private <T> SaveOrUpdateResult<T> saveOrReplaceByEsIdWithResult(T record, BaseMapper<T> mapper) {
         String esId = (String) readEsId(record);
         T db = mapper.selectByPrimaryKey(esId);
         if (db == null) {
             try {
                 mapper.insert(record);
+                return new SaveOrUpdateResult<>(null, record, true);
             } catch (DuplicateKeyException e) {
                 // 并发消费同一 esId 时，其他线程可能已经完成插入，这里直接转更新即可。
                 log.info("MMBA审计并发幂等转更新 esId={} entity={}", esId, record.getClass().getSimpleName());
+                T latest = mapper.selectByPrimaryKey(esId);
                 mapper.update(record);
+                return new SaveOrUpdateResult<>(latest, record, false);
             }
-            return record;
         }
         mapper.update(record);
-        return record;
+        return new SaveOrUpdateResult<>(db, record, false);
     }
 
     private Object readEsId(Object record) {
