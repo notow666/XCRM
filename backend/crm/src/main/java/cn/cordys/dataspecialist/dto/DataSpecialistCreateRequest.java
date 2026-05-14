@@ -16,6 +16,14 @@ public class DataSpecialistCreateRequest {
     @Schema(description = "登录名")
     private String username;
 
+    @Size(max = 128)
+    @Schema(description = "名称")
+    private String name;
+
+    @Size(max = 512)
+    @Schema(description = "备注")
+    private String remark;
+
     @NotBlank
     @Size(min = 1, max = 64)
     @Schema(description = "初始密码")

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { cloneDeep } from 'lodash-es';
 
 import { SubscribeMessageUrl } from '@lib/shared/api/requrls/system/message';
+import { SSE_KIND_TENANT } from '@lib/shared/constants/ssePrincipalKind';
 import { CompanyTypeEnum } from '@lib/shared/enums/commonEnum';
 import { ModuleConfigEnum } from '@lib/shared/enums/moduleEnum';
 import { getSSE } from '@lib/shared/method/index';
@@ -126,9 +127,15 @@ const useAppStore = defineStore('app', {
       const userStore = useUserStore();
 
       await this.disconnectSystemMessageSSE();
+      const tenantId = this.tenantId || userStore.userInfo.tenantId;
+      if (!tenantId || !userStore.clientIdRandomId || !userStore.userInfo.id) {
+        return;
+      }
       this.eventSource = getSSE(SubscribeMessageUrl, {
         clientId: userStore.clientIdRandomId,
         userId: userStore.userInfo.id,
+        tenantId,
+        kind: SSE_KIND_TENANT,
       });
       if (this.eventSource) {
         this.eventSource.onmessage = (event: MessageEvent) => {
@@ -158,12 +165,20 @@ const useAppStore = defineStore('app', {
      */
     async disconnectSystemMessageSSE() {
       const userStore = useUserStore();
+      if (!userStore.clientIdRandomId || !userStore.userInfo.id) return;
       if (this.eventSource) {
         this.eventSource.close();
         this.eventSource = null;
       }
       try {
-        await closeMessageSubscribe({ clientId: userStore.clientIdRandomId, userId: userStore.userInfo.id });
+        const tenantId = this.tenantId || userStore.userInfo.tenantId;
+        if (!tenantId) return;
+        await closeMessageSubscribe({
+          clientId: userStore.clientIdRandomId,
+          userId: userStore.userInfo.id,
+          kind: SSE_KIND_TENANT,
+          tenantId,
+        });
       } catch (error) {
         // eslint-disable-next-line no-console
         console.log(error);

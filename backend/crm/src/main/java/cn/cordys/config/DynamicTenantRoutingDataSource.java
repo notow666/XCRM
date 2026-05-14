@@ -1,6 +1,7 @@
 package cn.cordys.config;
 
 import cn.cordys.context.TenantContext;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
 
 import javax.sql.DataSource;
@@ -23,7 +24,8 @@ public class DynamicTenantRoutingDataSource extends AbstractRoutingDataSource {
 
     @Override
     protected Object determineCurrentLookupKey() {
-        return TenantContext.getTenantIdOrDefault();
+        // 未绑定租户时返回 null，由 AbstractRoutingDataSource 走 defaultTargetDataSource，不向字面量 default 误映射
+        return StringUtils.trimToNull(TenantContext.getTenantId());
     }
 
     /**

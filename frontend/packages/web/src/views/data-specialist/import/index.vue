@@ -17,6 +17,9 @@
           class="w-full max-w-[480px]"
           @update:value="onTenantChange"
         />
+        <div class="mt-1 max-w-[480px] text-xs leading-relaxed text-[var(--text-n4)]">
+          {{ t('dataSpecialistImport.tenantSwitchHint') }}
+        </div>
       </div>
 
       <div class="mb-4">
@@ -70,11 +73,11 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, ref, watch } from 'vue';
+  import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
   import { NAlert, NButton, NCard, NSelect, useMessage } from 'naive-ui';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
-  import { downloadByteFile } from '@lib/shared/method';
+  import { downloadByteFile, getGenerateId } from '@lib/shared/method';
   import type { PoolCustomerImportCheckResponse } from '@lib/shared/models/customer';
 
   import CrmUpload from '@/components/pure/crm-upload/index.vue';
@@ -90,10 +93,14 @@
     dataSpecialistPreCheckPoolImport,
   } from '@/api/modules';
   import useUser from '@/hooks/useUser';
+  import useAppStore from '@/store/modules/app';
+  import useUserStore from '@/store/modules/user';
 
   const { t } = useI18n();
   const Message = useMessage();
   const { logout } = useUser();
+  const userStore = useUserStore();
+  const appStore = useAppStore();
 
   const tenantOptions = ref<Array<{ tenantId: string; name: string; code: string }>>([]);
   const poolOptions = ref<Array<{ id: string; name: string }>>([]);
@@ -113,9 +120,7 @@
   };
   const checkResponse = ref<PoolCustomerImportCheckResponse>({ ...initCheckResponse });
 
-  const canPreCheck = computed(
-    () => !!selectedTenantId.value && !!selectedPoolId.value && fileList.value.length > 0
-  );
+  const canPreCheck = computed(() => !!selectedTenantId.value && !!selectedPoolId.value && fileList.value.length > 0);
 
   let currentFile: File | null = null;
 
@@ -149,15 +154,16 @@
     }
   }
 
-  watch(
-    () => selectedTenantId.value,
-    (v) => {
-      if (!v) {
-        poolOptions.value = [];
-        selectedPoolId.value = null;
-      }
+  function resetWorkbenchAfterTenantChange(oldTid: string | null | undefined, newTid: string | null) {
+    if (oldTid != null && oldTid !== newTid) {
+      fileList.value = [];
+      currentFile = null;
+      checkResponse.value = { ...initCheckResponse };
+      checkResultModal.value = false;
+      importLoading.value = false;
+      validateLoading.value = false;
     }
-  );
+  }
 
   async function handleDownloadTemplate() {
     if (!selectedTenantId.value) return;
@@ -209,21 +215,36 @@
   async function downloadErrorFile() {
     if (!selectedTenantId.value || !checkResponse.value.errorFileId) return;
     try {
-      const res = await dataSpecialistDownloadPoolErrorFile(
-        selectedTenantId.value,
-        checkResponse.value.errorFileId
-      );
+      const res = await dataSpecialistDownloadPoolErrorFile(selectedTenantId.value, checkResponse.value.errorFileId);
       downloadByteFile(res.data, checkResponse.value.errorFileName || 'error_file.xlsx');
     } catch {
       Message.error(t('common.downloadFailed'));
     }
   }
 
+  watch(selectedTenantId, (tid, oldTid) => {
+    resetWorkbenchAfterTenantChange(oldTid, tid);
+    if (!tid) {
+      poolOptions.value = [];
+      selectedPoolId.value = null;
+    }
+  });
+
+  onMounted(async () => {
+    if (!userStore.clientIdRandomId) {
+      userStore.$patch({ clientIdRandomId: getGenerateId() });
+    }
+    await appStore.connectSystemMessageSSE(() => {});
+    loadTenants();
+  });
+
+  onUnmounted(async () => {
+    await appStore.disconnectSystemMessageSSE();
+  });
+
   async function handleLogout() {
     await logout(undefined, undefined, false);
   }
-
-  loadTenants();
 </script>
 
 <style scoped>

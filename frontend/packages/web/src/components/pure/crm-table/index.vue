@@ -563,6 +563,20 @@
     });
   }
 
+  /** computedStyleMap 在 Safari <16.4、部分内置浏览器等环境不存在 */
+  function getColElementWidthPx(el: Element): number | undefined {
+    const mapFn = (el as HTMLElement).computedStyleMap;
+    if (typeof mapFn === 'function') {
+      const widthEntry = mapFn.call(el)?.get('width') as CSSNumericValue | undefined;
+      const v = widthEntry?.value;
+      if (typeof v === 'number' && Number.isFinite(v)) {
+        return v;
+      }
+    }
+    const parsed = parseFloat(getComputedStyle(el as HTMLElement).width);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
   /**
    * 监听列宽变化，更新缓存的列配置，以记住列宽
    * 这里使用 ResizeObserver 来监听 col 元素的宽度变化
@@ -583,7 +597,7 @@
           const key = e.getAttribute('data-col-key');
           const col = tableColumnsMap.column.find((c) => c.key === key);
           if (col) {
-            col.width = (e.computedStyleMap()?.get('width') as any)?.value || col.width;
+            col.width = getColElementWidthPx(e) || col.width;
           }
         });
         setItem(attrs.tableKey as TableKeyEnum, tableColumnsMap);

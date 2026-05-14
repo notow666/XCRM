@@ -1,19 +1,12 @@
 import type { CordysAxios } from '@lib/shared/api/http/Axios';
-import { LocaleChangeUrl, VersionUrl } from '@lib/shared/api/requrls/sys';
-import type { SystemVersion } from '@lib/shared/models/common';
+import { LocaleChangeUrl } from '@lib/shared/api/requrls/sys';
 
 export default function useSysApi(CDR: CordysAxios) {
-  // 获取系统版本信息
-  function getSystemVersion() {
-    return CDR.get<SystemVersion>({ url: VersionUrl });
-  }
-
   function changeLocaleBackEnd(language: string) {
     return CDR.post({ url: LocaleChangeUrl, data: { language } });
   }
 
   return {
-    getSystemVersion,
     changeLocaleBackEnd,
   };
 }

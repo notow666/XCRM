@@ -40,6 +40,16 @@
     <NSpace vertical class="max-w-[90vw]">
       <NInput v-model:value="createForm.username" :placeholder="t('managementCenter.dataSpecialist.username')" />
       <NInput
+        v-model:value="createForm.name"
+        :placeholder="t('managementCenter.dataSpecialist.specialistName')"
+      />
+      <NInput
+        v-model:value="createForm.remark"
+        type="textarea"
+        :rows="3"
+        :placeholder="t('managementCenter.dataSpecialist.remark')"
+      />
+      <NInput
         v-model:value="createForm.password"
         type="password"
         show-password-on="click"
@@ -97,6 +107,13 @@
   >
     <NSpace vertical class="max-w-[90vw]">
       <NInput v-model:value="editForm.username" disabled :placeholder="t('managementCenter.dataSpecialist.username')" />
+      <NInput v-model:value="editForm.name" :placeholder="t('managementCenter.dataSpecialist.specialistName')" />
+      <NInput
+        v-model:value="editForm.remark"
+        type="textarea"
+        :rows="3"
+        :placeholder="t('managementCenter.dataSpecialist.remark')"
+      />
       <NInput
         v-model:value="editForm.password"
         type="password"
@@ -201,6 +218,8 @@
   const showCreate = ref(false);
   const createForm = reactive({
     username: '',
+    name: '',
+    remark: '',
     password: '',
     tenantIds: [] as string[],
   });
@@ -209,6 +228,8 @@
   const editForm = reactive({
     id: '',
     username: '',
+    name: '',
+    remark: '',
     password: '',
     enabled: true,
     tenantIds: [] as string[],
@@ -248,9 +269,11 @@
     )
   );
 
-  function formatTime(ms?: number) {
+  function formatDateTime(ms?: number) {
     if (ms == null) return '-';
-    return new Date(ms).toLocaleString();
+    const d = new Date(ms);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
   }
 
   async function loadTenantOptions() {
@@ -306,6 +329,8 @@
     }
     tenantFilterCreate.value = '';
     createForm.username = '';
+    createForm.name = '';
+    createForm.remark = '';
     createForm.password = '';
     createForm.tenantIds = [];
     showCreate.value = true;
@@ -330,6 +355,8 @@
       await createDataSpecialist({
         username,
         password,
+        name: createForm.name.trim() || undefined,
+        remark: createForm.remark.trim() || undefined,
         tenantIds: createForm.tenantIds,
       });
       message.success(t('managementCenter.dataSpecialist.createSuccess'));
@@ -354,6 +381,8 @@
       tenantFilterEdit.value = '';
       editForm.id = detail.id;
       editForm.username = detail.username;
+      editForm.name = detail.name ?? '';
+      editForm.remark = detail.remark ?? '';
       editForm.password = '';
       editForm.enabled = !!detail.enabled;
       editForm.tenantIds = [...(detail.tenantIds || [])];
@@ -369,10 +398,14 @@
       return false;
     }
     const payload: {
+      name: string;
+      remark: string;
       enabled: boolean;
       tenantIds: string[];
       password?: string;
     } = {
+      name: editForm.name.trim(),
+      remark: editForm.remark.trim(),
       enabled: editForm.enabled,
       tenantIds: editForm.tenantIds,
     };
@@ -404,7 +437,21 @@
   }
 
   const columns = computed(() => [
-    { title: t('managementCenter.dataSpecialist.username'), key: 'username' },
+    { title: t('managementCenter.dataSpecialist.username'), key: 'username', width: 120, ellipsis: { tooltip: true } },
+    {
+      title: t('managementCenter.dataSpecialist.specialistName'),
+      key: 'name',
+      width: 120,
+      ellipsis: { tooltip: true },
+      render: (row: DataSpecialistAdminItem) => row.name || '-',
+    },
+    {
+      title: t('managementCenter.dataSpecialist.remark'),
+      key: 'remark',
+      minWidth: 140,
+      ellipsis: { tooltip: true },
+      render: (row: DataSpecialistAdminItem) => row.remark || '-',
+    },
     {
       title: t('managementCenter.dataSpecialist.enabled'),
       key: 'enabled',
@@ -418,8 +465,8 @@
     {
       title: t('managementCenter.dataSpecialist.createTime'),
       key: 'createTime',
-      width: 180,
-      render: (row: DataSpecialistAdminItem) => formatTime(row.createTime),
+      width: 178,
+      render: (row: DataSpecialistAdminItem) => formatDateTime(row.createTime),
     },
     {
       title: t('managementCenter.dataSpecialist.id'),

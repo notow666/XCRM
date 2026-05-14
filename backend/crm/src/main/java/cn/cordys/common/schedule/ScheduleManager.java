@@ -84,7 +84,7 @@ public class ScheduleManager {
             JobBuilder jobBuilder = JobBuilder.newJob(jobClass).withIdentity(withTenantJobKey(jobKey));
             if (jobDataMap != null) {
                 if (StringUtils.isBlank(jobDataMap.getString(TENANT_ID_KEY))) {
-                    jobDataMap.put(TENANT_ID_KEY, TenantContext.getTenantIdOrDefault());
+                    jobDataMap.put(TENANT_ID_KEY, TenantContext.requireTenantId());
                 }
                 jobBuilder.usingJobData(jobDataMap);
             }
@@ -236,19 +236,19 @@ public class ScheduleManager {
         jobDataMap.put("userId", userId);
         jobDataMap.put("config", schedule.getConfig());
         jobDataMap.put("organizationId", schedule.getOrganizationId());
-        jobDataMap.put(TENANT_ID_KEY, TenantContext.getTenantIdOrDefault());
+        jobDataMap.put(TENANT_ID_KEY, TenantContext.requireTenantId());
         return jobDataMap;
     }
 
     private JobKey withTenantJobKey(JobKey jobKey) {
-        String tenantId = TenantContext.getTenantIdOrDefault();
+        String tenantId = TenantContext.requireTenantId();
         String name = appendTenantPrefix(jobKey.getName(), tenantId);
         String group = appendTenantPrefix(jobKey.getGroup(), tenantId);
         return new JobKey(name, group);
     }
 
     private TriggerKey withTenantTriggerKey(TriggerKey triggerKey) {
-        String tenantId = TenantContext.getTenantIdOrDefault();
+        String tenantId = TenantContext.requireTenantId();
         String name = appendTenantPrefix(triggerKey.getName(), tenantId);
         String group = appendTenantPrefix(triggerKey.getGroup(), tenantId);
         return new TriggerKey(name, group);

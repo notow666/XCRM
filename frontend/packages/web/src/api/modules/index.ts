@@ -758,7 +758,7 @@ export const {
 
 export const { login, signout, isLogin, getKey, getThirdCallback, getThirdOauthCallback } = loginApi;
 
-export const { getSystemVersion, changeLocaleBackEnd } = sysApi;
+export const { changeLocaleBackEnd } = sysApi;
 
 export const { getLicense, addLicense } = licenseApi;
 

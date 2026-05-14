@@ -340,10 +340,9 @@
 
   onBeforeMount(() => {
     if (isPlatformUser.value) {
-      appStore.getVersion();
+      appStore.connectSystemMessageSSE(userStore.showSystemNotify);
       return;
     }
-    appStore.getVersion();
     if (route.name !== WorkbenchRouteEnum.WORKBENCH_INDEX) {
       appStore.initMessage();
     }

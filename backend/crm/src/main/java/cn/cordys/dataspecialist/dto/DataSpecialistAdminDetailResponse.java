@@ -10,6 +10,8 @@ public class DataSpecialistAdminDetailResponse {
 
     private String id;
     private String username;
+    private String name;
+    private String remark;
     private Boolean enabled;
     private Long createTime;
     private Long updateTime;

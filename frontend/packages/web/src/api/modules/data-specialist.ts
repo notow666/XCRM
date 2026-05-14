@@ -3,6 +3,15 @@ import type { PoolCustomerImportCheckResponse } from '@lib/shared/models/custome
 
 import CDR from '@/api/http';
 
+export const DATA_SPECIALIST_USER_ID_PREFIX = 'DS:';
+
+/** 与后端 DataSpecialistConstants.SSE_POOL_IMPORT_RESULT_TYPE 一致 */
+export const DATA_SPECIALIST_SSE_POOL_IMPORT_TYPE = 'DATA_SPECIALIST_POOL_IMPORT';
+
+export function dataSpecialistBusinessUserId(masterSpecialistId: string) {
+  return `${DATA_SPECIALIST_USER_ID_PREFIX}${masterSpecialistId}`;
+}
+
 export interface DataSpecialistTenantItem {
   tenantId: string;
   code: string;
@@ -18,6 +27,8 @@ export interface DataSpecialistAdminPageRequest {
 export interface DataSpecialistAdminItem {
   id: string;
   username: string;
+  name?: string | null;
+  remark?: string | null;
   enabled: boolean;
   createTime: number;
   updateTime: number;
@@ -30,10 +41,14 @@ export interface DataSpecialistAdminDetail extends DataSpecialistAdminItem {
 export interface DataSpecialistCreatePayload {
   username: string;
   password: string;
+  name?: string;
+  remark?: string;
   tenantIds: string[];
 }
 
 export interface DataSpecialistUpdatePayload {
+  name?: string;
+  remark?: string;
   password?: string;
   enabled?: boolean;
   tenantIds?: string[];

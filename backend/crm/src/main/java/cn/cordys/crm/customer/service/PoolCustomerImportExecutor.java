@@ -54,7 +54,7 @@ public class PoolCustomerImportExecutor {
     private static final int BATCH_SIZE = 500;
 
     @Transactional(rollbackFor = Exception.class)
-    public void executeImport(MultipartFile file, String poolId, String userId, String orgId) {
+    public int executeImport(MultipartFile file, String poolId, String userId, String orgId) {
         try (InputStream inputStream = file.getInputStream()) {
             List<BaseField> fields = moduleFormService.getAllCustomImportFields(FormKey.CUSTOMER.getKey(), orgId);
             List<BaseField> filteredFields = filterOwnerField(fields);
@@ -65,7 +65,7 @@ public class PoolCustomerImportExecutor {
             CustomFieldImportEventListener<Customer> eventListener = new CustomFieldImportEventListener<>(
                     filteredFields, Customer.class, orgId, userId, "customer_field", afterDo, 2000, null, null);
             FastExcelFactory.read(inputStream, eventListener).headRowNumber(1).ignoreEmptyRow(true).sheet().doRead();
-
+            return eventListener.getSuccess();
         } catch (Exception e) {
             Throwable cause = e.getCause();
             log.error("pool customer import error", cause != null ? cause : e);

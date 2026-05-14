@@ -97,8 +97,13 @@ export default function useProductApi(CDR: CordysAxios) {
     return CDR.post({ url: BatchSaveMessageTaskUrl, data });
   }
 
-  // 关闭订阅消息SSE事件流
-  function closeMessageSubscribe(params: { userId: string; clientId: string }) {
+  // 关闭订阅消息SSE事件流（tenantId 用于 EventSource 无法带头时与 TenantContextWebFilter 一致；kind 与后端 SsePrincipalKind 一致）
+  function closeMessageSubscribe(params: {
+    clientId: string;
+    userId: string;
+    kind?: string;
+    tenantId?: string;
+  }) {
     return CDR.get({ url: CloseMessageUrl, params }, { ignoreCancelToken: true });
   }
 

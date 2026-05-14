@@ -44,8 +44,8 @@ public class PlatformAuthService {
         }
 
         UserDTO user = new UserDTO();
-        user.setId(userRow.getId());
-        user.setName(userRow.getUsername());
+        user.setId(userRow.getUsername());
+        user.setName(userRow.getId());
         user.setSource("PLATFORM");
         user.setEnable(true);
         user.setTenantId("---");

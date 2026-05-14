@@ -2,6 +2,11 @@ import { defineStore } from 'pinia';
 import { cloneDeep } from 'lodash-es';
 
 import { SubscribeMessageUrl } from '@lib/shared/api/requrls/system/message';
+import {
+  SSE_KIND_DATA_SPECIALIST,
+  SSE_KIND_PLATFORM,
+  SSE_KIND_TENANT,
+} from '@lib/shared/constants/ssePrincipalKind';
 import { CompanyTypeEnum } from '@lib/shared/enums/commonEnum';
 import { ModuleConfigEnum } from '@lib/shared/enums/moduleEnum';
 import { useI18n } from '@lib/shared/hooks/useI18n';
@@ -12,24 +17,27 @@ import { loadScript } from '@lib/shared/method/scriptLoader';
 
 import {
   closeMessageSubscribe,
+  DATA_SPECIALIST_SSE_POOL_IMPORT_TYPE,
   getHomeMessageList,
   getKey,
   getModuleNavConfigList,
   getModuleTopNavList,
   getOpportunityStageConfig,
   getPageConfig,
-  getSystemVersion,
   getThirdConfigByType,
   getThirdPartyResource,
   getUnReadAnnouncement,
 } from '@/api/modules';
 import { defaultNavList } from '@/config/system';
+import useDiscreteApi from '@/hooks/useDiscreteApi';
 import useUserStore from '@/store/modules/user';
 import { watchStyle, watchTheme } from '@/utils/theme';
 import { getThemeOverrides } from '@/utils/themeOverrides';
 
 import type { AppState, PageConfig, PageConfigKeys, Style, Theme } from './types';
 import type { RouteRecordRaw } from 'vue-router';
+
+const { message } = useDiscreteApi();
 
 const isCanceledError = (error: unknown) => {
   const e = error as { name?: string; code?: string };
@@ -287,12 +295,30 @@ const useAppStore = defineStore('app', {
      */
     async connectSystemMessageSSE(callback: () => void) {
       const userStore = useUserStore();
+      const { t } = useI18n();
 
       await this.disconnectSystemMessageSSE();
-      this.eventSource = getSSE(SubscribeMessageUrl, {
+      if (!userStore.clientIdRandomId || !userStore.userInfo.id) {
+        return;
+      }
+      const src = userStore.userInfo.source || '';
+      const params: Record<string, string> = {
         clientId: userStore.clientIdRandomId,
         userId: userStore.userInfo.id,
-      });
+        kind: SSE_KIND_TENANT,
+      };
+      if (src === 'PLATFORM') {
+        params.kind = SSE_KIND_PLATFORM;
+      } else if (src === 'DATA_SPECIALIST') {
+        params.kind = SSE_KIND_DATA_SPECIALIST;
+      } else {
+        const tenantId = this.tenantId || userStore.userInfo.tenantId;
+        if (!tenantId) {
+          return;
+        }
+        params.tenantId = tenantId;
+      }
+      this.eventSource = getSSE(SubscribeMessageUrl, params);
       if (this.eventSource) {
         this.eventSource.onmessage = (event: MessageEvent) => {
           try {
@@ -301,6 +327,14 @@ const useAppStore = defineStore('app', {
             }
 
             const data = JSON.parse(event.data);
+            if (data.type === DATA_SPECIALIST_SSE_POOL_IMPORT_TYPE) {
+              if (data.success) {
+                message.success(typeof data.message === 'string' ? data.message : t('common.success'));
+              } else {
+                message.error(typeof data.message === 'string' ? data.message : t('poolImportButton.importFailed'));
+              }
+              return;
+            }
 
             this.messageInfo = { ...data };
             callback();
@@ -329,7 +363,19 @@ const useAppStore = defineStore('app', {
         this.eventSource = null;
       }
       try {
-        await closeMessageSubscribe({ clientId: userStore.clientIdRandomId, userId: userStore.userInfo.id });
+        const src = userStore.userInfo.source || '';
+        const base = { clientId: userStore.clientIdRandomId, userId: userStore.userInfo.id };
+        if (src === 'PLATFORM') {
+          await closeMessageSubscribe({ ...base, kind: SSE_KIND_PLATFORM });
+        } else if (src === 'DATA_SPECIALIST') {
+          await closeMessageSubscribe({ ...base, kind: SSE_KIND_DATA_SPECIALIST });
+        } else {
+          const tenantId = this.tenantId || userStore.userInfo.tenantId;
+          if (!tenantId) {
+            return;
+          }
+          await closeMessageSubscribe({ ...base, kind: SSE_KIND_TENANT, tenantId });
+        }
       } catch (error) {
         // eslint-disable-next-line no-console
         console.log(error);
@@ -361,14 +407,6 @@ const useAppStore = defineStore('app', {
     },
     setRestoreMenuTimeStamp(timeStamp: number) {
       this.restoreMenuTimeStamp = timeStamp;
-    },
-    async getVersion() {
-      try {
-        this.versionInfo = await getSystemVersion();
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.log(error);
-      }
     },
     // 显示 SQLBot
     async showSQLBot() {

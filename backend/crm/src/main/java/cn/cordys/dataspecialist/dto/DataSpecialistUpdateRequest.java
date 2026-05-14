@@ -9,6 +9,14 @@ import java.util.List;
 @Data
 public class DataSpecialistUpdateRequest {
 
+    @Size(max = 128)
+    @Schema(description = "名称，不传则不修改")
+    private String name;
+
+    @Size(max = 512)
+    @Schema(description = "备注，不传则不修改")
+    private String remark;
+
     @Size(min = 1, max = 64)
     @Schema(description = "新密码，不传则不修改")
     private String password;

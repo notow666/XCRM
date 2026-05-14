@@ -14,6 +14,12 @@ public class DataSpecialist extends BaseModel {
     @Schema(description = "登录名")
     private String username;
 
+    @Schema(description = "名称")
+    private String specialistName;
+
+    @Schema(description = "备注")
+    private String remark;
+
     @Schema(description = "密码摘要")
     private String passwordHash;
 

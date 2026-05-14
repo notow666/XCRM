@@ -104,7 +104,7 @@ public class InSiteNoticeSender extends AbstractNoticeSender {
             NoticeRedisMessage noticeRedisMessage = new NoticeRedisMessage();
             noticeRedisMessage.setMessage(receiver.getUserId());
             noticeRedisMessage.setNoticeType(NotificationConstants.Type.SYSTEM_NOTICE.toString());
-            noticeRedisMessage.setTenantId(TenantContext.getTenantIdOrDefault());
+            noticeRedisMessage.setTenantId(TenantContext.requireTenantId());
             messagePublisher.publish(TopicConstants.SSE_TOPIC, JSON.toJSONString(noticeRedisMessage));
         });
 
