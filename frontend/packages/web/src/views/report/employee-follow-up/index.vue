@@ -56,6 +56,7 @@
         :loading="loading"
         :bordered="false"
         :scroll-x="tableScrollX"
+        :max-height="tableMaxHeight"
       />
     </CrmCard>
   </n-scrollbar>
@@ -138,6 +139,8 @@
     CALL_OVER_3MIN: 'callOver3Min',
   } as const;
 
+  const EMPTY_CUSTOMER_SOURCE_DIMENSION_KEY = '__EMPTY__';
+
   type MetricTypeValue = (typeof MetricType)[keyof typeof MetricType];
 
   type FollowUpRow = EmployeeFollowAnalysisSummaryItem;
@@ -180,6 +183,9 @@
     { label: t('report.dimension.statDay'), value: Dimension.STAT_DAY },
     { label: t('report.dimension.statMonth'), value: Dimension.STAT_MONTH },
   ]);
+
+  // 给表格设置视口内最大高度，让数据区域内部滚动，表头保持固定可见。
+  const tableMaxHeight = 'calc(100vh - 320px)';
 
   function formatDuration(sec: number) {
     const value = Math.max(0, Math.floor(sec));
@@ -256,7 +262,9 @@
       return;
     }
     drilldownState.metricType = metricType;
-    drilldownState.dimensionKey = row.dimensionKey;
+    // 客户来源汇总里显示为 "-" 的行，真实维度键是空串；下钻时改传约定值，避免被后端 @NotBlank 拦截。
+    drilldownState.dimensionKey =
+      form.dimension === Dimension.CUSTOMER_SOURCE && !row.dimensionKey ? EMPTY_CUSTOMER_SOURCE_DIMENSION_KEY : row.dimensionKey;
     drilldownState.title = resolveDrilldownTitle(metricType);
     drilldownState.current = 1;
     drilldownState.pageSize = 10;

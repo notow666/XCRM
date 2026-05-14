@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 @Service
 @Transactional(rollbackFor = Exception.class)
@@ -47,15 +48,23 @@ public class EmployeeFollowAnalysisFactBuildService {
 
     public void rebuildDay(LocalDate statDate, String operatorUserId) {
         // 历史重算按天覆盖写，先删旧事实，再按四类来源重新聚合入表。
-        deleteByStatDate(statDate.toString());
+        logSqlCommand("deleteByStatDate", "statDate=" + statDate, () -> deleteByStatDate(statDate.toString()));
         long startTime = statDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
         long endTime = statDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() - 1;
 
         List<EmployeeFollowAnalysisMetricRow> mergedRows = mergeMetricRows(List.of(
-                employeeFollowAnalysisMapper.listInboundRows(startTime, endTime, null),
-                employeeFollowAnalysisMapper.listContactedRows(startTime, endTime, null),
-                employeeFollowAnalysisMapper.listCallRows(startTime, endTime, null),
-                employeeFollowAnalysisMapper.listWechatRows(startTime, endTime, null)
+                logSqlQuery("listInboundRows-rebuild",
+                        buildSqlParams(startTime, endTime),
+                        () -> employeeFollowAnalysisMapper.listInboundRows(startTime, endTime, null)),
+                logSqlQuery("listContactedRows-rebuild",
+                        buildSqlParams(startTime, endTime),
+                        () -> employeeFollowAnalysisMapper.listContactedRows(startTime, endTime, null)),
+                logSqlQuery("listCallRows-rebuild",
+                        buildSqlParams(startTime, endTime),
+                        () -> employeeFollowAnalysisMapper.listCallRows(startTime, endTime, null)),
+                logSqlQuery("listWechatRows-rebuild",
+                        buildSqlParams(startTime, endTime),
+                        () -> employeeFollowAnalysisMapper.listWechatRows(startTime, endTime, null))
         ));
         if (CollectionUtils.isEmpty(mergedRows)) {
             return;
@@ -86,7 +95,13 @@ public class EmployeeFollowAnalysisFactBuildService {
 
         for (int i = 0; i < insertList.size(); i += BATCH_SIZE) {
             int end = Math.min(i + BATCH_SIZE, insertList.size());
-            employeeFollowAnalysisFactDayBaseMapper.batchInsert(insertList.subList(i, end));
+            int batchStart = i;
+            int batchEnd = end;
+            logSqlCommand(
+                    "batchInsertFactDay",
+                    "statDate=" + statDate + ", batchStart=" + batchStart + ", batchEnd=" + batchEnd + ", batchSize=" + (batchEnd - batchStart),
+                    () -> employeeFollowAnalysisFactDayBaseMapper.batchInsert(insertList.subList(batchStart, batchEnd))
+            );
         }
         log.info("员工跟进分析事实日报重算完成，statDate={}, count={}", statDate, insertList.size());
     }
@@ -146,5 +161,26 @@ public class EmployeeFollowAnalysisFactBuildService {
 
     private long defaultLong(Long value) {
         return value == null ? 0L : value;
+    }
+
+    private String buildSqlParams(long startTime, long endTime) {
+        return "startTime=" + startTime + ", endTime=" + endTime + ", orgId=null";
+    }
+
+    private <T> List<T> logSqlQuery(String sqlName, String params, Supplier<List<T>> supplier) {
+        long start = System.currentTimeMillis();
+        //log.info("员工跟进分析SQL开始, sqlName={}, params={}", sqlName, params);
+        List<T> result = supplier.get();
+        long cost = System.currentTimeMillis() - start;
+        //log.info("员工跟进分析SQL结束, sqlName={}, params={}, costMs={}, resultSize={}", sqlName, params, cost, result == null ? 0 : result.size());
+        return result;
+    }
+
+    private void logSqlCommand(String sqlName, String params, Runnable runnable) {
+        long start = System.currentTimeMillis();
+        //log.info("员工跟进分析SQL开始, sqlName={}, params={}", sqlName, params);
+        runnable.run();
+        long cost = System.currentTimeMillis() - start;
+        //log.info("员工跟进分析SQL结束, sqlName={}, params={}, costMs={}", sqlName, params, cost);
     }
 }

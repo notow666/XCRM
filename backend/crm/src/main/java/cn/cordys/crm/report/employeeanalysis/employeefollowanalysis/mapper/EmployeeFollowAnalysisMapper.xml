@@ -29,7 +29,91 @@
                call_duration_sec as callDurationSec
         from report_employee_follow_analysis_fact_day
         where stat_date between #{startDate} and #{endDate}
-        order by stat_date asc, customer_id asc, operator_user_id asc
+    </select>
+
+    <select id="listHistoryRowsByEmployee" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisHistoryAggregateRow">
+        select f.operator_user_id as dimensionKey,
+               '' as dimensionLabel,
+               f.customer_id as customerId,
+               max(f.inbound_customer_flag) as inboundCustomerFlag,
+               max(f.contacted_customer_flag) as contactedCustomerFlag,
+               max(f.new_wechat_friend_flag) as newWechatFriendFlag,
+               sum(f.dial_count) as dialCount,
+               sum(f.connected_count) as connectedCount,
+               sum(f.call_over_1min_count) as callOver1minCount,
+               sum(f.call_over_3min_count) as callOver3minCount,
+               sum(f.call_duration_sec) as callDurationSec
+        from report_employee_follow_analysis_fact_day f
+        where f.stat_date between #{startDate} and #{endDate}
+        group by f.operator_user_id, f.customer_id
+    </select>
+
+    <select id="listHistoryRowsByDepartment" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisHistoryAggregateRow">
+        select f.operator_user_id as dimensionKey,
+               '' as dimensionLabel,
+               f.customer_id as customerId,
+               max(f.inbound_customer_flag) as inboundCustomerFlag,
+               max(f.contacted_customer_flag) as contactedCustomerFlag,
+               max(f.new_wechat_friend_flag) as newWechatFriendFlag,
+               sum(f.dial_count) as dialCount,
+               sum(f.connected_count) as connectedCount,
+               sum(f.call_over_1min_count) as callOver1minCount,
+               sum(f.call_over_3min_count) as callOver3minCount,
+               sum(f.call_duration_sec) as callDurationSec
+        from report_employee_follow_analysis_fact_day f
+        where f.stat_date between #{startDate} and #{endDate}
+        group by f.operator_user_id, f.customer_id
+    </select>
+
+    <select id="listHistoryRowsByCustomerSource" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisHistoryAggregateRow">
+        select f.customer_id as dimensionKey,
+               '' as dimensionLabel,
+               f.customer_id as customerId,
+               max(f.inbound_customer_flag) as inboundCustomerFlag,
+               max(f.contacted_customer_flag) as contactedCustomerFlag,
+               max(f.new_wechat_friend_flag) as newWechatFriendFlag,
+               sum(f.dial_count) as dialCount,
+               sum(f.connected_count) as connectedCount,
+               sum(f.call_over_1min_count) as callOver1minCount,
+               sum(f.call_over_3min_count) as callOver3minCount,
+               sum(f.call_duration_sec) as callDurationSec
+        from report_employee_follow_analysis_fact_day f
+        where f.stat_date between #{startDate} and #{endDate}
+        group by f.customer_id
+    </select>
+
+    <select id="listHistoryRowsByStatDay" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisHistoryAggregateRow">
+        select date_format(f.stat_date, '%Y-%m-%d') as dimensionKey,
+               date_format(f.stat_date, '%Y-%m-%d') as dimensionLabel,
+               f.customer_id as customerId,
+               max(f.inbound_customer_flag) as inboundCustomerFlag,
+               max(f.contacted_customer_flag) as contactedCustomerFlag,
+               max(f.new_wechat_friend_flag) as newWechatFriendFlag,
+               sum(f.dial_count) as dialCount,
+               sum(f.connected_count) as connectedCount,
+               sum(f.call_over_1min_count) as callOver1minCount,
+               sum(f.call_over_3min_count) as callOver3minCount,
+               sum(f.call_duration_sec) as callDurationSec
+        from report_employee_follow_analysis_fact_day f
+        where f.stat_date between #{startDate} and #{endDate}
+        group by f.stat_date, f.customer_id
+    </select>
+
+    <select id="listHistoryRowsByStatMonth" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisHistoryAggregateRow">
+        select date_format(f.stat_date, '%Y-%m') as dimensionKey,
+               date_format(f.stat_date, '%Y-%m') as dimensionLabel,
+               f.customer_id as customerId,
+               max(f.inbound_customer_flag) as inboundCustomerFlag,
+               max(f.contacted_customer_flag) as contactedCustomerFlag,
+               max(f.new_wechat_friend_flag) as newWechatFriendFlag,
+               sum(f.dial_count) as dialCount,
+               sum(f.connected_count) as connectedCount,
+               sum(f.call_over_1min_count) as callOver1minCount,
+               sum(f.call_over_3min_count) as callOver3minCount,
+               sum(f.call_duration_sec) as callDurationSec
+        from report_employee_follow_analysis_fact_day f
+        where f.stat_date between #{startDate} and #{endDate}
+        group by date_format(f.stat_date, '%Y-%m'), f.customer_id
     </select>
 
     <select id="listInboundRows" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisMetricRow">
@@ -124,10 +208,10 @@
                <!-- 通话时长 -->
                sum(case when ifnull(cra.is_connected, 0) = 1 then ifnull(cra.duration, 0) else 0 end) as callDurationSec
         from mmba_call_record_audit cra
-        join sys_user su on su.um = cra.um
-        join customer c on c.mobile = cra.customer_tel
-                       and c.owner = su.id
-                       and c.in_shared_pool is false
+        straight_join sys_user su on su.um = cra.um
+        straight_join customer c on c.mobile = cra.customer_tel
+                                and c.owner = su.id
+                                and c.in_shared_pool is false
         where cra.begin_timestamp between #{startTime} and #{endTime}
           and cra.direction = 0
           and cra.customer_tel is not null
@@ -194,19 +278,8 @@
 
     <select id="listCustomerContexts" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisCustomerContextRow">
         select c.id as customerId,
-               c.name as customerName,
-               c.mobile,
-               c.owner as ownerId,
-               su.name as ownerName,
-               sou.department_id as departmentId,
-               sd.name as departmentName,
                cf.field_value as customerSource
         from customer c
-        left join sys_user su on su.id = c.owner
-        left join sys_organization_user sou
-               on sou.organization_id = #{orgId}
-              and sou.user_id = c.owner
-        left join sys_department sd on sd.id = sou.department_id
         left join customer_field cf
                on cf.resource_id = c.id
               and cf.field_id = (
@@ -218,10 +291,7 @@
                     and mf.internal_key = 'customerSource'
                   limit 1
               )
-        where c.id in
-        <foreach collection="customerIds" item="customerId" open="(" close=")" separator=",">
-            #{customerId}
-        </foreach>
+        where c.organization_id = #{orgId}
     </select>
 
     <select id="listInboundCustomerDrilldown" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisDrilldownItemResponse">
@@ -258,7 +328,10 @@
           <if test="request.dimensionType == 'employeeDept'">
               and sou.department_id = #{request.dimensionKey}
           </if>
-          <if test="request.dimensionType == 'customerSource'">
+          <if test="request.dimensionType == 'customerSource' and request.dimensionKey == '__EMPTY__'">
+              and ifnull(cf.field_value, '') = ''
+          </if>
+          <if test="request.dimensionType == 'customerSource' and request.dimensionKey != '__EMPTY__'">
               and ifnull(cf.field_value, '') = #{request.dimensionKey}
           </if>
           <if test="request.dimensionType == 'statDay'">
@@ -308,7 +381,10 @@
           <if test="request.dimensionType == 'employeeDept'">
               and action_sou.department_id = #{request.dimensionKey}
           </if>
-          <if test="request.dimensionType == 'customerSource'">
+          <if test="request.dimensionType == 'customerSource' and request.dimensionKey == '__EMPTY__'">
+              and ifnull(cf.field_value, '') = ''
+          </if>
+          <if test="request.dimensionType == 'customerSource' and request.dimensionKey != '__EMPTY__'">
               and ifnull(cf.field_value, '') = #{request.dimensionKey}
           </if>
           <if test="request.dimensionType == 'statDay'">
@@ -380,7 +456,10 @@
               <if test="request.dimensionType == 'employeeDept'">
                   and action_sou.department_id = #{request.dimensionKey}
               </if>
-              <if test="request.dimensionType == 'customerSource'">
+              <if test="request.dimensionType == 'customerSource' and request.dimensionKey == '__EMPTY__'">
+                  and ifnull(cf.field_value, '') = ''
+              </if>
+              <if test="request.dimensionType == 'customerSource' and request.dimensionKey != '__EMPTY__'">
                   and ifnull(cf.field_value, '') = #{request.dimensionKey}
               </if>
               <if test="request.dimensionType == 'statDay'">
@@ -431,10 +510,10 @@
                cra.is_connected as isConnected,
                cra.direction
         from mmba_call_record_audit cra
-        join sys_user su on su.um = cra.um
-        join customer c on c.mobile = cra.customer_tel
-                       and c.owner = su.id
-                       and c.in_shared_pool is false
+        straight_join sys_user su on su.um = cra.um
+        straight_join customer c on c.mobile = cra.customer_tel
+                                and c.owner = su.id
+                                and c.in_shared_pool is false
         left join sys_user owner_user on owner_user.id = c.owner
         left join sys_organization_user owner_sou
                on owner_sou.organization_id = #{orgId}
@@ -475,7 +554,10 @@
           <if test="request.dimensionType == 'employeeDept'">
               and action_sou.department_id = #{request.dimensionKey}
           </if>
-          <if test="request.dimensionType == 'customerSource'">
+          <if test="request.dimensionType == 'customerSource' and request.dimensionKey == '__EMPTY__'">
+              and ifnull(cf.field_value, '') = ''
+          </if>
+          <if test="request.dimensionType == 'customerSource' and request.dimensionKey != '__EMPTY__'">
               and ifnull(cf.field_value, '') = #{request.dimensionKey}
           </if>
           <if test="request.dimensionType == 'statDay'">

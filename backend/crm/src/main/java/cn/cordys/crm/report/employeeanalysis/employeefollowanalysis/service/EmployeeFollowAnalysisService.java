@@ -6,6 +6,7 @@ import cn.cordys.common.service.BaseService;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.request.EmployeeFollowAnalysisSummaryRequest;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisCustomerContextRow;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisEmployeeDimensionRow;
+import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisHistoryAggregateRow;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisMetricRow;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisSummaryItemResponse;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.enums.EmployeeFollowAnalysisDimensionType;
@@ -15,6 +16,7 @@ import cn.cordys.crm.system.dto.field.base.OptionProp;
 import cn.cordys.crm.system.service.ModuleFieldExtService;
 import jakarta.annotation.Resource;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,9 +34,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Comparator;
 import java.util.Set;
+import java.util.function.Supplier;
 
 @Service
 @Transactional(rollbackFor = Exception.class, readOnly = true)
+@Slf4j
 public class EmployeeFollowAnalysisService {
 
     private static final String CUSTOMER_SOURCE_INTERNAL_KEY = "customerSource";
@@ -50,25 +54,44 @@ public class EmployeeFollowAnalysisService {
     public List<EmployeeFollowAnalysisSummaryItemResponse> summary(EmployeeFollowAnalysisSummaryRequest request, String orgId) {
         // 汇总查询固定拆成两段：昨天及以前走事实表，今天走原始表实时聚合。
         QueryRange range = buildQueryRange(request.getTimePreset(), request.getStartTime(), request.getEndTime());
-        List<EmployeeFollowAnalysisMetricRow> metricRows = new ArrayList<>();
+        EmployeeFollowAnalysisDimensionType dimensionType = EmployeeFollowAnalysisDimensionType.fromValue(request.getDimensionType());
+        AggregationContext context = buildAggregationContext(orgId, dimensionType);
+        Map<String, SummaryAccumulator> accumulatorMap = new LinkedHashMap<>();
         if (range.getHistoryStartDate() != null && range.getHistoryEndDate() != null) {
-            // 历史区间 9 个指标统一从事实日报表读取。
-            metricRows.addAll(employeeFollowAnalysisMapper.listFactRows(range.getHistoryStartDate().toString(), range.getHistoryEndDate().toString()));
+            // 历史区间直接按当前维度在事实表聚合，避免回传大量明细行再由 Java 二次聚合。
+            mergeAccumulatorMaps(
+                    accumulatorMap,
+                    aggregateHistoryRows(loadHistoryAggregateRows(range, dimensionType, orgId), dimensionType, context)
+            );
         }
+        List<EmployeeFollowAnalysisMetricRow> metricRows = new ArrayList<>();
         if (range.getTodayStartTime() != null && range.getTodayEndTime() != null) {
             // 入库客户数
-            metricRows.addAll(employeeFollowAnalysisMapper.listInboundRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId));
+            metricRows.addAll(logSqlQuery(
+                    "listInboundRows",
+                    "startTime=" + range.getTodayStartTime() + ", endTime=" + range.getTodayEndTime() + ", orgId=" + orgId,
+                    () -> employeeFollowAnalysisMapper.listInboundRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId)
+            ));
             // 联系客户数
-            metricRows.addAll(employeeFollowAnalysisMapper.listContactedRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId));
+            metricRows.addAll(logSqlQuery(
+                    "listContactedRows",
+                    "startTime=" + range.getTodayStartTime() + ", endTime=" + range.getTodayEndTime() + ", orgId=" + orgId,
+                    () -> employeeFollowAnalysisMapper.listContactedRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId)
+            ));
             // 通话类指标：拨打电话数、拨打接通数、一分钟以上通话数、三分钟以上通话数、通话时长
-            metricRows.addAll(employeeFollowAnalysisMapper.listCallRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId));
+            metricRows.addAll(logSqlQuery(
+                    "listCallRows",
+                    "startTime=" + range.getTodayStartTime() + ", endTime=" + range.getTodayEndTime() + ", orgId=" + orgId,
+                    () -> employeeFollowAnalysisMapper.listCallRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId)
+            ));
             // 新增微信好友数
-            metricRows.addAll(employeeFollowAnalysisMapper.listWechatRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId));
+            metricRows.addAll(logSqlQuery(
+                    "listWechatRows",
+                    "startTime=" + range.getTodayStartTime() + ", endTime=" + range.getTodayEndTime() + ", orgId=" + orgId,
+                    () -> employeeFollowAnalysisMapper.listWechatRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId)
+            ));
         }
-
-        EmployeeFollowAnalysisDimensionType dimensionType = EmployeeFollowAnalysisDimensionType.fromValue(request.getDimensionType());
-        AggregationContext context = buildAggregationContext(metricRows, orgId);
-        Map<String, SummaryAccumulator> accumulatorMap = aggregateRows(metricRows, dimensionType, context);
+        mergeAccumulatorMaps(accumulatorMap, aggregateRows(metricRows, dimensionType, context));
         if (Boolean.TRUE.equals(request.getShowEmptyItems())) {
             fillEmptyDimensions(accumulatorMap, dimensionType, context, range);
         }
@@ -77,12 +100,19 @@ public class EmployeeFollowAnalysisService {
         return responses;
     }
 
-    private AggregationContext buildAggregationContext(List<EmployeeFollowAnalysisMetricRow> metricRows, String orgId) {
+    private AggregationContext buildAggregationContext(String orgId, EmployeeFollowAnalysisDimensionType dimensionType) {
         AggregationContext context = new AggregationContext();
         // 维度展示统一取当前值，不在历史事实表内固化部门和客户来源。
-        List<EmployeeFollowAnalysisEmployeeDimensionRow> employees = employeeFollowAnalysisMapper.listCurrentEmployees(orgId);
-        Map<String, UserDeptDTO> userDeptMap = baseService.getUserDeptMapByUserIds(
-                employees.stream().map(EmployeeFollowAnalysisEmployeeDimensionRow::getOperatorUserId).toList(), orgId);
+        List<EmployeeFollowAnalysisEmployeeDimensionRow> employees = logSqlQuery(
+                "listCurrentEmployees",
+                "orgId=" + orgId,
+                () -> employeeFollowAnalysisMapper.listCurrentEmployees(orgId)
+        );
+        Map<String, UserDeptDTO> userDeptMap = logMapQuery(
+                "getUserDeptMapByUserIds",
+                "orgId=" + orgId + ", userCount=" + employees.size(),
+                () -> baseService.getUserDeptMapByUserIds(employees.stream().map(EmployeeFollowAnalysisEmployeeDimensionRow::getOperatorUserId).toList(), orgId)
+        );
         Map<String, EmployeeFollowAnalysisEmployeeDimensionRow> employeeMap = new LinkedHashMap<>();
         for (EmployeeFollowAnalysisEmployeeDimensionRow item : employees) {
             UserDeptDTO userDeptDTO = userDeptMap.get(item.getOperatorUserId());
@@ -116,7 +146,11 @@ public class EmployeeFollowAnalysisService {
         context.setDepartmentOrderMap(departmentOrderMap);
 
         Map<String, String> sourceLabelMap = new LinkedHashMap<>();
-        List<OptionProp> sourceOptions = moduleFieldExtService.getFieldOptions(FormKey.CUSTOMER.getKey(), orgId, CUSTOMER_SOURCE_INTERNAL_KEY);
+        List<OptionProp> sourceOptions = logSqlQuery(
+                "getFieldOptions(customerSource)",
+                "formKey=" + FormKey.CUSTOMER.getKey() + ", orgId=" + orgId + ", internalKey=" + CUSTOMER_SOURCE_INTERNAL_KEY,
+                () -> moduleFieldExtService.getFieldOptions(FormKey.CUSTOMER.getKey(), orgId, CUSTOMER_SOURCE_INTERNAL_KEY)
+        );
         Map<String, Integer> sourceOrderMap = new LinkedHashMap<>();
         int sourceIndex = 0;
         for (OptionProp option : sourceOptions) {
@@ -126,21 +160,101 @@ public class EmployeeFollowAnalysisService {
         context.setSourceLabelMap(sourceLabelMap);
         context.setSourceOrderMap(sourceOrderMap);
 
-        Set<String> customerIds = new LinkedHashSet<>();
-        for (EmployeeFollowAnalysisMetricRow row : metricRows) {
-            if (StringUtils.isNotBlank(row.getCustomerId())) {
-                customerIds.add(row.getCustomerId());
-            }
-        }
         Map<String, EmployeeFollowAnalysisCustomerContextRow> customerContextMap = new LinkedHashMap<>();
-        if (!customerIds.isEmpty()) {
-            List<EmployeeFollowAnalysisCustomerContextRow> customerRows = employeeFollowAnalysisMapper.listCustomerContexts(new ArrayList<>(customerIds), orgId);
+        // 客户来源维度直接查询当前客户来源映射，避免按 customerIds 拼超长 IN SQL。
+        if (dimensionType == EmployeeFollowAnalysisDimensionType.CUSTOMER_SOURCE) {
+            List<EmployeeFollowAnalysisCustomerContextRow> customerRows = logSqlQuery(
+                    "listCustomerContexts",
+                    "orgId=" + orgId,
+                    () -> employeeFollowAnalysisMapper.listCustomerContexts(orgId)
+            );
             for (EmployeeFollowAnalysisCustomerContextRow item : customerRows) {
                 customerContextMap.put(item.getCustomerId(), item);
             }
         }
         context.setCustomerContextMap(customerContextMap);
         return context;
+    }
+
+    private List<EmployeeFollowAnalysisHistoryAggregateRow> loadHistoryAggregateRows(QueryRange range,
+                                                                                     EmployeeFollowAnalysisDimensionType dimensionType,
+                                                                                     String orgId) {
+        String startDate = range.getHistoryStartDate().toString();
+        String endDate = range.getHistoryEndDate().toString();
+        return switch (dimensionType) {
+            case EMPLOYEE_NAME -> logSqlQuery(
+                    "listHistoryRowsByEmployee",
+                    "startDate=" + startDate + ", endDate=" + endDate,
+                    () -> employeeFollowAnalysisMapper.listHistoryRowsByEmployee(startDate, endDate)
+            );
+            case EMPLOYEE_DEPT -> logSqlQuery(
+                    "listHistoryRowsByDepartment",
+                    "startDate=" + startDate + ", endDate=" + endDate + ", orgId=" + orgId,
+                    () -> employeeFollowAnalysisMapper.listHistoryRowsByDepartment(startDate, endDate, orgId)
+            );
+            case CUSTOMER_SOURCE -> logSqlQuery(
+                    "listHistoryRowsByCustomerSource",
+                    "startDate=" + startDate + ", endDate=" + endDate,
+                    () -> employeeFollowAnalysisMapper.listHistoryRowsByCustomerSource(startDate, endDate)
+            );
+            case STAT_DAY -> logSqlQuery(
+                    "listHistoryRowsByStatDay",
+                    "startDate=" + startDate + ", endDate=" + endDate,
+                    () -> employeeFollowAnalysisMapper.listHistoryRowsByStatDay(startDate, endDate)
+            );
+            case STAT_MONTH -> logSqlQuery(
+                    "listHistoryRowsByStatMonth",
+                    "startDate=" + startDate + ", endDate=" + endDate,
+                    () -> employeeFollowAnalysisMapper.listHistoryRowsByStatMonth(startDate, endDate)
+            );
+        };
+    }
+
+    private Map<String, SummaryAccumulator> aggregateHistoryRows(List<EmployeeFollowAnalysisHistoryAggregateRow> rows,
+                                                                EmployeeFollowAnalysisDimensionType dimensionType,
+                                                                AggregationContext context) {
+        Map<String, SummaryAccumulator> result = new LinkedHashMap<>();
+        for (EmployeeFollowAnalysisHistoryAggregateRow row : rows) {
+            DimensionValue dimension = resolveHistoryDimensionValue(row, dimensionType, context);
+            String dimensionKey = StringUtils.defaultString(dimension.getKey());
+            SummaryAccumulator accumulator = result.computeIfAbsent(dimensionKey,
+                    ignore -> new SummaryAccumulator(dimensionKey, defaultText(dimension.getLabel())));
+            accumulator.getInboundCustomers().addIfFlag(row.getCustomerId(), row.getInboundCustomerFlag());
+            accumulator.getContactedCustomers().addIfFlag(row.getCustomerId(), row.getContactedCustomerFlag());
+            accumulator.getWechatCustomers().addIfFlag(row.getCustomerId(), row.getNewWechatFriendFlag());
+            accumulator.setDialCount(accumulator.getDialCount() + defaultInt(row.getDialCount()));
+            accumulator.setConnectedCount(accumulator.getConnectedCount() + defaultInt(row.getConnectedCount()));
+            accumulator.setCallOver1MinCount(accumulator.getCallOver1MinCount() + defaultInt(row.getCallOver1minCount()));
+            accumulator.setCallOver3MinCount(accumulator.getCallOver3MinCount() + defaultInt(row.getCallOver3minCount()));
+            accumulator.setCallDurationSec(accumulator.getCallDurationSec() + defaultLong(row.getCallDurationSec()));
+        }
+        return result;
+    }
+
+    private DimensionValue resolveHistoryDimensionValue(EmployeeFollowAnalysisHistoryAggregateRow row,
+                                                        EmployeeFollowAnalysisDimensionType dimensionType,
+                                                        AggregationContext context) {
+        return switch (dimensionType) {
+            case EMPLOYEE_NAME -> new DimensionValue(
+                    StringUtils.defaultString(row.getDimensionKey()),
+                    defaultText(row.getDimensionLabel())
+            );
+            case EMPLOYEE_DEPT -> {
+                EmployeeFollowAnalysisEmployeeDimensionRow employee = context.getEmployeeMap().get(row.getDimensionKey());
+                String departmentId = employee == null ? "" : StringUtils.defaultString(employee.getDepartmentId());
+                String departmentName = employee == null ? "" : employee.getDepartmentName();
+                yield new DimensionValue(departmentId, defaultText(departmentName));
+            }
+            case CUSTOMER_SOURCE -> {
+                EmployeeFollowAnalysisCustomerContextRow customer = context.getCustomerContextMap().get(row.getCustomerId());
+                String sourceValue = customer == null ? "" : StringUtils.defaultString(customer.getCustomerSource());
+                yield new DimensionValue(sourceValue, defaultText(context.getSourceLabelMap().getOrDefault(sourceValue, sourceValue)));
+            }
+            case STAT_DAY, STAT_MONTH -> new DimensionValue(
+                    StringUtils.defaultString(row.getDimensionKey()),
+                    defaultText(row.getDimensionLabel())
+            );
+        };
     }
 
     private Map<String, SummaryAccumulator> aggregateRows(List<EmployeeFollowAnalysisMetricRow> metricRows,
@@ -161,6 +275,22 @@ public class EmployeeFollowAnalysisService {
             accumulator.setCallDurationSec(accumulator.getCallDurationSec() + defaultLong(row.getCallDurationSec()));
         }
         return result;
+    }
+
+    private void mergeAccumulatorMaps(Map<String, SummaryAccumulator> target,
+                                      Map<String, SummaryAccumulator> source) {
+        for (SummaryAccumulator sourceItem : source.values()) {
+            SummaryAccumulator targetItem = target.computeIfAbsent(sourceItem.getDimensionKey(),
+                    ignore -> new SummaryAccumulator(sourceItem.getDimensionKey(), sourceItem.getDimensionLabel()));
+            targetItem.getInboundCustomers().addAll(sourceItem.getInboundCustomers());
+            targetItem.getContactedCustomers().addAll(sourceItem.getContactedCustomers());
+            targetItem.getWechatCustomers().addAll(sourceItem.getWechatCustomers());
+            targetItem.setDialCount(targetItem.getDialCount() + sourceItem.getDialCount());
+            targetItem.setConnectedCount(targetItem.getConnectedCount() + sourceItem.getConnectedCount());
+            targetItem.setCallOver1MinCount(targetItem.getCallOver1MinCount() + sourceItem.getCallOver1MinCount());
+            targetItem.setCallOver3MinCount(targetItem.getCallOver3MinCount() + sourceItem.getCallOver3MinCount());
+            targetItem.setCallDurationSec(targetItem.getCallDurationSec() + sourceItem.getCallDurationSec());
+        }
     }
 
     private void fillEmptyDimensions(Map<String, SummaryAccumulator> accumulatorMap,
@@ -257,7 +387,11 @@ public class EmployeeFollowAnalysisService {
                                        EmployeeFollowAnalysisDimensionType dimensionType,
                                        AggregationContext context) {
         return switch (dimensionType) {
-            case EMPLOYEE_NAME, EMPLOYEE_DEPT, STAT_DAY, STAT_MONTH -> accumulator.getDimensionLabel();
+            case EMPLOYEE_NAME -> {
+                EmployeeFollowAnalysisEmployeeDimensionRow employee = context.getEmployeeMap().get(accumulator.getDimensionKey());
+                yield defaultText(employee == null ? accumulator.getDimensionLabel() : employee.getEmployeeName());
+            }
+            case EMPLOYEE_DEPT, STAT_DAY, STAT_MONTH -> accumulator.getDimensionLabel();
             case CUSTOMER_SOURCE -> {
                 if (StringUtils.isBlank(accumulator.getDimensionKey())) {
                     yield defaultText(accumulator.getDimensionLabel());
@@ -362,6 +496,24 @@ public class EmployeeFollowAnalysisService {
         return orderMap.getOrDefault(StringUtils.defaultString(key), Integer.MAX_VALUE);
     }
 
+    private <T> List<T> logSqlQuery(String sqlName, String params, Supplier<List<T>> supplier) {
+        long start = System.currentTimeMillis();
+        //log.info("员工跟进分析SQL开始, sqlName={}, params={}", sqlName, params);
+        List<T> result = supplier.get();
+        long cost = System.currentTimeMillis() - start;
+        //log.info("员工跟进分析SQL结束, sqlName={}, params={}, costMs={}, resultSize={}", sqlName, params, cost, result == null ? 0 : result.size());
+        return result;
+    }
+
+    private <K, V> Map<K, V> logMapQuery(String sqlName, String params, Supplier<Map<K, V>> supplier) {
+        long start = System.currentTimeMillis();
+        //log.info("员工跟进分析SQL开始, sqlName={}, params={}", sqlName, params);
+        Map<K, V> result = supplier.get();
+        long cost = System.currentTimeMillis() - start;
+        //log.info("员工跟进分析SQL结束, sqlName={}, params={}, costMs={}, resultSize={}", sqlName, params, cost, result == null ? 0 : result.size());
+        return result;
+    }
+
     @Data
     private static class QueryRange {
         private LocalDate queryStartDate;
@@ -414,6 +566,10 @@ public class EmployeeFollowAnalysisService {
 
         int size() {
             return customerIds.size();
+        }
+
+        void addAll(UniqueCustomerSet source) {
+            customerIds.addAll(source.customerIds);
         }
     }
 }

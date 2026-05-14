@@ -13,6 +13,7 @@ import cn.cordys.crm.system.service.ModuleFieldExtService;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,9 +25,11 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 @Service
 @Transactional(rollbackFor = Exception.class, readOnly = true)
+@Slf4j
 public class EmployeeFollowAnalysisDrilldownService {
 
     @Resource
@@ -40,11 +43,31 @@ public class EmployeeFollowAnalysisDrilldownService {
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         EmployeeFollowAnalysisMetricType metricType = EmployeeFollowAnalysisMetricType.fromValue(request.getMetricType());
         List<EmployeeFollowAnalysisDrilldownItemResponse> list = switch (metricType) {
-            case INBOUND_CUSTOMER -> employeeFollowAnalysisMapper.listInboundCustomerDrilldown(request, orgId);
-            case CONTACTED_CUSTOMER -> employeeFollowAnalysisMapper.listContactedCustomerDrilldown(request, orgId);
-            case NEW_WECHAT_FRIEND -> employeeFollowAnalysisMapper.listWechatFriendDrilldown(request, orgId);
+            case INBOUND_CUSTOMER -> logSqlQuery(
+                    "listInboundCustomerDrilldown",
+                    "orgId=" + orgId + ", metricType=" + request.getMetricType() + ", dimensionType=" + request.getDimensionType()
+                            + ", dimensionKey=" + request.getDimensionKey(),
+                    () -> employeeFollowAnalysisMapper.listInboundCustomerDrilldown(request, orgId)
+            );
+            case CONTACTED_CUSTOMER -> logSqlQuery(
+                    "listContactedCustomerDrilldown",
+                    "orgId=" + orgId + ", metricType=" + request.getMetricType() + ", dimensionType=" + request.getDimensionType()
+                            + ", dimensionKey=" + request.getDimensionKey(),
+                    () -> employeeFollowAnalysisMapper.listContactedCustomerDrilldown(request, orgId)
+            );
+            case NEW_WECHAT_FRIEND -> logSqlQuery(
+                    "listWechatFriendDrilldown",
+                    "orgId=" + orgId + ", metricType=" + request.getMetricType() + ", dimensionType=" + request.getDimensionType()
+                            + ", dimensionKey=" + request.getDimensionKey(),
+                    () -> employeeFollowAnalysisMapper.listWechatFriendDrilldown(request, orgId)
+            );
             case DIAL_COUNT, CONNECTED_COUNT, CALL_OVER_1MIN, CALL_OVER_3MIN ->
-                    employeeFollowAnalysisMapper.listCallDrilldown(request, orgId);
+                    logSqlQuery(
+                            "listCallDrilldown",
+                            "orgId=" + orgId + ", metricType=" + request.getMetricType() + ", dimensionType=" + request.getDimensionType()
+                                    + ", dimensionKey=" + request.getDimensionKey(),
+                            () -> employeeFollowAnalysisMapper.listCallDrilldown(request, orgId)
+                    );
         };
         fillCustomerSourceLabels(list, orgId);
         return PageUtils.setPageInfo(page, list);
@@ -94,7 +117,11 @@ public class EmployeeFollowAnalysisDrilldownService {
             return;
         }
         // 下钻明细里 customerSource 返回的是当前值，这里再翻译成前端展示标签。
-        List<OptionProp> options = moduleFieldExtService.getFieldOptions(FormKey.CUSTOMER.getKey(), orgId, "customerSource");
+        List<OptionProp> options = logSqlQuery(
+                "getFieldOptions(customerSource)-drilldown",
+                "formKey=" + FormKey.CUSTOMER.getKey() + ", orgId=" + orgId + ", internalKey=customerSource",
+                () -> moduleFieldExtService.getFieldOptions(FormKey.CUSTOMER.getKey(), orgId, "customerSource")
+        );
         Map<String, String> sourceLabelMap = new LinkedHashMap<>();
         for (OptionProp option : options) {
             sourceLabelMap.put(StringUtils.defaultString(option.getValue()), option.getLabel());
@@ -107,5 +134,14 @@ public class EmployeeFollowAnalysisDrilldownService {
             }
             item.setCustomerSource(sourceLabelMap.getOrDefault(rawValue, rawValue));
         }
+    }
+
+    private <T> List<T> logSqlQuery(String sqlName, String params, Supplier<List<T>> supplier) {
+        long start = System.currentTimeMillis();
+        //log.info("员工跟进分析SQL开始, sqlName={}, params={}", sqlName, params);
+        List<T> result = supplier.get();
+        long cost = System.currentTimeMillis() - start;
+        //log.info("员工跟进分析SQL结束, sqlName={}, params={}, costMs={}, resultSize={}", sqlName, params, cost, result == null ? 0 : result.size());
+        return result;
     }
 }
