@@ -225,14 +225,11 @@ public class PoolCustomerImportService {
      */
     private ErrorCheckResult doErrorCheck(Map<Integer, String> rowMobileMap, List<ExcelErrData> fieldErrors,
                                            String orgId, String poolId, String mobileFieldName) {
-        long layerStartTime;
         ErrorCheckResult result = new ErrorCheckResult();
-
+        Map<String, Object> view = new HashMap<>();
         // 第一层：基础字段校验（必填 + 手机号格式）
-        layerStartTime = System.currentTimeMillis();
         checkFieldValidation(rowMobileMap, fieldErrors, result, mobileFieldName);
-        log.info("[耗时] Layer1-字段校验: {} ms, 错误数: {}", 
-                System.currentTimeMillis() - layerStartTime, result.getRowErrorCount());
+        view.put("Layer1-字段校验", result.getRowErrorCount());
         
         // 如果第一层有错误，直接返回，不继续后续校验
         if (!result.isPassed()) {
@@ -241,11 +238,9 @@ public class PoolCustomerImportService {
         }
 
         // 第二层：Excel内手机号重复检查
-        layerStartTime = System.currentTimeMillis();
         checkExcelDuplicate(rowMobileMap, result);
-        log.info("[耗时] Layer2-Excel重复检查: {} ms, 错误数: {}", 
-                System.currentTimeMillis() - layerStartTime, result.getRowErrorCount());
-        
+        view.put("Layer2-Excel重复检查", result.getRowErrorCount());
+
         // 如果第二层有错误，直接返回，不继续后续校验
         if (!result.isPassed()) {
             log.info("Layer 2 validation failed, skip layer 3/4. Error count: {}", result.getRowErrorCount());
@@ -253,11 +248,12 @@ public class PoolCustomerImportService {
         }
 
         // 第三层和第四层：数据库冲突检查
-        layerStartTime = System.currentTimeMillis();
-        checkDatabaseConflictsLayered(rowMobileMap, orgId, poolId, result);
-        log.info("[耗时] Layer3&4-数据库冲突检查: {} ms, 错误数: {}", 
-                System.currentTimeMillis() - layerStartTime, result.getRowErrorCount());
-        
+        checkDatabaseConflictsLayered(rowMobileMap, orgId, poolId, result, view);
+
+        view.put("Layer3&4-数据库冲突错误数", result.getRowErrorCount());
+
+        log.info("基础校验详情: [{}]", JSON.toFormatJSONString(view));
+
         return result;
     }
 
@@ -269,33 +265,26 @@ public class PoolCustomerImportService {
      * - 分层处理错误，客户池冲突优先（逻辑优化）
      */
     private void checkDatabaseConflictsLayered(Map<Integer, String> rowMobileMap, String orgId, String poolId,
-                                                 ErrorCheckResult result) {
-        long stepStartTime = System.currentTimeMillis();
-        
+                                                 ErrorCheckResult result, Map<String, Object> view) {
         List<String> validMobiles = rowMobileMap.entrySet().stream()
                 .filter(e -> StringUtils.isNotBlank(e.getValue()) && !result.isInvalidMobileRow(e.getKey()))
                 .map(Map.Entry::getValue)
                 .distinct()
                 .collect(Collectors.toList());
 
-        log.info("[耗时] 筛选有效手机号: {} ms, 有效手机号数量: {}", 
-                System.currentTimeMillis() - stepStartTime, validMobiles.size());
+        view.put("有效手机号数量", validMobiles.size());
 
         if (CollectionUtils.isEmpty(validMobiles)) {
             return;
         }
 
         // 一次查询获取所有冲突信息
-        stepStartTime = System.currentTimeMillis();
         Map<String, String> mobileConflictTypeMap = queryConflictsBatch(orgId, poolId, validMobiles);
-        log.info("[耗时] 批量查询数据库冲突: {} ms, 冲突手机号数量: {}", 
-                System.currentTimeMillis() - stepStartTime, mobileConflictTypeMap.size());
+        log.debug("冲突手机号数量: {}", mobileConflictTypeMap.size());
 
         // 第三层：先处理客户池冲突
-        stepStartTime = System.currentTimeMillis();
         processPrivatePoolConflicts(rowMobileMap, mobileConflictTypeMap, result);
-        log.info("[耗时] Layer3-处理客户池冲突: {} ms, 客户池冲突数: {}", 
-                System.currentTimeMillis() - stepStartTime, result.getPrivateConflictCount());
+        view.put("Layer3-客户池冲突数", result.getPrivateConflictCount());
         
         // 如果第三层有错误，直接返回，不处理第四层
         if (!result.isPassed()) {
@@ -304,10 +293,8 @@ public class PoolCustomerImportService {
         }
 
         // 第四层：处理其他公海池冲突
-        stepStartTime = System.currentTimeMillis();
         processOtherPoolConflicts(rowMobileMap, mobileConflictTypeMap, result);
-        log.info("[耗时] Layer4-处理其他公海池冲突: {} ms, 其他公海池冲突数: {}", 
-                System.currentTimeMillis() - stepStartTime, result.getOtherPoolConflictCount());
+        view.put("Layer4-其他公海池冲突数", result.getOtherPoolConflictCount());
     }
 
     /**
@@ -334,12 +321,12 @@ public class PoolCustomerImportService {
             }
             
             if (batchCount % 10 == 0 || i + BATCH_QUERY_SIZE >= validMobiles.size()) {
-                log.info("[耗时] DB查询第{}批: {} ms, 本批手机号数: {}, 冲突数: {}", 
+                log.debug("[耗时] DB查询第{}批: {} ms, 本批手机号数: {}, 冲突数: {}",
                         batchCount, batchTime, batchMobiles.size(), conflicts.size());
             }
         }
         
-        log.info("[耗时] DB查询总计: {} ms, 总批数: {}, 总手机号数: {}", 
+        log.debug("[耗时] DB查询总计: {} ms, 总批数: {}, 总手机号数: {}",
                 totalDbQueryTime, batchCount, validMobiles.size());
 
         return mobileConflictTypeMap;
@@ -678,9 +665,15 @@ public class PoolCustomerImportService {
                 ExportConstants.ExportType.CUSTOMER_POOL_IMPORT.toString(), fileName);
 
         Locale locale = LocaleContextHolder.getLocale();
+        String tenantId = TenantContext.getTenantId();
         Thread.startVirtualThread(() -> {
+            boolean tenantBound = false;
             try {
                 LocaleContextHolder.setLocale(locale);
+                if (StringUtils.isNotBlank(tenantId)) {
+                    TenantContext.setTenantId(tenantId);
+                    tenantBound = true;
+                }
                 poolCustomerImportExecutor.executeImport(file, poolId, userId, orgId);
                 exportTaskService.update(exportTask.getId(), ExportConstants.ExportStatus.SUCCESS.toString(), userId);
             } catch (Exception e) {
@@ -688,6 +681,9 @@ public class PoolCustomerImportService {
                 exportTaskService.update(exportTask.getId(), ExportConstants.ExportStatus.ERROR.toString(), userId);
             } finally {
                 LocaleContextHolder.resetLocaleContext();
+                if (tenantBound) {
+                    TenantContext.clear();
+                }
             }
         });
 

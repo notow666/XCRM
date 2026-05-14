@@ -42,6 +42,5 @@ public class MmbaWxFriendChangeAudit {
     private Long timestamp;
     private String um;
     private String wxType;
-    private String rawData;
     private String callbackRecordId;
 }

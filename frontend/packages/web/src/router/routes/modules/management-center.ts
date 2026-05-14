@@ -34,6 +34,15 @@ const managementCenter: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'data-specialist',
+      name: ManagementCenterRouteEnum.MANAGEMENT_CENTER_DATA_SPECIALIST,
+      component: () => import('../../../views/management-center/data-specialist/index.vue'),
+      meta: {
+        locale: 'menu.managementCenter.dataSpecialist',
+        permissions: ['PLATFORM_ADMIN:READ'],
+      },
+    },
+    {
       path: 'audit',
       name: ManagementCenterRouteEnum.MANAGEMENT_CENTER_AUDIT,
       component: () => import('@/views/management-center/audit/index.vue'),

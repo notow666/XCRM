@@ -55,6 +55,5 @@ public class MmbaWxChatAudit {
     private Long timestamp;
     private String um;
     private String contactMobile;
-    private String rawData;
     private String callbackRecordId;
 }

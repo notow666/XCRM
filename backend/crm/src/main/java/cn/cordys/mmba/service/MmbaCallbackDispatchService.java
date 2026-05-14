@@ -454,7 +454,6 @@ public class MmbaCallbackDispatchService {
         record.setOperateTime(operateTime);
         record.setProcessMsg(data.getProcessMsg());
         record.setBizExtInfo(data.getBizExtInfo());
-        record.setRawData(requireRawData(data));
         record.setCallbackRecordId(callbackRecord.getId());
         switch (behaviorType) {
             case MmbaBehaviorTypes.DIAL_FAIL_RECEIPT, MmbaBehaviorTypes.SMS_FAIL_RECEIPT -> {
@@ -542,7 +541,6 @@ public class MmbaCallbackDispatchService {
         }
         device.setLastBehaviorType(behaviorType);
         device.setLastAuditTime(data.getTimestamp());
-        device.setRawData(requireRawData(data));
         log.info("MMBA设备快照同步 behaviorType={} tenantId={} deviceId={} imei={} um={}",
                 behaviorType, data.getTenantId(), device.getDeviceId(), device.getImei(), data.getUm());
         mmbaDeviceService.saveOrUpdateDevice(device, MmbaConstants.SYSTEM_USER);
@@ -551,7 +549,7 @@ public class MmbaCallbackDispatchService {
 
     /**
      * 各业务表公共字段填充。
-     * 这里统一处理组织、人员、设备、原始 JSON 和回调总表 ID。
+     * 这里统一处理组织、人员、设备和回调总表 ID。
      */
     private void fillCommon(Object target, ZzyData data, MmbaCallbackRecord callbackRecord) {
         try {
@@ -582,18 +580,10 @@ public class MmbaCallbackDispatchService {
             if (hasMethod(target, "setImei2", String.class)) {
                 target.getClass().getMethod("setImei2", String.class).invoke(target, data.getImei2());
             }
-            target.getClass().getMethod("setRawData", String.class).invoke(target, requireRawData(data));
             target.getClass().getMethod("setCallbackRecordId", String.class).invoke(target, callbackRecord.getId());
         } catch (Exception e) {
             throw new IllegalStateException("MMBA公共字段填充失败", e);
         }
-    }
-
-    private String requireRawData(ZzyData data) {
-        if (data != null && StringUtils.isNotBlank(data.getRawPayload())) {
-            return data.getRawPayload();
-        }
-        throw new IllegalStateException("MMBA回调明细缺少原始rawPayload，禁止使用DTO重序列化结果写入raw_data");
     }
 
     private boolean hasMethod(Object target, String methodName, Class<?>... parameterTypes) {

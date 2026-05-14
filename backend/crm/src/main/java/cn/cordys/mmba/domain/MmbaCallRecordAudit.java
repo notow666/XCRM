@@ -47,6 +47,5 @@ public class MmbaCallRecordAudit {
     private String staffName;
     private Long timestamp;
     private String um;
-    private String rawData;
     private String callbackRecordId;
 }

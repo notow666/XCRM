@@ -118,24 +118,21 @@ public class RedisStreamCallbackService implements SmartLifecycle {
             String rawPayload = json == null ? null : json.toString();
             Map<String, String> stringStringMap = tenantMetaService.listEnabledTenant();
             MmbaAuditRequest dto = MmbaAuditRequest.generate(json, stringStringMap);
-            if (CollectionUtils.isEmpty(dto.getData())) {
-                log.warn("[mmba-callback-queue] 忽略无效回调（无 data）: {}", JSON.toJSONString(json));
-            } else if (MmbaBehaviorTypes.isSupported(dto.getBehaviorType())) {
-                Map<String, Object> message = new HashMap<>(8);
-                message.put(MESSAGE_DTO_FIELD, JSON.toJSONString(dto));
-                message.put(MESSAGE_RAW_PAYLOAD_FIELD, rawPayload);
-                message.put("timestamp", System.currentTimeMillis());
-                message.put("source", "callback_api");
-                message.put("retryCount", 0);
-                message.put("lastRetryTime", 0L);
-
-                RecordId recordId = redisTemplate.opsForStream()
-                        .add(StreamRecords.newRecord().in(STREAM_KEY).ofMap(message));
-
-                log.info("[mmba-callback-queue] 已入队 streamId={}, behaviorType={}", recordId, dto.getBehaviorType());
-            } else {
-                log.warn("[mmba-callback-queue] 忽略不支持的行为类型: {}", dto.getBehaviorType());
+            if(dto == null) {
+                return;
             }
+            Map<String, Object> message = new HashMap<>(8);
+            message.put(MESSAGE_DTO_FIELD, JSON.toJSONString(dto));
+            message.put(MESSAGE_RAW_PAYLOAD_FIELD, rawPayload);
+            message.put("timestamp", System.currentTimeMillis());
+            message.put("source", "callback_api");
+            message.put("retryCount", 0);
+            message.put("lastRetryTime", 0L);
+
+            RecordId recordId = redisTemplate.opsForStream()
+                    .add(StreamRecords.newRecord().in(STREAM_KEY).ofMap(message));
+
+            log.info("[mmba-callback-queue] 已入队 streamId={}, behaviorType={}", recordId, dto.getBehaviorType());
         } catch (Exception e) {
             log.error("[mmba-callback-queue] 写入 Redis Stream 失败", e);
         }
@@ -302,9 +299,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
                 List<MapRecord<String, Object, Object>> records = Optional.ofNullable(
                         redisTemplate.opsForStream().read(
                                 Consumer.from(CONSUMER_GROUP, consumerName),
-                                StreamReadOptions.empty()
-                                        .count(READ_BATCH_COUNT)
-                                        .block(READ_BLOCK),
+                                StreamReadOptions.empty().count(READ_BATCH_COUNT).block(READ_BLOCK),
                                 StreamOffset.create(STREAM_KEY, ReadOffset.lastConsumed())))
                         .orElse(Collections.emptyList());
 
@@ -352,13 +347,18 @@ public class RedisStreamCallbackService implements SmartLifecycle {
                                      List<MapRecord<String, Object, Object>> sourceRecords,
                                      String consumerName,
                                      String sourceType) {
+        int skipped = 0;
         for (MapRecord<String, Object, Object> record : sourceRecords) {
             String streamId = record.getId().getValue();
             MapRecord<String, Object, Object> previous = pendingRecordMap.putIfAbsent(streamId, record);
             if (previous != null) {
-                log.info("[mmba-callback-queue] 批次内命中重复消息，已跳过 streamId={}, consumer={}, source={}",
-                        streamId, consumerName, sourceType);
+                skipped++;
             }
+        }
+        // XREADGROUP id=0 会在未 XACK 前每轮重复返回同一批 PEL；与本地 map 去重是预期行为，勿按条打 INFO
+        if (skipped > 0 && log.isDebugEnabled()) {
+            log.debug("[mmba-callback-queue] 合并去重: consumer={}, source={}, skippedDup={}, mapSize={}, incoming={}",
+                    consumerName, sourceType, skipped, pendingRecordMap.size(), sourceRecords.size());
         }
     }
 
@@ -378,8 +378,9 @@ public class RedisStreamCallbackService implements SmartLifecycle {
         Map<MapRecord<String, Object, Object>, CompletableFuture<StreamMessageDisposition>> futureByRecord =
                 new LinkedHashMap<>(validRecords.size());
         for (MapRecord<String, Object, Object> record : validRecords) {
-            futureByRecord.put(record, CompletableFuture.supplyAsync(
-                    () -> processStreamRecord(record, consumerName),
+            futureByRecord.put(record,
+                    CompletableFuture.supplyAsync(
+                            () -> processStreamRecord(record, consumerName),
                     consumerService));
         }
 
@@ -428,12 +429,25 @@ public class RedisStreamCallbackService implements SmartLifecycle {
                 .forEach(this::acknowledgeRecord);
     }
 
+    /**
+     * 先从消费组确认，再从 Stream 中删除 entry，避免主队列无限增长占内存。
+     * 顺序必须为 XACK 再 XDEL（先释放 PEL，再删数据）。
+     */
     private void acknowledgeRecord(MapRecord<String, Object, Object> record) {
+        RecordId id = record.getId();
         try {
-            redisTemplate.opsForStream()
-                    .acknowledge(STREAM_KEY, CONSUMER_GROUP, record.getId());
+            redisTemplate.opsForStream().acknowledge(STREAM_KEY, CONSUMER_GROUP, id);
         } catch (Exception e) {
-            log.error("[mmba-callback-queue] XACK 失败 streamId={}", record.getId().getValue(), e);
+            log.error("[mmba-callback-queue] XACK 失败 streamId={}", id.getValue(), e);
+            return;
+        }
+        try {
+            Long removed = redisTemplate.opsForStream().delete(STREAM_KEY, id);
+            if (removed == null || removed == 0) {
+                log.debug("[mmba-callback-queue] XDEL 未删除到条目（可能已删） streamId={}", id.getValue());
+            }
+        } catch (Exception e) {
+            log.error("[mmba-callback-queue] XACK 成功但 XDEL 失败 streamId={}", id.getValue(), e);
         }
     }
 
@@ -442,16 +456,30 @@ public class RedisStreamCallbackService implements SmartLifecycle {
             return;
         }
 
+        RecordId[] recordIds = records.stream()
+                .map(MapRecord::getId)
+                .toArray(RecordId[]::new);
         try {
-            RecordId[] recordIds = records.stream()
-                    .map(MapRecord::getId)
-                    .toArray(RecordId[]::new);
             redisTemplate.opsForStream()
                     .acknowledge(STREAM_KEY, CONSUMER_GROUP, recordIds);
             log.debug("[mmba-callback-queue] 批量 XACK {} 条", recordIds.length);
         } catch (Exception e) {
             log.error("[mmba-callback-queue] 批量 XACK 失败，改为逐条", e);
             records.forEach(this::acknowledgeRecord);
+            return;
+        }
+        try {
+            Long removed = redisTemplate.opsForStream().delete(STREAM_KEY, recordIds);
+            log.debug("[mmba-callback-queue] 批量 XDEL 请求 {} 条, removed={}", recordIds.length, removed);
+        } catch (Exception e) {
+            log.error("[mmba-callback-queue] 批量 XACK 成功但 XDEL 失败，将逐条补删", e);
+            for (RecordId id : recordIds) {
+                try {
+                    redisTemplate.opsForStream().delete(STREAM_KEY, id);
+                } catch (Exception ex) {
+                    log.error("[mmba-callback-queue] 补删失败 streamId={}", id.getValue(), ex);
+                }
+            }
         }
     }
 
@@ -480,7 +508,6 @@ public class RedisStreamCallbackService implements SmartLifecycle {
                 dto.setRawPayload(rawPayload);
                 dto.setStreamId(messageId);
                 dto.setStreamConsumer(consumerName);
-                dto.hydrateDataRawPayload();
             } catch (Exception parseEx) {
                 log.error("[mmba-callback-queue] 反序列化失败，送入 DLQ: streamId={}", messageId, parseEx);
                 handleFailedMessage(record, parseEx);

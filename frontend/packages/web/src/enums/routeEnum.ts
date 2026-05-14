@@ -108,6 +108,7 @@ export enum ManagementCenterRouteEnum {
   MANAGEMENT_CENTER_OVERVIEW = 'managementCenterOverview',
   MANAGEMENT_CENTER_TENANT = 'managementCenterTenant',
   MANAGEMENT_CENTER_AUDIT = 'managementCenterAudit',
+  MANAGEMENT_CENTER_DATA_SPECIALIST = 'managementCenterDataSpecialist',
 }
 
 export enum FullPageEnum {

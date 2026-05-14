@@ -45,7 +45,7 @@ public class TenantProvisioningService {
     private static final Set<String> RESERVED_TENANT_CODES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "default", "master", "system", "mysql",
             "information_schema", "performance_schema",
-            "sys", "admin", "management"
+            "sys", "admin", "management", "platform" , "data-specialist"
     )));
 
     @Resource
@@ -89,7 +89,7 @@ public class TenantProvisioningService {
     public synchronized TenantProvisionResponse provision(String tenantCode, String tenantName, String operatorId,
                                                           List<String> initialUserIds, String orgId) {
         String tenantId = tenantCode.trim().toLowerCase(Locale.ROOT);
-        managementLog.info(LogModule.MANAGEMENT_MARKER,"[MANAGEMENT_CENTER][TENANT_PROVISION_BEGIN] tenantId={}, operator={}", tenantId, operatorId);
+        managementLog.info(LogModule.MANAGEMENT_MARKER, "[TENANT_PROVISION_BEGIN] tenantId={}, operator={}", tenantId, operatorId);
         if (RESERVED_TENANT_CODES.contains(tenantId)) {
             throw new GenericException(CrmHttpResultCode.VALIDATE_FAILED, Translator.get("tenant.code.reserved"));
         }
@@ -103,7 +103,7 @@ public class TenantProvisioningService {
                     tenantRoutingDataSource.registerTenantDataSource(tenantId, pool);
                 }
                 initializeTenantData(tenantId);
-                managementLog.info(LogModule.MANAGEMENT_MARKER,"[MANAGEMENT_CENTER][TENANT_PROVISION_IDEMPOTENT_HIT] tenantId={}", tenantId);
+                managementLog.info(LogModule.MANAGEMENT_MARKER,"[TENANT_PROVISION_IDEMPOTENT_HIT] tenantId={}", tenantId);
                 return TenantProvisionResponse.builder()
                         .tenantId(tenantId)
                         .dbName(existingConfig.getDbName())
@@ -136,7 +136,7 @@ public class TenantProvisioningService {
             tenantRoutingDataSource.registerTenantDataSource(tenantId, pool);
             initializeTenantData(tenantId);
 
-            managementLog.info(LogModule.MANAGEMENT_MARKER,"[MANAGEMENT_CENTER][TENANT_PROVISION_SUCCESS] tenantId={}, dbName={}", tenantId, dbName);
+            managementLog.info(LogModule.MANAGEMENT_MARKER,"[TENANT_PROVISION_SUCCESS] tenantId={}, dbName={}", tenantId, dbName);
 
             return TenantProvisionResponse.builder()
                     .tenantId(tenantId)
@@ -145,7 +145,7 @@ public class TenantProvisioningService {
                     .build();
         } catch (Exception e) {
             cleanupAfterProvisionFailure(tenantId, dbName, serverUrl, driver, jdbcUser, jdbcPassword, databaseCreated);
-            managementLog.error(LogModule.MANAGEMENT_MARKER,"[MANAGEMENT_CENTER][TENANT_PROVISION_FAILED] tenantId={}, error={}", tenantId, e.getMessage(), e);
+            managementLog.error(LogModule.MANAGEMENT_MARKER,"[TENANT_PROVISION_FAILED] tenantId={}, error={}", tenantId, e.getMessage(), e);
             throw new GenericException(CrmHttpResultCode.FAILED, e);
         }
     }

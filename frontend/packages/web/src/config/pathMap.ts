@@ -323,6 +323,11 @@ export const pathMap: PathMapItem[] = [
         locale: 'menu.managementCenter.tenant',
       },
       {
+        key: 'MANAGEMENT_CENTER_DATA_SPECIALIST',
+        route: AppRouteEnum.MANAGEMENT_CENTER_DATA_SPECIALIST,
+        locale: 'menu.managementCenter.dataSpecialist',
+      },
+      {
         key: 'MANAGEMENT_CENTER_AUDIT',
         route: AppRouteEnum.MANAGEMENT_CENTER_AUDIT,
         locale: 'menu.managementCenter.audit',

@@ -24,7 +24,7 @@
 
   import CrmSysUpgradeTip from '@/components/pure/crm-sys-upgrade-tip/index.vue';
 
-  import { getThirdOauthCallback, platformIsLogin } from '@/api/modules';
+  import { dataSpecialistIsLogin, getThirdOauthCallback, platformIsLogin } from '@/api/modules';
   import useLoading from '@/hooks/useLoading';
   import useUser from '@/hooks/useUser';
   import useAppStore from '@/store/modules/app';
@@ -136,6 +136,23 @@
       }
       return;
     }
+    const isDataSpecialistRoute = window.location.hash.includes('/data-specialist');
+    if (isDataSpecialistRoute) {
+      try {
+        if (hasToken()) {
+          const specialistUser = await dataSpecialistIsLogin();
+          if (specialistUser?.source === 'DATA_SPECIALIST') {
+            userStore.setInfo(specialistUser as any);
+          }
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.log(error);
+      } finally {
+        appStore.setLoginLoading(false);
+      }
+      return;
+    }
     const isWXWork = navigator.userAgent.includes('wxwork');
     const isDingTalk =
       navigator.userAgent.includes('dingtalk') ||
@@ -189,7 +206,11 @@
   watchTheme(appStore.pageConfig.theme, appStore.pageConfig);
 
   onBeforeMount(async () => {
-    if (window.location.hash.includes('/platform/login') || window.location.hash.includes('/management-center')) {
+    if (
+      window.location.hash.includes('/platform/login') ||
+      window.location.hash.includes('/management-center') ||
+      window.location.hash.includes('/data-specialist')
+    ) {
       return;
     }
     try {

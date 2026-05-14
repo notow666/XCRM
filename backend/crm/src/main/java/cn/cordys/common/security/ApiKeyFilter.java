@@ -1,5 +1,6 @@
 package cn.cordys.common.security;
 
+import cn.cordys.dataspecialist.DataSpecialistConstants;
 import cn.cordys.security.SessionConstants;
 import cn.cordys.security.SessionUser;
 import cn.cordys.security.SessionUtils;
@@ -52,6 +53,16 @@ public class ApiKeyFilter extends AnonymousFilter {
         // 如果不是 API 密钥请求且用户未认证，允许请求继续
         Boolean apiKeyCall = ApiKeyHandler.isApiKeyCall(httpRequest);
         if (!apiKeyCall && !SecurityUtils.getSubject().isAuthenticated()) {
+            // platform data-specialist 用户
+            SessionUser sessionUser = SessionUtils.getUser();
+            if(sessionUser != null) {
+                if(DataSpecialistConstants.SESSION_SOURCE.equals(sessionUser.getSource())){
+                    MDC.put(USER_ID_KEY, DataSpecialistConstants.specialistUserId(sessionUser.getId()));
+                }else{
+                    MDC.put(USER_ID_KEY, "SA:" + sessionUser.getId());
+                }
+                MDC.put(USER_NAME_KEY, sessionUser.getName());
+            }
             return true;
         }
 
@@ -68,12 +79,11 @@ public class ApiKeyFilter extends AnonymousFilter {
         if (!SecurityUtils.getSubject().isAuthenticated()) {
             ((HttpServletResponse) response).setHeader(SessionConstants.AUTHENTICATION_STATUS, "invalid");
         }
-        else{
-            SessionUser sessionUser = SessionUtils.getUser();
-            if(sessionUser != null) {
-                MDC.put(USER_ID_KEY, sessionUser.getId());
-                MDC.put(USER_NAME_KEY, sessionUser.getName());
-            }
+
+        SessionUser sessionUser = SessionUtils.getUser();
+        if(sessionUser != null) {
+            MDC.put(USER_ID_KEY, sessionUser.getId());
+            MDC.put(USER_NAME_KEY, sessionUser.getName());
         }
 
         return true;

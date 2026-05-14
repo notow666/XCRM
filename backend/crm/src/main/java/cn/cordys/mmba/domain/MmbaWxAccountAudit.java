@@ -37,6 +37,5 @@ public class MmbaWxAccountAudit {
     private Long timestamp;
     private String um;
     private Integer verifiedStatus;
-    private String rawData;
     private String callbackRecordId;
 }

@@ -553,7 +553,6 @@ public class MmbaFacadeService {
         device.setLastOnlineTime(text(item, "lastOnlineTime"));
         device.setLoginStatus(intValue(item, "loginStatus"));
         device.setLastAuditTime(System.currentTimeMillis());
-        device.setRawData(JSON.toJSONString(item));
         return device;
     }
 

@@ -16,7 +16,7 @@ import javax.sql.DataSource;
 
 @Configuration
 @MapperScan(
-        basePackages = {"cn.cordys.platform.mapper", "cn.cordys.tenant.mapper"},
+        basePackages = {"cn.cordys.platform.mapper", "cn.cordys.tenant.mapper", "cn.cordys.dataspecialist.mapper"},
         sqlSessionFactoryRef = "masterSqlSessionFactory"
 )
 public class MasterMybatisConfig {
@@ -27,12 +27,13 @@ public class MasterMybatisConfig {
                                                      MybatisProperties myBatisProperties) throws Exception {
         SqlSessionFactoryBean factoryBean = new SqlSessionFactoryBean();
         factoryBean.setDataSource(masterDataSource);
-        factoryBean.setTypeAliasesPackage("cn.cordys.platform.domain,cn.cordys.tenant.domain");
+        factoryBean.setTypeAliasesPackage("cn.cordys.platform.domain,cn.cordys.tenant.domain,cn.cordys.dataspecialist.domain");
         PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
         factoryBean.setMapperLocations(new org.springframework.core.io.Resource[]{
                 resolver.getResource("classpath:cn/cordys/platform/mapper/ExtPlatformUserMapper.xml"),
                 resolver.getResource("classpath:cn/cordys/platform/mapper/ExtTenantOpsTaskMapper.xml"),
-                resolver.getResource("classpath:cn/cordys/tenant/mapper/ExtTenantMapper.xml")
+                resolver.getResource("classpath:cn/cordys/tenant/mapper/ExtTenantMapper.xml"),
+                resolver.getResource("classpath:cn/cordys/dataspecialist/mapper/ExtDataSpecialistMapper.xml")
         });
         factoryBean.setPlugins(interceptorsProvider.getIfAvailable());
 

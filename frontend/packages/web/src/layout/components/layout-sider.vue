@@ -23,11 +23,11 @@
         <n-menu
           v-model:value="menuValue"
           v-model:expanded-keys="expandedKeys"
-          :root-indent="15"
-          :indent="appStore.getMenuIconStatus ? 28 : 8"
+          :root-indent="24"
+          :indent="appStore.getMenuIconStatus ? 38 : 8"
           :collapsed-width="appStore.collapsedWidth"
-          :icon-size="15"
-          :collapsed-icon-size="25"
+          :icon-size="18"
+          :collapsed-icon-size="28"
           :options="menuOptions"
           :render-label="renderLabel"
           accordion

@@ -543,9 +543,4 @@ public class ZzyData implements Serializable {
      */
     private String telecomOperators;
     private String telecomOperators2;
-
-    /**
-     * 单条回调原始JSON
-     */
-    private transient String rawPayload;
 }

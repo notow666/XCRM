@@ -21,5 +21,4 @@ public class MmbaDeviceMapping extends BaseModel {
     private String qq;
     private String mappingStatus;
     private Long lastSyncTime;
-    private String rawData;
 }

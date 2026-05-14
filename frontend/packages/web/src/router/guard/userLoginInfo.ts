@@ -1,6 +1,6 @@
 import { clearToken, hasToken, isLoginExpires } from '@lib/shared/method/auth';
 
-import { platformIsLogin } from '@/api/modules';
+import { dataSpecialistIsLogin, platformIsLogin } from '@/api/modules';
 import useUser from '@/hooks/useUser';
 import useUserStore from '@/store/modules/user';
 
@@ -20,8 +20,10 @@ export default function setupUserLoginInfoGuard(router: Router) {
     const tokenExists = hasToken();
     const userStore = useUserStore();
     let isPlatformUser = userStore.userInfo.source === 'PLATFORM';
+    let isDataSpecialistUser = userStore.userInfo.source === 'DATA_SPECIALIST';
     const isPlatformRoute = to.path.startsWith('/platform');
     const isManagementCenterRoute = to.path.startsWith('/management-center');
+    const isDataSpecialistRoute = to.path.startsWith('/data-specialist');
 
     if (tokenExists && (isPlatformRoute || isManagementCenterRoute) && !isPlatformUser) {
       try {
@@ -35,10 +37,51 @@ export default function setupUserLoginInfoGuard(router: Router) {
       }
     }
 
+    if (tokenExists && isDataSpecialistRoute && !isDataSpecialistUser) {
+      try {
+        const specialistUser = await dataSpecialistIsLogin();
+        if (specialistUser?.source === 'DATA_SPECIALIST') {
+          userStore.setInfo(specialistUser as any);
+          isDataSpecialistUser = true;
+        }
+      } catch (error) {
+        // ignore
+      }
+    }
+
+    if (isPlatformUser && isDataSpecialistRoute) {
+      next({ name: 'managementCenterOverview' });
+      NProgress.done();
+      return;
+    }
+
+    if (tokenExists && isDataSpecialistUser && !isDataSpecialistRoute) {
+      next({ name: 'dataSpecialistImport' });
+      NProgress.done();
+      return;
+    }
+
+    if (
+      tokenExists &&
+      isDataSpecialistRoute &&
+      !isPlatformUser &&
+      userStore.userInfo.source &&
+      userStore.userInfo.source !== 'DATA_SPECIALIST'
+    ) {
+      next({ name: 'workbenchIndex' });
+      NProgress.done();
+      return;
+    }
+
     // 未登录访问受限页面重定向登录页
-    if (!tokenExists && to.name !== 'login' && to.name !== 'platformLogin' && !isWhiteListPage()) {
+    if (!tokenExists && to.name !== 'login' && !isWhiteListPage(to)) {
       if (isPlatformRoute) {
         next({ name: 'platformLogin' });
+        NProgress.done();
+        return;
+      }
+      if (isDataSpecialistRoute) {
+        next({ name: 'dataSpecialistLogin' });
         NProgress.done();
         return;
       }
@@ -64,13 +107,29 @@ export default function setupUserLoginInfoGuard(router: Router) {
 
     // 已登录访问 login重定向（有权限第一个页面）
     if (to.name === 'login' && tokenExists) {
-      next({ name: isPlatformUser ? 'managementCenterOverview' : 'workbenchIndex' });
+      let postLoginName = 'workbenchIndex';
+      if (isPlatformUser) {
+        postLoginName = 'managementCenterOverview';
+      } else if (isDataSpecialistUser) {
+        postLoginName = 'dataSpecialistImport';
+      }
+      next({ name: postLoginName });
       NProgress.done();
       return;
     }
 
     if (to.name === 'platformLogin' && tokenExists) {
-      next({ name: 'managementCenterOverview' });
+      if (isDataSpecialistUser) {
+        next({ name: 'dataSpecialistImport' });
+      } else {
+        next({ name: 'managementCenterOverview' });
+      }
+      NProgress.done();
+      return;
+    }
+
+    if (to.name === 'dataSpecialistLogin' && tokenExists && isDataSpecialistUser) {
+      next({ name: 'dataSpecialistImport' });
       NProgress.done();
       return;
     }
