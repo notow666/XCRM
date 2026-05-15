@@ -1,6 +1,7 @@
 package cn.cordys.mmba.mapper;
 
 import cn.cordys.mmba.domain.MmbaCallRecordAudit;
+import cn.cordys.mmba.domain.MmbaDeviceMapping;
 import cn.cordys.mmba.domain.MmbaDeviceInfoAudit;
 import cn.cordys.mmba.domain.MmbaSmsRecordAudit;
 import cn.cordys.mmba.domain.MmbaWxAccountAudit;
@@ -27,6 +28,14 @@ import java.util.List;
  * MMBA 审计查询扩展 Mapper。
  */
 public interface ExtMmbaAuditMapper {
+
+    int upsertWxChatAudit(MmbaWxChatAudit record);
+
+    int upsertWxAccountAudit(MmbaWxAccountAudit record);
+
+    int upsertWxFriendChangeAudit(MmbaWxFriendChangeAudit record);
+
+    int upsertDeviceMapping(MmbaDeviceMapping record);
 
     List<CustomerCallStatusDTO> listCustomerCallStatus(@Param("customerTels") List<String> customerTels,
                                                        @Param("orgId") String orgId);

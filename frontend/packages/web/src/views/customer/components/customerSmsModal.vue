@@ -49,7 +49,7 @@
           type="textarea"
           :placeholder="t('customer.reach.friendNotePlaceholder')"
           allow-clear
-          :maxlength="50"
+          :maxlength="32"
           show-count
         />
       </n-form-item>
@@ -69,7 +69,16 @@
 
 <script setup lang="ts">
   import { nextTick } from 'vue';
-  import { FormInst, FormRules, NForm, NFormItem, NInput, NSelect, SelectOption } from 'naive-ui';
+  import {
+    FormInst,
+    FormItemRule,
+    FormRules,
+    NForm,
+    NFormItem,
+    NInput,
+    NSelect,
+    SelectOption,
+  } from 'naive-ui';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
 
@@ -109,7 +118,9 @@
   });
 
   const showWechatSelector = computed(() => props.mode === 'wxFriend' && wxFriendStep.value === 'select');
-  const showContentInput = computed(() => props.mode === 'sms' || props.mode === 'wx' || wxFriendStep.value === 'content');
+  const showContentInput = computed(
+    () => props.mode === 'sms' || props.mode === 'wx' || wxFriendStep.value === 'content'
+  );
   const showFriendNoteInput = computed(() => props.mode === 'wxFriend' && wxFriendStep.value === 'content');
   const showFriendDescriptionInput = computed(() => props.mode === 'wxFriend' && wxFriendStep.value === 'content');
   const modalTitle = computed(() => {
@@ -148,10 +159,37 @@
     }
     return t('customer.reach.verifyPlaceholder');
   });
-  const contentMaxLength = computed(() => (props.mode === 'wx' ? 2048 : 500));
+  const contentMaxLength = computed(() => {
+    if (props.mode === 'wx') {
+      return 2048;
+    }
+    if (props.mode === 'wxFriend') {
+      return 100;
+    }
+    return 500;
+  });
   const selectedWechat = computed(() =>
     (props.wechatOptions || []).find((item) => item.value === form.value.selectedWechatId)
   );
+
+  function getBusinessTextLength(value: string): number {
+    return Array.from(value || '').reduce((length, char) => {
+      return length + (char.charCodeAt(0) > 255 ? 2 : 1);
+    }, 0);
+  }
+
+  function validateBusinessTextLength(limit: number, message: string) {
+    return (_rule: FormItemRule, value: string) => {
+      if (!value) {
+        return true;
+      }
+      if (getBusinessTextLength(value.trim()) > limit) {
+        return new Error(message);
+      }
+      return true;
+    };
+  }
+
   const rules = computed<FormRules>(() => {
     return {
       selectedWechatId: showWechatSelector.value
@@ -169,6 +207,22 @@
               trigger: ['input', 'blur'],
               required: true,
               message: t('common.notNull', { value: contentLabel.value }),
+            },
+            ...(props.mode === 'wxFriend'
+              ? [
+                  {
+                    trigger: ['input', 'blur'],
+                    validator: validateBusinessTextLength(100, t('customer.reach.verifyInfoLengthTip')),
+                  },
+                ]
+              : []),
+          ]
+        : [],
+      note: showFriendNoteInput.value
+        ? [
+            {
+              trigger: ['input', 'blur'],
+              validator: validateBusinessTextLength(32, t('customer.reach.friendNoteLengthTip')),
             },
           ]
         : [],

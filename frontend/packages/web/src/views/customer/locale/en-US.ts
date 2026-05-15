@@ -107,7 +107,11 @@ export default {
   'customer.reach.wechatPhoneMissing': 'This customer has no mobile number, so a WeChat message cannot be sent',
   'customer.reach.verifyInfo': 'Verification Message',
   'customer.reach.verifyPlaceholder': 'Please enter the verification message',
+  'customer.reach.verifyInfoLengthTip':
+    'The verification message can contain up to 50 Chinese characters or 100 English characters',
   'customer.reach.friendNotePlaceholder': 'Please enter the remark',
+  'customer.reach.friendNoteLengthTip':
+    'The remark can contain up to 16 Chinese characters or 32 English characters',
   'customer.reach.friendDescription': 'Memo (Description)',
   'customer.reach.friendDescriptionPlaceholder': 'Please enter the memo description',
   'customer.reach.selectWechat': 'Select WeChat',

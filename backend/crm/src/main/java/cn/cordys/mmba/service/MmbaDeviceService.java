@@ -8,6 +8,7 @@ import cn.cordys.common.util.Translator;
 import cn.cordys.mmba.domain.MmbaDevice;
 import cn.cordys.mmba.domain.MmbaDeviceMapping;
 import cn.cordys.mmba.dto.request.MmbaDeviceSaveRequest;
+import cn.cordys.mmba.mapper.ExtMmbaAuditMapper;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
 import jakarta.annotation.Resource;
@@ -32,6 +33,8 @@ public class MmbaDeviceService {
     private BaseMapper<MmbaDevice> mmbaDeviceMapper;
     @Resource
     private BaseMapper<MmbaDeviceMapping> mmbaDeviceMappingMapper;
+    @Resource
+    private ExtMmbaAuditMapper extMmbaAuditMapper;
 
     /**
      * 保存或更新设备主表快照。
@@ -175,16 +178,9 @@ public class MmbaDeviceService {
      * 保存或更新设备映射关系。
      */
     public MmbaDeviceMapping saveOrUpdateMapping(MmbaDeviceMapping mapping, String userId) {
-        MmbaDeviceMapping db = findMapping(mapping);
-        if (db == null) {
-            init(mapping, userId);
-            mmbaDeviceMappingMapper.insert(mapping);
-            return mapping;
-        }
-        mergeMapping(db, mapping);
-        touch(db, userId);
-        mmbaDeviceMappingMapper.update(db);
-        return db;
+        prepareMappingUpsert(mapping, userId);
+        extMmbaAuditMapper.upsertDeviceMapping(mapping);
+        return mapping;
     }
 
     /**
@@ -239,6 +235,24 @@ public class MmbaDeviceService {
             return null;
         }
         return mmbaDeviceMappingMapper.selectOne(query);
+    }
+
+    private void prepareMappingUpsert(MmbaDeviceMapping mapping, String userId) {
+        if (mapping == null) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (StringUtils.isBlank(mapping.getId())) {
+            mapping.setId(IDGenerator.nextStr());
+        }
+        if (mapping.getCreateTime() == null) {
+            mapping.setCreateTime(now);
+        }
+        if (StringUtils.isBlank(mapping.getCreateUser())) {
+            mapping.setCreateUser(userId);
+        }
+        mapping.setUpdateTime(now);
+        mapping.setUpdateUser(userId);
     }
 
     private void mergeMapping(MmbaDeviceMapping target, MmbaDeviceMapping source) {

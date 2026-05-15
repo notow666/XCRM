@@ -34,6 +34,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAccessor;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * MMBA 回调分发服务。
@@ -65,7 +67,10 @@ public class MmbaCallbackDispatchService {
      * 审计类回调分发。
      */
     public void dispatchAudit(MmbaAuditRequest dto, MmbaCallbackRecord callbackRecord) {
-        for (ZzyData data : dto.getData()) {
+        List<ZzyData> orderedDataList = dto.getData() == null ? List.of() : dto.getData().stream()
+                .sorted(Comparator.comparing(ZzyData::getEsId, Comparator.nullsLast(String::compareTo)))
+                .toList();
+        for (ZzyData data : orderedDataList) {
             log.info("MMBA审计回调分发 callbackRecordId={} behaviorType={} reqId={} esId={} tenantId={}",
                     callbackRecord.getId(), dto.getBehaviorType(), data.getReqId(), data.getEsId(), data.getTenantId());
             switch (dto.getBehaviorType()) {

@@ -4,6 +4,235 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="cn.cordys.mmba.mapper.ExtMmbaAuditMapper">
 
+    <insert id="upsertWxChatAudit" parameterType="cn.cordys.mmba.domain.MmbaWxChatAudit">
+        INSERT INTO mmba_wx_chat_audit (
+            es_id, app_name, behavior_type, chat_sources_type, chat_type, contact_description,
+            content, customer, customer_account, customer_account_id, customer_nickname, customer_pic,
+            dept_id, dept_id_path, dept_info, device_id, direction, duration, file_identifier, file_name,
+            friend_phone, friend_search, group_id, group_name, imei, imei2, insert_time, member_account,
+            member_nick_name, member_pic, msg_id, org_name, org_names, quote_id, req_id, staff_account,
+            staff_account_id, staff_name, staff_nickname, staff_pic, status, target_type, tenancy_name,
+            time, timestamp, um, contact_mobile, callback_record_id
+        ) VALUES (
+            #{esId}, #{appName}, #{behaviorType}, #{chatSourcesType}, #{chatType}, #{contactDescription},
+            #{content}, #{customer}, #{customerAccount}, #{customerAccountId}, #{customerNickname}, #{customerPic},
+            #{deptId}, #{deptIdPath}, #{deptInfo}, #{deviceId}, #{direction}, #{duration}, #{fileIdentifier}, #{fileName},
+            #{friendPhone}, #{friendSearch}, #{groupId}, #{groupName}, #{imei}, #{imei2}, #{insertTime}, #{memberAccount},
+            #{memberNickName}, #{memberPic}, #{msgId}, #{orgName}, #{orgNames}, #{quoteId}, #{reqId}, #{staffAccount},
+            #{staffAccountId}, #{staffName}, #{staffNickname}, #{staffPic}, #{status}, #{targetType}, #{tenancyName},
+            #{time}, #{timestamp}, #{um}, #{contactMobile}, #{callbackRecordId}
+        )
+        ON DUPLICATE KEY UPDATE
+            app_name = VALUES(app_name),
+            behavior_type = VALUES(behavior_type),
+            chat_sources_type = VALUES(chat_sources_type),
+            chat_type = VALUES(chat_type),
+            contact_description = VALUES(contact_description),
+            content = VALUES(content),
+            customer = VALUES(customer),
+            customer_account = VALUES(customer_account),
+            customer_account_id = VALUES(customer_account_id),
+            customer_nickname = VALUES(customer_nickname),
+            customer_pic = VALUES(customer_pic),
+            dept_id = VALUES(dept_id),
+            dept_id_path = VALUES(dept_id_path),
+            dept_info = VALUES(dept_info),
+            device_id = VALUES(device_id),
+            direction = VALUES(direction),
+            duration = VALUES(duration),
+            file_identifier = VALUES(file_identifier),
+            file_name = VALUES(file_name),
+            friend_phone = VALUES(friend_phone),
+            friend_search = VALUES(friend_search),
+            group_id = VALUES(group_id),
+            group_name = VALUES(group_name),
+            imei = VALUES(imei),
+            imei2 = VALUES(imei2),
+            insert_time = VALUES(insert_time),
+            member_account = VALUES(member_account),
+            member_nick_name = VALUES(member_nick_name),
+            member_pic = VALUES(member_pic),
+            msg_id = VALUES(msg_id),
+            org_name = VALUES(org_name),
+            org_names = VALUES(org_names),
+            quote_id = VALUES(quote_id),
+            req_id = VALUES(req_id),
+            staff_account = VALUES(staff_account),
+            staff_account_id = VALUES(staff_account_id),
+            staff_name = VALUES(staff_name),
+            staff_nickname = VALUES(staff_nickname),
+            staff_pic = VALUES(staff_pic),
+            status = VALUES(status),
+            target_type = VALUES(target_type),
+            tenancy_name = VALUES(tenancy_name),
+            time = VALUES(time),
+            timestamp = VALUES(timestamp),
+            um = VALUES(um),
+            contact_mobile = VALUES(contact_mobile),
+            callback_record_id = VALUES(callback_record_id)
+    </insert>
+
+    <insert id="upsertWxAccountAudit" parameterType="cn.cordys.mmba.domain.MmbaWxAccountAudit">
+        INSERT INTO mmba_wx_account_audit (
+            es_id, app_id, app_name, behavior_type, create_time, dept_id, dept_id_path, dept_info,
+            device_id, imei, imei2, insert_time, note, org_name, org_names, qq, sign, staff_area,
+            staff_id_in_app, staff_im_app_account, staff_im_app_header_pic, staff_im_nick_name,
+            staff_mobile, staff_name, staff_sex, tenancy_name, timestamp, um, verified_status,
+            callback_record_id
+        ) VALUES (
+            #{esId}, #{appId}, #{appName}, #{behaviorType}, #{createTime}, #{deptId}, #{deptIdPath}, #{deptInfo},
+            #{deviceId}, #{imei}, #{imei2}, #{insertTime}, #{note}, #{orgName}, #{orgNames}, #{qq}, #{sign}, #{staffArea},
+            #{staffIdInApp}, #{staffImAppAccount}, #{staffImAppHeaderPic}, #{staffImNickName},
+            #{staffMobile}, #{staffName}, #{staffSex}, #{tenancyName}, #{timestamp}, #{um}, #{verifiedStatus},
+            #{callbackRecordId}
+        )
+        ON DUPLICATE KEY UPDATE
+            app_id = VALUES(app_id),
+            app_name = VALUES(app_name),
+            behavior_type = VALUES(behavior_type),
+            create_time = VALUES(create_time),
+            dept_id = VALUES(dept_id),
+            dept_id_path = VALUES(dept_id_path),
+            dept_info = VALUES(dept_info),
+            device_id = VALUES(device_id),
+            imei = VALUES(imei),
+            imei2 = VALUES(imei2),
+            insert_time = VALUES(insert_time),
+            note = VALUES(note),
+            org_name = VALUES(org_name),
+            org_names = VALUES(org_names),
+            qq = VALUES(qq),
+            sign = VALUES(sign),
+            staff_area = VALUES(staff_area),
+            staff_id_in_app = VALUES(staff_id_in_app),
+            staff_im_app_account = VALUES(staff_im_app_account),
+            staff_im_app_header_pic = VALUES(staff_im_app_header_pic),
+            staff_im_nick_name = VALUES(staff_im_nick_name),
+            staff_mobile = VALUES(staff_mobile),
+            staff_name = VALUES(staff_name),
+            staff_sex = VALUES(staff_sex),
+            tenancy_name = VALUES(tenancy_name),
+            timestamp = VALUES(timestamp),
+            um = VALUES(um),
+            verified_status = VALUES(verified_status),
+            callback_record_id = VALUES(callback_record_id)
+    </insert>
+
+    <insert id="upsertWxFriendChangeAudit" parameterType="cn.cordys.mmba.domain.MmbaWxFriendChangeAudit">
+        INSERT INTO mmba_wx_friend_change_audit (
+            es_id, behavior_type, contact_area, contac_im_app_note, contact_description,
+            contact_im_app_account, contact_im_app_header_pic, contact_im_app_nick_name,
+            contact_im_app_note, contact_im_id_in_app, contact_mobile, contact_sex,
+            contact_weixin_tags, create_time, dept_id, dept_id_path, dept_info, device_id,
+            friend_phone, friend_search, imei, imei2, insert_time, is_friend, oper_flag,
+            org_name, org_names, source, staff_id_in_app, staff_name, tenancy_name,
+            timestamp, um, wx_type, callback_record_id
+        ) VALUES (
+            #{esId}, #{behaviorType}, #{contactArea}, #{contacImAppNote}, #{contactDescription},
+            #{contactImAppAccount}, #{contactImAppHeaderPic}, #{contactImAppNickName},
+            #{contactImAppNote}, #{contactImIdInApp}, #{contactMobile}, #{contactSex},
+            #{contactWeixinTags}, #{createTime}, #{deptId}, #{deptIdPath}, #{deptInfo}, #{deviceId},
+            #{friendPhone}, #{friendSearch}, #{imei}, #{imei2}, #{insertTime}, #{isFriend}, #{operFlag},
+            #{orgName}, #{orgNames}, #{source}, #{staffIdInApp}, #{staffName}, #{tenancyName},
+            #{timestamp}, #{um}, #{wxType}, #{callbackRecordId}
+        )
+        ON DUPLICATE KEY UPDATE
+            behavior_type = VALUES(behavior_type),
+            contact_area = VALUES(contact_area),
+            contac_im_app_note = VALUES(contac_im_app_note),
+            contact_description = VALUES(contact_description),
+            contact_im_app_account = VALUES(contact_im_app_account),
+            contact_im_app_header_pic = VALUES(contact_im_app_header_pic),
+            contact_im_app_nick_name = VALUES(contact_im_app_nick_name),
+            contact_im_app_note = VALUES(contact_im_app_note),
+            contact_im_id_in_app = VALUES(contact_im_id_in_app),
+            contact_mobile = VALUES(contact_mobile),
+            contact_sex = VALUES(contact_sex),
+            contact_weixin_tags = VALUES(contact_weixin_tags),
+            create_time = VALUES(create_time),
+            dept_id = VALUES(dept_id),
+            dept_id_path = VALUES(dept_id_path),
+            dept_info = VALUES(dept_info),
+            device_id = VALUES(device_id),
+            friend_phone = VALUES(friend_phone),
+            friend_search = VALUES(friend_search),
+            imei = VALUES(imei),
+            imei2 = VALUES(imei2),
+            insert_time = VALUES(insert_time),
+            is_friend = VALUES(is_friend),
+            oper_flag = VALUES(oper_flag),
+            org_name = VALUES(org_name),
+            org_names = VALUES(org_names),
+            source = VALUES(source),
+            staff_id_in_app = VALUES(staff_id_in_app),
+            staff_name = VALUES(staff_name),
+            tenancy_name = VALUES(tenancy_name),
+            timestamp = VALUES(timestamp),
+            um = VALUES(um),
+            wx_type = VALUES(wx_type),
+            callback_record_id = VALUES(callback_record_id)
+    </insert>
+
+    <insert id="upsertDeviceMapping" parameterType="cn.cordys.mmba.domain.MmbaDeviceMapping">
+        INSERT INTO mmba_device_mapping (
+            id, um, staff_name, device_id, imei, imei2, iccid, wxid, wx_account, wx_phone,
+            wx_nick_name, wx_header_pic, qq, mapping_status, last_sync_time,
+            create_time, create_user, update_time, update_user
+        ) VALUES (
+            #{id}, #{um}, #{staffName}, #{deviceId}, #{imei}, #{imei2}, #{iccid}, #{wxid}, #{wxAccount}, #{wxPhone},
+            #{wxNickName}, #{wxHeaderPic}, #{qq}, #{mappingStatus}, #{lastSyncTime},
+            #{createTime}, #{createUser}, #{updateTime}, #{updateUser}
+        )
+        ON DUPLICATE KEY UPDATE
+            staff_name = CASE
+                WHEN VALUES(staff_name) IS NULL OR TRIM(VALUES(staff_name)) = '' THEN staff_name
+                ELSE VALUES(staff_name)
+            END,
+            device_id = CASE
+                WHEN VALUES(device_id) IS NULL OR TRIM(VALUES(device_id)) = '' THEN device_id
+                ELSE VALUES(device_id)
+            END,
+            imei = CASE
+                WHEN VALUES(imei) IS NULL OR TRIM(VALUES(imei)) = '' THEN imei
+                ELSE VALUES(imei)
+            END,
+            imei2 = CASE
+                WHEN VALUES(imei2) IS NULL OR TRIM(VALUES(imei2)) = '' THEN imei2
+                ELSE VALUES(imei2)
+            END,
+            iccid = CASE
+                WHEN VALUES(iccid) IS NULL OR TRIM(VALUES(iccid)) = '' THEN iccid
+                ELSE VALUES(iccid)
+            END,
+            wx_account = CASE
+                WHEN VALUES(wx_account) IS NULL OR TRIM(VALUES(wx_account)) = '' THEN wx_account
+                ELSE VALUES(wx_account)
+            END,
+            wx_phone = CASE
+                WHEN VALUES(wx_phone) IS NULL OR TRIM(VALUES(wx_phone)) = '' THEN wx_phone
+                ELSE VALUES(wx_phone)
+            END,
+            wx_nick_name = CASE
+                WHEN VALUES(wx_nick_name) IS NULL OR TRIM(VALUES(wx_nick_name)) = '' THEN wx_nick_name
+                ELSE VALUES(wx_nick_name)
+            END,
+            wx_header_pic = CASE
+                WHEN VALUES(wx_header_pic) IS NULL OR TRIM(VALUES(wx_header_pic)) = '' THEN wx_header_pic
+                ELSE VALUES(wx_header_pic)
+            END,
+            qq = CASE
+                WHEN VALUES(qq) IS NULL OR TRIM(VALUES(qq)) = '' THEN qq
+                ELSE VALUES(qq)
+            END,
+            mapping_status = CASE
+                WHEN VALUES(mapping_status) IS NULL OR TRIM(VALUES(mapping_status)) = '' THEN mapping_status
+                ELSE VALUES(mapping_status)
+            END,
+            last_sync_time = IFNULL(VALUES(last_sync_time), last_sync_time),
+            update_time = VALUES(update_time),
+            update_user = VALUES(update_user)
+    </insert>
+
     <select id="listCustomerCallStatus" resultType="cn.cordys.mmba.dto.CustomerCallStatusDTO">
         select customer_tel as customerTel,
                max(case when ifnull(is_connected, 0) = 1 then 2 else 1 end) as callStatus

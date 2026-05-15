@@ -9,10 +9,10 @@ import cn.cordys.mmba.domain.MmbaWxChatAudit;
 import cn.cordys.mmba.domain.MmbaWxFriendChangeAudit;
 import cn.cordys.mmba.domain.MmbaWxFriendListAudit;
 import cn.cordys.mmba.domain.MmbaWxLoginAudit;
+import cn.cordys.mmba.mapper.ExtMmbaAuditMapper;
 import cn.cordys.mybatis.BaseMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,6 +67,8 @@ public class MmbaAuditPersistenceService {
     private BaseMapper<MmbaWxLoginAudit> mmbaWxLoginAuditMapper;
     @Resource
     private BaseMapper<MmbaDeviceInfoAudit> mmbaDeviceInfoAuditMapper;
+    @Resource
+    private ExtMmbaAuditMapper extMmbaAuditMapper;
 
     public MmbaCallRecordAudit saveOrUpdateCallAudit(MmbaCallRecordAudit record, String userId) {
         return saveOrReplaceByEsId(record, mmbaCallRecordAuditMapper);
@@ -97,19 +99,26 @@ public class MmbaAuditPersistenceService {
     }
 
     public MmbaWxAccountAudit saveOrUpdateWxAccountAudit(MmbaWxAccountAudit record, String userId) {
-        return saveOrReplaceByEsId(record, mmbaWxAccountAuditMapper);
+        extMmbaAuditMapper.upsertWxAccountAudit(record);
+        return record;
     }
 
     public MmbaWxChatAudit saveOrUpdateWxChatAudit(MmbaWxChatAudit record, String userId) {
-        return saveOrReplaceByEsId(record, mmbaWxChatAuditMapper);
+        extMmbaAuditMapper.upsertWxChatAudit(record);
+        return record;
     }
 
     public SaveOrUpdateResult<MmbaWxChatAudit> saveOrUpdateWxChatAuditWithResult(MmbaWxChatAudit record, String userId) {
-        return saveOrReplaceByEsIdWithResult(record, mmbaWxChatAuditMapper);
+        // 这里只保留一次旧值查询，供自动跟进判断“是否首次进入成功态”使用；
+        // 真正的写入路径已经固定为原子 upsert，不再依赖查询结果决定 insert / update。
+        MmbaWxChatAudit previous = loadByEsId(record.getEsId(), mmbaWxChatAuditMapper);
+        extMmbaAuditMapper.upsertWxChatAudit(record);
+        return new SaveOrUpdateResult<>(previous, record, previous == null);
     }
 
     public MmbaWxFriendChangeAudit saveOrUpdateWxFriendChangeAudit(MmbaWxFriendChangeAudit record, String userId) {
-        return saveOrReplaceByEsId(record, mmbaWxFriendChangeAuditMapper);
+        extMmbaAuditMapper.upsertWxFriendChangeAudit(record);
+        return record;
     }
 
     public MmbaWxFriendListAudit saveOrUpdateWxFriendListAudit(MmbaWxFriendListAudit record, String userId) {
@@ -153,21 +162,17 @@ public class MmbaAuditPersistenceService {
 
     private <T> SaveOrUpdateResult<T> saveOrReplaceByEsIdWithResult(T record, BaseMapper<T> mapper) {
         String esId = (String) readEsId(record);
-        T db = mapper.selectByPrimaryKey(esId);
+        T db = loadByEsId(esId, mapper);
         if (db == null) {
-            try {
-                mapper.insert(record);
-                return new SaveOrUpdateResult<>(null, record, true);
-            } catch (DuplicateKeyException e) {
-                // 并发消费同一 esId 时，其他线程可能已经完成插入，这里直接转更新即可。
-                log.info("MMBA审计并发幂等转更新 esId={} entity={}", esId, record.getClass().getSimpleName());
-                T latest = mapper.selectByPrimaryKey(esId);
-                mapper.update(record);
-                return new SaveOrUpdateResult<>(latest, record, false);
-            }
+            mapper.insert(record);
+            return new SaveOrUpdateResult<>(null, record, true);
         }
         mapper.update(record);
         return new SaveOrUpdateResult<>(db, record, false);
+    }
+
+    private <T> T loadByEsId(String esId, BaseMapper<T> mapper) {
+        return esId == null ? null : mapper.selectByPrimaryKey(esId);
     }
 
     private Object readEsId(Object record) {
