@@ -3,9 +3,12 @@ package cn.cordys.mmba.service;
 import cn.cordys.common.domain.BaseModel;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.JSON;
+import cn.cordys.common.util.Translator;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.context.TenantContext;
+import cn.cordys.crm.system.notice.sse.SsePrincipalKind;
+import cn.cordys.crm.system.notice.sse.SseService;
 import cn.cordys.crm.customer.domain.Customer;
 import cn.cordys.crm.system.domain.User;
 import cn.cordys.mmba.MmbaApiPaths;
@@ -16,7 +19,6 @@ import cn.cordys.mmba.MmbaInvokeException;
 import cn.cordys.mmba.domain.MmbaDevice;
 import cn.cordys.mmba.domain.MmbaRequestRecord;
 import cn.cordys.mybatis.BaseMapper;
-import cn.cordys.security.SessionUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -63,6 +65,8 @@ public class MmbaFacadeService {
     private BaseMapper<User> userBaseMapper;
     @Resource
     private BaseMapper<Customer> customerMapper;
+    @Resource
+    private SseService sseService;
 
     /**
      * 拨打电话。
@@ -174,22 +178,42 @@ public class MmbaFacadeService {
     }
 
     /**
-     * 查询设备并同步
-     * @return
+     * 查询设备并同步（异步执行，结束后通过 SSE 推送 {@link MmbaConstants#SSE_EVENT_DEVICE_SYNC}）。
      */
     @Async("threadPoolTaskExecutor")
     public void syncDevices(String userId) {
-        List<MmbaDevice> mmbaDevices = mmbaDeviceService.syncDevices();
-        if(CollectionUtils.isEmpty(mmbaDevices)) {
+        String tenantId = StringUtils.trimToNull(TenantContext.getTenantId());
+        if (tenantId == null) {
+            log.warn("syncDevices skip: tenantId missing userId={}", userId);
             return;
         }
-        List<String> ums = mmbaDevices.stream().map(BaseModel::getId).toList();
-        ObjectMapper mapper = JSON.MAPPER;
-        ObjectNode objectNode = mapper.createObjectNode();
-        objectNode.set("ums", mapper.valueToTree(ums));
-        JsonNode response = executeJson(MmbaBizTypes.DEVICE_LIST_QUERY, MmbaApiPaths.DEVICE_LIST_QUERY, objectNode, userId,
-                OrganizationContext.getOrganizationId(), mmbaIntegrationService::queryDeviceList);
-        syncDeviceListSnapshot(response, userId);
+        try {
+            List<MmbaDevice> mmbaDevices = mmbaDeviceService.syncDevices();
+            if (CollectionUtils.isEmpty(mmbaDevices)) {
+                sendMmbaDeviceSyncSse(userId, tenantId, true, Translator.get("mmba_device_sync_sse_no_local"));
+                return;
+            }
+            List<String> ums = mmbaDevices.stream().map(BaseModel::getId).toList();
+            ObjectMapper mapper = JSON.MAPPER;
+            ObjectNode objectNode = mapper.createObjectNode();
+            objectNode.set("ums", mapper.valueToTree(ums));
+            JsonNode response = executeJson(MmbaBizTypes.DEVICE_LIST_QUERY, MmbaApiPaths.DEVICE_LIST_QUERY, objectNode, userId,
+                    OrganizationContext.getOrganizationId(), mmbaIntegrationService::queryDeviceList);
+            syncDeviceListSnapshot(response, userId);
+            sendMmbaDeviceSyncSse(userId, tenantId, true, Translator.get("mmba_device_sync_sse_done"));
+        } catch (Exception e) {
+            log.error("MMBA syncDevices failed userId={} tenantId={}", userId, tenantId, e);
+            String err = StringUtils.defaultIfBlank(e.getMessage(), "unknown");
+            sendMmbaDeviceSyncSse(userId, tenantId, false, Translator.getWithArgs("mmba_device_sync_sse_failed", err));
+        }
+    }
+
+    private void sendMmbaDeviceSyncSse(String userId, String tenantId, boolean success, String message) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("type", MmbaConstants.SSE_EVENT_DEVICE_SYNC);
+        payload.put("success", success);
+        payload.put("message", message);
+        sseService.sendToPrincipal(SsePrincipalKind.TENANT, tenantId, userId, payload);
     }
 
     /**

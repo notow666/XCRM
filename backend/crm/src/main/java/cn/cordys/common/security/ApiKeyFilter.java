@@ -46,7 +46,7 @@ public class ApiKeyFilter extends AnonymousFilter {
         HttpServletRequest httpRequest = WebUtils.toHttp(request);
 
         String uri = httpRequest.getRequestURI();
-        if(uri != null && uri.contains("/anonymous/mmba/callback")){
+        if(uri != null && (uri.contains("/anonymous/mmba/callback") || uri.contains("/anonymous/mmba/mgmt-sso/check"))){
             return true;
         }
 

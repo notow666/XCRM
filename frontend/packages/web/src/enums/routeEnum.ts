@@ -95,11 +95,13 @@ export enum ReportRouteEnum {
 
 export enum MMBAAuditRouteEnum {
   MMBA_AUDIT = 'mmbaAudit',
-  /** 审计-微信 */
+  /** 审计-指掌易管理平台（内嵌） */
+  MMBA_AUDIT_MGMT_SSO = 'mmbaAuditMgmtSso',
+  /** 审计-微信（暂隐藏，保留） */
   MMBA_AUDIT_WECHAT = 'mmbaAuditWechat',
-  /** 审计-通话 */
+  /** 审计-通话（暂隐藏，保留） */
   MMBA_AUDIT_CALL = 'mmbaAuditCall',
-  /** 审计-短信 */
+  /** 审计-短信（暂隐藏，保留） */
   MMBA_AUDIT_SMS = 'mmbaAuditSms',
 }
 

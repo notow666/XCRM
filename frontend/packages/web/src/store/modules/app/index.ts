@@ -2,11 +2,8 @@ import { defineStore } from 'pinia';
 import { cloneDeep } from 'lodash-es';
 
 import { SubscribeMessageUrl } from '@lib/shared/api/requrls/system/message';
-import {
-  SSE_KIND_DATA_SPECIALIST,
-  SSE_KIND_PLATFORM,
-  SSE_KIND_TENANT,
-} from '@lib/shared/constants/ssePrincipalKind';
+import { MMBA_DEVICE_SYNC_DOM_EVENT, SSE_EVENT_MMBA_DEVICE_SYNC } from '@lib/shared/constants/sseEventType';
+import { SSE_KIND_DATA_SPECIALIST, SSE_KIND_PLATFORM, SSE_KIND_TENANT } from '@lib/shared/constants/ssePrincipalKind';
 import { CompanyTypeEnum } from '@lib/shared/enums/commonEnum';
 import { ModuleConfigEnum } from '@lib/shared/enums/moduleEnum';
 import { useI18n } from '@lib/shared/hooks/useI18n';
@@ -333,6 +330,18 @@ const useAppStore = defineStore('app', {
               } else {
                 message.error(typeof data.message === 'string' ? data.message : t('poolImportButton.importFailed'));
               }
+              return;
+            }
+
+            if (data.type === SSE_EVENT_MMBA_DEVICE_SYNC) {
+              if (data.success) {
+                message.success(typeof data.message === 'string' ? data.message : t('common.success'));
+              } else {
+                message.error(typeof data.message === 'string' ? data.message : t('common.fail'));
+              }
+              window.dispatchEvent(
+                new CustomEvent(MMBA_DEVICE_SYNC_DOM_EVENT, { detail: { success: Boolean(data.success) } })
+              );
               return;
             }
 

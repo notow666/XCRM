@@ -26,4 +26,10 @@ export default {
   'mmbaAudit.callTab.detail': 'Call details',
   'mmbaAudit.smsTab.stat': 'SMS statistics',
   'mmbaAudit.smsTab.detail': 'SMS details',
+  'mmbaMgmtSso.loadFailed': 'Failed to load the audit entry. Please try again later.',
+  'mmbaMgmtSso.emptyUrl': 'No valid audit URL was returned. Please contact the administrator.',
+  'mmbaMgmtSso.openedNewTab':
+    'The Zhiyi management console has been opened in a new tab. If it did not appear, check whether your browser blocked pop-ups.',
+  'mmbaMgmtSso.popupBlocked':
+    'Could not open a new tab: the browser may have blocked a pop-up. Allow pop-ups for this site and try again.',
 };

@@ -26,4 +26,8 @@ export default {
   'mmbaAudit.callTab.detail': '通话详情',
   'mmbaAudit.smsTab.stat': '短信统计',
   'mmbaAudit.smsTab.detail': '短信详情',
+  'mmbaMgmtSso.loadFailed': '无法加载审计入口，请稍后重试',
+  'mmbaMgmtSso.emptyUrl': '未返回有效的审计地址，请联系管理员',
+  'mmbaMgmtSso.openedNewTab': '已在新标签页打开指掌易管理平台。若未出现新页，请检查浏览器是否拦截弹出窗口。',
+  'mmbaMgmtSso.popupBlocked': '无法打开新标签页：浏览器可能拦截了弹出窗口，请允许本站弹出窗口后重试。',
 };

@@ -567,7 +567,7 @@
   function getColElementWidthPx(el: Element): number | undefined {
     const mapFn = (el as HTMLElement).computedStyleMap;
     if (typeof mapFn === 'function') {
-      const widthEntry = mapFn.call(el)?.get('width') as CSSNumericValue | undefined;
+      const widthEntry = mapFn.call(el)?.get('width') as CSSUnitValue | undefined;
       const v = widthEntry?.value;
       if (typeof v === 'number' && Number.isFinite(v)) {
         return v;

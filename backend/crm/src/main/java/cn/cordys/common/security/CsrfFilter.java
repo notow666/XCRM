@@ -40,7 +40,7 @@ public class CsrfFilter extends AnonymousFilter {
         HttpServletRequest httpServletRequest = WebUtils.toHttp(request);
 
         String uri = httpServletRequest.getRequestURI();
-        if(uri != null && uri.contains("/anonymous/mmba/callback")){
+        if(uri != null && (uri.contains("/anonymous/mmba/callback") || uri.contains("/anonymous/mmba/mgmt-sso/check"))){
             return true;
         }
 

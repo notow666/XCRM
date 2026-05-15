@@ -157,25 +157,8 @@ export const pathMap: PathMapItem[] = [
   },
   {
     key: 'MMBA_AUDIT',
-    route: AppRouteEnum.MMBA_AUDIT,
+    route: AppRouteEnum.MMBA_AUDIT_MGMT_SSO,
     locale: 'menu.mmbaAudit',
-    children: [
-      {
-        key: 'MMBA_AUDIT_WECHAT',
-        route: AppRouteEnum.MMBA_AUDIT_WECHAT,
-        locale: 'mmbaAudit.channel.wechat',
-      },
-      {
-        key: 'MMBA_AUDIT_CALL',
-        route: AppRouteEnum.MMBA_AUDIT_CALL,
-        locale: 'mmbaAudit.channel.call',
-      },
-      {
-        key: 'MMBA_AUDIT_SMS',
-        route: AppRouteEnum.MMBA_AUDIT_SMS,
-        locale: 'mmbaAudit.channel.sms',
-      },
-    ],
   },
   {
     key: 'CLUE_MANAGEMENT',

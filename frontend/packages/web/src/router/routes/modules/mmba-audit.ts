@@ -6,7 +6,7 @@ import type { AppRouteRecordRaw } from '../types';
 const mmbaAudit: AppRouteRecordRaw = {
   path: '/mmba-audit',
   name: MMBAAuditRouteEnum.MMBA_AUDIT,
-  redirect: '/mmba-audit/wechat',
+  redirect: '/mmba-audit/mgmt-sso',
   component: DEFAULT_LAYOUT,
   meta: {
     locale: 'menu.mmbaAudit',
@@ -17,12 +17,21 @@ const mmbaAudit: AppRouteRecordRaw = {
   },
   children: [
     {
+      path: 'mgmt-sso',
+      name: MMBAAuditRouteEnum.MMBA_AUDIT_MGMT_SSO,
+      component: () => import('../../../views/mmba-audit/mgmt-sso-portal.vue'),
+      meta: {
+        locale: 'menu.mmbaAudit',
+        permissions: ['MMBA_AUDIT:READ'],
+      },
+    },
+    {
       path: 'wechat',
       name: MMBAAuditRouteEnum.MMBA_AUDIT_WECHAT,
       component: () => import('../../../views/mmba-audit/index.vue'),
       meta: {
         locale: 'mmbaAudit.channel.wechat',
-        isTopMenu: true,
+        hideInMenu: true,
         permissions: ['MMBA_AUDIT:READ'],
       },
     },
@@ -32,7 +41,7 @@ const mmbaAudit: AppRouteRecordRaw = {
       component: () => import('../../../views/mmba-audit/index.vue'),
       meta: {
         locale: 'mmbaAudit.channel.call',
-        isTopMenu: true,
+        hideInMenu: true,
         permissions: ['MMBA_AUDIT:READ'],
       },
     },
@@ -42,7 +51,7 @@ const mmbaAudit: AppRouteRecordRaw = {
       component: () => import('../../../views/mmba-audit/index.vue'),
       meta: {
         locale: 'mmbaAudit.channel.sms',
-        isTopMenu: true,
+        hideInMenu: true,
         permissions: ['MMBA_AUDIT:READ'],
       },
     },

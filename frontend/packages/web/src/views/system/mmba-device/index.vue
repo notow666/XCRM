@@ -15,8 +15,8 @@
           >
             <n-button>{{ t('mmbaDevice.import') }}</n-button>
           </n-upload>
-          <n-button v-permission="['MMBA_DEVICE:READ']" type="primary" ghost @click="handleSyncClick">
-            {{ t('mmbaDevice.sync') }}
+          <n-button v-permission="['MMBA_DEVICE:READ']" type="primary" ghost @click="handleSyncOrRefreshClick">
+            {{ syncUiAwaitingRefresh ? t('mmbaDevice.refresh') : t('mmbaDevice.sync') }}
           </n-button>
         </div>
         <div class="flex min-w-0 flex-1 items-center justify-end gap-[12px]">
@@ -119,7 +119,8 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, h, onMounted, reactive, ref } from 'vue';
+  import { computed, h, onMounted, onUnmounted, reactive, ref } from 'vue';
+  import { useRoute } from 'vue-router';
   import {
     type DataTableColumns,
     type FormInst,
@@ -139,6 +140,7 @@
   } from 'naive-ui';
   import dayjs from 'dayjs';
 
+  import { MMBA_DEVICE_SYNC_DOM_EVENT } from '@lib/shared/constants/sseEventType';
   import { useI18n } from '@lib/shared/hooks/useI18n';
   import type { MmbaDevice } from '@lib/shared/models/mmba/device';
 
@@ -150,12 +152,17 @@
   import useLicenseStore from '@/store/modules/setting/license';
   import { hasAnyPermission } from '@/utils/permission';
 
+  import { SystemRouteEnum } from '@/enums/routeEnum';
+
   const { t } = useI18n();
   const message = useMessage();
   const { openModal } = useModal();
   const licenseStore = useLicenseStore();
+  const route = useRoute();
 
   const keyword = ref('');
+  /** 同步任务完成后，在本页将「同步」切换为「刷新」直至用户刷新列表 */
+  const syncUiAwaitingRefresh = ref(false);
   const loading = ref(false);
   const tableData = ref<MmbaDevice[]>([]);
   const total = ref(0);
@@ -451,7 +458,26 @@
     }
   }
 
-  function handleSyncClick() {
+  function onMmbaDeviceSyncSse() {
+    if (route.name === SystemRouteEnum.SYSTEM_MMBA_DEVICE) {
+      syncUiAwaitingRefresh.value = true;
+    }
+  }
+
+  async function handleSyncOrRefreshClick() {
+    if (syncUiAwaitingRefresh.value) {
+      try {
+        await load();
+      } finally {
+        syncUiAwaitingRefresh.value = false;
+      }
+      return;
+    }
+    const kw = keyword.value.trim();
+    if (total.value === 0 && !kw) {
+      message.warning(t('mmbaDevice.syncNeedDevices'));
+      return;
+    }
     openModal({
       type: 'warning',
       title: t('mmbaDevice.sync'),
@@ -460,8 +486,7 @@
       negativeText: t('common.cancel'),
       onPositiveClick: async () => {
         await syncMmbaDevices();
-        message.success(t('mmbaDevice.syncSuccess'));
-        load();
+        message.info(t('mmbaDevice.syncSubmitted'));
       },
     });
   }
@@ -488,6 +513,12 @@
   }
 
   onMounted(() => {
+    window.addEventListener(MMBA_DEVICE_SYNC_DOM_EVENT, onMmbaDeviceSyncSse);
     load();
+  });
+
+  onUnmounted(() => {
+    window.removeEventListener(MMBA_DEVICE_SYNC_DOM_EVENT, onMmbaDeviceSyncSse);
+    syncUiAwaitingRefresh.value = false;
   });
 </script>

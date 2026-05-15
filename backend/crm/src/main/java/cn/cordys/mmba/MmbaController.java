@@ -28,9 +28,11 @@ import cn.cordys.mmba.dto.request.MmbaWxChatAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxFriendChangeAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxFriendListAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxLoginAuditPageRequest;
+import cn.cordys.mmba.dto.MmbaMgmtSsoRedirectVO;
 import cn.cordys.mmba.service.MmbaDeviceImportService;
 import cn.cordys.mmba.service.MmbaDeviceService;
 import cn.cordys.mmba.service.MmbaFacadeService;
+import cn.cordys.mmba.service.MmbaMgmtSsoService;
 import cn.cordys.mmba.service.MmbaQueryService;
 import cn.cordys.security.SessionUtils;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -70,6 +72,18 @@ public class MmbaController {
     private MmbaDeviceService mmbaDeviceService;
     @Resource
     private MmbaDeviceImportService mmbaDeviceImportService;
+    @Resource
+    private MmbaMgmtSsoService mmbaMgmtSsoService;
+
+    /**
+     * 指掌易管理平台第三方 SSO：返回需整页打开的跳转 URL（含 ticket）。
+     */
+    @GetMapping("/mgmt-sso/redirect-url")
+    @Operation(summary = "指掌易管理平台 SSO 跳转地址")
+    @RequiresPermissions(PermissionConstants.MMBA_AUDIT_READ)
+    public MmbaMgmtSsoRedirectVO getMgmtSsoRedirectUrl() {
+        return mmbaMgmtSsoService.buildRedirectForUser(SessionUtils.getUser());
+    }
 
     /**
      * 拨打电话。

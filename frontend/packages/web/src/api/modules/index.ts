@@ -7,6 +7,7 @@ import useDashboard from '@lib/shared/api/modules/dashboard';
 import useFollowApi from '@lib/shared/api/modules/follow';
 import useHomeApi from '@lib/shared/api/modules/home';
 import useMmbaDeviceApi from '@lib/shared/api/modules/mmba/device';
+import useMmbaMgmtSsoApi from '@lib/shared/api/modules/mmba/mgmtSso';
 import useOpportunityApi from '@lib/shared/api/modules/opportunity';
 import useOrderApi from '@lib/shared/api/modules/order';
 import useProductApi from '@lib/shared/api/modules/product';
@@ -50,6 +51,7 @@ const opportunityApi = useOpportunityApi(CDR);
 const contractApi = useContractApi(CDR);
 const orderApi = useOrderApi(CDR);
 const mmbaDeviceApi = useMmbaDeviceApi(CDR);
+const mmbaMgmtSsoApi = useMmbaMgmtSsoApi(CDR);
 const employeeFollowAnalysisApi = useEmployeeFollowAnalysisApi(CDR);
 
 export const {
@@ -635,6 +637,8 @@ export const {
   getMmbaDeviceOptionList,
   syncMmbaDevices,
 } = mmbaDeviceApi;
+
+export const { getMmbaMgmtSsoRedirectUrl } = mmbaMgmtSsoApi;
 
 export const { getEmployeeFollowAnalysisSummary, getEmployeeFollowAnalysisDrilldown } = employeeFollowAnalysisApi;
 

@@ -1,7 +1,11 @@
 package cn.cordys.mmba;
 
 import cn.cordys.common.exception.GenericException;
+import cn.cordys.common.response.handler.NoResultHolder;
+import cn.cordys.common.util.JSON;
 import cn.cordys.mmba.callback.RedisStreamCallbackService;
+import cn.cordys.mmba.dto.MmbaMgmtSsoCheckRequest;
+import cn.cordys.mmba.service.MmbaMgmtSsoService;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 /**
  * MMBA 平台回调入口（Shiro anon：/anonymous/**）。需 HTTP 200 且非空响应体表示成功。
  */
@@ -23,9 +29,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/anonymous/mmba")
 public class MmbaAnonymousCallbackController {
     private final RedisStreamCallbackService streamCallbackService;
+    private final MmbaMgmtSsoService mmbaMgmtSsoService;
 
-    public MmbaAnonymousCallbackController(RedisStreamCallbackService streamCallbackService) {
+    public MmbaAnonymousCallbackController(RedisStreamCallbackService streamCallbackService,
+                                           MmbaMgmtSsoService mmbaMgmtSsoService) {
         this.streamCallbackService = streamCallbackService;
+        this.mmbaMgmtSsoService = mmbaMgmtSsoService;
     }
 
     //数据回调规则说明：
@@ -50,5 +59,17 @@ public class MmbaAnonymousCallbackController {
             log.error("MMBA 回调系统异常 body={}", body, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error");
         }
+    }
+
+    /**
+     * 指掌易管理平台 SSO 鉴权（配置为 checkLoginUrl）。无需系统登录态，返回未包装 JSON。
+     */
+    @PostMapping(value = "/mgmt-sso/check", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "管理平台 SSO token 校验", hidden = true)
+    @NoResultHolder
+    public Map<String, Object> mgmtSsoCheck(@RequestBody MmbaMgmtSsoCheckRequest body) {
+        log.info("----------------------------   SSO token 校验 ---------");
+        log.info(JSON.toJSONString(body));
+        return mmbaMgmtSsoService.validateAndRespond(body);
     }
 }
