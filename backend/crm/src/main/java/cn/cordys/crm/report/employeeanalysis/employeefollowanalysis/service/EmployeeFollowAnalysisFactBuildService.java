@@ -120,7 +120,11 @@ public class EmployeeFollowAnalysisFactBuildService {
             }
             for (EmployeeFollowAnalysisMetricRow row : rows) {
                 String key = buildKey(row.getStatDate(), row.getCustomerId(), row.getOperatorUserId());
-                EmployeeFollowAnalysisMetricRow target = resultMap.computeIfAbsent(key, ignore -> newMetricRow(row));
+                EmployeeFollowAnalysisMetricRow target = resultMap.get(key);
+                if (target == null) {
+                    resultMap.put(key, newMetricRow(row));
+                    continue;
+                }
                 // flag 型指标取最大值，计数/时长型指标做累加，最终落成 stat_date + customer + operator 的事实粒度。
                 target.setInboundCustomerFlag(Math.max(defaultInt(target.getInboundCustomerFlag()), defaultInt(row.getInboundCustomerFlag())));
                 target.setContactedCustomerFlag(Math.max(defaultInt(target.getContactedCustomerFlag()), defaultInt(row.getContactedCustomerFlag())));
