@@ -14,6 +14,7 @@ import cn.cordys.dataspecialist.dto.DataSpecialistUpdateRequest;
 import cn.cordys.dataspecialist.mapper.ExtDataSpecialistMapper;
 import cn.cordys.tenant.mapper.ExtTenantMapper;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Service
 public class DataSpecialistAdminService {
 

@@ -1,5 +1,6 @@
 package cn.cordys.crm.system.notice.sse;
 
+import cn.cordys.common.constants.SsePrincipalKind;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.response.result.CrmHttpResultCode;
 import cn.cordys.common.util.BeanUtils;

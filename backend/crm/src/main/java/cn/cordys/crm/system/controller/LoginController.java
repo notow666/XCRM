@@ -1,6 +1,6 @@
 package cn.cordys.crm.system.controller;
 
-import cn.cordys.common.constants.UserSource;
+import cn.cordys.common.security.ShiroSessionAttributes;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.request.LoginRequest;
 import cn.cordys.common.util.Translator;
@@ -21,6 +21,8 @@ import org.apache.commons.lang3.Strings;
 import org.apache.shiro.SecurityUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import cn.cordys.common.constants.LoginAuthenticateConstants.LoginAuthenticateType;
 
 /**
  * 登录控制器，负责处理用户登录、校验和退出操作。
@@ -103,7 +105,7 @@ public class LoginController {
             }
         }
         // 设置认证方式为 LOCAL
-        SecurityUtils.getSubject().getSession().setAttribute("authenticate", UserSource.LOCAL.name());
+        SecurityUtils.getSubject().getSession().setAttribute(ShiroSessionAttributes.AUTHENTICATE, LoginAuthenticateType.LOCAL.name());
         return userLoginService.login(request);
     }
 

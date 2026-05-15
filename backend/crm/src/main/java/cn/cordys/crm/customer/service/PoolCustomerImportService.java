@@ -24,7 +24,7 @@ import cn.cordys.crm.system.service.ModuleFormService;
 import cn.cordys.excel.domain.ExcelErrData;
 import cn.cordys.excel.utils.EasyExcelExporter;
 import cn.cordys.context.TenantContext;
-import cn.cordys.crm.system.notice.sse.SsePrincipalKind;
+import cn.cordys.common.constants.SsePrincipalKind;
 import cn.cordys.crm.system.notice.sse.SseService;
 import cn.cordys.dataspecialist.DataSpecialistConstants;
 import cn.cordys.file.engine.DefaultRepositoryDir;

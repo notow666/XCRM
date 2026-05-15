@@ -171,7 +171,7 @@ public class SSOService {
                 authenticateType
         );
 
-        SecurityUtils.getSubject().getSession().setAttribute("authenticate", authenticateType);
+        SecurityUtils.getSubject().getSession().setAttribute(cn.cordys.common.security.ShiroSessionAttributes.AUTHENTICATE, authenticateType);
         return userLoginService.login(loginRequest);
     }
 
@@ -204,7 +204,7 @@ public class SSOService {
                 authenticateType
         );
 
-        SecurityUtils.getSubject().getSession().setAttribute("authenticate", authenticateType);
+        SecurityUtils.getSubject().getSession().setAttribute(cn.cordys.common.security.ShiroSessionAttributes.AUTHENTICATE, authenticateType);
         return userLoginService.login(loginRequest);
     }
 
@@ -444,7 +444,7 @@ public class SSOService {
                 loginType
         );
 
-        SecurityUtils.getSubject().getSession().setAttribute("authenticate", loginType);
+        SecurityUtils.getSubject().getSession().setAttribute(cn.cordys.common.security.ShiroSessionAttributes.AUTHENTICATE, loginType);
         return userLoginService.login(loginRequest);
     }
 

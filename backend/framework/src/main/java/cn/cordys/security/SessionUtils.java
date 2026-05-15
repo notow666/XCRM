@@ -1,5 +1,6 @@
 package cn.cordys.security;
 
+import cn.cordys.common.constants.LoginAuthenticateConstants;
 import cn.cordys.common.util.CommonBeanFactory;
 import cn.cordys.context.TenantContext;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +10,7 @@ import org.apache.commons.lang3.Strings;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.subject.Subject;
+import org.apache.shiro.util.ThreadContext;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.data.redis.RedisIndexedSessionRepository;
 
@@ -25,8 +27,6 @@ import static cn.cordys.security.SessionConstants.ATTR_USER;
  */
 @Slf4j
 public class SessionUtils {
-    private static final String DEFAULT_SOURCE = "LOCAL";
-
     /**
      * 获取当前用户的 ID。
      *
@@ -44,13 +44,12 @@ public class SessionUtils {
      */
     public static SessionUser getUser() {
         try {
-            // 检查 SecurityManager 是否存在
-            if (SecurityUtils.getSecurityManager() == null) {
-                log.warn("SecurityManager 未配置，可能为非 Web 环境");
+            // 仅信任当前线程 ThreadContext：避免 SecurityUtils.getSecurityManager() 回落到 JVM 静态单例
+            // 导致“误判有 Manager、getSubject 却抛 No SecurityManager accessible”的日志与行为分裂
+            if (ThreadContext.getSecurityManager() == null) {
                 return null;
             }
-
-            Subject subject = SecurityUtils.getSubject();
+            Subject subject = ThreadContext.getSubject();
             if (subject == null) {
                 return null;
             }
@@ -75,7 +74,14 @@ public class SessionUtils {
      */
     public static String getSessionId() {
         try {
-            return (String) SecurityUtils.getSubject().getSession().getId();
+            if (ThreadContext.getSecurityManager() == null) {
+                return null;
+            }
+            Subject subject = ThreadContext.getSubject();
+            if (subject == null) {
+                return null;
+            }
+            return (String) subject.getSession().getId();
         } catch (Exception e) {
             return null;
         }
@@ -85,7 +91,7 @@ public class SessionUtils {
         if (StringUtils.isBlank(userId)) {
             return null;
         }
-        String normalizedSource = StringUtils.defaultIfBlank(source, DEFAULT_SOURCE);
+        String normalizedSource = StringUtils.defaultIfBlank(source, LoginAuthenticateConstants.LoginAuthenticateType.LOCAL.name());
         String normalizedTenantId = StringUtils.trimToNull(tenantId);
         if (normalizedTenantId == null) {
             return null;
@@ -143,7 +149,7 @@ public class SessionUtils {
             log.warn("kickOutUser 跳过：当前线程未绑定租户 userId={}", userId);
             return;
         }
-        kickOutUser(DEFAULT_SOURCE, tenantId, userId);
+        kickOutUser(LoginAuthenticateConstants.LoginAuthenticateType.LOCAL.name(), tenantId, userId);
     }
 
     /**

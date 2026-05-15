@@ -3,15 +3,18 @@ package cn.cordys.config;
 import cn.cordys.common.security.ApiKeyFilter;
 import cn.cordys.common.security.AuthFilter;
 import cn.cordys.common.security.CsrfFilter;
+import cn.cordys.common.security.realm.DataSpecialistRealm;
 import cn.cordys.common.security.realm.LocalRealm;
+import cn.cordys.common.security.realm.PlatformRealm;
 import cn.cordys.common.util.CommonBeanFactory;
 import cn.cordys.security.ShiroFilter;
 import jakarta.servlet.Filter;
 import org.apache.shiro.aop.AnnotationResolver;
+import org.apache.shiro.authc.pam.AtLeastOneSuccessfulStrategy;
+import org.apache.shiro.authc.pam.ModularRealmAuthenticator;
 import org.apache.shiro.authz.aop.*;
 import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.cache.MemoryConstrainedCacheManager;
-import org.apache.shiro.realm.Realm;
 import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.spring.LifecycleBeanPostProcessor;
 import org.apache.shiro.spring.aop.SpringAnnotationResolver;
@@ -28,6 +31,7 @@ import org.springframework.context.annotation.DependsOn;
 import org.springframework.web.filter.DelegatingFilterProxy;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -126,11 +130,18 @@ public class ShiroConfig {
      * @return 配置好的 {@link DefaultWebSecurityManager} 实例
      */
     @Bean(name = "securityManager")
-    public DefaultWebSecurityManager securityManager(SessionManager sessionManager, CacheManager cacheManager, Realm localRealm) {
+    public DefaultWebSecurityManager securityManager(SessionManager sessionManager,
+                                                     CacheManager cacheManager,
+                                                     LocalRealm localRealm,
+                                                     PlatformRealm platformRealm,
+                                                     DataSpecialistRealm dataSpecialistRealm) {
         DefaultWebSecurityManager defaultManager = new DefaultWebSecurityManager();
         defaultManager.setSessionManager(sessionManager);
         defaultManager.setCacheManager(cacheManager);
-        defaultManager.setRealm(localRealm);
+        ModularRealmAuthenticator authenticator = new ModularRealmAuthenticator();
+        authenticator.setAuthenticationStrategy(new AtLeastOneSuccessfulStrategy());
+        defaultManager.setAuthenticator(authenticator);
+        defaultManager.setRealms(Arrays.asList(localRealm, platformRealm, dataSpecialistRealm));
         return defaultManager;
     }
 
@@ -146,6 +157,18 @@ public class ShiroConfig {
     @DependsOn("lifecycleBeanPostProcessor")
     public LocalRealm localRealm() {
         return new LocalRealm();
+    }
+
+    @Bean
+    @DependsOn("lifecycleBeanPostProcessor")
+    public PlatformRealm platformRealm() {
+        return new PlatformRealm();
+    }
+
+    @Bean
+    @DependsOn("lifecycleBeanPostProcessor")
+    public DataSpecialistRealm dataSpecialistRealm() {
+        return new DataSpecialistRealm();
     }
 
     /**
@@ -221,6 +244,7 @@ public class ShiroConfig {
 
         FilterRegistrationBean<DelegatingFilterProxy> registration = new FilterRegistrationBean<>();
         registration.setFilter(proxy);
+        registration.setOrder(-105);
         registration.setAsyncSupported(true);
         registration.setDispatcherTypes(ASYNC);
         return registration;

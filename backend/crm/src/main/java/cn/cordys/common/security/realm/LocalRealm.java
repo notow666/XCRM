@@ -3,6 +3,7 @@ package cn.cordys.common.security.realm;
 
 import cn.cordys.common.constants.UserSource;
 import cn.cordys.common.permission.PermissionUtils;
+import cn.cordys.common.security.ShiroSessionAttributes;
 import cn.cordys.common.util.CodingUtils;
 import cn.cordys.common.util.Translator;
 import cn.cordys.crm.system.service.UserLoginService;
@@ -22,6 +23,7 @@ import org.springframework.context.annotation.Lazy;
 
 import java.util.Objects;
 
+import cn.cordys.common.constants.LoginAuthenticateConstants.LoginAuthenticateType;
 
 /**
  * 自定义Realm 注入service 可能会导致在 service的aop 失效，例如@Transactional,
@@ -40,7 +42,25 @@ public class LocalRealm extends AuthorizingRealm {
 
     @Override
     public String getName() {
-        return "LOCAL";
+        return LoginAuthenticateType.LOCAL.name();
+    }
+
+    @Override
+    public boolean supports(AuthenticationToken token) {
+        if (!(token instanceof UsernamePasswordToken)) {
+            return false;
+        }
+        String authenticate = getAuthenticateFromSession();
+        if (authenticate == null) {
+            return true;
+        }
+        if (LoginAuthenticateType.PLATFORM.name().equals(authenticate)) {
+            return false;
+        }
+        if (LoginAuthenticateType.DATA_SPECIALIST.name().equals(authenticate)) {
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -58,12 +78,13 @@ public class LocalRealm extends AuthorizingRealm {
     protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken authenticationToken) throws AuthenticationException {
         UsernamePasswordToken token = (UsernamePasswordToken) authenticationToken;
         Session session = SecurityUtils.getSubject().getSession();
-        String login = (String) session.getAttribute("authenticate");
+        String login = (String) session.getAttribute(ShiroSessionAttributes.AUTHENTICATE);
 
         String userId = token.getUsername();
         String password = String.valueOf(token.getPassword());
 
-        if (Strings.CS.equals(login, UserSource.LOCAL.name())) {
+        if (Strings.CS.equals(login, LoginAuthenticateType.LOCAL.name())
+                || Strings.CS.equals(login, UserSource.LOCAL.name())) {
             return loginLocalMode(userId, password);
         }
 
@@ -103,6 +124,15 @@ public class LocalRealm extends AuthorizingRealm {
         SessionUser sessionUser = SessionUser.fromUser(user, SessionUtils.getSessionId());
         SessionUtils.putUser(sessionUser);
         return new SimpleAuthenticationInfo(userId, password, getName());
+    }
+
+    private static String getAuthenticateFromSession() {
+        Session session = SecurityUtils.getSubject().getSession(false);
+        if (session == null) {
+            return null;
+        }
+        Object value = session.getAttribute(ShiroSessionAttributes.AUTHENTICATE);
+        return value == null ? null : String.valueOf(value);
     }
 
 }

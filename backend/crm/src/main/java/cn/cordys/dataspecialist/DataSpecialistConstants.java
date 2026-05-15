@@ -1,15 +1,12 @@
 package cn.cordys.dataspecialist;
 
+import cn.cordys.common.constants.LoginAuthenticateConstants;
 import org.apache.commons.lang3.StringUtils;
 
 /**
  * 数据专员：写入租户库业务表时的 userId / create_user 等与租户内用户区分的前缀。 dataspecialist
  */
 public final class DataSpecialistConstants {
-
-    public static final String USER_ID_PREFIX = "DS:";
-
-    public static final String SESSION_SOURCE = "DATA_SPECIALIST";
 
     public static final String PERMISSION_POOL_IMPORT = "DATA_SPECIALIST:POOL_IMPORT";
 
@@ -22,11 +19,11 @@ public final class DataSpecialistConstants {
     }
 
     public static String specialistUserId(String masterSpecialistId) {
-        return USER_ID_PREFIX + masterSpecialistId;
+        return LoginAuthenticateConstants.DATA_SPECIALIST_USER_PREFIX + masterSpecialistId;
     }
 
     public static boolean isSpecialistUserId(String userId) {
-        return userId != null && userId.startsWith(USER_ID_PREFIX);
+        return userId != null && userId.startsWith(LoginAuthenticateConstants.DATA_SPECIALIST_USER_PREFIX);
     }
 
     /**
@@ -36,6 +33,6 @@ public final class DataSpecialistConstants {
         if (!isSpecialistUserId(userId)) {
             return StringUtils.trimToNull(userId);
         }
-        return userId.substring(USER_ID_PREFIX.length());
+        return userId.substring(LoginAuthenticateConstants.DATA_SPECIALIST_USER_PREFIX.length());
     }
 }

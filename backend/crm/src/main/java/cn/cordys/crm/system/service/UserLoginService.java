@@ -1,6 +1,7 @@
 package cn.cordys.crm.system.service;
 
 import cn.cordys.common.constants.InternalUser;
+import cn.cordys.common.constants.LoginAuthenticateConstants;
 import cn.cordys.common.constants.ThirdDetailType;
 import cn.cordys.common.dto.RoleDataScopeDTO;
 import cn.cordys.common.exception.GenericException;
@@ -142,6 +143,8 @@ public class UserLoginService {
         // 获取用户信息
         UserDTO userDTO = Optional.ofNullable(extUserMapper.selectByPhoneOrEmail(userKey))
                 .orElseThrow(() -> new AuthenticationException(Translator.get("password_is_incorrect")));
+
+        userDTO.setSource(LoginAuthenticateConstants.LoginAuthenticateType.LOCAL.name());
 
         // 非管理员用户需要检查是否被禁用
         if (!isAdminUser(userDTO.getId())) {

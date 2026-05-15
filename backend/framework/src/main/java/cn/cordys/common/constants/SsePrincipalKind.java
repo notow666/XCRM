@@ -1,4 +1,4 @@
-package cn.cordys.crm.system.notice.sse;
+package cn.cordys.common.constants;
 
 import org.apache.commons.lang3.StringUtils;
 

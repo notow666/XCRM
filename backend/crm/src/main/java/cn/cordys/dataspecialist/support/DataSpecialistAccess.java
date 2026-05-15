@@ -1,5 +1,6 @@
 package cn.cordys.dataspecialist.support;
 
+import cn.cordys.common.constants.LoginAuthenticateConstants;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.response.result.CrmHttpResultCode;
 import cn.cordys.context.TenantContext;
@@ -19,7 +20,7 @@ public class DataSpecialistAccess {
 
     public SessionUser requireDataSpecialist() {
         SessionUser user = SessionUtils.getUser();
-        if (user == null || !DataSpecialistConstants.SESSION_SOURCE.equalsIgnoreCase(StringUtils.defaultString(user.getSource()))) {
+        if (user == null || !LoginAuthenticateConstants.LoginAuthenticateType.DATA_SPECIALIST.name().equalsIgnoreCase(StringUtils.defaultString(user.getSource()))) {
             throw new GenericException(CrmHttpResultCode.FORBIDDEN);
         }
         return user;

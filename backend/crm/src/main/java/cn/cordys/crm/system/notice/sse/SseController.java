@@ -1,5 +1,6 @@
 package cn.cordys.crm.system.notice.sse;
 
+import cn.cordys.common.constants.SsePrincipalKind;
 import cn.cordys.context.TenantContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
