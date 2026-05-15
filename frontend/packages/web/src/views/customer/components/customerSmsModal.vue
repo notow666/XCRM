@@ -160,6 +160,9 @@
     return t('customer.reach.verifyPlaceholder');
   });
   const contentMaxLength = computed(() => {
+    if (props.mode === 'sms') {
+      return 200;
+    }
     if (props.mode === 'wx') {
       return 2048;
     }
