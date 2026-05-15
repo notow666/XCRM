@@ -10,7 +10,7 @@ public final class TenantRedisKeyBuilder {
     }
 
     public static String tenantKey(String rawKey) {
-        String tenantId = TenantContext.getTenantId();
+        String tenantId = TenantContext.requireTenantId();
         if (StringUtils.isBlank(rawKey)) {
             return tenantId + ":";
         }

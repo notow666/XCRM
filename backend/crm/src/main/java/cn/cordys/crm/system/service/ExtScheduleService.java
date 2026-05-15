@@ -49,7 +49,7 @@ public class ExtScheduleService {
                         removeJob(schedule); // 删除关闭的job
                     }
                     log.info("初始化任务：{}", JSON.toJSONString(schedule));
-                    String tenantId = TenantContext.getTenantId();
+                    String tenantId = TenantContext.requireTenantId();
                     scheduleManager.addOrUpdateCronJob(
                             new JobKey(tenantId + ":" + schedule.getKey(), tenantId + ":" + schedule.getJob()),
                             new TriggerKey(tenantId + ":" + schedule.getKey(), tenantId + ":" + schedule.getJob()),
@@ -69,7 +69,7 @@ public class ExtScheduleService {
     }
 
     private void removeJob(Schedule schedule) {
-        String tenantId = TenantContext.getTenantIdOrDefault();
+        String tenantId = TenantContext.requireTenantId();
         scheduleManager.removeJob(
                 new JobKey(tenantId + ":" + schedule.getKey(), tenantId + ":" + schedule.getJob()),
                 new TriggerKey(tenantId + ":" + schedule.getKey(), tenantId + ":" + schedule.getJob())

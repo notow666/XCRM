@@ -730,7 +730,7 @@ public class OrganizationUserService {
      * @param operatorId
      * @param orgId
      */
-    @CacheEvict(value = "dept_tree_cache", key = "T(cn.cordys.context.TenantContext).getTenantIdOrDefault() + ':' + #orgId", beforeInvocation = true)
+    @CacheEvict(value = "dept_tree_cache", key = "T(cn.cordys.context.TenantContext).getTenantId() + ':' + #orgId", beforeInvocation = true)
     public void saveImportData(List<UserExcelData> list, List<BaseTreeNode> departmentTree, Map<String, String> departmentMap, String operatorId, String orgId) {
         //部门
         List<String> departmentPath = list.stream().map(UserExcelData::getDepartment).toList();

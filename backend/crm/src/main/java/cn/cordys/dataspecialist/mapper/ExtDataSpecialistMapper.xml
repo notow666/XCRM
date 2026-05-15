@@ -3,13 +3,15 @@
 <mapper namespace="cn.cordys.dataspecialist.mapper.ExtDataSpecialistMapper">
 
     <insert id="insert">
-        INSERT INTO data_specialist (id, username, password_hash, enabled, create_time, update_time, create_user, update_user)
-        VALUES (#{id}, #{username}, #{passwordHash}, #{enabled}, #{createTime}, #{updateTime}, #{createUser}, #{updateUser})
+        INSERT INTO data_specialist (id, username, specialist_name, remark, password_hash, enabled, create_time, update_time, create_user, update_user)
+        VALUES (#{id}, #{username}, #{specialistName}, #{remark}, #{passwordHash}, #{enabled}, #{createTime}, #{updateTime}, #{createUser}, #{updateUser})
     </insert>
 
     <update id="update">
         UPDATE data_specialist
         SET username = #{username},
+            specialist_name = #{specialistName},
+            remark = #{remark},
             password_hash = #{passwordHash},
             enabled = #{enabled},
             update_time = #{updateTime},
@@ -20,6 +22,8 @@
     <select id="selectByUsername" resultType="cn.cordys.dataspecialist.domain.DataSpecialist">
         SELECT id,
                username,
+               specialist_name AS specialistName,
+               remark,
                password_hash AS passwordHash,
                enabled,
                create_time AS createTime,
@@ -34,6 +38,8 @@
     <select id="selectById" resultType="cn.cordys.dataspecialist.domain.DataSpecialist">
         SELECT id,
                username,
+               specialist_name AS specialistName,
+               remark,
                password_hash AS passwordHash,
                enabled,
                create_time AS createTime,
@@ -50,7 +56,9 @@
         FROM data_specialist
         <where>
             <if test="keyword != null and keyword != ''">
-                username LIKE #{like}
+                (username LIKE #{like}
+                OR specialist_name LIKE #{like}
+                OR remark LIKE #{like})
             </if>
         </where>
     </select>
@@ -58,13 +66,17 @@
     <select id="pageByKeyword" resultType="cn.cordys.dataspecialist.dto.DataSpecialistAdminItemResponse">
         SELECT id,
                username,
+               specialist_name AS name,
+               remark,
                enabled,
                create_time AS createTime,
                update_time AS updateTime
         FROM data_specialist
         <where>
             <if test="keyword != null and keyword != ''">
-                username LIKE #{like}
+                (username LIKE #{like}
+                OR specialist_name LIKE #{like}
+                OR remark LIKE #{like})
             </if>
         </where>
         ORDER BY create_time DESC

@@ -47,7 +47,7 @@
           <div v-if="list.length" class="grid h-full grid-cols-2 gap-[16px]">
             <div v-for="item of list" :key="item.id" class="export-item">
               <div class="mb-[8px] flex items-center justify-between">
-                <exportStatusTag :status="item.status" :resource-type="item.resourceType" />
+                <exportStatusTag :status="item.status" />
                 <CrmTag type="info" theme="light">
                   {{ getItemType(item.resourceType) }}
                 </CrmTag>
@@ -132,7 +132,6 @@
   const tabList = ref([
     { name: '', tab: t('common.all') },
     { name: SystemResourceMessageTypeEnum.CUSTOMER, tab: t('menu.customer') },
-    { name: SystemResourceMessageTypeEnum.CUSTOMER_POOL_IMPORT, tab: t('module.poolImport') },
     { name: SystemResourceMessageTypeEnum.CLUE, tab: t('menu.clue') },
     // { name: SystemResourceMessageTypeEnum.OPPORTUNITY, tab: t('menu.opportunity') },
     { name: SystemResourceMessageTypeEnum.CONTRACT, tab: t('module.contract') },

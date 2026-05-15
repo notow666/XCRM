@@ -82,8 +82,14 @@ public class SessionUtils {
     }
 
     private static String buildPrincipalName(String source, String tenantId, String userId) {
+        if (StringUtils.isBlank(userId)) {
+            return null;
+        }
         String normalizedSource = StringUtils.defaultIfBlank(source, DEFAULT_SOURCE);
-        String normalizedTenantId = StringUtils.defaultIfBlank(tenantId, TenantContext.DEFAULT_TENANT_ID);
+        String normalizedTenantId = StringUtils.trimToNull(tenantId);
+        if (normalizedTenantId == null) {
+            return null;
+        }
         return normalizedSource + ":" + normalizedTenantId + ":" + userId;
     }
 
@@ -111,6 +117,10 @@ public class SessionUtils {
             return;
         }
         String principalName = buildPrincipalName(source, tenantId, userId);
+        if (StringUtils.isBlank(principalName)) {
+            log.warn("kickOutUser 跳过：tenantId 为空，避免按默认租户误踢 userId={}", userId);
+            return;
+        }
 
         // 根据 principal 索引查找会话
         Map<String, ?> users = sessionRepository.findByPrincipalName(principalName);
@@ -128,7 +138,12 @@ public class SessionUtils {
      * @param userId 用户ID
      */
     public static void kickOutUser(String userId) {
-        kickOutUser(DEFAULT_SOURCE, TenantContext.getTenantIdOrDefault(), userId);
+        String tenantId = StringUtils.trimToNull(TenantContext.getTenantId());
+        if (tenantId == null) {
+            log.warn("kickOutUser 跳过：当前线程未绑定租户 userId={}", userId);
+            return;
+        }
+        kickOutUser(DEFAULT_SOURCE, tenantId, userId);
     }
 
     /**

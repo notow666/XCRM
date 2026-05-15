@@ -119,7 +119,7 @@ public class NotificationService {
             NoticeRedisMessage noticeRedisMessage = new NoticeRedisMessage();
             noticeRedisMessage.setMessage(userId);
             noticeRedisMessage.setNoticeType(NotificationConstants.Status.READ.toString());
-            noticeRedisMessage.setTenantId(TenantContext.getTenantIdOrDefault());
+            noticeRedisMessage.setTenantId(TenantContext.requireTenantId());
             messagePublisher.publish(TopicConstants.SSE_TOPIC, JSON.toJSONString(noticeRedisMessage));
         }
         return update;
@@ -149,7 +149,7 @@ public class NotificationService {
         NoticeRedisMessage noticeRedisMessage = new NoticeRedisMessage();
         noticeRedisMessage.setMessage(userId);
         noticeRedisMessage.setNoticeType(NotificationConstants.Status.READ.toString());
-        noticeRedisMessage.setTenantId(TenantContext.getTenantIdOrDefault());
+        noticeRedisMessage.setTenantId(TenantContext.requireTenantId());
         messagePublisher.publish(TopicConstants.SSE_TOPIC, JSON.toJSONString(noticeRedisMessage));
         //sseService.broadcastPeriodically(userId,NotificationConstants.Status.READ.toString());
         return extNotificationMapper.updateByReceiver(record);

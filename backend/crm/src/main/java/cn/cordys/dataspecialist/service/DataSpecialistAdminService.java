@@ -51,6 +51,8 @@ public class DataSpecialistAdminService {
         DataSpecialistAdminDetailResponse resp = new DataSpecialistAdminDetailResponse();
         resp.setId(row.getId());
         resp.setUsername(row.getUsername());
+        resp.setName(row.getSpecialistName());
+        resp.setRemark(row.getRemark());
         resp.setEnabled(row.getEnabled());
         resp.setCreateTime(row.getCreateTime());
         resp.setUpdateTime(row.getUpdateTime());
@@ -70,6 +72,8 @@ public class DataSpecialistAdminService {
         DataSpecialist row = new DataSpecialist();
         row.setId(IDGenerator.nextStr());
         row.setUsername(username);
+        row.setSpecialistName(StringUtils.trimToNull(request.getName()));
+        row.setRemark(StringUtils.trimToNull(request.getRemark()));
         row.setPasswordHash(CodingUtils.md5(request.getPassword()));
         row.setEnabled(true);
         row.setCreateTime(now);
@@ -89,6 +93,12 @@ public class DataSpecialistAdminService {
         }
         if (request.getEnabled() != null) {
             row.setEnabled(request.getEnabled());
+        }
+        if (request.getName() != null) {
+            row.setSpecialistName(StringUtils.trimToNull(request.getName()));
+        }
+        if (request.getRemark() != null) {
+            row.setRemark(StringUtils.trimToNull(request.getRemark()));
         }
         if (StringUtils.isNotBlank(request.getPassword())) {
             row.setPasswordHash(CodingUtils.md5(request.getPassword()));

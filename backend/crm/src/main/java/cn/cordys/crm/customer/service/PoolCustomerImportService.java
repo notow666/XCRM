@@ -4,26 +4,29 @@ import cn.cordys.common.constants.BusinessModuleField;
 import cn.cordys.common.constants.FormKey;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.uid.IDGenerator;
+import cn.cordys.common.util.AsyncUtils;
 import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.Translator;
-import cn.cordys.crm.customer.domain.Customer;
 import cn.cordys.crm.customer.domain.CustomerPool;
 import cn.cordys.crm.customer.dto.MobileConflictDTO;
 import cn.cordys.crm.customer.dto.response.PoolCustomerImportCheckResponse;
 import cn.cordys.crm.customer.dto.response.PoolImportErrorSummary;
 import cn.cordys.crm.customer.mapper.ExtCustomerMapper;
-import cn.cordys.crm.system.constants.ExportConstants;
+import cn.cordys.crm.system.constants.NotificationConstants;
 import cn.cordys.crm.system.constants.SheetKey;
-import cn.cordys.crm.system.domain.ExportTask;
+import cn.cordys.crm.system.domain.User;
 import cn.cordys.crm.system.dto.field.base.BaseField;
 import cn.cordys.crm.system.excel.handler.CustomHeadColWidthStyleStrategy;
 import cn.cordys.crm.system.excel.handler.CustomTemplateWriteHandler;
 import cn.cordys.crm.system.excel.listener.CustomFieldCheckEventListener;
-import cn.cordys.crm.system.service.ExportTaskService;
+import cn.cordys.crm.system.notice.CommonNoticeSendService;
 import cn.cordys.crm.system.service.ModuleFormService;
 import cn.cordys.excel.domain.ExcelErrData;
 import cn.cordys.excel.utils.EasyExcelExporter;
 import cn.cordys.context.TenantContext;
+import cn.cordys.crm.system.notice.sse.SsePrincipalKind;
+import cn.cordys.crm.system.notice.sse.SseService;
+import cn.cordys.dataspecialist.DataSpecialistConstants;
 import cn.cordys.file.engine.DefaultRepositoryDir;
 import cn.cordys.mybatis.BaseMapper;
 import cn.idev.excel.EasyExcel;
@@ -32,6 +35,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -52,6 +56,8 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.util.*;
+import java.util.Locale;
+import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -69,11 +75,17 @@ public class PoolCustomerImportService {
     @Resource
     private CustomerStageService customerStageService;
     @Resource
-    private ExportTaskService exportTaskService;
+    private BaseMapper<User> userBaseMapper;
+    @Resource
+    private CommonNoticeSendService commonNoticeSendService;
     @Resource
     private BaseMapper<CustomerPool> customerPoolBaseMapper;
     @Resource
     private PoolCustomerImportExecutor poolCustomerImportExecutor;
+    @Resource(name = "threadPoolTaskExecutor")
+    private Executor executor;
+    @Resource
+    private SseService sseService;
 
     private static final String OWNER_FIELD_KEY = "customerOwner";
     
@@ -653,41 +665,84 @@ public class PoolCustomerImportService {
     }
 
     /**
-     * 公海导入执行（异步）
+     * 公海导入执行（异步）；完成后通过站内消息通知操作人，不再创建导出任务。
      */
     public String realImport(MultipartFile file, String poolId, String userId, String orgId) {
         CustomerPool pool = validatePool(poolId);
-        exportTaskService.checkUserTaskLimit(userId, ExportConstants.ExportStatus.PREPARED.toString());
 
-        String fileId = IDGenerator.nextStr();
-        String fileName = Translator.get("pool.import.tpl.name");
-        ExportTask exportTask = exportTaskService.saveTask(orgId, fileId, userId,
-                ExportConstants.ExportType.CUSTOMER_POOL_IMPORT.toString(), fileName);
-
-        Locale locale = LocaleContextHolder.getLocale();
-        String tenantId = TenantContext.getTenantId();
-        Thread.startVirtualThread(() -> {
-            boolean tenantBound = false;
+        AsyncUtils.runAsync(() -> {
+            Locale prevLocale = LocaleContextHolder.getLocale();
             try {
+                User operator = userBaseMapper.selectByPrimaryKey(userId);
+                Locale locale = resolveUserLocale(operator);
                 LocaleContextHolder.setLocale(locale);
-                if (StringUtils.isNotBlank(tenantId)) {
-                    TenantContext.setTenantId(tenantId);
-                    tenantBound = true;
-                }
-                poolCustomerImportExecutor.executeImport(file, poolId, userId, orgId);
-                exportTaskService.update(exportTask.getId(), ExportConstants.ExportStatus.SUCCESS.toString(), userId);
+
+                int success = poolCustomerImportExecutor.executeImport(file, poolId, userId, orgId);
+                sendImportNotice(userId, orgId, pool,true, success,null);
             } catch (Exception e) {
                 log.error("pool customer import error", e);
-                exportTaskService.update(exportTask.getId(), ExportConstants.ExportStatus.ERROR.toString(), userId);
+                User operator = userBaseMapper.selectByPrimaryKey(userId);
+                Locale locale = resolveUserLocale(operator);
+                LocaleContextHolder.setLocale(locale);
+                String errMsg = e.getMessage() != null ? StringUtils.abbreviate(e.getMessage(), 500) : "";
+                sendImportNotice(userId, orgId, pool, false, 0, errMsg);
             } finally {
-                LocaleContextHolder.resetLocaleContext();
-                if (tenantBound) {
-                    TenantContext.clear();
-                }
+                LocaleContextHolder.setLocale(prevLocale);
             }
-        });
+        }, executor);
 
-        return exportTask.getId();
+        return Translator.get("pool.import.accepted");
+    }
+
+    private static Locale resolveUserLocale(User operator) {
+        if (operator == null || StringUtils.isBlank(operator.getLanguage())) {
+            return Locale.SIMPLIFIED_CHINESE;
+        }
+        String language = operator.getLanguage();
+        if (Strings.CI.contains(language, "US")) {
+            return Locale.US;
+        }
+        if (Strings.CI.contains(language, "TW")) {
+            return Locale.TAIWAN;
+        }
+        return Locale.SIMPLIFIED_CHINESE;
+    }
+
+    private void sendImportNotice(String userId, String orgId, CustomerPool pool, boolean success, int successCount, String errorMessage) {
+        if (DataSpecialistConstants.isSpecialistUserId(userId)) {
+            sendDataSpecialistPoolImportSse(userId, pool, success, successCount, errorMessage);
+            return;
+        }
+        String resultSuffix = success
+                ? Translator.get("pool.import.notify.result.success") + successCount
+                : Translator.get("pool.import.notify.result.failure") + (StringUtils.isNotBlank(errorMessage) ? errorMessage : "");
+        Map<String, Object> resource = new HashMap<>();
+        resource.put("poolId", pool.getId());
+        resource.put("poolName", pool.getName());
+        resource.put("resultSuffix", resultSuffix);
+        resource.put("name", pool.getName());
+        commonNoticeSendService.sendNotice(NotificationConstants.Module.CUSTOMER,
+                NotificationConstants.Event.CUSTOMER_IMPORT, resource, userId, orgId,
+                List.of(userId), false);
+    }
+
+    /**
+     * 数据专员不属于租户用户，不走站内通知；按数据专员主体推送 SSE（与当前操作租户无关）。
+     */
+    private void sendDataSpecialistPoolImportSse(String userId, CustomerPool pool, boolean success, int successCount, String errorMessage) {
+        String text = success
+                ? Translator.get("pool.import.notify.result.success") + successCount
+                : Translator.get("pool.import.notify.result.failure") + (StringUtils.isNotBlank(errorMessage) ? errorMessage : "");
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("type", DataSpecialistConstants.SSE_POOL_IMPORT_RESULT_TYPE);
+        payload.put("success", success);
+        payload.put("successCount", successCount);
+        payload.put("errorMessage", StringUtils.trimToNull(errorMessage));
+        payload.put("poolId", pool.getId());
+        payload.put("poolName", pool.getName());
+        payload.put("message", text);
+        String masterId = DataSpecialistConstants.masterSpecialistIdFromBusinessUserId(userId);
+        sseService.sendToPrincipal(SsePrincipalKind.DATA_SPECIALIST, null, masterId, payload);
     }
 
     private CustomerPool validatePool(String poolId) {

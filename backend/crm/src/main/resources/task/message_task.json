@@ -89,6 +89,14 @@
         "emailEnable": false,
         "sysEnable": false,
         "weComEnable": false
+      },
+      {
+        "event": "CUSTOMER_IMPORT",
+        "eventName": "",
+        "emailEnable": false,
+        "sysEnable": false,
+        "weComEnable": false,
+        "display": false
       }
     ]
   },

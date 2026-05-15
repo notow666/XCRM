@@ -35,12 +35,11 @@ public class CommandCallConsumer extends AbstractZZYConsumer {
 
     @Override
     public void process(MmbaAuditRequest dto) {
-        log.info("MMBA结果回调开始消费 streamId={} consumer={} behaviorType={} tenancyName={} contextTenantId={} count={}",
+        log.info("MMBA结果回调开始消费 streamId={} consumer={} behaviorType={} tenancyName={} count={}",
                 dto.getStreamId(), dto.getStreamConsumer(), dto.getBehaviorType(), dto.getTenancyName(),
-                TenantContext.getTenantId(), dto.getData() == null ? 0 : dto.getData().size());
+                dto.getData() == null ? 0 : dto.getData().size());
         log.debug("CommandCallConsumer payload={}", JSON.toJSONString(dto));
         for (Map.Entry<String, List<ZzyData>> entry : groupByTenant(dto).entrySet()) {
-            String previousTenantId = TenantContext.getTenantId();
             String tenantId = entry.getKey();
             MmbaCallbackProcessService.CallbackRecordPrepareResult prepareResult = null;
             MmbaAuditRequest tenantDto = dto.copyWithData(entry.getValue());
@@ -66,11 +65,7 @@ public class CommandCallConsumer extends AbstractZZYConsumer {
                 }
                 throw e;
             } finally {
-                if (StringUtils.isBlank(previousTenantId)) {
-                    TenantContext.clear();
-                } else {
-                    TenantContext.setTenantId(previousTenantId);
-                }
+                TenantContext.clear();
             }
         }
     }

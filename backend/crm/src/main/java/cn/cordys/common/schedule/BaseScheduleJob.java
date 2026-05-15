@@ -55,10 +55,13 @@ public abstract class BaseScheduleJob implements Job {
             String tenantId = jobDataMap.getString("tenantId");
             if (StringUtils.isNotBlank(tenantId)) {
                 TenantContext.setTenantId(tenantId);
+            } else {
+                // 避免 Quartz 线程复用时沿用上一次 Job 的租户
+                TenantContext.clear();
             }
 
             // 记录日志，显示当前任务的执行情况
-            log.info("{} Running: {}, tenantId={}", jobKey.getGroup(), resourceId, TenantContext.getTenantIdOrDefault());
+            log.info("{} Running: {}, tenantId={}", jobKey.getGroup(), resourceId, TenantContext.getTenantId());
 
             // 调用子类实现的业务逻辑
             businessExecute(context);

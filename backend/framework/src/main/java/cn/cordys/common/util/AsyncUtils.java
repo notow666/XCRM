@@ -2,6 +2,7 @@ package cn.cordys.common.util;
 
 import cn.cordys.context.TenantContext;
 import org.slf4j.MDC;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +31,7 @@ public class AsyncUtils {
                     MDC.setContextMap(parentMdc);
                 }
                 // 恢复租户上下文
-                if (tenantId != null) {
+                if (StringUtils.hasText(tenantId)) {
                     TenantContext.setTenantId(tenantId);
                 }
                 return supplier.get();
@@ -54,7 +55,7 @@ public class AsyncUtils {
                 if (parentMdc != null) {
                     MDC.setContextMap(parentMdc);
                 }
-                if (tenantId != null) {
+                if (StringUtils.hasText(tenantId)) {
                     TenantContext.setTenantId(tenantId);
                 }
                 runnable.run();
@@ -82,7 +83,7 @@ public class AsyncUtils {
                     if (parentMdc != null) {
                         MDC.setContextMap(parentMdc);
                     }
-                    if (tenantId != null) {
+                    if (StringUtils.hasText(tenantId)) {
                         TenantContext.setTenantId(tenantId);
                     }
                     return function.apply(task);
@@ -115,7 +116,7 @@ public class AsyncUtils {
                     if (parentMdc != null) {
                         MDC.setContextMap(parentMdc);
                     }
-                    if (tenantId != null) {
+                    if (StringUtils.hasText(tenantId)) {
                         TenantContext.setTenantId(tenantId);
                     }
                     R result = function.apply(task);

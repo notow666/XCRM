@@ -279,7 +279,7 @@ public class MmbaFacadeService {
         Map<String, Object> headers = new LinkedHashMap<>();
         headers.put("Content-Type", "application/json");
         headers.put("Api-Info", companyCode);
-        headers.put("X-Tenant-ID", TenantContext.getTenantId());
+        headers.put("X-Tenant-ID", TenantContext.requireTenantId());
         headers.put("Organization-Id", organizationId);
         return JSON.toJSONString(headers);
     }

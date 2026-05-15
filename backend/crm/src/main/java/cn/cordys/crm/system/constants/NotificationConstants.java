@@ -44,6 +44,8 @@ public class NotificationConstants {
         //新建客户
         @Schema(description = "message.customer_add")
         String CUSTOMER_ADD = "CUSTOMER_ADD";
+        @Schema(description = "message.customer_import")
+        String CUSTOMER_IMPORT = "CUSTOMER_IMPORT";
         @Schema(description = "message.customer_concat_add")
         String CUSTOMER_CONCAT_ADD = "CUSTOMER_CONCAT_ADD";
         @Schema(description = "message.customer_collaboration_add")
@@ -168,6 +170,9 @@ public class NotificationConstants {
         //请注意！${OPERATOR}新建${customerName}客户给您，请知悉！
         @Schema(description = "message.customer_add_text")
         String CUSTOMER_ADD_TEXT = "CUSTOMER_ADD_TEXT";
+
+        @Schema(description = "message.customer_import_text")
+        String CUSTOMER_IMPORT_TEXT = "CUSTOMER_IMPORT_TEXT";
 
         @Schema(description = "message.customer_concat_add_text")
         String CUSTOMER_CONCAT_ADD_TEXT = "CUSTOMER_CONCAT_ADD_TEXT";

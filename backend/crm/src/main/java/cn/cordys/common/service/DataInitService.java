@@ -46,7 +46,7 @@ public class DataInitService {
 
     public void initOneTime() {
         // 多租户业务中心 Redis key 统一使用 tenantId: 前缀
-        String tenantId = TenantContext.getTenantId();
+        String tenantId = TenantContext.requireTenantId();
         RLock lock = redisson.getLock(tenantId + ":init_data_lock");
         try {
             if(lock.tryLock(5, TimeUnit.MINUTES)) {

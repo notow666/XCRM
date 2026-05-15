@@ -11,6 +11,7 @@ import org.springframework.core.task.TaskDecorator;
 import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.util.StringUtils;
 
 import java.util.Map;
 import java.util.concurrent.*;
@@ -106,7 +107,7 @@ public class AsyncConfig implements AsyncConfigurer {
                     if (parentMdc != null) {
                         MDC.setContextMap(parentMdc);
                     }
-                    if (tenantId != null) {
+                    if (StringUtils.hasText(tenantId)) {
                         TenantContext.setTenantId(tenantId);
                     }
                     runnable.run();

@@ -43,9 +43,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -74,8 +72,8 @@ public abstract class BaseExportService {
     @Resource
     private ExportTaskService exportTaskService;
 
-	private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
-
+    @Resource(name = "threadPoolTaskExecutor")
+    private Executor executor;
 
     public Map<String, BaseField> getFieldConfigMap(String formKey, String orgId) {
         return Objects.requireNonNull(CommonBeanFactory.getBean(ModuleFormService.class))
@@ -442,8 +440,9 @@ public abstract class BaseExportService {
 		for (int i = 1; i < alignSubFvs.size(); i++) {
 			// 其余行只用遍历子表格字段
 			Map<String,Object> subRowMap = alignSubFvs.get(i);
-			futures.add(AsyncUtils.supplyAsync(
-                    () -> transFieldValueWithSub(metas, new LinkedHashMap<>(), new LinkedHashMap<>(), subRowMap), executor));
+			futures.add(
+                    CompletableFuture.supplyAsync(() -> transFieldValueWithSub(metas, new LinkedHashMap<>(), new LinkedHashMap<>(), subRowMap), executor)
+            );
 		}
 
 		for (Future<List<Object>> f : futures) {
@@ -658,7 +657,9 @@ public abstract class BaseExportService {
     }
 
     public void runExport(String orgId, String userId, String module, Locale locale, ExportTask exportTask, String fileName, ExportTaskFunction func) {
-        Thread.startVirtualThread(() -> {
+        // 虚拟线程不继承发起线程的 ThreadLocal，须在提交前快照租户并在子线程内绑定/清理
+
+        CompletableFuture.runAsync(() -> {
             try {
                 LocaleContextHolder.setLocale(locale);
                 ExportThreadRegistry.register(exportTask.getId(), Thread.currentThread());
@@ -688,7 +689,7 @@ public abstract class BaseExportService {
                 ExportThreadRegistry.remove(exportTask.getId());
                 exportLog(orgId, exportTask.getId(), userId, LogType.EXPORT, module, fileName);
             }
-        });
+        }, executor);
     }
 
     protected void exportSelectData(ExportTask exportTask, ExportDTO exportDTO) {

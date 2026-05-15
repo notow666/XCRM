@@ -63,6 +63,24 @@ public class TenantContextWebFilter extends OncePerRequestFilter {
         return uri.contains("/pic/preview/") || uri.contains("/attachment/preview/");
     }
 
+    /**
+     * 浏览器 {@code EventSource} 无法自定义请求头，须通过查询参数 {@code tenantId} 写入 {@link TenantContext}（与请求头二选一）。
+     */
+    private static boolean requiresTenantForSse(String uri) {
+        if (uri == null) {
+            return false;
+        }
+        return uri.contains("/sse/subscribe") || uri.contains("/sse/close") || uri.contains("/sse/broadcast");
+    }
+
+    /**
+     * 平台管理员、数据专员 SSE 不绑定租户上下文（与 {@code kind} 查询参数一致）。
+     */
+    private static boolean sseExemptFromTenant(HttpServletRequest request) {
+        String kind = StringUtils.trimToEmpty(request.getParameter("kind")).toUpperCase();
+        return "PLATFORM".equals(kind) || "DATA_SPECIALIST".equals(kind);
+    }
+
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain chain)
             throws ServletException, IOException {
@@ -73,11 +91,14 @@ public class TenantContextWebFilter extends OncePerRequestFilter {
         }
 
         tenantId = StringUtils.trimToNull(tenantId);
-        if (requiresTenantForAnonymousFilePreview(uri) && tenantId == null) {
+        boolean needTenantForSse = requiresTenantForSse(uri) && !sseExemptFromTenant(request);
+        // 平台 / 数据专员 SSE 不绑定租户；若请求仍带占位头（如 ---），不得按真实租户校验否则 400「请求非法」
+        boolean sseSkipTenantResolution = requiresTenantForSse(uri) && sseExemptFromTenant(request);
+        if ((requiresTenantForAnonymousFilePreview(uri) || needTenantForSse) && tenantId == null) {
             rejectIllegalTenant(response, "缺少租户标识 tenantId");
             return;
         }
-        if (StringUtils.isNotBlank(tenantId)) {
+        if (StringUtils.isNotBlank(tenantId) && !sseSkipTenantResolution) {
             if (!tenantMetaService.existsTenantId(tenantId)) {
                 rejectIllegalTenant(response, "请求非法");
                 return;
@@ -99,6 +120,10 @@ public class TenantContextWebFilter extends OncePerRequestFilter {
 
             MDC.put(REQUEST_URI_KEY, request.getRequestURI());
             MDC.put(REQUEST_METHOD_KEY, request.getMethod());
+
+            if(needTenantForSse) {
+                MDC.put(USER_ID_KEY, request.getParameter(USER_ID_KEY));
+            }
         }
 
         try {

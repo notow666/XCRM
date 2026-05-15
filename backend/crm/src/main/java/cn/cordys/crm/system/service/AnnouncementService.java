@@ -281,7 +281,7 @@ public class AnnouncementService {
                     NoticeRedisMessage noticeRedisMessage = new NoticeRedisMessage();
                     noticeRedisMessage.setMessage(subUserId);
                     noticeRedisMessage.setNoticeType(NotificationConstants.Type.ANNOUNCEMENT_NOTICE.toString());
-                    noticeRedisMessage.setTenantId(TenantContext.getTenantIdOrDefault());
+                    noticeRedisMessage.setTenantId(TenantContext.requireTenantId());
                     messagePublisher.publish(TopicConstants.SSE_TOPIC, JSON.toJSONString(noticeRedisMessage));
                     //sseService.broadcastPeriodically(subUserId, NotificationConstants.Type.ANNOUNCEMENT_NOTICE.toString());
                 }

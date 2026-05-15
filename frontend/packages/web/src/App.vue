@@ -18,8 +18,8 @@
 
   import { CompanyTypeEnum } from '@lib/shared/enums/commonEnum';
   import useLocale from '@lib/shared/locale/useLocale';
+  import { getGenerateId, getQueryVariable, getUrlParameterWidthRegExp } from '@lib/shared/method';
   import { hasToken, setLoginExpires, setLoginType } from '@lib/shared/method/auth';
-  import { getQueryVariable, getUrlParameterWidthRegExp } from '@lib/shared/method/index';
   import type { Result } from '@lib/shared/types/axios';
 
   import CrmSysUpgradeTip from '@/components/pure/crm-sys-upgrade-tip/index.vue';
@@ -143,6 +143,9 @@
           const specialistUser = await dataSpecialistIsLogin();
           if (specialistUser?.source === 'DATA_SPECIALIST') {
             userStore.setInfo(specialistUser as any);
+            if (!userStore.clientIdRandomId) {
+              userStore.$patch({ clientIdRandomId: getGenerateId() });
+            }
           }
         }
       } catch (error) {

@@ -39,7 +39,7 @@ public class DataSpecialistAuthService {
 
         UserDTO user = new UserDTO();
         user.setId(row.getId());
-        user.setName(row.getUsername());
+        user.setName(StringUtils.isNotBlank(row.getSpecialistName()) ? row.getSpecialistName() : row.getUsername());
         user.setEmail(row.getUsername() + "@data-specialist.local");
         user.setSource(DataSpecialistConstants.SESSION_SOURCE);
         user.setEnable(true);

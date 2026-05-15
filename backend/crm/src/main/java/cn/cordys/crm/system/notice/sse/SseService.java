@@ -1,5 +1,7 @@
 package cn.cordys.crm.system.notice.sse;
 
+import cn.cordys.common.exception.GenericException;
+import cn.cordys.common.response.result.CrmHttpResultCode;
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.JSON;
 import cn.cordys.common.redis.TenantRedisKeyBuilder;
@@ -46,21 +48,41 @@ public class SseService {
         return TenantRedisKeyBuilder.tenantKey(rawKey);
     }
 
-    private String tenantUserKey(String userId) {
-        return TenantContext.getTenantIdOrDefault() + ":" + userId;
+    /**
+     * 与 {@link #addClient(SsePrincipalKind, String, String, String)} 使用的连接分组键一致。
+     */
+    public String connectionKey(SsePrincipalKind kind, String tenantId, String userId) {
+        if (StringUtils.isBlank(userId)) {
+            throw new GenericException(CrmHttpResultCode.VALIDATE_FAILED, "userId 不能为空");
+        }
+        String uid = userId.trim();
+        return switch (kind) {
+            case TENANT -> {
+                String tid = StringUtils.trimToNull(tenantId);
+                if (tid == null) {
+                    tid = StringUtils.trimToNull(TenantContext.getTenantId());
+                }
+                if (tid == null) {
+                    throw new GenericException(CrmHttpResultCode.VALIDATE_FAILED, "缺少租户标识 tenantId");
+                }
+                yield "TENANT:" + tid + ":" + uid;
+            }
+            case PLATFORM -> "PLATFORM:" + uid;
+            case DATA_SPECIALIST -> "DATA_SPECIALIST:" + uid;
+        };
     }
 
     /**
-     * 添加或获取现有客户端流
+     * 添加或获取现有客户端流（租户内 / 平台 / 数据专员各自独立连接键，与租户切换无关）。
      */
-    public Flux<String> addClient(String userId, String clientId) {
-        log.info("当前在线用户数: {} ", userClients.size());
+    public Flux<String> addClient(SsePrincipalKind kind, String tenantId, String userId, String clientId) {
+        log.info("SSE addClient kind={} userId={} clientId={}", kind, userId, clientId);
 
-        if (StringUtils.isAnyBlank(userId, clientId)) {
-            log.info("User ID or Client ID is blank, cannot add client.");
+        if (StringUtils.isBlank(clientId)) {
+            log.info("Client ID is blank, cannot add client.");
             return null;
         }
-        String userKey = tenantUserKey(userId);
+        String userKey = connectionKey(kind, tenantId, userId);
         Map<String, ClientSinkWrapper> inner = userClients.computeIfAbsent(userKey,
                 k -> Collections.synchronizedMap(new LinkedHashMap<>()));
 
@@ -69,7 +91,6 @@ public class SseService {
                 return inner.get(clientId).flux;
             }
             ClientSinkWrapper wrapper = new ClientSinkWrapper();
-            // 控制最多 2 个客户端
             inner.put(clientId, wrapper);
             if (inner.size() > 2) {
                 Iterator<String> it = inner.keySet().iterator();
@@ -77,57 +98,57 @@ public class SseService {
                 ClientSinkWrapper old = inner.remove(oldest);
                 old.complete();
             }
-            // 首次心跳
             wrapper.emit("HEARTBEAT: " + System.currentTimeMillis());
             return wrapper.flux;
         }
     }
 
-    /**
-     * 移除客户端
-     */
-    public void removeClient(String userId, String clientId) {
-        if (StringUtils.isAnyBlank(userId, clientId)) return;
-        String userKey = tenantUserKey(userId);
+    public void removeClient(SsePrincipalKind kind, String tenantId, String userId, String clientId) {
+        if (StringUtils.isBlank(clientId) || StringUtils.isBlank(userId)) {
+            return;
+        }
+        String userKey = connectionKey(kind, tenantId, userId);
         Map<String, ClientSinkWrapper> map = userClients.get(userKey);
-        if (map == null) return;
+        if (map == null) {
+            return;
+        }
         synchronized (map) {
             ClientSinkWrapper w = map.remove(clientId);
-            if (w != null) w.complete();
-            if (map.isEmpty()) userClients.remove(userKey);
+            if (w != null) {
+                w.complete();
+            }
+            if (map.isEmpty()) {
+                userClients.remove(userKey);
+            }
         }
     }
 
     /**
-     * 向指定用户所有客户端发送事件
+     * 向指定主体下所有在线客户端推送一条 JSON 文本帧。
      */
-    public void sendToUser(String userId, Object data) {
-        Map<String, ClientSinkWrapper> map = userClients.get(tenantUserKey(userId));
+    public void sendToPrincipal(SsePrincipalKind kind, String tenantId, String userId, Object data) {
+        String userKey = connectionKey(kind, tenantId, userId);
+        Map<String, ClientSinkWrapper> map = userClients.get(userKey);
         if (map != null) {
             map.forEach((clientId, wrapper) -> wrapper.emit(JSON.toJSONString(data)));
         }
     }
 
-    /**
-     * 向单个客户端发送事件
-     */
-    public void sendToClient(String userId, String clientId, Object data) {
-        Optional.ofNullable(userClients.get(tenantUserKey(userId)))
+    public void sendToClient(SsePrincipalKind kind, String tenantId, String userId, String clientId, Object data) {
+        Optional.ofNullable(userClients.get(connectionKey(kind, tenantId, userId)))
                 .map(m -> m.get(clientId)).ifPresent(wrapper -> wrapper.emit(JSON.toJSONString(data)));
     }
 
     /**
-     * 定时广播逻辑调用
+     * 定时广播逻辑调用（仅租户内通知：依赖当前线程 {@link TenantContext} 与 Redis 租户键）。
      */
     public void broadcastPeriodically(String userId, String sendType) {
         SseMessageDTO msg = buildMessage(userId, sendType);
-        sendToUser(userId, msg);
-        log.info("Broadcast to user {} at {}", userId, System.currentTimeMillis());
+        String tenantId = TenantContext.requireTenantId();
+        sendToPrincipal(SsePrincipalKind.TENANT, tenantId, userId, msg);
+        log.info("Broadcast to tenant user {} at {}", userId, System.currentTimeMillis());
     }
 
-    /**
-     * 构建通知消息体
-     */
     private SseMessageDTO buildMessage(String userId, String sendType) {
         SseMessageDTO dto = new SseMessageDTO();
         if (Strings.CI.equals(sendType, NotificationConstants.Type.SYSTEM_NOTICE.toString())) {
@@ -156,9 +177,6 @@ public class SseService {
         return dto;
     }
 
-    /**
-     * 根据 Redis 构建 DTO 列表
-     */
     private List<NotificationDTO> buildDTOList(Set<String> values, String prefix) {
         if (CollectionUtils.isEmpty(values)) {
             return Collections.emptyList();
@@ -177,9 +195,6 @@ public class SseService {
                 .toList();
     }
 
-    /**
-     * 客户端包装，包含 Sink 与 Flux
-     */
     private static class ClientSinkWrapper {
         private final Sinks.Many<String> sink;
         private final Flux<String> flux;
@@ -187,7 +202,6 @@ public class SseService {
         ClientSinkWrapper() {
             this.sink = Sinks.many().multicast().onBackpressureBuffer();
             this.flux = sink.asFlux()
-                    // 心跳自动推送每 15 秒一次
                     .mergeWith(Flux.interval(Duration.ofSeconds(15))
                             .map(tick -> "HEARTBEAT: " + System.currentTimeMillis()))
                     .doOnCancel(this::complete);

@@ -33,10 +33,11 @@ public class OrganizationContextWebFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String organizationId = request.getHeader(ORGANIZATION_ID_HEADER);
-        if (organizationId != null) {
-            OrganizationContext.setOrganizationId(organizationId);
-        }
+//        String organizationId = request.getHeader(ORGANIZATION_ID_HEADER);
+//        if (organizationId != null) {
+//            OrganizationContext.setOrganizationId(organizationId);
+//        }
+        OrganizationContext.setOrganizationId(OrganizationContext.DEFAULT_ORGANIZATION_ID);
         try {
             chain.doFilter(request, response);
         } finally {
