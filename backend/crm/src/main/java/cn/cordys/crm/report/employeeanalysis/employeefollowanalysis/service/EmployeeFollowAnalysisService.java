@@ -1,8 +1,11 @@
 package cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service;
 
 import cn.cordys.common.constants.FormKey;
+import cn.cordys.common.constants.PermissionConstants;
+import cn.cordys.common.dto.DeptDataPermissionDTO;
 import cn.cordys.common.dto.UserDeptDTO;
 import cn.cordys.common.service.BaseService;
+import cn.cordys.common.service.DataScopeService;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.request.EmployeeFollowAnalysisSummaryRequest;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisCustomerContextRow;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisEmployeeDimensionRow;
@@ -50,18 +53,24 @@ public class EmployeeFollowAnalysisService {
     private ModuleFieldExtService moduleFieldExtService;
     @Resource
     private BaseService baseService;
+    @Resource
+    private DataScopeService dataScopeService;
 
-    public List<EmployeeFollowAnalysisSummaryItemResponse> summary(EmployeeFollowAnalysisSummaryRequest request, String orgId) {
+    public List<EmployeeFollowAnalysisSummaryItemResponse> summary(EmployeeFollowAnalysisSummaryRequest request, String orgId, String userId) {
         // 汇总查询固定拆成两段：昨天及以前走事实表，今天走原始表实时聚合。
         QueryRange range = buildQueryRange(request.getTimePreset(), request.getStartTime(), request.getEndTime());
         EmployeeFollowAnalysisDimensionType dimensionType = EmployeeFollowAnalysisDimensionType.fromValue(request.getDimensionType());
-        AggregationContext context = buildAggregationContext(orgId, dimensionType);
+        AggregationContext context = buildAggregationContext(orgId, userId, dimensionType);
+        if (context.getEmployeeMap().isEmpty()) {
+            return List.of();
+        }
+        List<String> visibleOperatorUserIds = context.getSqlFilterOperatorUserIds();
         Map<String, SummaryAccumulator> accumulatorMap = new LinkedHashMap<>();
         if (range.getHistoryStartDate() != null && range.getHistoryEndDate() != null) {
             // 历史区间直接按当前维度在事实表聚合，避免回传大量明细行再由 Java 二次聚合。
             mergeAccumulatorMaps(
                     accumulatorMap,
-                    aggregateHistoryRows(loadHistoryAggregateRows(range, dimensionType, orgId), dimensionType, context)
+                    aggregateHistoryRows(loadHistoryAggregateRows(range, dimensionType, orgId, visibleOperatorUserIds), dimensionType, context)
             );
         }
         List<EmployeeFollowAnalysisMetricRow> metricRows = new ArrayList<>();
@@ -70,25 +79,25 @@ public class EmployeeFollowAnalysisService {
             metricRows.addAll(logSqlQuery(
                     "listInboundRows",
                     "startTime=" + range.getTodayStartTime() + ", endTime=" + range.getTodayEndTime() + ", orgId=" + orgId,
-                    () -> employeeFollowAnalysisMapper.listInboundRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId)
+                    () -> employeeFollowAnalysisMapper.listInboundRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId, visibleOperatorUserIds)
             ));
             // 联系客户数
             metricRows.addAll(logSqlQuery(
                     "listContactedRows",
                     "startTime=" + range.getTodayStartTime() + ", endTime=" + range.getTodayEndTime() + ", orgId=" + orgId,
-                    () -> employeeFollowAnalysisMapper.listContactedRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId)
+                    () -> employeeFollowAnalysisMapper.listContactedRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId, visibleOperatorUserIds)
             ));
             // 通话类指标：拨打电话数、拨打接通数、一分钟以上通话数、三分钟以上通话数、通话时长
             metricRows.addAll(logSqlQuery(
                     "listCallRows",
                     "startTime=" + range.getTodayStartTime() + ", endTime=" + range.getTodayEndTime() + ", orgId=" + orgId,
-                    () -> employeeFollowAnalysisMapper.listCallRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId)
+                    () -> employeeFollowAnalysisMapper.listCallRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId, visibleOperatorUserIds)
             ));
             // 新增微信好友数
             metricRows.addAll(logSqlQuery(
                     "listWechatRows",
                     "startTime=" + range.getTodayStartTime() + ", endTime=" + range.getTodayEndTime() + ", orgId=" + orgId,
-                    () -> employeeFollowAnalysisMapper.listWechatRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId)
+                    () -> employeeFollowAnalysisMapper.listWechatRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId, visibleOperatorUserIds)
             ));
         }
         mergeAccumulatorMaps(accumulatorMap, aggregateRows(metricRows, dimensionType, context));
@@ -100,29 +109,18 @@ public class EmployeeFollowAnalysisService {
         return responses;
     }
 
-    private AggregationContext buildAggregationContext(String orgId, EmployeeFollowAnalysisDimensionType dimensionType) {
+    private AggregationContext buildAggregationContext(String orgId, String userId, EmployeeFollowAnalysisDimensionType dimensionType) {
         AggregationContext context = new AggregationContext();
+        // 员工跟进分析当前没有独立权限点，这里复用客户管理读权限上的数据范围来裁剪可见员工。
+        DeptDataPermissionDTO permission = dataScopeService.getDeptDataPermission(userId, orgId, PermissionConstants.CUSTOMER_MANAGEMENT_READ);
         // 维度展示统一取当前值，不在历史事实表内固化部门和客户来源。
-        List<EmployeeFollowAnalysisEmployeeDimensionRow> employees = logSqlQuery(
-                "listCurrentEmployees",
-                "orgId=" + orgId,
-                () -> employeeFollowAnalysisMapper.listCurrentEmployees(orgId)
-        );
-        Map<String, UserDeptDTO> userDeptMap = logMapQuery(
-                "getUserDeptMapByUserIds",
-                "orgId=" + orgId + ", userCount=" + employees.size(),
-                () -> baseService.getUserDeptMapByUserIds(employees.stream().map(EmployeeFollowAnalysisEmployeeDimensionRow::getOperatorUserId).toList(), orgId)
-        );
+        List<EmployeeFollowAnalysisEmployeeDimensionRow> employees = loadVisibleEmployees(orgId, userId, permission);
         Map<String, EmployeeFollowAnalysisEmployeeDimensionRow> employeeMap = new LinkedHashMap<>();
         for (EmployeeFollowAnalysisEmployeeDimensionRow item : employees) {
-            UserDeptDTO userDeptDTO = userDeptMap.get(item.getOperatorUserId());
-            if (userDeptDTO != null) {
-                item.setDepartmentId(userDeptDTO.getDeptId());
-                item.setDepartmentName(userDeptDTO.getDeptName());
-            }
             employeeMap.put(item.getOperatorUserId(), item);
         }
         context.setEmployeeMap(employeeMap);
+        context.setSqlFilterOperatorUserIds(Boolean.TRUE.equals(permission.getAll()) ? null : new ArrayList<>(employeeMap.keySet()));
         Map<String, Integer> employeeOrderMap = new LinkedHashMap<>();
         for (int i = 0; i < employees.size(); i++) {
             employeeOrderMap.put(employees.get(i).getOperatorUserId(), i);
@@ -176,36 +174,92 @@ public class EmployeeFollowAnalysisService {
         return context;
     }
 
+    private List<EmployeeFollowAnalysisEmployeeDimensionRow> loadVisibleEmployees(String orgId,
+                                                                                  String userId,
+                                                                                  DeptDataPermissionDTO permission) {
+        List<EmployeeFollowAnalysisEmployeeDimensionRow> employees = logSqlQuery(
+                "listCurrentEmployees",
+                "orgId=" + orgId + ", userId=" + userId,
+                () -> employeeFollowAnalysisMapper.listCurrentEmployees(orgId)
+        );
+        if (employees.isEmpty()) {
+            return List.of();
+        }
+        Map<String, UserDeptDTO> userDeptMap = logMapQuery(
+                "getUserDeptMapByUserIds",
+                "orgId=" + orgId + ", userCount=" + employees.size(),
+                () -> baseService.getUserDeptMapByUserIds(
+                        employees.stream().map(EmployeeFollowAnalysisEmployeeDimensionRow::getOperatorUserId).toList(),
+                        orgId
+                )
+        );
+        for (EmployeeFollowAnalysisEmployeeDimensionRow item : employees) {
+            UserDeptDTO userDeptDTO = userDeptMap.get(item.getOperatorUserId());
+            if (userDeptDTO != null) {
+                item.setDepartmentId(userDeptDTO.getDeptId());
+                item.setDepartmentName(userDeptDTO.getDeptName());
+            }
+        }
+        if (Boolean.TRUE.equals(permission.getAll())) {
+            return employees;
+        }
+        List<EmployeeFollowAnalysisEmployeeDimensionRow> visibleEmployees = new ArrayList<>();
+        if (Boolean.TRUE.equals(permission.getSelf())) {
+            for (EmployeeFollowAnalysisEmployeeDimensionRow item : employees) {
+                if (StringUtils.equals(item.getOperatorUserId(), userId)) {
+                    visibleEmployees.add(item);
+                }
+            }
+            return visibleEmployees;
+        }
+        Set<String> deptIds = permission.getDeptIds();
+        if (deptIds == null || deptIds.isEmpty()) {
+            for (EmployeeFollowAnalysisEmployeeDimensionRow item : employees) {
+                if (StringUtils.equals(item.getOperatorUserId(), userId)) {
+                    visibleEmployees.add(item);
+                }
+            }
+            return visibleEmployees;
+        }
+        for (EmployeeFollowAnalysisEmployeeDimensionRow item : employees) {
+            if (StringUtils.equals(item.getOperatorUserId(), userId) || deptIds.contains(item.getDepartmentId())) {
+                visibleEmployees.add(item);
+            }
+        }
+        return visibleEmployees;
+    }
+
     private List<EmployeeFollowAnalysisHistoryAggregateRow> loadHistoryAggregateRows(QueryRange range,
                                                                                      EmployeeFollowAnalysisDimensionType dimensionType,
-                                                                                     String orgId) {
+                                                                                     String orgId,
+                                                                                     List<String> visibleOperatorUserIds) {
         String startDate = range.getHistoryStartDate().toString();
         String endDate = range.getHistoryEndDate().toString();
         return switch (dimensionType) {
             case EMPLOYEE_NAME -> logSqlQuery(
                     "listHistoryRowsByEmployee",
                     "startDate=" + startDate + ", endDate=" + endDate,
-                    () -> employeeFollowAnalysisMapper.listHistoryRowsByEmployee(startDate, endDate)
+                    () -> employeeFollowAnalysisMapper.listHistoryRowsByEmployee(startDate, endDate, visibleOperatorUserIds)
             );
             case EMPLOYEE_DEPT -> logSqlQuery(
                     "listHistoryRowsByDepartment",
                     "startDate=" + startDate + ", endDate=" + endDate + ", orgId=" + orgId,
-                    () -> employeeFollowAnalysisMapper.listHistoryRowsByDepartment(startDate, endDate, orgId)
+                    () -> employeeFollowAnalysisMapper.listHistoryRowsByDepartment(startDate, endDate, orgId, visibleOperatorUserIds)
             );
             case CUSTOMER_SOURCE -> logSqlQuery(
                     "listHistoryRowsByCustomerSource",
                     "startDate=" + startDate + ", endDate=" + endDate,
-                    () -> employeeFollowAnalysisMapper.listHistoryRowsByCustomerSource(startDate, endDate)
+                    () -> employeeFollowAnalysisMapper.listHistoryRowsByCustomerSource(startDate, endDate, visibleOperatorUserIds)
             );
             case STAT_DAY -> logSqlQuery(
                     "listHistoryRowsByStatDay",
                     "startDate=" + startDate + ", endDate=" + endDate,
-                    () -> employeeFollowAnalysisMapper.listHistoryRowsByStatDay(startDate, endDate)
+                    () -> employeeFollowAnalysisMapper.listHistoryRowsByStatDay(startDate, endDate, visibleOperatorUserIds)
             );
             case STAT_MONTH -> logSqlQuery(
                     "listHistoryRowsByStatMonth",
                     "startDate=" + startDate + ", endDate=" + endDate,
-                    () -> employeeFollowAnalysisMapper.listHistoryRowsByStatMonth(startDate, endDate)
+                    () -> employeeFollowAnalysisMapper.listHistoryRowsByStatMonth(startDate, endDate, visibleOperatorUserIds)
             );
         };
     }
@@ -527,6 +581,7 @@ public class EmployeeFollowAnalysisService {
     @Data
     private static class AggregationContext {
         private Map<String, EmployeeFollowAnalysisEmployeeDimensionRow> employeeMap = new LinkedHashMap<>();
+        private List<String> sqlFilterOperatorUserIds;
         private Map<String, Integer> employeeOrderMap = new LinkedHashMap<>();
         private Map<String, String> departmentMap = new LinkedHashMap<>();
         private Map<String, Integer> departmentOrderMap = new LinkedHashMap<>();

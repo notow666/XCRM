@@ -45,6 +45,12 @@
                sum(f.call_duration_sec) as callDurationSec
         from report_employee_follow_analysis_fact_day f
         where f.stat_date between #{startDate} and #{endDate}
+          <if test="operatorUserIds != null">
+              and f.operator_user_id in
+              <foreach collection="operatorUserIds" item="operatorUserId" open="(" separator="," close=")">
+                  #{operatorUserId}
+              </foreach>
+          </if>
         group by f.operator_user_id, f.customer_id
     </select>
 
@@ -62,6 +68,12 @@
                sum(f.call_duration_sec) as callDurationSec
         from report_employee_follow_analysis_fact_day f
         where f.stat_date between #{startDate} and #{endDate}
+          <if test="operatorUserIds != null">
+              and f.operator_user_id in
+              <foreach collection="operatorUserIds" item="operatorUserId" open="(" separator="," close=")">
+                  #{operatorUserId}
+              </foreach>
+          </if>
         group by f.operator_user_id, f.customer_id
     </select>
 
@@ -79,6 +91,12 @@
                sum(f.call_duration_sec) as callDurationSec
         from report_employee_follow_analysis_fact_day f
         where f.stat_date between #{startDate} and #{endDate}
+          <if test="operatorUserIds != null">
+              and f.operator_user_id in
+              <foreach collection="operatorUserIds" item="operatorUserId" open="(" separator="," close=")">
+                  #{operatorUserId}
+              </foreach>
+          </if>
         group by f.customer_id
     </select>
 
@@ -96,6 +114,12 @@
                sum(f.call_duration_sec) as callDurationSec
         from report_employee_follow_analysis_fact_day f
         where f.stat_date between #{startDate} and #{endDate}
+          <if test="operatorUserIds != null">
+              and f.operator_user_id in
+              <foreach collection="operatorUserIds" item="operatorUserId" open="(" separator="," close=")">
+                  #{operatorUserId}
+              </foreach>
+          </if>
         group by f.stat_date, f.customer_id
     </select>
 
@@ -113,6 +137,12 @@
                sum(f.call_duration_sec) as callDurationSec
         from report_employee_follow_analysis_fact_day f
         where f.stat_date between #{startDate} and #{endDate}
+          <if test="operatorUserIds != null">
+              and f.operator_user_id in
+              <foreach collection="operatorUserIds" item="operatorUserId" open="(" separator="," close=")">
+                  #{operatorUserId}
+              </foreach>
+          </if>
         group by date_format(f.stat_date, '%Y-%m'), f.customer_id
     </select>
 
@@ -139,6 +169,12 @@
         where c.in_shared_pool is false
           and c.collection_time is not null
           and c.collection_time between #{startTime} and #{endTime}
+          <if test="operatorUserIds != null">
+              and c.owner in
+              <foreach collection="operatorUserIds" item="operatorUserId" open="(" separator="," close=")">
+                  #{operatorUserId}
+              </foreach>
+          </if>
     </select>
 
     <select id="listContactedRows" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisMetricRow">
@@ -169,6 +205,12 @@
             where c.in_shared_pool is false
               and f.follow_time is not null
               and f.follow_time between #{startTime} and #{endTime}
+              <if test="operatorUserIds != null">
+                  and f.owner in
+                  <foreach collection="operatorUserIds" item="operatorUserId" open="(" separator="," close=")">
+                      #{operatorUserId}
+                  </foreach>
+              </if>
             group by date_format(from_unixtime(f.follow_time / 1000), '%Y-%m-%d'),
                      f.customer_id,
                      f.owner
@@ -216,6 +258,12 @@
           and cra.direction = 0
           and cra.customer_tel is not null
           and cra.customer_tel != ''
+          <if test="operatorUserIds != null">
+              and su.id in
+              <foreach collection="operatorUserIds" item="operatorUserId" open="(" separator="," close=")">
+                  #{operatorUserId}
+              </foreach>
+          </if>
         group by date_format(from_unixtime(cra.begin_timestamp / 1000), '%Y-%m-%d'),
                  c.id,
                  su.id
@@ -250,6 +298,12 @@
           and a.is_friend = '1'
           and a.friend_phone is not null
           and a.friend_phone != ''
+          <if test="operatorUserIds != null">
+              and su.id in
+              <foreach collection="operatorUserIds" item="operatorUserId" open="(" separator="," close=")">
+                  #{operatorUserId}
+              </foreach>
+          </if>
         group by date_format(from_unixtime(a.`timestamp` / 1000), '%Y-%m-%d'),
                  c.id,
                  su.id
@@ -322,6 +376,12 @@
               )
         where c.in_shared_pool is false
           and c.collection_time between #{request.startTime} and #{request.endTime}
+          <if test="operatorUserIds != null">
+              and c.owner in
+              <foreach collection="operatorUserIds" item="operatorUserId" open="(" separator="," close=")">
+                  #{operatorUserId}
+              </foreach>
+          </if>
           <if test="request.dimensionType == 'employeeName'">
               and c.owner = #{request.dimensionKey}
           </if>
@@ -375,6 +435,12 @@
               and action_sou.user_id = f.owner
         where c.in_shared_pool is false
           and f.follow_time between #{request.startTime} and #{request.endTime}
+          <if test="operatorUserIds != null">
+              and f.owner in
+              <foreach collection="operatorUserIds" item="operatorUserId" open="(" separator="," close=")">
+                  #{operatorUserId}
+              </foreach>
+          </if>
           <if test="request.dimensionType == 'employeeName'">
               and f.owner = #{request.dimensionKey}
           </if>
@@ -450,6 +516,12 @@
               and a.`timestamp` between #{request.startTime} and #{request.endTime}
               and a.friend_phone is not null
               and a.friend_phone != ''
+              <if test="operatorUserIds != null">
+                  and su.id in
+                  <foreach collection="operatorUserIds" item="operatorUserId" open="(" separator="," close=")">
+                      #{operatorUserId}
+                  </foreach>
+              </if>
               <if test="request.dimensionType == 'employeeName'">
                   and su.id = #{request.dimensionKey}
               </if>
@@ -537,6 +609,12 @@
           and cra.direction = 0
           and cra.customer_tel is not null
           and cra.customer_tel != ''
+          <if test="operatorUserIds != null">
+              and su.id in
+              <foreach collection="operatorUserIds" item="operatorUserId" open="(" separator="," close=")">
+                  #{operatorUserId}
+              </foreach>
+          </if>
           <if test="request.metricType == 'connectedCount'">
               and ifnull(cra.is_connected, 0) = 1
           </if>

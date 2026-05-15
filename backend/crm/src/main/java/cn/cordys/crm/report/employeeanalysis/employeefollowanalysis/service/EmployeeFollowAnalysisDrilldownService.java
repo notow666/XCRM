@@ -1,9 +1,15 @@
 package cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service;
 
 import cn.cordys.common.constants.FormKey;
+import cn.cordys.common.constants.PermissionConstants;
+import cn.cordys.common.dto.DeptDataPermissionDTO;
+import cn.cordys.common.dto.UserDeptDTO;
 import cn.cordys.common.pager.PageUtils;
 import cn.cordys.common.pager.Pager;
+import cn.cordys.common.service.BaseService;
+import cn.cordys.common.service.DataScopeService;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.request.EmployeeFollowAnalysisDrilldownRequest;
+import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisEmployeeDimensionRow;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisDrilldownItemResponse;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.enums.EmployeeFollowAnalysisMetricType;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.enums.EmployeeFollowAnalysisTimePreset;
@@ -18,13 +24,15 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.LinkedHashMap;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 
 @Service
@@ -36,41 +44,91 @@ public class EmployeeFollowAnalysisDrilldownService {
     private EmployeeFollowAnalysisMapper employeeFollowAnalysisMapper;
     @Resource
     private ModuleFieldExtService moduleFieldExtService;
+    @Resource
+    private BaseService baseService;
+    @Resource
+    private DataScopeService dataScopeService;
 
-    public Pager<List<EmployeeFollowAnalysisDrilldownItemResponse>> drilldown(EmployeeFollowAnalysisDrilldownRequest request, String orgId) {
+    public Pager<List<EmployeeFollowAnalysisDrilldownItemResponse>> drilldown(EmployeeFollowAnalysisDrilldownRequest request, String orgId, String userId) {
         // 下钻不查事实表，直接按当前口径回查原始业务/MMBA 明细，避免汇总和明细脱节。
         fillTimeRange(request);
+        // 下钻和汇总复用同一数据权限锚点，保证“谁能看汇总，谁就只能看同范围的明细”。
+        DeptDataPermissionDTO permission = dataScopeService.getDeptDataPermission(userId, orgId, PermissionConstants.CUSTOMER_MANAGEMENT_READ);
+        List<String> visibleOperatorUserIds = loadDrilldownOperatorUserIds(orgId, userId, permission);
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
+        if (!Boolean.TRUE.equals(permission.getAll()) && visibleOperatorUserIds.isEmpty()) {
+            return PageUtils.setPageInfo(page, List.of());
+        }
         EmployeeFollowAnalysisMetricType metricType = EmployeeFollowAnalysisMetricType.fromValue(request.getMetricType());
         List<EmployeeFollowAnalysisDrilldownItemResponse> list = switch (metricType) {
             case INBOUND_CUSTOMER -> logSqlQuery(
                     "listInboundCustomerDrilldown",
                     "orgId=" + orgId + ", metricType=" + request.getMetricType() + ", dimensionType=" + request.getDimensionType()
                             + ", dimensionKey=" + request.getDimensionKey(),
-                    () -> employeeFollowAnalysisMapper.listInboundCustomerDrilldown(request, orgId)
+                    () -> employeeFollowAnalysisMapper.listInboundCustomerDrilldown(request, orgId, visibleOperatorUserIds)
             );
             case CONTACTED_CUSTOMER -> logSqlQuery(
                     "listContactedCustomerDrilldown",
                     "orgId=" + orgId + ", metricType=" + request.getMetricType() + ", dimensionType=" + request.getDimensionType()
                             + ", dimensionKey=" + request.getDimensionKey(),
-                    () -> employeeFollowAnalysisMapper.listContactedCustomerDrilldown(request, orgId)
+                    () -> employeeFollowAnalysisMapper.listContactedCustomerDrilldown(request, orgId, visibleOperatorUserIds)
             );
             case NEW_WECHAT_FRIEND -> logSqlQuery(
                     "listWechatFriendDrilldown",
                     "orgId=" + orgId + ", metricType=" + request.getMetricType() + ", dimensionType=" + request.getDimensionType()
                             + ", dimensionKey=" + request.getDimensionKey(),
-                    () -> employeeFollowAnalysisMapper.listWechatFriendDrilldown(request, orgId)
+                    () -> employeeFollowAnalysisMapper.listWechatFriendDrilldown(request, orgId, visibleOperatorUserIds)
             );
             case DIAL_COUNT, CONNECTED_COUNT, CALL_OVER_1MIN, CALL_OVER_3MIN ->
                     logSqlQuery(
                             "listCallDrilldown",
                             "orgId=" + orgId + ", metricType=" + request.getMetricType() + ", dimensionType=" + request.getDimensionType()
                                     + ", dimensionKey=" + request.getDimensionKey(),
-                            () -> employeeFollowAnalysisMapper.listCallDrilldown(request, orgId)
+                            () -> employeeFollowAnalysisMapper.listCallDrilldown(request, orgId, visibleOperatorUserIds)
                     );
         };
         fillCustomerSourceLabels(list, orgId);
         return PageUtils.setPageInfo(page, list);
+    }
+
+    private List<String> loadDrilldownOperatorUserIds(String orgId,
+                                                       String userId,
+                                                       DeptDataPermissionDTO permission) {
+        if (Boolean.TRUE.equals(permission.getAll())) {
+            return null;
+        }
+        if (Boolean.TRUE.equals(permission.getSelf())) {
+            return List.of(userId);
+        }
+        Set<String> deptIds = permission.getDeptIds();
+        if (deptIds == null || deptIds.isEmpty()) {
+            return List.of(userId);
+        }
+        List<EmployeeFollowAnalysisEmployeeDimensionRow> employees = logSqlQuery(
+                "listCurrentEmployees-drilldown",
+                "orgId=" + orgId + ", userId=" + userId,
+                () -> employeeFollowAnalysisMapper.listCurrentEmployees(orgId)
+        );
+        if (employees.isEmpty()) {
+            return List.of();
+        }
+        Map<String, UserDeptDTO> userDeptMap = logMapQuery(
+                "getUserDeptMapByUserIds-drilldown",
+                "orgId=" + orgId + ", userCount=" + employees.size(),
+                () -> baseService.getUserDeptMapByUserIds(
+                        employees.stream().map(EmployeeFollowAnalysisEmployeeDimensionRow::getOperatorUserId).toList(),
+                        orgId
+                )
+        );
+        List<String> visibleOperatorUserIds = new ArrayList<>();
+        for (EmployeeFollowAnalysisEmployeeDimensionRow item : employees) {
+            UserDeptDTO userDeptDTO = userDeptMap.get(item.getOperatorUserId());
+            String departmentId = userDeptDTO == null ? null : userDeptDTO.getDeptId();
+            if (StringUtils.equals(item.getOperatorUserId(), userId) || deptIds.contains(departmentId)) {
+                visibleOperatorUserIds.add(item.getOperatorUserId());
+            }
+        }
+        return visibleOperatorUserIds;
     }
 
     private void fillTimeRange(EmployeeFollowAnalysisDrilldownRequest request) {
@@ -140,6 +198,15 @@ public class EmployeeFollowAnalysisDrilldownService {
         long start = System.currentTimeMillis();
         //log.info("员工跟进分析SQL开始, sqlName={}, params={}", sqlName, params);
         List<T> result = supplier.get();
+        long cost = System.currentTimeMillis() - start;
+        //log.info("员工跟进分析SQL结束, sqlName={}, params={}, costMs={}, resultSize={}", sqlName, params, cost, result == null ? 0 : result.size());
+        return result;
+    }
+
+    private <K, V> Map<K, V> logMapQuery(String sqlName, String params, Supplier<Map<K, V>> supplier) {
+        long start = System.currentTimeMillis();
+        //log.info("员工跟进分析SQL开始, sqlName={}, params={}", sqlName, params);
+        Map<K, V> result = supplier.get();
         long cost = System.currentTimeMillis() - start;
         //log.info("员工跟进分析SQL结束, sqlName={}, params={}, costMs={}, resultSize={}", sqlName, params, cost, result == null ? 0 : result.size());
         return result;

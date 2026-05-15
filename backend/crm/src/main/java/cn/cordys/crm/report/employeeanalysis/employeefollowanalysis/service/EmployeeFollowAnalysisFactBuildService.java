@@ -55,16 +55,16 @@ public class EmployeeFollowAnalysisFactBuildService {
         List<EmployeeFollowAnalysisMetricRow> mergedRows = mergeMetricRows(List.of(
                 logSqlQuery("listInboundRows-rebuild",
                         buildSqlParams(startTime, endTime),
-                        () -> employeeFollowAnalysisMapper.listInboundRows(startTime, endTime, null)),
+                        () -> employeeFollowAnalysisMapper.listInboundRows(startTime, endTime, null, null)),
                 logSqlQuery("listContactedRows-rebuild",
                         buildSqlParams(startTime, endTime),
-                        () -> employeeFollowAnalysisMapper.listContactedRows(startTime, endTime, null)),
+                        () -> employeeFollowAnalysisMapper.listContactedRows(startTime, endTime, null, null)),
                 logSqlQuery("listCallRows-rebuild",
                         buildSqlParams(startTime, endTime),
-                        () -> employeeFollowAnalysisMapper.listCallRows(startTime, endTime, null)),
+                        () -> employeeFollowAnalysisMapper.listCallRows(startTime, endTime, null, null)),
                 logSqlQuery("listWechatRows-rebuild",
                         buildSqlParams(startTime, endTime),
-                        () -> employeeFollowAnalysisMapper.listWechatRows(startTime, endTime, null))
+                        () -> employeeFollowAnalysisMapper.listWechatRows(startTime, endTime, null, null))
         ));
         if (CollectionUtils.isEmpty(mergedRows)) {
             return;

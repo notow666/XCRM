@@ -43,8 +43,9 @@ public class EmployeeFollowAnalysisController {
     public List<EmployeeFollowAnalysisSummaryItemResponse> summary(@Valid @RequestBody EmployeeFollowAnalysisSummaryRequest request) {
         long start = System.currentTimeMillis();
         String orgId = OrganizationContext.getOrganizationId();
-        log.info("员工跟进分析请求开始, api=summary, orgId={}, request={}", orgId, request);
-        List<EmployeeFollowAnalysisSummaryItemResponse> result = employeeFollowAnalysisService.summary(request, orgId);
+        String userId = SessionUtils.getUserId();
+        log.info("员工跟进分析请求开始, api=summary, orgId={}, userId={}, request={}", orgId, userId, request);
+        List<EmployeeFollowAnalysisSummaryItemResponse> result = employeeFollowAnalysisService.summary(request, orgId, userId);
         log.info("员工跟进分析请求结束, api=summary, orgId={}, costMs={}, resultSize={}", orgId, System.currentTimeMillis() - start, result == null ? 0 : result.size());
         return result;
     }
@@ -54,8 +55,9 @@ public class EmployeeFollowAnalysisController {
     public Pager<List<EmployeeFollowAnalysisDrilldownItemResponse>> drilldown(@Valid @RequestBody EmployeeFollowAnalysisDrilldownRequest request) {
         long start = System.currentTimeMillis();
         String orgId = OrganizationContext.getOrganizationId();
-        log.info("员工跟进分析请求开始, api=drilldown, orgId={}, request={}", orgId, request);
-        Pager<List<EmployeeFollowAnalysisDrilldownItemResponse>> result = employeeFollowAnalysisDrilldownService.drilldown(request, orgId);
+        String userId = SessionUtils.getUserId();
+        log.info("员工跟进分析请求开始, api=drilldown, orgId={}, userId={}, request={}", orgId, userId, request);
+        Pager<List<EmployeeFollowAnalysisDrilldownItemResponse>> result = employeeFollowAnalysisDrilldownService.drilldown(request, orgId, userId);
         int resultSize = result == null || result.getList() == null ? 0 : result.getList().size();
         log.info("员工跟进分析请求结束, api=drilldown, orgId={}, costMs={}, resultSize={}", orgId, System.currentTimeMillis() - start, resultSize);
         return result;
