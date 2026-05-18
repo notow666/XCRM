@@ -246,11 +246,6 @@
     wxId: string;
     wxPhone: string;
   }
-  const callStatusTitleMap: Record<number, string> = {
-    0: '未拨打',
-    1: '拨打未接通',
-    2: '拨打已接通',
-  };
 
   const props = defineProps<{
     formKey: FormDesignKeyEnum.CUSTOMER | FormDesignKeyEnum.SEARCH_ADVANCED_CUSTOMER;
@@ -604,7 +599,17 @@
   }
 
   function getCallStatusText(row: any) {
-    return callStatusTitleMap[readCallStatus(row)] || callStatusTitleMap[0];
+    const status = readCallStatus(row);
+    if (status === -1) {
+      return t('customer.callStatusInitiated');
+    }
+    if (status === 1) {
+      return t('customer.callStatusNotConnected');
+    }
+    if (status === 2) {
+      return t('customer.callStatusConnected');
+    }
+    return t('customer.callStatusNotDialed');
   }
 
   function readWechatFriendStatus(row: any) {
@@ -616,6 +621,9 @@
 
   function getWxFriendStatusText(row: any) {
     const status = readWechatFriendStatus(row);
+    if (status === -1) {
+      return t('customer.wechatFriendInitiated');
+    }
     if (status === 2) {
       return t('customer.wechatFriendAdded');
     }
@@ -623,6 +631,14 @@
       return t('customer.wechatFriendPending');
     }
     return t('customer.wechatFriendNotAdded');
+  }
+
+  function markReachStatusInitiated(row: any, field: 'callStatus' | 'wechatFriendStatus') {
+    const currentStatus = field === 'callStatus' ? readCallStatus(row) : readWechatFriendStatus(row);
+    if (currentStatus !== 0) {
+      return;
+    }
+    row[field] = -1;
   }
 
   await initStageConfig();
@@ -788,6 +804,7 @@
         customerId: row.id,
       },
     });
+    markReachStatusInitiated(row, 'callStatus');
     Message.success('正在拨打中,请稍等');
   }
 
@@ -805,9 +822,11 @@
     mobile: '',
     cardSlotNum: 1,
   });
+  const activeReachRow = ref<any>();
   const activeWechatOptions = ref<ActiveWechatOption[]>([]);
 
   function openReachModal(row: any, mode: ReachModalMode, cardSlotNum = 1) {
+    activeReachRow.value = row;
     reachModal.value = {
       mode,
       sourceId: row.id,
@@ -912,6 +931,9 @@
           customerId: reachModal.value.sourceId,
         },
       });
+      if (activeReachRow.value) {
+        markReachStatusInitiated(activeReachRow.value, 'wechatFriendStatus');
+      }
       Message.success(t('customer.reach.addWechatSending'));
     } catch (error) {
       // eslint-disable-next-line no-console

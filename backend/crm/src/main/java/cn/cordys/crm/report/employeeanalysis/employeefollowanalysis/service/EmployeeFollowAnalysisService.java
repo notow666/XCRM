@@ -552,10 +552,10 @@ public class EmployeeFollowAnalysisService {
 
     private <T> List<T> logSqlQuery(String sqlName, String params, Supplier<List<T>> supplier) {
         long start = System.currentTimeMillis();
-        //log.info("员工跟进分析SQL开始, sqlName={}, params={}", sqlName, params);
+        log.info("员工跟进分析SQL开始, sqlName={}, params={}", sqlName, params);
         List<T> result = supplier.get();
         long cost = System.currentTimeMillis() - start;
-        //log.info("员工跟进分析SQL结束, sqlName={}, params={}, costMs={}, resultSize={}", sqlName, params, cost, result == null ? 0 : result.size());
+        log.info("员工跟进分析SQL结束, sqlName={}, params={}, costMs={}, resultSize={}", sqlName, params, cost, result == null ? 0 : result.size());
         return result;
     }
 

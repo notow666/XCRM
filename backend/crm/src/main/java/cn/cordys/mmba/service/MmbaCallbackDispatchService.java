@@ -289,9 +289,12 @@ public class MmbaCallbackDispatchService {
         record.setContactImAppHeaderPic(data.getContactImAppHeaderPic());
         record.setContactMobile(data.getContactMobile());
         record.setFriendPhone(data.getFriendPhone());
+        record.setFriendSearch(data.getFriendSearch());
         record.setContactArea(data.getContactArea());
         record.setContactSex(data.getContactSex());
         record.setContactWeixinTags(data.getContactWeixinTags());
+        record.setSource(data.getSource());
+        record.setWxType(data.getWxType());
         record.setDeptId(data.getDeptId());
         record.setDeptIdPath(data.getDeptIdPath());
         record.setDeptInfo(data.getDeptInfo());

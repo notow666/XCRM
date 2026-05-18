@@ -8,6 +8,8 @@ import cn.cordys.common.exception.GenericException;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.context.TenantContext;
 import cn.cordys.common.constants.SsePrincipalKind;
+import cn.cordys.crm.customer.service.CustomerCallStatusService;
+import cn.cordys.crm.customer.service.CustomerWechatFriendStatusService;
 import cn.cordys.crm.system.notice.sse.SseService;
 import cn.cordys.crm.customer.domain.Customer;
 import cn.cordys.crm.system.domain.User;
@@ -66,19 +68,26 @@ public class MmbaFacadeService {
     private BaseMapper<Customer> customerMapper;
     @Resource
     private SseService sseService;
+    @Resource
+    private CustomerCallStatusService customerCallStatusService;
+    @Resource
+    private CustomerWechatFriendStatusService customerWechatFriendStatusService;
 
     /**
      * 拨打电话。
      */
     public JsonNode dial(JsonNode request, String userId, String organizationId) {
-        return executeJson(
+        ObjectNode payload = enrichDialRequest(request, userId, organizationId);
+        JsonNode response = executeJson(
                 MmbaBizTypes.CALL_DIAL,
                 MmbaApiPaths.PHONE_DIAL,
-                enrichDialRequest(request, userId, organizationId),
+                payload,
                 userId,
                 organizationId,
                 mmbaIntegrationService::dial
         );
+        customerCallStatusService.markDialInitiated(readCustomerId(payload));
+        return response;
     }
 
     /**
@@ -113,14 +122,17 @@ public class MmbaFacadeService {
      * 添加微信好友。
      */
     public JsonNode addWxFriend(JsonNode request, String userId, String organizationId) {
-        return executeJson(
+        ObjectNode payload = enrichAddWxFriendRequest(request, userId, organizationId);
+        JsonNode response = executeJson(
                 MmbaBizTypes.WX_FRIEND_ADD,
                 MmbaApiPaths.IM_ADD_FRIEND,
-                enrichAddWxFriendRequest(request, userId, organizationId),
+                payload,
                 userId,
                 organizationId,
                 mmbaIntegrationService::addWxFriend
         );
+        customerWechatFriendStatusService.markAddInitiated(readCustomerId(payload));
+        return response;
     }
 
     /**
@@ -429,6 +441,10 @@ public class MmbaFacadeService {
             throw new GenericException(actionText + "时卡槽参数无效");
         }
         return cardSlotNum;
+    }
+
+    private String readCustomerId(JsonNode payload) {
+        return StringUtils.trimToNull(payload.path("bizExtInfo").path("customerId").asText(null));
     }
 
     private void ensureCardSlotAvailable(String um, int cardSlotNum, String userId, String organizationId, String actionText) {

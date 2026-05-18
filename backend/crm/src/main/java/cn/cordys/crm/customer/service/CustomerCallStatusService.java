@@ -15,13 +15,14 @@ import java.util.List;
 
 /**
  * 客户拨打状态维护。
- * 仅允许状态升级：0 -> 1 -> 2，不允许降级。
+ * 回调结果仅允许状态升级：0/-1 -> 1 -> 2，不允许降级。
  */
 @Slf4j
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class CustomerCallStatusService {
 
+    public static final int REQUEST_INITIATED = -1;
     public static final int NOT_DIALED = 0;
     public static final int DIALED_NOT_CONNECTED = 1;
     public static final int DIALED_CONNECTED = 2;
@@ -32,6 +33,24 @@ public class CustomerCallStatusService {
     private BaseMapper<User> userBaseMapper;
     @Resource
     private ExtCustomerMapper extCustomerMapper;
+
+    public void markDialInitiated(String customerId) {
+        if (StringUtils.isBlank(customerId)) {
+            return;
+        }
+        Customer customer = customerMapper.selectByPrimaryKey(customerId);
+        if (customer == null || Boolean.TRUE.equals(customer.getInSharedPool())) {
+            return;
+        }
+        int currentStatus = customer.getCallStatus() == null ? NOT_DIALED : customer.getCallStatus();
+        if (currentStatus != NOT_DIALED) {
+            return;
+        }
+        extCustomerMapper.updateCallStatusById(customer.getId(), REQUEST_INITIATED);
+        customer.setCallStatus(REQUEST_INITIATED);
+        log.info("客户拨打状态更新为已发起拨打 customerId={} mobile={} from={} to={}",
+                customer.getId(), customer.getMobile(), currentStatus, REQUEST_INITIATED);
+    }
 
     public void upgradeByCustomer(String customerId, String customerTel, String um, Integer targetStatus, String userId) {
         if (targetStatus == null || targetStatus < DIALED_NOT_CONNECTED) {

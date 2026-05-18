@@ -26,6 +26,7 @@ import java.util.Set;
 @Transactional(rollbackFor = Exception.class)
 public class CustomerWechatFriendStatusService {
 
+    public static final int REQUEST_INITIATED = -1;
     public static final int NOT_ADDED = 0;
     public static final int PENDING = 1;
     public static final int ADDED = 2;
@@ -49,6 +50,24 @@ public class CustomerWechatFriendStatusService {
     private ExtMmbaAuditMapper extMmbaAuditMapper;
     @Resource
     private MmbaDeviceService mmbaDeviceService;
+
+    public void markAddInitiated(String customerId) {
+        if (StringUtils.isBlank(customerId)) {
+            return;
+        }
+        Customer customer = customerMapper.selectByPrimaryKey(customerId);
+        if (customer == null || Boolean.TRUE.equals(customer.getInSharedPool())) {
+            return;
+        }
+        int currentStatus = normalizeStatus(customer.getWechatFriendStatus());
+        if (currentStatus != NOT_ADDED) {
+            return;
+        }
+        extCustomerMapper.updateWechatFriendStatusById(customer.getId(), REQUEST_INITIATED);
+        customer.setWechatFriendStatus(REQUEST_INITIATED);
+        log.info("客户微信好友状态更新为已发起添加 customerId={} mobile={} from={} to={}",
+                customer.getId(), customer.getMobile(), currentStatus, REQUEST_INITIATED);
+    }
 
     public void handleAddFriendReceipt(String um, String friendPhone, Integer processStatus, String userId) {
         Integer targetStatus = resolveAddFriendReceiptStatus(processStatus);

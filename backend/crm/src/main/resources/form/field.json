@@ -295,6 +295,10 @@
       "defaultValue": "0",
       "options": [
         {
+          "value": "-1",
+          "label": "已发起拨打"
+        },
+        {
           "value": "0",
           "label": "未拨打"
         },
@@ -308,6 +312,10 @@
         }
       ],
       "customOptions": [
+        {
+          "value": "-1",
+          "label": "已发起拨打"
+        },
         {
           "value": "0",
           "label": "未拨打"
@@ -351,19 +359,27 @@
       "defaultValue": "0",
       "options": [
         {
+          "value": "-1",
+          "label": "已发起添加"
+        },
+        {
           "value": "0",
-          "label": "未拨打"
+          "label": "未添加"
         },
         {
           "value": "1",
-          "label": "拨打未接通"
+          "label": "添加未通过"
         },
         {
           "value": "2",
-          "label": "拨打已接通"
+          "label": "已添加"
         }
       ],
       "customOptions": [
+        {
+          "value": "-1",
+          "label": "已发起添加"
+        },
         {
           "value": "0",
           "label": "未添加"
