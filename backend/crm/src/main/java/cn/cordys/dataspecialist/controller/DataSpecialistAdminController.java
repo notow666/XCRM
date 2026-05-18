@@ -1,5 +1,6 @@
 package cn.cordys.dataspecialist.controller;
 
+import cn.cordys.common.constants.LoginAuthenticateConstants;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.common.response.result.CrmHttpResultCode;
@@ -60,7 +61,7 @@ public class DataSpecialistAdminController {
 
     private String assertPlatformAdmin() {
         SessionUser user = SessionUtils.getUser();
-        if (user == null || !"PLATFORM".equalsIgnoreCase(StringUtils.defaultString(user.getSource()))
+        if (user == null || !LoginAuthenticateConstants.LoginAuthenticateType.PLATFORM.name().equalsIgnoreCase(StringUtils.defaultString(user.getSource()))
                 || user.getPermissionIds() == null || !user.getPermissionIds().contains("PLATFORM_ADMIN:READ")) {
             throw new GenericException(CrmHttpResultCode.FORBIDDEN);
         }

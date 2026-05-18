@@ -1,5 +1,6 @@
 package cn.cordys.mmba.callback;
 
+import cn.cordys.common.constants.CrmLoggers;
 import cn.cordys.common.util.JSON;
 import cn.cordys.mmba.MmbaBehaviorTypes;
 import cn.cordys.mmba.dto.MmbaAuditRequest;
@@ -26,7 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service
-@Slf4j
+@Slf4j(topic = CrmLoggers.MMBA_CALLBACK)
 public class RedisStreamCallbackService implements SmartLifecycle {
     private static final String MESSAGE_DTO_FIELD = "ZZYAuditReceipt";
     private static final String MESSAGE_RAW_PAYLOAD_FIELD = "rawPayload";
@@ -142,7 +143,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
     public void start() {
         synchronized (lifecycleLock) {
             if (!running) {
-                log.info("Starting Redis Stream consumer service, consumerBaseId={}...", consumerBaseId);
+                log.info("[mmba-callback-queue] 启动 Stream 消费 consumerBaseId={}", consumerBaseId);
                 try {
                     ensureStreamExists();
 
@@ -153,7 +154,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
 
                     if (!groupExists) {
                         redisTemplate.opsForStream().createGroup(STREAM_KEY, CONSUMER_GROUP);
-                        log.info("[mmba-callback-queue] 已创建消费组: {}", CONSUMER_GROUP);
+                        log.debug("[mmba-callback-queue] 已创建消费组: {}", CONSUMER_GROUP);
                     }
                     startStreamConsumers();
                     running = true;
@@ -176,7 +177,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
     public void stop(Runnable callback) {
         synchronized (lifecycleLock) {
             if (running) {
-                log.info("[mmba-callback-queue] 正在优雅停止 Stream 消费...");
+                log.debug("[mmba-callback-queue] 正在优雅停止 Stream 消费...");
                 running = false;
 
                 waitForPendingMessagesGracefully();
@@ -195,7 +196,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
         final long maxWaitMs = TimeUnit.SECONDS.toMillis(60);
         final long checkIntervalMs = 200L;
 
-        log.info("[mmba-callback-queue] 等待在途业务处理完成, processingCount={}", processingCount.get());
+        log.debug("[mmba-callback-queue] 等待在途业务处理完成, processingCount={}", processingCount.get());
 
         long waitedMs = 0;
         long lastLogMs = 0;
@@ -207,7 +208,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
                 waitedMs += checkIntervalMs;
                 if (processingCount.get() > 0 && waitedMs - lastLogMs >= TimeUnit.SECONDS.toMillis(5)) {
                     lastLogMs = waitedMs;
-                    log.info("[mmba-callback-queue] 仍在等待在途消息, count={}, waitedMs={}",
+                    log.debug("[mmba-callback-queue] 仍在等待在途消息, count={}, waitedMs={}",
                             processingCount.get(), waitedMs);
                 }
             } catch (InterruptedException e) {
@@ -221,7 +222,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
             log.warn("[mmba-callback-queue] 等待在途消息超时, 剩余 processingCount={}, 将强制关闭线程池",
                     processingCount.get());
         } else {
-            log.info("[mmba-callback-queue] 在途消息已全部结束");
+            log.debug("[mmba-callback-queue] 在途消息已全部结束");
         }
     }
 
@@ -230,7 +231,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
             return;
         }
 
-        log.info("Shutting down {}...", name);
+        log.debug("Shutting down {}...", name);
         executor.shutdown();
         try {
             if (!executor.awaitTermination(timeoutSeconds, TimeUnit.SECONDS)) {
@@ -263,7 +264,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
 
             RecordId recordId = redisTemplate.opsForStream()
                     .add(StreamRecords.newRecord().in(STREAM_KEY).ofMap(message));
-            log.info("[mmba-callback-queue] 已创建 Stream '{}' 初始消息 id={}", STREAM_KEY, recordId);
+            log.debug("[mmba-callback-queue] 已创建 Stream '{}' 初始消息 id={}", STREAM_KEY, recordId);
         }
     }
 
@@ -275,7 +276,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
     }
 
     private void consumeStreamWithBatch(String consumerName) {
-        log.info("[mmba-callback-queue] 消费循环启动 consumer={}", consumerName);
+        log.debug("[mmba-callback-queue] 消费循环启动 consumer={}", consumerName);
 
         LinkedHashMap<String, MapRecord<String, Object, Object>> pendingRecordMap = new LinkedHashMap<>();
         long lastBatchTime = System.currentTimeMillis();
@@ -323,7 +324,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
             } catch (Exception e) {
                 if (e instanceof InterruptedException) {
                     Thread.currentThread().interrupt();
-                    log.info("[mmba-callback-queue] 消费线程被中断 consumer={}", consumerName);
+                    log.debug("[mmba-callback-queue] 消费线程被中断 consumer={}", consumerName);
                     break;
                 }
                 log.error("[mmba-callback-queue] 消费循环异常 consumer={}", consumerName, e);
@@ -340,7 +341,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
             batchProcessRecords(new ArrayList<>(pendingRecordMap.values()), consumerName);
         }
 
-        log.info("[mmba-callback-queue] 消费循环结束 consumer={}", consumerName);
+        log.debug("[mmba-callback-queue] 消费循环结束 consumer={}", consumerName);
     }
 
     private void mergePendingRecords(LinkedHashMap<String, MapRecord<String, Object, Object>> pendingRecordMap,
@@ -535,14 +536,14 @@ public class RedisStreamCallbackService implements SmartLifecycle {
                 long delay = calculateBackoffDelay(retryCount);
                 long elapsed = System.currentTimeMillis() - lastRetryTime;
                 if (elapsed < delay) {
-                    log.info("[mmba-callback-queue] 退避中不 ACK，待 PEL 再次拉回: streamId={}, remainingMs={}, consumer={}",
+                    log.debug("[mmba-callback-queue] 退避中不 ACK，待 PEL 再次拉回: streamId={}, remainingMs={}, consumer={}",
                             messageId, delay - elapsed, consumerName);
                     return StreamMessageDisposition.PENDING_NO_ACK;
                 }
             }
 
             try {
-                log.info("[mmba-callback-queue] 准备执行业务 streamId={}, consumer={}, behaviorType={}, retryCount={}, dataCount={}",
+                log.debug("[mmba-callback-queue] 准备执行业务 streamId={}, consumer={}, behaviorType={}, retryCount={}, dataCount={}",
                         messageId, consumerName, dto.getBehaviorType(), retryCount,
                         dto.getData() == null ? 0 : dto.getData().size());
                 executeWithTenantContext(messageId, dto, retryCount);
@@ -595,7 +596,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
 
             acknowledgeRecord(record);
 
-            log.info("[mmba-callback-queue] 已写重试尾消息并 XACK 原消息: oldId={}, newId={}, attempt={}",
+            log.debug("[mmba-callback-queue] 已写重试尾消息并 XACK 原消息: oldId={}, newId={}, attempt={}",
                     messageId, newRecordId != null ? newRecordId.getValue() : "null", retryCount);
             return StreamMessageDisposition.ALREADY_ACKED;
         } catch (Exception ex) {
@@ -609,7 +610,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
         ZZYConsumerService consumer = abstractZZYConsumerMap.get(
                 MmbaBehaviorTypes.SUPPORTED.get(dto.getBehaviorType()));
         if (consumer != null) {
-            log.info("[mmba-callback-queue] 分发消费者 streamId={}, consumer={}, group={}, behaviorType={}, retryCount={}",
+            log.debug("[mmba-callback-queue] 分发消费者 streamId={}, consumer={}, group={}, behaviorType={}, retryCount={}",
                     messageId, dto.getStreamConsumer(), consumer.group(), dto.getBehaviorType(), retryCount);
             consumer.mainProcess(dto);
             log.debug("[mmba-callback-queue] 业务处理结束: streamId={}, retryCount={}", messageId, retryCount);

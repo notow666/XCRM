@@ -1,6 +1,6 @@
 package cn.cordys.mmba.callback.consumer;
 
-import cn.cordys.common.util.JSON;
+import cn.cordys.common.constants.CrmLoggers;
 import cn.cordys.context.TenantContext;
 import cn.cordys.mmba.MmbaConstants;
 import cn.cordys.mmba.callback.AbstractZZYConsumer;
@@ -19,7 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-@Slf4j
+@Slf4j(topic = CrmLoggers.MMBA_CALLBACK)
 @Service
 public class AuditCallConsumer extends AbstractZZYConsumer {
 
@@ -50,16 +50,17 @@ public class AuditCallConsumer extends AbstractZZYConsumer {
                     continue;
                 }
                 MmbaCallbackRecord callbackRecord = prepareResult.getCallbackRecord();
-                log.info("MMBA审计回调切换租户 streamId={} consumer={} callbackRecordId={} behaviorType={} tenantId={} recordCount={} reqId={} esId={}",
-                        tenantDto.getStreamId(), tenantDto.getStreamConsumer(), callbackRecord.getId(),
-                        dto.getBehaviorType(), tenantId, entry.getValue().size(),
-                        firstReqId(entry.getValue()), firstEsId(entry.getValue()));
+                log.info("MMBA审计回调处理租户 streamId={} callbackRecordId={} behaviorType={} tenantId={} recordCount={} reqId={} esId={}",
+                        tenantDto.getStreamId(), callbackRecord.getId(), dto.getBehaviorType(), tenantId,
+                        entry.getValue().size(), firstReqId(entry.getValue()), firstEsId(entry.getValue()));
                 mmbaCallbackDispatchService.dispatchAudit(tenantDto, callbackRecord);
                 mmbaCallbackProcessService.markSuccess(callbackRecord, tenantDto);
             } catch (Exception e) {
-                log.error("审计回调数据处理异常 streamId={} consumer={} contextTenantId={} message={} dto={}",
-                        tenantDto.getStreamId(), tenantDto.getStreamConsumer(),
-                        TenantContext.getTenantId(), e.getMessage(), JSON.toJSONString(tenantDto), e);
+                log.error("审计回调数据处理异常 streamId={} tenantId={} callbackRecordId={} reqId={} esId={} message={}",
+                        tenantDto.getStreamId(), TenantContext.getTenantId(),
+                        prepareResult != null && prepareResult.getCallbackRecord() != null
+                                ? prepareResult.getCallbackRecord().getId() : null,
+                        firstReqId(entry.getValue()), firstEsId(entry.getValue()), e.getMessage(), e);
                 if (prepareResult != null && prepareResult.shouldProcess()) {
                     mmbaCallbackProcessService.markFailed(prepareResult.getCallbackRecord(), tenantDto, e);
                 }

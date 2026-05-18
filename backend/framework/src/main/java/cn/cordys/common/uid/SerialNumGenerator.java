@@ -86,26 +86,26 @@ public class SerialNumGenerator {
         }
     }
 
-    @QuartzScheduled(cron = "0 0 1 1,16 * ?")
-    public void clean() {
-        log.info("开始清理过期流水号");
-
-        String currentMonth = new SimpleDateFormat("yyyyMM").format(new Date());
-
-        try (Cursor<String> cursor = redis.scan(ScanOptions.scanOptions().match("*:serial:*:*:*").count(1000).build())) {
-            cursor.forEachRemaining(key -> {
-                String serialDate = key.substring(key.lastIndexOf(":") + 1);
-                if (!currentMonth.equals(serialDate)) {
-                    redis.delete(key);
-                    log.info("删除过期Key: {}", key);
-                }
-            });
-        } catch (Exception e) {
-            log.error("流水号过期Key清理异常: ", e);
-        }
-
-        log.info("流水号过期Key清理完成");
-    }
+//    @QuartzScheduled(cron = "0 0 1 1,16 * ?")
+//    public void clean() {
+//        log.info("开始清理过期流水号");
+//
+//        String currentMonth = new SimpleDateFormat("yyyyMM").format(new Date());
+//
+//        try (Cursor<String> cursor = redis.scan(ScanOptions.scanOptions().match("*:serial:*:*:*").count(1000).build())) {
+//            cursor.forEachRemaining(key -> {
+//                String serialDate = key.substring(key.lastIndexOf(":") + 1);
+//                if (!currentMonth.equals(serialDate)) {
+//                    redis.delete(key);
+//                    log.info("删除过期Key: {}", key);
+//                }
+//            });
+//        } catch (Exception e) {
+//            log.error("流水号过期Key清理异常: ", e);
+//        }
+//
+//        log.info("流水号过期Key清理完成");
+//    }
 
     public boolean sameRule(List<String> oRules, List<String> nRules) {
         if (oRules.size() != nRules.size() && oRules.size() != RULE_SIZE) {

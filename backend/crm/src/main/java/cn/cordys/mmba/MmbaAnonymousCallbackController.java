@@ -1,5 +1,6 @@
 package cn.cordys.mmba;
 
+import cn.cordys.common.constants.CrmLoggers;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.response.handler.NoResultHolder;
 import cn.cordys.common.util.JSON;
@@ -23,7 +24,7 @@ import java.util.Map;
 /**
  * MMBA 平台回调入口（Shiro anon：/anonymous/**）。需 HTTP 200 且非空响应体表示成功。
  */
-@Slf4j
+@Slf4j(topic = CrmLoggers.MMBA_CALLBACK)
 @Hidden
 @RestController
 @RequestMapping("/anonymous/mmba")
@@ -48,15 +49,15 @@ public class MmbaAnonymousCallbackController {
     @Operation(summary = "MMBA 审计/回执回调", hidden = true)
     public ResponseEntity<String> callback(@RequestBody JsonNode body) {
         try {
-            log.info("进入回调,原始数据{}", body);
+            log.info("[mmba-callback] 进入回调,原始数据={}", body);
             streamCallbackService.callbackStream(body);
 
             return ResponseEntity.ok("ok");
         } catch (GenericException e) {
-            log.error("MMBA 回调业务异常 body={}", body, e);
+            log.error("[mmba-callback] 回调业务异常 body={}", body, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error");
         } catch (Exception e) {
-            log.error("MMBA 回调系统异常 body={}", body, e);
+            log.error("[mmba-callback] 回调系统异常 body={}", body, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error");
         }
     }
@@ -68,8 +69,9 @@ public class MmbaAnonymousCallbackController {
     @Operation(summary = "管理平台 SSO token 校验", hidden = true)
     @NoResultHolder
     public Map<String, Object> mgmtSsoCheck(@RequestBody MmbaMgmtSsoCheckRequest body) {
-        log.info("----------------------------   SSO token 校验 ---------");
-        log.info(JSON.toJSONString(body));
-        return mmbaMgmtSsoService.validateAndRespond(body);
+        log.debug("[mmba-callback] SSO token 校验请求 body={}", JSON.toJSONString(body));
+        Map<String, Object> result = mmbaMgmtSsoService.validateAndRespond(body);
+        log.info("[mmba-callback] SSO token 校验完成 [{}]", JSON.toJSONString(result));
+        return result;
     }
 }

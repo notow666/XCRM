@@ -1,5 +1,6 @@
 package cn.cordys.mmba.dto;
 
+import cn.cordys.common.constants.CrmLoggers;
 import cn.cordys.common.util.JSON;
 import cn.cordys.mmba.MmbaBehaviorTypes;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -22,7 +23,7 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-@Slf4j
+@Slf4j(topic = CrmLoggers.MMBA_CALLBACK)
 public class MmbaAuditRequest implements Serializable {
     @Serial
     private static final long serialVersionUID = -8678428122164917085L;
@@ -80,13 +81,14 @@ public class MmbaAuditRequest implements Serializable {
             }
         }
         if (CollectionUtils.isEmpty(_new)) {
-            log.warn("[mmba-callback-queue] 忽略无效回调（无 data）: {}", jsonString);
+            log.warn("[mmba-callback-queue] 忽略无效回调（无有效 data） behaviorType={} tenancyName={}",
+                    mmbaAuditRequest.getBehaviorType(), mmbaAuditRequest.getTenancyName());
             return null;
         }else{
             mmbaAuditRequest.setData(_new);
         }
         if(!CollectionUtils.isEmpty(invalid)){
-            log.warn("无效mmba审计数据(无TenantId) => [{}]", JSON.toJSONString(invalid));
+            log.debug("[mmba-callback-queue] 无效审计数据(无TenantId) count={}", invalid.size());
         }
         return mmbaAuditRequest;
     }

@@ -4,6 +4,7 @@ import cn.cordys.aspectj.constants.LogModule;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.response.result.CrmHttpResultCode;
 import cn.cordys.common.util.Translator;
+import cn.cordys.common.schedule.TenantQuartzLifecycleService;
 import cn.cordys.common.service.DataInitService;
 import cn.cordys.config.DynamicTenantRoutingDataSource;
 import cn.cordys.context.TenantContext;
@@ -12,10 +13,12 @@ import cn.cordys.tenant.dto.response.TenantProvisionResponse;
 import cn.cordys.tenant.util.JdbcUrlUtils;
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
@@ -38,10 +41,9 @@ import java.util.Set;
 /**
  * 动态创建租户库、执行业务库 Flyway 迁移、写入 crm_master 并注册路由数据源。
  */
+@Slf4j
 @Service
 public class TenantProvisioningService {
-    private static final Logger managementLog = LoggerFactory.getLogger("MANAGEMENT_CENTER_LOG");
-
     private static final Set<String> RESERVED_TENANT_CODES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "default", "master", "system", "mysql",
             "information_schema", "performance_schema",
@@ -59,6 +61,9 @@ public class TenantProvisioningService {
     private TenantMetaService tenantMetaService;
     @Resource
     private DataInitService dataInitService;
+
+    @Resource
+    private ObjectProvider<TenantQuartzLifecycleService> tenantQuartzLifecycleServiceProvider;
 
     @Value("${spring.flyway.locations:classpath:migration}")
     private String flywayLocations;
@@ -89,7 +94,7 @@ public class TenantProvisioningService {
     public synchronized TenantProvisionResponse provision(String tenantCode, String tenantName, String operatorId,
                                                           List<String> initialUserIds, String orgId) {
         String tenantId = tenantCode.trim().toLowerCase(Locale.ROOT);
-        managementLog.info(LogModule.MANAGEMENT_MARKER, "[TENANT_PROVISION_BEGIN] tenantId={}, operator={}", tenantId, operatorId);
+        log.info("[TENANT_PROVISION_BEGIN] tenantId={}, operator={}", tenantId, operatorId);
         if (RESERVED_TENANT_CODES.contains(tenantId)) {
             throw new GenericException(CrmHttpResultCode.VALIDATE_FAILED, Translator.get("tenant.code.reserved"));
         }
@@ -103,7 +108,8 @@ public class TenantProvisioningService {
                     tenantRoutingDataSource.registerTenantDataSource(tenantId, pool);
                 }
                 initializeTenantData(tenantId);
-                managementLog.info(LogModule.MANAGEMENT_MARKER,"[TENANT_PROVISION_IDEMPOTENT_HIT] tenantId={}", tenantId);
+                initializeTenantQuartzSchedules(tenantId);
+                log.info("[TENANT_PROVISION_IDEMPOTENT_HIT] tenantId={}", tenantId);
                 return TenantProvisionResponse.builder()
                         .tenantId(tenantId)
                         .dbName(existingConfig.getDbName())
@@ -135,8 +141,9 @@ public class TenantProvisioningService {
             DataSource pool = buildPooledDataSource(tenantJdbcUrl, driver, jdbcUser, jdbcPassword, tenantId);
             tenantRoutingDataSource.registerTenantDataSource(tenantId, pool);
             initializeTenantData(tenantId);
+            initializeTenantQuartzSchedules(tenantId);
 
-            managementLog.info(LogModule.MANAGEMENT_MARKER,"[TENANT_PROVISION_SUCCESS] tenantId={}, dbName={}", tenantId, dbName);
+            log.info("[TENANT_PROVISION_SUCCESS] tenantId={}, dbName={}", tenantId, dbName);
 
             return TenantProvisionResponse.builder()
                     .tenantId(tenantId)
@@ -145,7 +152,7 @@ public class TenantProvisioningService {
                     .build();
         } catch (Exception e) {
             cleanupAfterProvisionFailure(tenantId, dbName, serverUrl, driver, jdbcUser, jdbcPassword, databaseCreated);
-            managementLog.error(LogModule.MANAGEMENT_MARKER,"[TENANT_PROVISION_FAILED] tenantId={}, error={}", tenantId, e.getMessage(), e);
+            log.error("[TENANT_PROVISION_FAILED] tenantId={}, error={}", tenantId, e.getMessage(), e);
             throw new GenericException(CrmHttpResultCode.FAILED, e);
         }
     }
@@ -174,21 +181,22 @@ public class TenantProvisioningService {
 
     private void cleanupAfterProvisionFailure(String tenantId, String dbName, String serverUrl, String driver,
                                               String jdbcUser, String jdbcPassword, boolean databaseCreated) {
+        purgeTenantQuartzSchedules(tenantId);
         try {
             tenantRoutingDataSource.unregisterTenantDataSource(tenantId);
         } catch (Exception e) {
-            managementLog.warn(LogModule.MANAGEMENT_MARKER,"unregister tenant datasource failed: {}", tenantId, e);
+            log.warn("unregister tenant datasource failed: {}", tenantId, e);
         }
         try {
             tenantMetaService.deleteTenantMetadataForProvisionRollback(tenantId);
         } catch (Exception e) {
-            managementLog.warn(LogModule.MANAGEMENT_MARKER,"rollback master tenant metadata failed: {}", tenantId, e);
+            log.warn("rollback master tenant metadata failed: {}", tenantId, e);
         }
         if (dropDatabaseOnFailure && databaseCreated && isProvisionedDbName(dbName, tenantId)) {
             try {
                 dropDatabaseIfExists(serverUrl, driver, jdbcUser, jdbcPassword, dbName);
             } catch (Exception e) {
-                managementLog.warn(LogModule.MANAGEMENT_MARKER,"DROP DATABASE failed, manual cleanup may be needed: {}", dbName, e);
+                log.warn("DROP DATABASE failed, manual cleanup may be needed: {}", dbName, e);
             }
         }
     }
@@ -274,6 +282,20 @@ public class TenantProvisioningService {
             } else {
                 TenantContext.setTenantId(previousTenantId);
             }
+        }
+    }
+
+    private void initializeTenantQuartzSchedules(String tenantId) {
+        TenantQuartzLifecycleService lifecycle = tenantQuartzLifecycleServiceProvider.getIfAvailable();
+        if (lifecycle != null) {
+            lifecycle.initializeTenantSchedules(tenantId);
+        }
+    }
+
+    private void purgeTenantQuartzSchedules(String tenantId) {
+        TenantQuartzLifecycleService lifecycle = tenantQuartzLifecycleServiceProvider.getIfAvailable();
+        if (lifecycle != null) {
+            lifecycle.purgeTenantSchedules(tenantId);
         }
     }
 }

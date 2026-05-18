@@ -21,12 +21,6 @@ public @interface OperationLog {
     String operator() default "";
 
     /**
-     * 平台
-     * @return
-     */
-    String platform() default LogModule.PLATFORM_TENANT_CENTER;
-
-    /**
      * @return 业务模块名
      * {@link LogModule}
      */

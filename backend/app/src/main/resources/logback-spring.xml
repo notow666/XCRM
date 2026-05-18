@@ -1,106 +1,260 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration debug="false">
 
-    <property name="LOG_PATH" value="./logs"/>
+    <property name="LOG_PATH" value="D:\workSpace\CordysCRM\logs"/>
 
-    <!-- 日志格式 -->
-    <property name="LOG_PATTERN"
+    <property name="FILE_LOG_PATTERN"
               value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{traceId}] [%X{tenantId}] [%X{userId}] %-5level %logger{36} - %msg%n"/>
 
-    <!-- Console 输出 -->
+    <!-- Console -->
     <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
             <level>INFO</level>
         </filter>
         <encoder>
-            <pattern>${LOG_PATTERN}</pattern>
-            <charset>UTF-8</charset>
-        </encoder>
-    </appender>
-
-    <!-- ===================== 文件 Appender ===================== -->
-    <!-- 通用的 RollingFileAppender 模板，通过不同的文件路径区分 -->
-    <appender name="APPENDER" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <FileNamePattern>${LOG_PATH}/${log.file.name}.%d{yyyyMMdd}-%i.log</FileNamePattern>
-            <maxHistory>30</maxHistory>
-            <maxFileSize>50MB</maxFileSize>
-        </rollingPolicy>
-        <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>
 
-    <!-- 分别包装不同的文件 -->
-    <appender name="infoAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <!-- tenant: info / warn / error -->
+    <appender name="tenantInfoAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/tenant/info/info.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <FileNamePattern>${LOG_PATH}/info/info.%d{yyyyMMdd}-%i.log</FileNamePattern>
+            <fileNamePattern>${LOG_PATH}/tenant/info/info.%d{yyyyMMdd}-%i.log</fileNamePattern>
             <maxHistory>30</maxHistory>
             <maxFileSize>100MB</maxFileSize>
         </rollingPolicy>
+        <filter class="cn.cordys.common.logback.MdcTenantLogFilter"/>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>
-
-    <appender name="warnAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <appender name="tenantWarnAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/tenant/warn/warn.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <FileNamePattern>${LOG_PATH}/warn/warn.%d{yyyyMMdd}-%i.log</FileNamePattern>
+            <fileNamePattern>${LOG_PATH}/tenant/warn/warn.%d{yyyyMMdd}-%i.log</fileNamePattern>
             <maxHistory>30</maxHistory>
             <maxFileSize>100MB</maxFileSize>
         </rollingPolicy>
+        <filter class="cn.cordys.common.logback.MdcTenantLogFilter"/>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>WARN</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>
-
-    <appender name="errorAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <appender name="tenantErrorAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/tenant/error/error.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <FileNamePattern>${LOG_PATH}/error/error.%d{yyyyMMdd}-%i.log</FileNamePattern>
+            <fileNamePattern>${LOG_PATH}/tenant/error/error.%d{yyyyMMdd}-%i.log</fileNamePattern>
             <maxHistory>30</maxHistory>
             <maxFileSize>100MB</maxFileSize>
         </rollingPolicy>
+        <filter class="cn.cordys.common.logback.MdcTenantLogFilter"/>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>
 
-    <!-- Async Appender - 通过 evaluator 进行级别路由 -->
-    <appender name="asyncAppender" class="ch.qos.logback.classic.AsyncAppender">
+    <!-- mmba callback: info / warn / error -->
+    <appender name="mmbaInfoAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/mmba/info/info.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/mmba/info/info.%d{yyyyMMdd}-%i.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <maxFileSize>100MB</maxFileSize>
+        </rollingPolicy>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+    <appender name="mmbaWarnAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/mmba/warn/warn.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/mmba/warn/warn.%d{yyyyMMdd}-%i.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <maxFileSize>100MB</maxFileSize>
+        </rollingPolicy>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>WARN</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+    <appender name="mmbaErrorAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/mmba/error/error.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/mmba/error/error.%d{yyyyMMdd}-%i.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <maxFileSize>100MB</maxFileSize>
+        </rollingPolicy>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- master: info / warn / error -->
+    <appender name="masterInfoAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/master/info/info.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/master/info/info.%d{yyyyMMdd}-%i.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <maxFileSize>100MB</maxFileSize>
+        </rollingPolicy>
+        <filter class="cn.cordys.common.logback.MdcMasterLogFilter"/>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+    <appender name="masterWarnAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/master/warn/warn.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/master/warn/warn.%d{yyyyMMdd}-%i.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <maxFileSize>100MB</maxFileSize>
+        </rollingPolicy>
+        <filter class="cn.cordys.common.logback.MdcMasterLogFilter"/>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>WARN</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+    <appender name="masterErrorAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/master/error/error.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/master/error/error.%d{yyyyMMdd}-%i.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <maxFileSize>100MB</maxFileSize>
+        </rollingPolicy>
+        <filter class="cn.cordys.common.logback.MdcMasterLogFilter"/>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- Async wrappers -->
+    <appender name="asyncTenantInfo" class="ch.qos.logback.classic.AsyncAppender">
         <queueSize>10000</queueSize>
         <discardingThreshold>0</discardingThreshold>
         <neverBlock>true</neverBlock>
-
-        <!-- 使用 Evaluator 根据级别路由到不同的文件 -->
-        <appender-ref ref="infoAppender"/>
-        <appender-ref ref="warnAppender"/>
-        <appender-ref ref="errorAppender"/>
+        <appender-ref ref="tenantInfoAppender"/>
+    </appender>
+    <appender name="asyncTenantWarn" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>10000</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="tenantWarnAppender"/>
+    </appender>
+    <appender name="asyncTenantError" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>10000</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="tenantErrorAppender"/>
     </appender>
 
-    <!-- ===================== Logger ===================== -->
-    <!-- Logger 配置 -->
-<!--    <logger name="cn.cordys" additivity="false" level="INFO">-->
-<!--        <appender-ref ref="asyncAppender"/>-->
-<!--    </logger>-->
+    <appender name="asyncMmbaInfo" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>10000</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="mmbaInfoAppender"/>
+    </appender>
+    <appender name="asyncMmbaWarn" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>10000</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="mmbaWarnAppender"/>
+    </appender>
+    <appender name="asyncMmbaError" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>10000</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="mmbaErrorAppender"/>
+    </appender>
 
-<!--    &lt;!&ndash; 管理中心与租户中心操作日志（独立 logger 名称，便于检索） &ndash;&gt;-->
-<!--    <logger name="MANAGEMENT_CENTER" additivity="false" level="INFO">-->
-<!--        <appender-ref ref="asyncAppender"/>-->
-<!--    </logger>-->
+    <appender name="asyncMasterInfo" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>10000</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="masterInfoAppender"/>
+    </appender>
+    <appender name="asyncMasterWarn" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>10000</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="masterWarnAppender"/>
+    </appender>
+    <appender name="asyncMasterError" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>10000</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="masterErrorAppender"/>
+    </appender>
 
-<!--    <logger name="TENANT_CENTER" additivity="false" level="INFO">-->
-<!--        <appender-ref ref="asyncAppender"/>-->
-<!--    </logger>-->
+    <!-- MMBA 匿名回调：仅写 mmba 目录 -->
+    <logger name="MMBA_CALLBACK_LOG" level="INFO" additivity="false">
+        <appender-ref ref="asyncMmbaInfo"/>
+        <appender-ref ref="asyncMmbaWarn"/>
+        <appender-ref ref="asyncMmbaError"/>
+        <appender-ref ref="console"/>
+    </logger>
 
-    <!-- 容器日志 -->
-    <logger name="org.eclipse.jetty.ee10.servlet.ServletChannel" level="ERROR"/>
-
-    <!-- ===================== Root ===================== -->
     <root level="INFO">
         <appender-ref ref="console"/>
+        <appender-ref ref="asyncTenantInfo"/>
+        <appender-ref ref="asyncTenantWarn"/>
+        <appender-ref ref="asyncTenantError"/>
+        <appender-ref ref="asyncMasterInfo"/>
+        <appender-ref ref="asyncMasterWarn"/>
+        <appender-ref ref="asyncMasterError"/>
     </root>
 </configuration>

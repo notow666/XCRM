@@ -1,5 +1,6 @@
 package cn.cordys.mmba.service;
 
+import cn.cordys.common.constants.CrmLoggers;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.response.result.CrmHttpResultCode;
 import cn.cordys.common.util.JSON;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -24,7 +26,7 @@ import java.util.Optional;
  * 指掌易管理平台 SSO：按配置拼装 URL、生成 ticket（含自定义 token）、供匿名鉴权解析。
  * <p>SSO 基址使用 {@code mmba.api-base-url}（即 https://ip:9074），路径 orgCode 使用 {@code mmba.company-code}。</p>
  */
-@Slf4j
+@Slf4j(topic = CrmLoggers.MMBA_CALLBACK)
 @Service
 public class MmbaMgmtSsoService {
 
@@ -74,15 +76,16 @@ public class MmbaMgmtSsoService {
             throw new GenericException(CrmHttpResultCode.VALIDATE_FAILED, e.getMessage());
         }
 
+        // 文档：仅 ticket 查询参数 = 标准 Base64(UTF-8 JSON{loginName, token})；orgCode/type 为明文
         Map<String, String> ticketMap = new LinkedHashMap<>();
         ticketMap.put("loginName", um);
         ticketMap.put("token", token);
         String ticketRaw = JSON.toJSONString(ticketMap);
-        String ticketB64 = java.util.Base64.getEncoder().encodeToString(ticketRaw.getBytes(StandardCharsets.UTF_8));
+        String ticketB64 = Base64.getEncoder().encodeToString(ticketRaw.getBytes(StandardCharsets.UTF_8));
 
-        String url = baseUrl + "/" + urlEncodePathSegment(orgCode)
-                + "?type=sso&orgCode=" + urlEncodeQuery(orgCode)
-                + "&ticket=" + urlEncodeQuery(ticketB64);
+        String url = baseUrl + "/" + orgCode
+                + "?type=sso&orgCode=" + orgCode
+                + "&ticket=" + ticketB64;
         return new MmbaMgmtSsoRedirectVO(url);
     }
 

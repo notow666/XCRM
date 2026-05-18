@@ -1,5 +1,6 @@
 package cn.cordys.mmba.service;
 
+import cn.cordys.common.constants.CrmLoggers;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.mmba.domain.MmbaCommandResult;
 import cn.cordys.mybatis.BaseMapper;
@@ -13,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
  * MMBA 指令结果持久化服务。
  * 指令结果回调统一落到 mmba_command_result，并按 reqId + behaviorType + targetValue 做幂等。
  */
-@Slf4j
+@Slf4j(topic = CrmLoggers.MMBA_CALLBACK)
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class MmbaCommandResultService {
@@ -37,8 +38,8 @@ public class MmbaCommandResultService {
         if (db == null) {
             init(record, userId);
             mmbaCommandResultMapper.insert(record);
-            log.info("MMBA结果回执新增 behaviorType={} reqId={} targetType={} targetValue={} callbackRecordId={}",
-                    record.getBehaviorType(), record.getReqId(), record.getTargetType(), record.getTargetValue(), record.getCallbackRecordId());
+            log.debug("MMBA结果回执新增 behaviorType={} reqId={} targetType={} callbackRecordId={}",
+                    record.getBehaviorType(), record.getReqId(), record.getTargetType(), record.getCallbackRecordId());
             return record;
         }
         record.setId(db.getId());
@@ -46,8 +47,8 @@ public class MmbaCommandResultService {
         record.setCreateUser(db.getCreateUser());
         touch(record, userId);
         mmbaCommandResultMapper.update(record);
-        log.info("MMBA结果回执更新 behaviorType={} reqId={} targetType={} targetValue={} callbackRecordId={}",
-                record.getBehaviorType(), record.getReqId(), record.getTargetType(), record.getTargetValue(), record.getCallbackRecordId());
+        log.debug("MMBA结果回执更新 behaviorType={} reqId={} targetType={} callbackRecordId={}",
+                record.getBehaviorType(), record.getReqId(), record.getTargetType(), record.getCallbackRecordId());
         return record;
     }
 

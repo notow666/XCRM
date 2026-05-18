@@ -1,6 +1,6 @@
 package cn.cordys.mmba.callback.consumer;
 
-import cn.cordys.common.util.JSON;
+import cn.cordys.common.constants.CrmLoggers;
 import cn.cordys.context.TenantContext;
 import cn.cordys.mmba.MmbaConstants;
 import cn.cordys.mmba.callback.AbstractZZYConsumer;
@@ -19,7 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-@Slf4j
+@Slf4j(topic = CrmLoggers.MMBA_CALLBACK)
 @Service
 public class CommandCallConsumer extends AbstractZZYConsumer {
 
@@ -38,7 +38,7 @@ public class CommandCallConsumer extends AbstractZZYConsumer {
         log.info("MMBA结果回调开始消费 streamId={} consumer={} behaviorType={} tenancyName={} count={}",
                 dto.getStreamId(), dto.getStreamConsumer(), dto.getBehaviorType(), dto.getTenancyName(),
                 dto.getData() == null ? 0 : dto.getData().size());
-        log.debug("CommandCallConsumer payload={}", JSON.toJSONString(dto));
+        log.debug("CommandCallConsumer payload={}", dto.getRawPayload());
         for (Map.Entry<String, List<ZzyData>> entry : groupByTenant(dto).entrySet()) {
             String tenantId = entry.getKey();
             MmbaCallbackProcessService.CallbackRecordPrepareResult prepareResult = null;
@@ -50,16 +50,17 @@ public class CommandCallConsumer extends AbstractZZYConsumer {
                     continue;
                 }
                 MmbaCallbackRecord callbackRecord = prepareResult.getCallbackRecord();
-                log.info("MMBA结果回调切换租户 streamId={} consumer={} callbackRecordId={} behaviorType={} tenantId={} recordCount={} reqId={} esId={}",
-                        tenantDto.getStreamId(), tenantDto.getStreamConsumer(), callbackRecord.getId(),
-                        dto.getBehaviorType(), tenantId, entry.getValue().size(),
-                        firstReqId(entry.getValue()), firstEsId(entry.getValue()));
+                log.info("MMBA结果回调处理租户 streamId={} callbackRecordId={} behaviorType={} tenantId={} recordCount={} reqId={} esId={}",
+                        tenantDto.getStreamId(), callbackRecord.getId(), dto.getBehaviorType(), tenantId,
+                        entry.getValue().size(), firstReqId(entry.getValue()), firstEsId(entry.getValue()));
                 mmbaCallbackDispatchService.dispatchCommand(tenantDto, callbackRecord);
                 mmbaCallbackProcessService.markSuccess(callbackRecord, tenantDto);
             } catch (Exception e) {
-                log.error("指令结果回调数据处理异常 streamId={} consumer={} contextTenantId={} message={} dto={}",
-                        tenantDto.getStreamId(), tenantDto.getStreamConsumer(),
-                        TenantContext.getTenantId(), e.getMessage(), JSON.toJSONString(tenantDto), e);
+                log.error("指令结果回调数据处理异常 streamId={} tenantId={} callbackRecordId={} reqId={} esId={} message={}",
+                        tenantDto.getStreamId(), TenantContext.getTenantId(),
+                        prepareResult != null && prepareResult.getCallbackRecord() != null
+                                ? prepareResult.getCallbackRecord().getId() : null,
+                        firstReqId(entry.getValue()), firstEsId(entry.getValue()), e.getMessage(), e);
                 if (prepareResult != null && prepareResult.shouldProcess()) {
                     mmbaCallbackProcessService.markFailed(prepareResult.getCallbackRecord(), tenantDto, e);
                 }

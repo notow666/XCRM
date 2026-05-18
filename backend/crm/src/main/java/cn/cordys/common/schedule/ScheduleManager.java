@@ -10,30 +10,15 @@ import org.quartz.*;
 
 /**
  * 定时任务管理器，用于管理调度任务的添加、修改、删除等操作。
- * 提供了对简单任务和 Cron 表达式任务的支持。
- * <p>
- * 主要功能包括：
- * <ul>
- *   <li>添加和删除定时任务</li>
- *   <li>修改 Cron 表达式</li>
- *   <li>启动和关闭调度器</li>
- * </ul>
- * </p>
- *
- * @since 1.0
+ * <p>Quartz JobStore 使用 crm_master；租户通过 JobKey 前缀与 JobDataMap.tenantId 隔离。</p>
  */
 @Slf4j
 public class ScheduleManager {
-    private static final String TENANT_ID_KEY = "tenantId";
+    public static final String TENANT_ID_KEY = "tenantId";
 
     @Resource
     private Scheduler scheduler;
 
-    /**
-     * 启动调度器。
-     *
-     * @param schedule 调度器
-     */
     public static void startJobs(Scheduler schedule) {
         try {
             schedule.start();
@@ -43,51 +28,24 @@ public class ScheduleManager {
         }
     }
 
-    /**
-     * 添加一个简单的定时任务。
-     *
-     * @param jobKey             任务标识
-     * @param triggerKey         触发器标识
-     * @param cls                任务类
-     * @param repeatIntervalTime 任务重复间隔时间（单位：小时）
-     * @param jobDataMap         任务数据
-     *
-     * @throws SchedulerException 如果调度失败
-     */
     public void addSimpleJob(JobKey jobKey, TriggerKey triggerKey, Class<? extends Job> cls, int repeatIntervalTime, JobDataMap jobDataMap)
             throws SchedulerException {
 
-        JobBuilder jobBuilder = JobBuilder.newJob(cls).withIdentity(jobKey);
-        if (jobDataMap != null) {
-            jobBuilder.usingJobData(jobDataMap);
-        }
+        JobBuilder jobBuilder = JobBuilder.newJob(cls).withIdentity(withTenantJobKey(jobKey));
+        jobBuilder.usingJobData(ensureTenantJobDataMap(jobDataMap));
 
-        SimpleTrigger trigger = TriggerBuilder.newTrigger().withIdentity(triggerKey)
+        SimpleTrigger trigger = TriggerBuilder.newTrigger().withIdentity(withTenantTriggerKey(triggerKey))
                 .withSchedule(SimpleScheduleBuilder.simpleSchedule().withIntervalInHours(repeatIntervalTime).repeatForever())
                 .startNow().build();
 
         scheduler.scheduleJob(jobBuilder.build(), trigger);
     }
 
-    /**
-     * 添加一个 Cron 表达式定时任务。
-     *
-     * @param jobKey     任务标识
-     * @param triggerKey 触发器标识
-     * @param jobClass   任务类
-     * @param cron       Cron 表达式
-     * @param jobDataMap 任务数据
-     */
     public void addCronJob(JobKey jobKey, TriggerKey triggerKey, Class<? extends Job> jobClass, String cron, JobDataMap jobDataMap) {
         try {
             log.info("addCronJob: {},{}", triggerKey.getName(), triggerKey.getGroup());
-            JobBuilder jobBuilder = JobBuilder.newJob(jobClass).withIdentity(withTenantJobKey(jobKey));
-            if (jobDataMap != null) {
-                if (StringUtils.isBlank(jobDataMap.getString(TENANT_ID_KEY))) {
-                    jobDataMap.put(TENANT_ID_KEY, TenantContext.requireTenantId());
-                }
-                jobBuilder.usingJobData(jobDataMap);
-            }
+            JobDataMap map = ensureTenantJobDataMap(jobDataMap);
+            JobBuilder jobBuilder = JobBuilder.newJob(jobClass).withIdentity(withTenantJobKey(jobKey)).usingJobData(map);
 
             TriggerBuilder<Trigger> triggerBuilder = TriggerBuilder.newTrigger();
             triggerBuilder.withIdentity(withTenantTriggerKey(triggerKey));
@@ -102,24 +60,10 @@ public class ScheduleManager {
         }
     }
 
-    /**
-     * 添加一个 Cron 表达式定时任务（不带 JobDataMap）。
-     *
-     * @param jobKey     任务标识
-     * @param triggerKey 触发器标识
-     * @param jobClass   任务类
-     * @param cron       Cron 表达式
-     */
     public void addCronJob(JobKey jobKey, TriggerKey triggerKey, Class<? extends Job> jobClass, String cron) {
         addCronJob(jobKey, triggerKey, jobClass, cron, null);
     }
 
-    /**
-     * 修改现有的 Cron 触发器的 Cron 表达式。
-     *
-     * @param triggerKey 触发器标识
-     * @param cron       新的 Cron 表达式
-     */
     public void modifyCronJobTime(TriggerKey triggerKey, String cron) {
         TriggerKey tenantTriggerKey = withTenantTriggerKey(triggerKey);
 
@@ -132,7 +76,6 @@ public class ScheduleManager {
 
             String oldTime = trigger.getCronExpression();
             if (!oldTime.equalsIgnoreCase(cron)) {
-                // 修改触发器的 Cron 表达式
                 TriggerBuilder<Trigger> triggerBuilder = TriggerBuilder.newTrigger();
                 triggerBuilder.withIdentity(tenantTriggerKey);
                 triggerBuilder.startNow();
@@ -145,12 +88,6 @@ public class ScheduleManager {
         }
     }
 
-    /**
-     * 删除指定的任务和触发器。
-     *
-     * @param jobKey     任务标识
-     * @param triggerKey 触发器标识
-     */
     public void removeJob(JobKey jobKey, TriggerKey triggerKey) {
         JobKey tenantJobKey = withTenantJobKey(jobKey);
         TriggerKey tenantTriggerKey = withTenantTriggerKey(triggerKey);
@@ -165,11 +102,6 @@ public class ScheduleManager {
         }
     }
 
-    /**
-     * 关闭调度器。
-     *
-     * @param schedule 调度器
-     */
     public void shutdownJobs(Scheduler schedule) {
         try {
             if (!schedule.isShutdown()) {
@@ -181,54 +113,35 @@ public class ScheduleManager {
         }
     }
 
-    /**
-     * 添加或更新 Cron 定时任务。
-     * 如果触发器已存在，则修改其 Cron 表达式；否则，添加新的 Cron 定时任务。
-     *
-     * @param jobKey     任务标识
-     * @param triggerKey 触发器标识
-     * @param jobClass   任务类
-     * @param cron       Cron 表达式
-     * @param jobDataMap 任务数据
-     *
-     * @throws SchedulerException 如果添加或更新任务失败
-     */
-    public void addOrUpdateCronJob(JobKey jobKey, TriggerKey triggerKey, Class jobClass, String cron, JobDataMap jobDataMap)
+    public void addOrUpdateCronJob(JobKey jobKey, TriggerKey triggerKey, Class<? extends Job> jobClass, String cron, JobDataMap jobDataMap)
             throws SchedulerException {
         JobKey tenantJobKey = withTenantJobKey(jobKey);
         TriggerKey tenantTriggerKey = withTenantTriggerKey(triggerKey);
+        JobDataMap map = ensureTenantJobDataMap(jobDataMap);
         log.info("AddOrUpdateCronJob: {}", tenantJobKey.getName() + "," + tenantTriggerKey.getGroup());
 
         if (scheduler.checkExists(tenantTriggerKey)) {
-            modifyCronJobTime(tenantTriggerKey, cron);
+            modifyCronJobTime(triggerKey, cron);
+            replaceJobDataMap(tenantJobKey, jobClass, map);
         } else {
-            addCronJob(tenantJobKey, tenantTriggerKey, jobClass, cron, jobDataMap);
+            addCronJob(jobKey, triggerKey, jobClass, cron, map);
         }
     }
 
-    /**
-     * 添加或更新 Cron 定时任务（不带 JobDataMap）。
-     *
-     * @param jobKey     任务标识
-     * @param triggerKey 触发器标识
-     * @param jobClass   任务类
-     * @param cron       Cron 表达式
-     *
-     * @throws SchedulerException 如果添加或更新任务失败
-     */
-    public void addOrUpdateCronJob(JobKey jobKey, TriggerKey triggerKey, Class jobClass, String cron) throws SchedulerException {
+    public void addOrUpdateCronJob(JobKey jobKey, TriggerKey triggerKey, Class<? extends Job> jobClass, String cron) throws SchedulerException {
         addOrUpdateCronJob(jobKey, triggerKey, jobClass, cron, null);
     }
 
-    /**
-     * 获取默认的 JobDataMap，包含定时任务所需的基本信息。
-     *
-     * @param schedule   定时任务调度对象
-     * @param expression Cron 或时间表达式
-     * @param userId     执行任务的用户 ID
-     *
-     * @return JobDataMap 对象
-     */
+    public boolean triggerExists(TriggerKey triggerKey) throws SchedulerException {
+        return scheduler.checkExists(withTenantTriggerKey(triggerKey));
+    }
+
+    public JobDataMap buildTenantJobDataMap(String tenantId, JobDataMap extra) {
+        JobDataMap jobDataMap = extra != null ? new JobDataMap(extra) : new JobDataMap();
+        jobDataMap.put(TENANT_ID_KEY, tenantId);
+        return jobDataMap;
+    }
+
     public JobDataMap getDefaultJobDataMap(Schedule schedule, String expression, String userId) {
         JobDataMap jobDataMap = new JobDataMap();
         jobDataMap.put("resourceId", schedule.getResourceId());
@@ -240,25 +153,41 @@ public class ScheduleManager {
         return jobDataMap;
     }
 
+    private JobDataMap ensureTenantJobDataMap(JobDataMap jobDataMap) {
+        JobDataMap map = jobDataMap != null ? new JobDataMap(jobDataMap) : new JobDataMap();
+        if (StringUtils.isBlank(map.getString(TENANT_ID_KEY))) {
+            map.put(TENANT_ID_KEY, TenantContext.requireTenantId());
+        }
+        return map;
+    }
+
+    private void replaceJobDataMap(JobKey tenantJobKey, Class<? extends Job> jobClass, JobDataMap jobDataMap) {
+        try {
+            if (!scheduler.checkExists(tenantJobKey)) {
+                return;
+            }
+            JobDetail detail = JobBuilder.newJob(jobClass)
+                    .withIdentity(tenantJobKey)
+                    .usingJobData(jobDataMap)
+                    .storeDurably(false)
+                    .build();
+            scheduler.addJob(detail, true, true);
+        } catch (SchedulerException e) {
+            throw new RuntimeException("更新 JobDataMap 失败", e);
+        }
+    }
+
     private JobKey withTenantJobKey(JobKey jobKey) {
         String tenantId = TenantContext.requireTenantId();
-        String name = appendTenantPrefix(jobKey.getName(), tenantId);
-        String group = appendTenantPrefix(jobKey.getGroup(), tenantId);
+        String name = TenantQuartzKeys.appendTenantPrefix(jobKey.getName(), tenantId);
+        String group = TenantQuartzKeys.appendTenantPrefix(jobKey.getGroup(), tenantId);
         return new JobKey(name, group);
     }
 
     private TriggerKey withTenantTriggerKey(TriggerKey triggerKey) {
         String tenantId = TenantContext.requireTenantId();
-        String name = appendTenantPrefix(triggerKey.getName(), tenantId);
-        String group = appendTenantPrefix(triggerKey.getGroup(), tenantId);
+        String name = TenantQuartzKeys.appendTenantPrefix(triggerKey.getName(), tenantId);
+        String group = TenantQuartzKeys.appendTenantPrefix(triggerKey.getGroup(), tenantId);
         return new TriggerKey(name, group);
-    }
-
-    private String appendTenantPrefix(String value, String tenantId) {
-        String prefix = tenantId + ":";
-        if (StringUtils.isBlank(value) || value.startsWith(prefix)) {
-            return value;
-        }
-        return prefix + value;
     }
 }

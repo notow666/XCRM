@@ -1,5 +1,6 @@
 package cn.cordys.crm.system.job;
 
+import cn.cordys.common.context.TenantTaskExecutor;
 import cn.cordys.common.util.JSON;
 import cn.cordys.crm.system.service.SystemService;
 import cn.cordys.quartz.anno.QuartzScheduled;
@@ -30,6 +31,9 @@ public class SessionJob {
     @Resource
     private SystemService systemService;
 
+    @Resource
+    private TenantTaskExecutor tenantTaskExecutor;
+
     /**
      * 定时清理没有绑定用户的会话。
      * <p>
@@ -38,7 +42,8 @@ public class SessionJob {
      * </p>
      *
      * <p>
-     * 该方法使用 {@link QuartzScheduled} 注解定时执行，并使用 {@link ScanOptions} 扫描 Redis 中的会话。
+     * 平台级任务：Spring Session 使用全局 Redis key（扫描全部会话）；表单缓存仅清理 ACTIVE 租户
+     * （{@link TenantTaskExecutor} 不含 FROZEN 租户）。
      * </p>
      * <p>
      * spring.session.timeout=30d
@@ -80,8 +85,8 @@ public class SessionJob {
                     }
                 }
             }
-            // 清理缓存
-            systemService.clearFormCache();
+            tenantTaskExecutor.runForEachEnabledTenant("SessionJob.clearFormCache", tenantId ->
+                    systemService.clearFormCache());
             log.info("用户会话统计: {}", JSON.toJSONString(userCount));
         } catch (Exception e) {
             log.error(e.getMessage(), e);

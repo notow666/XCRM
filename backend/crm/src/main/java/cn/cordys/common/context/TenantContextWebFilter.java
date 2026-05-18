@@ -13,7 +13,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.MDC;
 import org.springframework.lang.NonNull;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -49,7 +48,7 @@ public class TenantContextWebFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) throws ServletException {
         String uri = request.getRequestURI();
-        return uri != null && (uri.contains("/platform/")
+        return StringUtils.isNotBlank(uri) && (uri.contains("/platform/")
                 || uri.contains("/system/version") || uri.contains("/anonymous/mmba/callback")
                 || uri.contains("/anonymous/mmba/mgmt-sso/check"));
     }
@@ -68,7 +67,7 @@ public class TenantContextWebFilter extends OncePerRequestFilter {
         boolean b1 = CommonUtils.sseExemptFromTenant(request);
 
         boolean needTenantForSse = b && !b1;
-        if ((CommonUtils.requiresTenantForAnonymousFilePreview(uri) || needTenantForSse) && tenantId == null) {
+        if ((CommonUtils.requiresTenantForAnonymousFilePreview(uri) || needTenantForSse) && StringUtils.isBlank(tenantId)) {
             rejectIllegalTenant(response, "缺少租户标识 tenantId");
             return;
         }
@@ -86,14 +85,12 @@ public class TenantContextWebFilter extends OncePerRequestFilter {
             }
 
             TenantContext.setTenantId(tenantId);
-            MDC.put(TENANT_ID_KEY, tenantId);
         }
 
         try {
             chain.doFilter(request, response);
         } finally {
             TenantContext.clear();
-            MDC.clear();
         }
     }
 }

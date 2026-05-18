@@ -1,6 +1,7 @@
 package cn.cordys.platform.service;
 
 import cn.cordys.aspectj.constants.LogModule;
+import cn.cordys.common.schedule.TenantQuartzLifecycleService;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.common.response.result.CrmHttpResultCode;
@@ -22,7 +23,9 @@ import cn.cordys.tenant.service.TenantProvisioningService;
 import cn.cordys.tenant.service.TenantMetaService;
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
@@ -38,11 +41,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
+@Slf4j
 @Service
 public class PlatformAdminService {
-
-    private static final Logger managementLog = LoggerFactory.getLogger("MANAGEMENT_CENTER_LOG");
-
+    
     @Resource
     private ExtTenantMapper extTenantMapper;
 
@@ -64,6 +66,9 @@ public class PlatformAdminService {
 
     @Resource
     private TenantProvisioningService tenantProvisioningService;
+
+    @Resource
+    private ObjectProvider<TenantQuartzLifecycleService> tenantQuartzLifecycleServiceProvider;
 
     public Pager<List<PlatformTenantItemResponse>> pageTenants(PlatformTenantPageRequest request) {
         int current = Math.max(1, request.getCurrent());
@@ -100,14 +105,16 @@ public class PlatformAdminService {
         }
         tenantMetaService.evictEnabledTenantOrgMapCache();
         if (!enabled) {
+            purgeTenantQuartzSchedules(tenantId);
             tenantRoutingDataSource.unregisterTenantDataSource(tenantId);
-            managementLog.info(LogModule.MANAGEMENT_MARKER,"[TENANT_FREEZE] tenantId={}, operator={}", tenantId, operatorId);
+            log.info("[TENANT_FREEZE] tenantId={}, operator={}", tenantId, operatorId);
         } else {
             TenantDbConfigDTO cfg = tenantMetaService.getTenantDbConfig(tenantId);
             if (cfg != null && !tenantRoutingDataSource.hasTenantDataSource(tenantId)) {
                 tenantRoutingDataSource.registerTenantDataSource(tenantId, Objects.requireNonNull(createDataSource(cfg)));
             }
-            managementLog.info(LogModule.MANAGEMENT_MARKER,"[TENANT_UNFREEZE] tenantId={}, operator={}", tenantId, operatorId);
+            initializeTenantQuartzSchedules(tenantId);
+            log.info("[TENANT_UNFREEZE] tenantId={}, operator={}", tenantId, operatorId);
         }
         recordAudit(operatorId, enabled ? "TENANT_UNFREEZE" : "TENANT_FREEZE", tenantId, "SUCCESS", "", 0L);
     }
@@ -120,7 +127,7 @@ public class PlatformAdminService {
         }
         PlatformTenantProvisionTaskResponse latest = findLatestRunningProvisionTask(normalizedTenantId);
         if (latest != null) {
-            managementLog.info(LogModule.MANAGEMENT_MARKER,"[TENANT_PROVISION_DEDUP] tenantId={}, taskId={}",
+            log.info("[TENANT_PROVISION_DEDUP] tenantId={}, taskId={}",
                     normalizedTenantId, latest.getTaskId());
             return latest;
         }
@@ -138,7 +145,7 @@ public class PlatformAdminService {
         task.setUpdateTime(now);
         task.setOperatorId(operatorId);
         extTenantOpsTaskMapper.insertTask(task);
-        managementLog.info(LogModule.MANAGEMENT_MARKER,"[TENANT_PROVISION_SUBMITTED] taskId={}, tenantId={}, operator={}",
+        log.info("[TENANT_PROVISION_SUBMITTED] taskId={}, tenantId={}, operator={}",
                 taskId, normalizedTenantId, operatorId);
 
         return getTenantProvisionTask(taskId);
@@ -156,7 +163,7 @@ public class PlatformAdminService {
                                              List<String> initialUserIds, String orgId) {
         long start = System.currentTimeMillis();
         updateTaskStatus(taskId, "RUNNING", "provision running");
-        managementLog.info(LogModule.MANAGEMENT_MARKER,"[TENANT_PROVISION_START] taskId={}, tenantId={}, operator={}",
+        log.info("[TENANT_PROVISION_START] taskId={}, tenantId={}, operator={}",
                 taskId, tenantCode, operatorId);
         try {
             TenantProvisionResponse response = tenantProvisioningService.provision(tenantCode, tenantName, operatorId, initialUserIds, orgId);
@@ -164,14 +171,14 @@ public class PlatformAdminService {
             updateTaskStatus(taskId, "SUCCESS", detail);
             recordAudit(operatorId, "TENANT_PROVISION", response.getTenantId(), "SUCCESS", detail,
                     System.currentTimeMillis() - start);
-            managementLog.info(LogModule.MANAGEMENT_MARKER,"[TENANT_PROVISION_SUCCESS] taskId={}, tenantId={}",
+            log.info("[TENANT_PROVISION_SUCCESS] taskId={}, tenantId={}",
                     taskId, response.getTenantId());
         } catch (Exception e) {
             String detail = safeError(e);
             updateTaskStatus(taskId, "FAILED", detail);
             recordAudit(operatorId, "TENANT_PROVISION", tenantCode, "FAILED", detail,
                     System.currentTimeMillis() - start);
-            managementLog.error(LogModule.MANAGEMENT_MARKER,"[TENANT_PROVISION_FAILED] taskId={}, tenantId={}, error={}",
+            log.error("[TENANT_PROVISION_FAILED] taskId={}, tenantId={}, error={}",
                     taskId, tenantCode, detail, e);
         }
     }
@@ -324,6 +331,20 @@ public class PlatformAdminService {
                 ((AutoCloseable) dataSource).close();
             } catch (Exception ignored) {
             }
+        }
+    }
+
+    private void initializeTenantQuartzSchedules(String tenantId) {
+        TenantQuartzLifecycleService lifecycle = tenantQuartzLifecycleServiceProvider.getIfAvailable();
+        if (lifecycle != null) {
+            lifecycle.initializeTenantSchedules(tenantId);
+        }
+    }
+
+    private void purgeTenantQuartzSchedules(String tenantId) {
+        TenantQuartzLifecycleService lifecycle = tenantQuartzLifecycleServiceProvider.getIfAvailable();
+        if (lifecycle != null) {
+            lifecycle.purgeTenantSchedules(tenantId);
         }
     }
 }

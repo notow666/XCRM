@@ -9,16 +9,6 @@ import org.slf4j.MarkerFactory;
  */
 public class LogModule {
     /**
-     * 管理中心
-     */
-    public static final String PLATFORM_MANAGEMENT_CENTER = "MANAGEMENT_CENTER";
-    public static final Marker MANAGEMENT_MARKER = MarkerFactory.getMarker(PLATFORM_MANAGEMENT_CENTER);
-    /**
-     * 租户中心
-     */
-    public static final String PLATFORM_TENANT_CENTER = "TENANT_CENTER";
-    public static final Marker TENANT_MARKER = MarkerFactory.getMarker(PLATFORM_TENANT_CENTER);
-    /**
      * 系统管理模块
      */
     public static final String SYSTEM = "SYSTEM";

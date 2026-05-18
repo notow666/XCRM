@@ -1,5 +1,6 @@
 package cn.cordys.mmba.service;
 
+import cn.cordys.common.constants.CrmLoggers;
 import cn.cordys.common.util.JSON;
 import cn.cordys.crm.customer.service.CustomerCallStatusService;
 import cn.cordys.crm.customer.service.CustomerWechatFriendStatusService;
@@ -41,7 +42,7 @@ import java.util.List;
  * MMBA 回调分发服务。
  * 负责把统一回调 DTO 拆成各业务表实体，并调用对应的持久化服务做幂等保存。
  */
-@Slf4j
+@Slf4j(topic = CrmLoggers.MMBA_CALLBACK)
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class MmbaCallbackDispatchService {
@@ -559,7 +560,7 @@ public class MmbaCallbackDispatchService {
         }
         device.setLastBehaviorType(behaviorType);
         device.setLastAuditTime(data.getTimestamp());
-        log.info("MMBA设备快照同步 behaviorType={} tenantId={} deviceId={} imei={} um={}",
+        log.debug("MMBA设备快照同步 behaviorType={} tenantId={} deviceId={} imei={} um={}",
                 behaviorType, data.getTenantId(), device.getDeviceId(), device.getImei(), data.getUm());
         mmbaDeviceService.saveOrUpdateDevice(device, MmbaConstants.SYSTEM_USER);
     }
@@ -734,7 +735,7 @@ public class MmbaCallbackDispatchService {
 
     private void upgradeCustomerCallStatus(String customerId, String customerTel, String um, Integer targetStatus, String callbackRecordId) {
         customerCallStatusService.upgradeByCustomer(customerId, customerTel, um, targetStatus, MmbaConstants.SYSTEM_USER);
-        log.info("MMBA客户拨打状态维护 callbackRecordId={} customerId={} customerTel={} um={} targetStatus={}",
+        log.debug("MMBA客户拨打状态维护 callbackRecordId={} customerId={} customerTel={} um={} targetStatus={}",
                 callbackRecordId, customerId, customerTel, um, targetStatus);
     }
 }

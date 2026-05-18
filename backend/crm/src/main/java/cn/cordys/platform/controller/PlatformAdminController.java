@@ -1,5 +1,6 @@
 package cn.cordys.platform.controller;
 
+import cn.cordys.common.constants.LoginAuthenticateConstants;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.common.response.result.CrmHttpResultCode;
@@ -19,6 +20,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,9 +34,8 @@ import java.util.Map;
 @RequestMapping("/platform/admin")
 @Tag(name = "管理中心-平台运维")
 @Validated
+@Slf4j
 public class PlatformAdminController {
-
-    private static final Logger managementLog = LoggerFactory.getLogger("MANAGEMENT_CENTER_LOG");
 
     @Resource
     private PlatformAdminService platformAdminService;
@@ -60,7 +61,7 @@ public class PlatformAdminController {
     @Operation(summary = "创建租户")
     public PlatformTenantProvisionTaskResponse provision(@Valid @RequestBody TenantProvisionRequest request) {
         String operator = assertPlatformAdmin();
-        managementLog.info("[MANAGEMENT_CENTER][TENANT_PROVISION_REQUEST] operator={}, tenantCode={}",
+        log.info("[TENANT_PROVISION_REQUEST] operator={}, tenantCode={}",
                 operator, request.getCode());
         PlatformTenantProvisionTaskResponse task = platformAdminService.submitTenantProvisionTask(
                 request.getCode(), request.getName(), operator, request.getInitialUserIds(), request.getOrgId()
@@ -146,7 +147,7 @@ public class PlatformAdminController {
 
     private String assertPlatformAdmin() {
         SessionUser user = SessionUtils.getUser();
-        if (user == null || !"PLATFORM".equalsIgnoreCase(StringUtils.defaultString(user.getSource()))
+        if (user == null || !LoginAuthenticateConstants.LoginAuthenticateType.PLATFORM.name().equalsIgnoreCase(StringUtils.defaultString(user.getSource()))
                 || user.getPermissionIds() == null || !user.getPermissionIds().contains("PLATFORM_ADMIN:READ")) {
             throw new GenericException(CrmHttpResultCode.FORBIDDEN);
         }

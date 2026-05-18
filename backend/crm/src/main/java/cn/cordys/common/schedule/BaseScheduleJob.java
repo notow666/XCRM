@@ -1,83 +1,132 @@
 package cn.cordys.common.schedule;
 
 
+import cn.cordys.common.constants.MdcConstants;
+
+import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.context.TenantContext;
+
 import lombok.extern.slf4j.Slf4j;
+
 import org.apache.commons.lang3.StringUtils;
+
+import org.slf4j.MDC;
+
 import org.quartz.Job;
+
 import org.quartz.JobDataMap;
+
 import org.quartz.JobExecutionContext;
+
 import org.quartz.JobKey;
 
+
 /**
- * 基础调度任务类，所有调度任务都应该继承此类，并实现具体的业务逻辑。
- * <p>
- * 本类提供了调度任务执行所需的资源信息，并通过抽象方法 {@link #businessExecute(JobExecutionContext)}
- * 让子类实现具体的业务逻辑。
- * </p>
+ * 基础调度任务类，所有租户自定义 Quartz Job 应继承此类。
  *
- * @since 1.0
+ * <p>从 JobDataMap 或 JobKey 前缀恢复 tenantId，再执行业务逻辑。</p>
  */
+
 @Slf4j
+
 public abstract class BaseScheduleJob implements Job {
 
-    /**
-     * 资源 ID，表示该任务所关联的资源。
-     */
+
     protected String resourceId;
 
-    /**
-     * 用户 ID，表示该任务执行的用户。
-     */
+
     protected String userId;
 
-    /**
-     * 调度表达式，用于任务的调度规则。
-     */
+
     protected String expression;
 
-    /**
-     * 执行调度任务时调用，提取任务所需的信息并调用子类的业务执行方法。
-     *
-     * @param context 任务执行的上下文对象
-     */
+
     @Override
+
     public void execute(JobExecutionContext context) {
+
         String previousTenantId = TenantContext.getTenantId();
+
+        String previousMdcTraceId = MDC.get(MdcConstants.TRACE_ID_KEY);
+        String previousMdcTenantId = MDC.get(MdcConstants.TENANT_ID_KEY);
+
         try {
-            // 从 JobDataMap 中获取任务所需的资源信息
+
             JobKey jobKey = context.getTrigger().getJobKey();
+
             JobDataMap jobDataMap = context.getJobDetail().getJobDataMap();
+
             this.resourceId = jobDataMap.getString("resourceId");
+
             this.userId = jobDataMap.getString("userId");
+
             this.expression = jobDataMap.getString("expression");
 
-            String tenantId = jobDataMap.getString("tenantId");
+
+            String tenantId = resolveTenantId(jobDataMap, jobKey);
+
             if (StringUtils.isNotBlank(tenantId)) {
+
                 TenantContext.setTenantId(tenantId);
+
+                MDC.put(MdcConstants.TRACE_ID_KEY, IDGenerator.nextStr());
+                MDC.put(MdcConstants.TENANT_ID_KEY, tenantId);
+
             } else {
-                // 避免 Quartz 线程复用时沿用上一次 Job 的租户
+
                 TenantContext.clear();
+
+                MDC.remove(MdcConstants.TRACE_ID_KEY);
+                MDC.remove(MdcConstants.TENANT_ID_KEY);
+
             }
 
-            // 记录日志，显示当前任务的执行情况
+
             log.info("{} Running: {}, tenantId={}", jobKey.getGroup(), resourceId, TenantContext.getTenantId());
 
-            // 调用子类实现的业务逻辑
             businessExecute(context);
+
         } finally {
             if (StringUtils.isBlank(previousTenantId)) {
                 TenantContext.clear();
             } else {
                 TenantContext.setTenantId(previousTenantId);
             }
+
+            if (StringUtils.isBlank(previousMdcTraceId)) {
+                MDC.remove(MdcConstants.TRACE_ID_KEY);
+            } else {
+                MDC.put(MdcConstants.TRACE_ID_KEY, previousMdcTraceId);
+            }
+
+            if (StringUtils.isBlank(previousMdcTenantId)) {
+                MDC.remove(MdcConstants.TENANT_ID_KEY);
+            } else {
+                MDC.put(MdcConstants.TENANT_ID_KEY, previousMdcTenantId);
+            }
+
         }
+
     }
 
-    /**
-     * 子类需要实现该方法，定义任务执行的具体业务逻辑。
-     *
-     * @param context 任务执行的上下文对象
-     */
+
+    private String resolveTenantId(JobDataMap jobDataMap, JobKey jobKey) {
+
+        String tenantId = jobDataMap.getString(ScheduleManager.TENANT_ID_KEY);
+
+        if (StringUtils.isNotBlank(tenantId)) {
+
+            return tenantId;
+
+        }
+
+        return TenantQuartzKeys.parseTenantId(jobKey);
+
+    }
+
+
     protected abstract void businessExecute(JobExecutionContext context);
+
 }
+
+

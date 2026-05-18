@@ -1,5 +1,6 @@
 package cn.cordys.mmba.service;
 
+import cn.cordys.common.constants.CrmLoggers;
 import cn.cordys.common.util.JSON;
 import cn.cordys.context.TenantContext;
 import cn.cordys.mmba.MmbaConstants;
@@ -16,7 +17,7 @@ import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
 
-@Slf4j
+@Slf4j(topic = CrmLoggers.MMBA_CALLBACK)
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class MmbaCallbackProcessService {

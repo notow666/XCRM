@@ -1,6 +1,5 @@
 package cn.cordys.mmba.service;
 
-import cn.cordys.common.domain.BaseModel;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.Translator;
@@ -31,7 +30,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.CollectionUtils;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -51,6 +49,8 @@ import java.util.function.Function;
 public class MmbaFacadeService {
 
     private static final int WX_FRIEND_LIST_MAX_LIMIT = 100;
+    /** 设备列表同步（方式二：分页）单次 limit，与 MMBA 文档上限一致 */
+    private static final int DEVICE_LIST_SYNC_PAGE_LIMIT = 500;
 
     @Value("${mmba.company-code:}")
     private String companyCode;
@@ -190,6 +190,7 @@ public class MmbaFacadeService {
 
     /**
      * 查询设备并同步（异步执行，结束后通过 SSE 推送 {@link MmbaConstants#SSE_EVENT_DEVICE_SYNC}）。
+     * 使用设备列表查询方式二：不传 ums，按 limit/cursor 分页拉取全量设备。
      */
     @Async("threadPoolTaskExecutor")
     public void syncDevices(String userId) {
@@ -198,25 +199,36 @@ public class MmbaFacadeService {
             log.warn("syncDevices skip: tenantId missing userId={}", userId);
             return;
         }
+        String organizationId = OrganizationContext.getOrganizationId();
         try {
-            List<MmbaDevice> mmbaDevices = mmbaDeviceService.syncDevices();
-            if (CollectionUtils.isEmpty(mmbaDevices)) {
-                sendMmbaDeviceSyncSse(userId, tenantId, true, Translator.get("mmba_device_sync_sse_no_local"));
-                return;
-            }
-            List<String> ums = mmbaDevices.stream().map(BaseModel::getId).toList();
-            ObjectMapper mapper = JSON.MAPPER;
-            ObjectNode objectNode = mapper.createObjectNode();
-            objectNode.set("ums", mapper.valueToTree(ums));
-            JsonNode response = executeJson(MmbaBizTypes.DEVICE_LIST_QUERY, MmbaApiPaths.DEVICE_LIST_QUERY, objectNode, userId,
-                    OrganizationContext.getOrganizationId(), mmbaIntegrationService::queryDeviceList);
-            syncDeviceListSnapshot(response, userId);
+            syncDeviceListByPagination(userId, organizationId);
             sendMmbaDeviceSyncSse(userId, tenantId, true, Translator.get("mmba_device_sync_sse_done"));
         } catch (Exception e) {
             log.error("MMBA syncDevices failed userId={} tenantId={}", userId, tenantId, e);
             String err = StringUtils.defaultIfBlank(e.getMessage(), "unknown");
             sendMmbaDeviceSyncSse(userId, tenantId, false, Translator.getWithArgs("mmba_device_sync_sse_failed", err));
         }
+    }
+
+    /**
+     * 方式二分页同步：首次 {@code limit=500}，若响应含 {@code cursor} 则继续请求直至无下一页。
+     */
+    private void syncDeviceListByPagination(String userId, String organizationId) {
+        String cursor = null;
+        int page = 0;
+        do {
+            page++;
+            ObjectNode request = JSON.MAPPER.createObjectNode();
+            request.put("limit", DEVICE_LIST_SYNC_PAGE_LIMIT);
+            if (StringUtils.isNotBlank(cursor)) {
+                request.put("cursor", cursor);
+            }
+            JsonNode response = executeJson(MmbaBizTypes.DEVICE_LIST_QUERY, MmbaApiPaths.DEVICE_LIST_QUERY, request, userId,
+                    organizationId, mmbaIntegrationService::queryDeviceList);
+            syncDeviceListSnapshot(response, userId);
+            cursor = text(response, "cursor");
+            log.info("MMBA 设备列表分页同步 page={} nextCursorPresent={}", page, StringUtils.isNotBlank(cursor));
+        } while (StringUtils.isNotBlank(cursor));
     }
 
     private void sendMmbaDeviceSyncSse(String userId, String tenantId, boolean success, String message) {
