@@ -276,6 +276,12 @@ export interface BatchAssignOpenSeaCustomerParams extends BatchOperationOpenSeaC
   assignUserIds?: string[]; // 多个，用于批量分发多选
 }
 
+export interface BatchAssignOpenSeaCustomerByConditionParams extends OpenSeaCustomerTableParams {
+  assignCount: number;
+  assignUserId?: string;
+  assignUserIds?: string[];
+}
+
 export interface AssignOpenSeaCustomerParams {
   customerId: string;
   assignUserId: string;

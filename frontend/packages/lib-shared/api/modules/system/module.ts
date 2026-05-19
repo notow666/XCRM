@@ -234,10 +234,8 @@ export default function useProductApi(CDR: CordysAxios) {
   }
 
   // 批量获取用户库容信息（用于公海批量分发时显示剩余库容）
-  function batchUserCapacity(userIds: string[]) {
-    return CDR.get<UserCapacityItem[]>({
-      url: `${BatchUserCapacityUrl}?userIds=${userIds.join(',')}`,
-    });
+  function batchUserCapacity() {
+    return CDR.get<UserCapacityItem[]>({ url: BatchUserCapacityUrl });
   }
 
   // 公海相关API

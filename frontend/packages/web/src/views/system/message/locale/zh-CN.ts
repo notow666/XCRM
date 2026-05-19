@@ -39,6 +39,8 @@ export default {
   'system.message.system': '系统',
   'system.message.systemNotification': '系统通知',
   'system.message.setRead': '标为已读',
+  'system.message.viewMessage': '查看消息',
+  'system.message.newMessageCount': '您有 {count} 条新消息',
   'system.message.platformNotice': '{type}通知',
   'system.message.confirmCloseWeChatNotice': '确定关闭该企业微信通知吗？',
   'system.message.weComSwitchTip':

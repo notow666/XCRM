@@ -57,7 +57,7 @@
 
   import CrmModal from '@/components/pure/crm-modal/index.vue';
 
-  import { batchUserCapacity, getAuthUserOptions } from '@/api/modules';
+  import { batchUserCapacity } from '@/api/modules';
 
   const { t } = useI18n();
   const Message = useMessage();
@@ -103,23 +103,7 @@
   async function loadUserCapacity() {
     try {
       loadingUserList.value = true;
-      const res = await getAuthUserOptions();
-      if (res && res.length > 0) {
-        const userIds = res.map((u: any) => u.value || u.id);
-        const capacityRes = await batchUserCapacity(userIds);
-        const capacityMap = new Map(capacityRes.map((c: UserCapacityItem) => [c.userId, c]));
-        userCapacityList.value = res.map((u: any) => {
-          const userId = u.value || u.id;
-          const cap = capacityMap.get(userId);
-          return {
-            userId,
-            userName: u.label || u.name || '',
-            capacity: cap?.capacity,
-            ownedCount: cap?.ownedCount,
-            remainingCapacity: cap?.remainingCapacity,
-          };
-        });
-      }
+      userCapacityList.value = (await batchUserCapacity()) ?? [];
     } catch {
       userCapacityList.value = [];
     } finally {

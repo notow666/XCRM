@@ -5,27 +5,36 @@ import cn.cordys.aspectj.constants.LogModule;
 import cn.cordys.aspectj.constants.LogType;
 import cn.cordys.aspectj.context.OperationLogContext;
 import cn.cordys.aspectj.dto.LogContextInfo;
+import cn.cordys.common.constants.PermissionConstants;
+import cn.cordys.common.dto.OptionDTO;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.Translator;
+import cn.cordys.context.OrganizationContext;
+import cn.cordys.crm.customer.domain.Customer;
 import cn.cordys.crm.customer.domain.CustomerCapacity;
 import cn.cordys.crm.customer.dto.CustomerCapacityDTO;
+import cn.cordys.crm.customer.dto.response.UserCapacityResponse;
 import cn.cordys.crm.customer.mapper.ExtCustomerCapacityMapper;
+import cn.cordys.crm.customer.mapper.ExtCustomerMapper;
+import cn.cordys.crm.system.domain.User;
 import cn.cordys.crm.system.dto.FilterConditionDTO;
 import cn.cordys.crm.system.dto.request.CapacityAddRequest;
 import cn.cordys.crm.system.dto.request.CapacityUpdateRequest;
+import cn.cordys.crm.system.service.OrganizationUserService;
 import cn.cordys.crm.system.service.UserExtendService;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
+import cn.cordys.security.SessionUtils;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,6 +47,16 @@ public class CustomerCapacityService {
     private BaseMapper<CustomerCapacity> customerCapacityMapper;
     @Resource
     private ExtCustomerCapacityMapper extCustomerCapacityMapper;
+    @Resource
+    private OrganizationUserService organizationUserService;
+    @Resource
+    private CustomerStageService customerStageService;
+    @Resource
+    private PoolCustomerService poolCustomerService;
+    @Resource
+    private BaseMapper<Customer> customerMapper;
+    @Resource
+    private ExtCustomerMapper extCustomerMapper;
 
     /**
      * 获取客户库容设置
@@ -130,5 +149,53 @@ public class CustomerCapacityService {
         customerCapacityMapper.deleteByPrimaryKey(id);
         // 设置操作对象
         OperationLogContext.setResourceName(Translator.get("module.customer.capacity.setting"));
+    }
+
+    public List<UserCapacityResponse> batchUserCapacity() {
+        List<UserCapacityResponse> responses = new ArrayList<>();
+        String orgId = OrganizationContext.getOrganizationId();
+        List<OptionDTO> authUserOptions = organizationUserService.getAuthUserOptions(SessionUtils.getUserId(), orgId,
+                PermissionConstants.CUSTOMER_MANAGEMENT_ADD,
+                PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE,
+                PermissionConstants.CUSTOMER_MANAGEMENT_TRANSFER,
+                PermissionConstants.CUSTOMER_MANAGEMENT_RECYCLE,
+                PermissionConstants.CUSTOMER_MANAGEMENT_DELETE,
+                PermissionConstants.CUSTOMER_MANAGEMENT_EXPORT
+                );
+
+        Map<String, String> userNameMap = authUserOptions.stream()
+                .collect(Collectors.toMap(OptionDTO::getId, OptionDTO::getName, (a, b) -> a));
+
+        List<String> excludeStageIds = new ArrayList<>();
+        String paymentStageId = customerStageService.getPaymentStageId(orgId);
+        String failStageId = customerStageService.getFailStageId(orgId);
+        if (StringUtils.isNotEmpty(paymentStageId)) {
+            excludeStageIds.add(paymentStageId);
+        }
+        if (StringUtils.isNotEmpty(failStageId)) {
+            excludeStageIds.add(failStageId);
+        }
+        for (String userId : userNameMap.keySet()) {
+            UserCapacityResponse response = new UserCapacityResponse();
+            response.setUserId(userId);
+            response.setUserName(userNameMap.getOrDefault(userId, ""));
+            var capacity = poolCustomerService.getUserCapacity(userId, orgId);
+            if (capacity != null && capacity.getCapacity() != null) {
+                response.setCapacity(capacity.getCapacity());
+                LambdaQueryWrapper<Customer> wrapper = new LambdaQueryWrapper<>();
+                wrapper.eq(Customer::getOwner, userId).eq(Customer::getInSharedPool, false);
+                int ownCount = customerMapper.selectListByLambda(wrapper).size();
+                int excludeCount = 0;
+                if (CollectionUtils.isNotEmpty(excludeStageIds)) {
+                    excludeCount = extCustomerMapper.countByOwnerAndStages(userId, excludeStageIds);
+                }
+                response.setOwnedCount(ownCount);
+                response.setRemainingCapacity(capacity.getCapacity() - (ownCount - excludeCount));
+            }
+            responses.add(response);
+        }
+        return responses.stream()
+                .filter(u -> u.getRemainingCapacity() == null || u.getRemainingCapacity() > 0)
+                .sorted(new UserCapacityResponse.UserCapacityComparator().reversed()).collect(Collectors.toList());
     }
 }

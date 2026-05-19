@@ -43,8 +43,12 @@
           </template>
           <template #alertsSlot>
             <n-button class="p-[8px]" quaternary @click="showMessage">
-              <n-badge value="1" dot :show="showBadge">
-                <CrmIcon type="iconicon-alarmclock" :size="16" />
+              <n-badge :value="badgeCount" :max="99" :show="showBadge" :dot="badgeDotOnly">
+                <CrmIcon
+                  :class="{ 'message-bell-pulse': appStore.messageBellPulse }"
+                  type="iconicon-alarmclock"
+                  :size="16"
+                />
               </n-badge>
             </n-button>
           </template>
@@ -167,7 +171,6 @@
 </template>
 
 <script setup lang="ts">
-  import { useRoute } from 'vue-router';
   import { NBadge, NButton, NDivider, NLayoutHeader, NPopover, NPopselect, useMessage } from 'naive-ui';
   import { LanguageOutline } from '@vicons/ionicons5';
 
@@ -196,12 +199,10 @@
   import useUserStore from '@/store/modules/user';
   import { hasAnyPermission } from '@/utils/permission';
 
-  import { WorkbenchRouteEnum } from '@/enums/routeEnum';
+  import { OPEN_MESSAGE_DRAWER_EVENT } from '@/constants/messageNotify';
 
   const agentDrawer = defineAsyncComponent(() => import('@/components/business/crm-agent-drawer/index.vue'));
   const CrmFollowDrawer = defineAsyncComponent(() => import('@/components/business/crm-follow-drawer/index.vue'));
-
-  const route = useRoute();
 
   const { success, warning, loading } = useMessage();
   const { t } = useI18n();
@@ -225,8 +226,12 @@
   }
 
   const showBadge = computed(() => {
-    return !appStore.messageInfo.read;
+    return appStore.unreadMessageCount > 0 || !appStore.messageInfo.read;
   });
+
+  const badgeCount = computed(() => appStore.unreadMessageCount);
+
+  const badgeDotOnly = computed(() => badgeCount.value <= 0 && !appStore.messageInfo.read);
 
   const showMessageDrawer = ref(false);
   function showMessage() {
@@ -338,14 +343,25 @@
     Professional: t('system.license.LicenseProfessional'),
   };
 
+  function handleOpenMessageDrawerEvent() {
+    showMessageDrawer.value = true;
+  }
+
+  onMounted(() => {
+    window.addEventListener(OPEN_MESSAGE_DRAWER_EVENT, handleOpenMessageDrawerEvent);
+  });
+
+  onBeforeUnmount(() => {
+    window.removeEventListener(OPEN_MESSAGE_DRAWER_EVENT, handleOpenMessageDrawerEvent);
+  });
+
   onBeforeMount(() => {
     if (isPlatformUser.value) {
       appStore.connectSystemMessageSSE(userStore.showSystemNotify);
+      appStore.refreshUnreadMessageCount().catch(() => undefined);
       return;
     }
-    if (route.name !== WorkbenchRouteEnum.WORKBENCH_INDEX) {
-      appStore.initMessage();
-    }
+    appStore.initMessage();
     appStore.connectSystemMessageSSE(userStore.showSystemNotify);
     appStore.showSQLBot();
     userStore.initApiKeyList();
@@ -356,4 +372,25 @@
   );
 </script>
 
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+  @keyframes message-bell-pulse-keyframes {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    25% {
+      transform: scale(1.2);
+    }
+    50% {
+      transform: scale(0.95);
+    }
+    75% {
+      transform: scale(1.1);
+    }
+  }
+
+  .message-bell-pulse {
+    display: inline-block;
+    animation: message-bell-pulse-keyframes 0.6s ease-in-out 2;
+  }
+</style>

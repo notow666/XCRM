@@ -23,6 +23,7 @@ import cn.cordys.crm.customer.dto.CustomerPoolRecycleRuleDTO;
 import cn.cordys.crm.customer.dto.MobileConflictDTO;
 import cn.cordys.crm.customer.dto.request.CustomerChartAnalysisDbRequest;
 import cn.cordys.crm.customer.dto.request.CustomerPageRequest;
+import cn.cordys.crm.customer.dto.request.PoolBatchAssignByConditionRequest;
 import cn.cordys.crm.customer.dto.request.PoolCustomerChartAnalysisRequest;
 import cn.cordys.crm.customer.dto.request.PoolCustomerPickRequest;
 import cn.cordys.crm.customer.mapper.ExtCustomerCapacityMapper;
@@ -68,6 +69,7 @@ public class PoolCustomerService {
 
     public static final long DAY_MILLIS = 24 * 60 * 60 * 1000;
     private static final int BATCH_DELETE_BY_CONDITION_SIZE = 500;
+    private static final int BATCH_ASSIGN_BY_CONDITION_MAX_SIZE = 2000;
     @Resource
     private BaseMapper<Customer> customerMapper;
     @Resource
@@ -405,6 +407,25 @@ public class PoolCustomerService {
             batchDelete(deleteIds, userId, orgId);
             deletedCount += deleteIds.size();
         }
+    }
+
+    /**
+     * 按筛选条件批量分配客户（取当前筛选排序下的前 assignCount 条）
+     *
+     * @return 未分配的客户数量，0 表示全部分配完成
+     */
+    public int batchAssignByCondition(PoolBatchAssignByConditionRequest request, String currentOrgId, String currentUser) {
+        int assignCount = Math.min(request.getAssignCount(), BATCH_ASSIGN_BY_CONDITION_MAX_SIZE);
+        PageHelper.startPage(1, assignCount, false);
+        List<String> ids = extCustomerMapper.listIds(request, currentOrgId, currentUser, null);
+        if (CollectionUtils.isEmpty(ids)) {
+            return 0;
+        }
+        PoolBatchAssignRequest batchAssignRequest = new PoolBatchAssignRequest();
+        batchAssignRequest.setBatchIds(ids);
+        batchAssignRequest.setAssignUserId(request.getAssignUserId());
+        batchAssignRequest.setAssignUserIds(request.getAssignUserIds());
+        return batchAssign(batchAssignRequest, request.getAssignUserId(), currentOrgId, currentUser);
     }
 
     /**

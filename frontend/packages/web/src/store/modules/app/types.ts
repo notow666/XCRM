@@ -73,6 +73,9 @@ export interface AppState {
   topMenus: RouteRecordRaw[];
   currentTopMenu: RouteRecordRaw;
   messageInfo: MessageInfo; // 消息通知和公告
+  unreadMessageCount: number; // 未读消息总数（顶栏角标）
+  seenNotificationIds: string[]; // 本会话已弹出 Toast 的消息 id
+  messageBellPulse: boolean; // 新消息时铃铛动效
   eventSource: null | EventSource; // 事件流资源
   menuIconStatus: Record<string, boolean>;
   restoreMenuTimeStamp: number; // 恢复菜单激活状态，用于跳转拦截导致的菜单激活状态与路由不一致

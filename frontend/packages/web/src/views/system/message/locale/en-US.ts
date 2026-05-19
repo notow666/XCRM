@@ -40,6 +40,8 @@ export default {
   'system.message.system': 'System',
   'system.message.systemNotification': 'System notification',
   'system.message.setRead': 'Mark as read',
+  'system.message.viewMessage': 'View',
+  'system.message.newMessageCount': 'You have {count} new messages',
   'system.message.platformNotice': '{type}notice',
   'system.message.confirmCloseWeChatNotice': 'Are you sure to close the WeCom notification?',
   'system.message.weComSwitchTip':

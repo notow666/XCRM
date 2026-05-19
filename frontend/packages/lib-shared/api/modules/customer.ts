@@ -12,6 +12,7 @@ import {
   AddCustomerViewUrl,
   AssignOpenSeaCustomerUrl,
   BatchAssignOpenSeaCustomerUrl,
+  BatchAssignOpenSeaCustomerByConditionUrl,
   BatchDeleteCustomerCollaborationUrl,
   BatchDeleteCustomerUrl,
   BatchDeleteCustomerByConditionUrl,
@@ -173,6 +174,7 @@ import type {
   AddCustomerRelationItemParams,
   AssignOpenSeaCustomerParams,
   BatchAssignOpenSeaCustomerParams,
+  BatchAssignOpenSeaCustomerByConditionParams,
   BatchMoveToPublicPoolParams,
   BatchOperationOpenSeaCustomerParams,
   BatchUpdatePoolAccountParams,
@@ -632,6 +634,11 @@ export default function useProductApi(CDR: CordysAxios) {
   // 批量分配公海客户
   function batchAssignOpenSeaCustomer(data: BatchAssignOpenSeaCustomerParams) {
     return CDR.post<number>({ url: BatchAssignOpenSeaCustomerUrl, data });
+  }
+
+  // 按筛选条件批量分配公海客户
+  function batchAssignOpenSeaCustomerByCondition(data: BatchAssignOpenSeaCustomerByConditionParams) {
+    return CDR.post<number>({ url: BatchAssignOpenSeaCustomerByConditionUrl, data });
   }
 
   // 分配公海客户
@@ -1104,6 +1111,7 @@ export default function useProductApi(CDR: CordysAxios) {
     batchDeleteOpenSeaCustomer,
     batchDeleteOpenSeaCustomerByCondition,
     batchAssignOpenSeaCustomer,
+    batchAssignOpenSeaCustomerByCondition,
     assignOpenSeaCustomer,
     getOpenSeaOptions,
     getOpenSeaCustomer,

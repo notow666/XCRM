@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 
 import { CompanyTypeEnum } from '@lib/shared/enums/commonEnum';
+import { SystemMessageTypeEnum } from '@lib/shared/enums/systemEnum';
 import { useI18n } from '@lib/shared/hooks/useI18n';
 import { getGenerateId } from '@lib/shared/method';
 import { clearToken, setToken } from '@lib/shared/method/auth';
@@ -8,9 +9,11 @@ import { removeRouteListener } from '@lib/shared/method/route-listener';
 import { removeScript } from '@lib/shared/method/scriptLoader';
 import type { ApiKeyItem } from '@lib/shared/models/system/business';
 import type { LoginParams } from '@lib/shared/models/system/login';
+import type { MessageCenterItem } from '@lib/shared/models/system/message';
 import type { UserInfo } from '@lib/shared/models/user';
 
 import NotifyContent from '@/views/system/message/components/notifyContent.vue';
+import NotifyToastContent from '@/views/system/message/components/notifyToastContent.vue';
 
 import { getApiKeyList, isLogin, login, signout } from '@/api/modules';
 import useDiscreteApi from '@/hooks/useDiscreteApi';
@@ -20,6 +23,7 @@ import useAppStore from '@/store/modules/app/index';
 import useLicenseStore from '@/store/modules/setting/license';
 import { hasAnyPermission } from '@/utils/permission';
 
+import { dispatchOpenMessageDrawer } from '@/constants/messageNotify';
 import type { NotificationOptions, NotificationReactive } from 'naive-ui';
 
 const { notification } = useDiscreteApi();
@@ -114,6 +118,7 @@ const useUserStore = defineStore('user', {
         appStore.resetPageConfig();
       }
       appStore.disconnectSystemMessageSSE();
+      appStore.resetMessageNotifyState();
       this.destroySystemNotify();
       // 重置用户信息
       this.$reset();
@@ -209,7 +214,7 @@ const useUserStore = defineStore('user', {
         }
       }
     },
-    // 展示系统公告
+    // 展示系统公告（持久弹窗）
     showSystemNotify() {
       const appStore = useAppStore();
       if (appStore.messageInfo.announcementDTOList?.length) {
@@ -222,6 +227,37 @@ const useUserStore = defineStore('user', {
           },
           duration: undefined,
           maxCount: 1,
+        } as NotificationOptions);
+      }
+    },
+    /** 业务系统通知：短 Toast，同一会话同 id 不重复弹 */
+    showNotificationToasts(items: MessageCenterItem[]) {
+      if (!items.length) return;
+      const { t } = useI18n();
+      const displayItems = items.slice(0, 3);
+
+      displayItems.forEach((item) => {
+        const title =
+          item.type === SystemMessageTypeEnum.SYSTEM_NOTICE
+            ? t('system.message.systemNotification')
+            : item.subject || t('system.message.systemNotification');
+        const instance = notification.info({
+          title,
+          content: () =>
+            h(NotifyToastContent, {
+              item,
+              onClose: () => instance?.destroy(),
+            }),
+          duration: 5000,
+          onClick: () => dispatchOpenMessageDrawer(),
+        } as NotificationOptions);
+      });
+
+      if (items.length > 3) {
+        notification.info({
+          title: t('system.message.newMessageCount', { count: items.length }),
+          duration: 4000,
+          onClick: () => dispatchOpenMessageDrawer(),
         } as NotificationOptions);
       }
     },

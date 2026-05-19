@@ -399,6 +399,7 @@ export const {
   batchDeleteOpenSeaCustomer,
   batchDeleteOpenSeaCustomerByCondition,
   batchAssignOpenSeaCustomer,
+  batchAssignOpenSeaCustomerByCondition,
   getCustomerOpportunityPage,
   batchUpdateOpenSeaCustomer,
   getCustomerFollowRecordList,

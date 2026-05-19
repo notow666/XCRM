@@ -6,11 +6,13 @@ import { MMBA_DEVICE_SYNC_DOM_EVENT, SSE_EVENT_MMBA_DEVICE_SYNC } from '@lib/sha
 import { SSE_KIND_DATA_SPECIALIST, SSE_KIND_PLATFORM, SSE_KIND_TENANT } from '@lib/shared/constants/ssePrincipalKind';
 import { CompanyTypeEnum } from '@lib/shared/enums/commonEnum';
 import { ModuleConfigEnum } from '@lib/shared/enums/moduleEnum';
+import { SystemMessageStatusEnum } from '@lib/shared/enums/systemEnum';
 import { useI18n } from '@lib/shared/hooks/useI18n';
 import { getSSE } from '@lib/shared/method';
 import { withApiPathPrefix } from '@lib/shared/method/api-path';
 import { setLocalStorage } from '@lib/shared/method/local-storage';
 import { loadScript } from '@lib/shared/method/scriptLoader';
+import type { MessageCenterItem } from '@lib/shared/models/system/message';
 
 import {
   closeMessageSubscribe,
@@ -19,6 +21,7 @@ import {
   getKey,
   getModuleNavConfigList,
   getModuleTopNavList,
+  getNotificationCount,
   getOpportunityStageConfig,
   getPageConfig,
   getThirdConfigByType,
@@ -149,6 +152,9 @@ const useAppStore = defineStore('app', {
       notificationDTOList: [],
       announcementDTOList: [],
     },
+    unreadMessageCount: 0,
+    seenNotificationIds: [],
+    messageBellPulse: false,
     eventSource: null,
     menuIconStatus: {},
     restoreMenuTimeStamp: 0,
@@ -345,8 +351,7 @@ const useAppStore = defineStore('app', {
               return;
             }
 
-            this.messageInfo = { ...data };
-            callback();
+            this.handleIncomingMessageInfo(data, callback);
           } catch (error) {
             // eslint-disable-next-line no-console
             console.error('SSE Message parsing failure:', error);
@@ -397,6 +402,82 @@ const useAppStore = defineStore('app', {
       const userStore = useUserStore();
       this.menuIconStatus[userStore.userInfo.id] = val;
     },
+    resetMessageNotifyState() {
+      this.seenNotificationIds = [];
+      this.unreadMessageCount = 0;
+      this.messageBellPulse = false;
+    },
+    markNotificationsSeen(ids: string[]) {
+      const seen = new Set(this.seenNotificationIds);
+      ids.forEach((id) => seen.add(id));
+      this.seenNotificationIds = [...seen];
+    },
+    seedSeenNotifications(notifications: MessageCenterItem[], announcements: MessageCenterItem[]) {
+      const ids = [...(notifications ?? []), ...(announcements ?? [])].map((item) => item.id);
+      this.markNotificationsSeen(ids);
+    },
+    findNewUnreadNotifications(
+      previous: MessageCenterItem[],
+      next: MessageCenterItem[] | undefined
+    ): MessageCenterItem[] {
+      const prevIds = new Set((previous ?? []).map((item) => item.id));
+      const seen = new Set(this.seenNotificationIds);
+      return (next ?? []).filter(
+        (item) => item.status === SystemMessageStatusEnum.UNREAD && !prevIds.has(item.id) && !seen.has(item.id)
+      );
+    },
+    triggerMessageBellPulse() {
+      this.messageBellPulse = true;
+      window.setTimeout(() => {
+        this.messageBellPulse = false;
+      }, 1200);
+    },
+    async refreshUnreadMessageCount() {
+      try {
+        const result = await getNotificationCount({
+          type: '',
+          status: SystemMessageStatusEnum.UNREAD,
+          resourceType: '',
+          createTime: null,
+          endTime: null,
+        });
+        const totalItem = result?.find(({ key }) => key === 'total');
+        this.unreadMessageCount = totalItem?.count ?? 0;
+        this.messageInfo.read = this.unreadMessageCount === 0;
+      } catch (error) {
+        if (!isCanceledError(error)) {
+          // eslint-disable-next-line no-console
+          console.log(error);
+        }
+      }
+    },
+    handleIncomingMessageInfo(
+      data: {
+        read?: boolean;
+        notificationDTOList?: MessageCenterItem[];
+        announcementDTOList?: MessageCenterItem[];
+      },
+      callback: () => void
+    ) {
+      const prevNotifications = this.messageInfo.notificationDTOList ?? [];
+      this.messageInfo = {
+        read: data.read ?? true,
+        notificationDTOList: data.notificationDTOList ?? [],
+        announcementDTOList: data.announcementDTOList ?? [],
+      };
+
+      const newItems = this.findNewUnreadNotifications(prevNotifications, data.notificationDTOList);
+      const userStore = useUserStore();
+      // 未完成 initMessage 种子前不弹 Toast，避免首包 SSE 误报
+      if (newItems.length && this.seenNotificationIds.length > 0) {
+        this.markNotificationsSeen(newItems.map((item) => item.id));
+        userStore.showNotificationToasts(newItems);
+        this.triggerMessageBellPulse();
+      }
+
+      this.refreshUnreadMessageCount().catch(() => undefined);
+      callback();
+    },
     /**
      * 初始化首页消息
      */
@@ -406,6 +487,9 @@ const useAppStore = defineStore('app', {
         this.messageInfo.notificationDTOList = notifications;
         this.messageInfo.announcementDTOList = announcements;
         this.messageInfo.read = !(announcements?.length || notifications?.length);
+        this.seedSeenNotifications(notifications ?? [], announcements ?? []);
+
+        await this.refreshUnreadMessageCount();
 
         const userStore = useUserStore();
         userStore.showSystemNotify();

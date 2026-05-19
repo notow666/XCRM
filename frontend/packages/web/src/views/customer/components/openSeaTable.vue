@@ -29,15 +29,16 @@
           class="w-[200px]"
           @update-value="(e) => searchData(undefined, e)"
         />
+        <CrmPoolImportButton @import-success="searchData" />
         <n-button
-          v-if="hasAnyPermission(['CUSTOMER_MANAGEMENT_POOL:EXPORT']) && !props.readonly"
+          v-if="hasAnyPermission(['CUSTOMER_MANAGEMENT_POOL:ASSIGN']) && !props.readonly"
           type="primary"
           ghost
           class="n-btn-outline-primary"
-          :disabled="propsRes.data.length === 0"
-          @click="handleExportAllClick"
+          :disabled="(propsRes.crmPagination?.itemCount || 0) === 0"
+          @click="handleAssignByConditionClick"
         >
-          {{ t('common.exportAll') }}
+          {{ t('customer.assignByCondition') }}
         </n-button>
         <n-button
           v-if="hasAnyPermission(['CUSTOMER_MANAGEMENT_POOL:DELETE']) && !props.readonly"
@@ -48,7 +49,16 @@
         >
           {{ t('customer.deleteByCondition') }}
         </n-button>
-        <CrmPoolImportButton @import-success="searchData" />
+        <n-button
+          v-if="hasAnyPermission(['CUSTOMER_MANAGEMENT_POOL:EXPORT']) && !props.readonly"
+          type="primary"
+          ghost
+          class="n-btn-outline-primary"
+          :disabled="propsRes.data.length === 0"
+          @click="handleExportAllClick"
+        >
+          {{ t('common.exportAll') }}
+        </n-button>
       </div>
     </template>
     <template #actionRight>
@@ -93,14 +103,11 @@
     @change="searchData(undefined, undefined, activeCustomerId)"
     @delete="removeItemFromList(activeCustomerId)"
   />
-  <TransferModal
-    v-model:show="showDistributeModal"
-    :source-ids="checkedRowKeys"
-    :title="t('common.batchDistribute')"
-    :positive-text="t('common.distribute')"
-    :show-capacity="true"
-    :save-api="handleBatchAssignApi"
-    @load-list="handleDistributeSuccess"
+  <CrmPoolAssignByConditionModal
+    v-model:show="showAssignByConditionModal"
+    :total="propsRes.crmPagination?.itemCount || 0"
+    :query-params="assignByConditionQueryParams"
+    @success="handleAssignByConditionSuccess"
   />
   <CrmTableExportModal
     v-model:show="showExportModal"
@@ -126,7 +133,7 @@
 </template>
 
 <script setup lang="ts">
-  import { VNodeChild } from 'vue';
+  import { computed, VNodeChild } from 'vue';
   import { useRoute } from 'vue-router';
   import { DataTableRowKey, NButton, NSelect, NTooltip, useMessage } from 'naive-ui';
 
@@ -148,9 +155,9 @@
   import CrmTableButton from '@/components/pure/crm-table-button/index.vue';
   import CrmBatchEditModal from '@/components/business/crm-batch-edit-modal/index.vue';
   import CrmOperationButton from '@/components/business/crm-operation-button/index.vue';
+  import CrmPoolAssignByConditionModal from '@/components/business/crm-pool-assign-by-condition-modal/index.vue';
   import CrmPoolImportButton from '@/components/business/crm-pool-import-button/index.vue';
   import CrmTableExportModal from '@/components/business/crm-table-export-modal/index.vue';
-  import TransferModal from '@/components/business/crm-transfer-modal/index.vue';
   import TransferForm from '@/components/business/crm-transfer-modal/transferForm.vue';
   import CrmTransferToPoolModal from '@/components/business/crm-transfer-to-pool-modal/index.vue';
   import CrmViewSelect from '@/components/business/crm-view-select/index.vue';
@@ -159,7 +166,6 @@
 
   import {
     assignOpenSeaCustomer,
-    batchAssignOpenSeaCustomer,
     batchDeleteOpenSeaCustomer,
     batchDeleteOpenSeaCustomerByCondition,
     batchPickOpenSeaCustomer,
@@ -243,11 +249,6 @@
         permission: ['CUSTOMER_MANAGEMENT_POOL:PICK'],
       },
       {
-        label: t('common.batchDistribute'),
-        key: 'batchDistribute',
-        permission: ['CUSTOMER_MANAGEMENT_POOL:ASSIGN'],
-      },
-      {
         label: t('common.batchEdit'),
         key: 'batchEdit',
         permission: ['CUSTOMER_MANAGEMENT_POOL:UPDATE'],
@@ -302,44 +303,7 @@
     owners: [],
   });
   const distributeFormKey = ref(0);
-  const showDistributeModal = ref<boolean>(false);
-  function handleBatchAssignApi(params: any) {
-    const batchIds = params.batchIds || checkedRowKeys.value;
-    return batchAssignOpenSeaCustomer({
-      ...batchTableQueryParams.value,
-      batchIds: batchIds as string[],
-      assignUserId: params.assignUserId || params.owner || '',
-      assignUserIds: params.assignUserIds || [],
-    });
-  }
-  function handleDistributeSuccess() {
-    checkedRowKeys.value = [];
-    tableRefreshId.value += 1;
-  }
-  async function handleBatchAssign(owners: string[]) {
-    try {
-      distributeLoading.value = true;
-      const res = await batchAssignOpenSeaCustomer({
-        ...batchTableQueryParams.value,
-        batchIds: checkedRowKeys.value,
-        assignUserId: owners[0] || '',
-        assignUserIds: owners,
-      });
-      checkedRowKeys.value = [];
-      if (typeof res === 'number' && res > 0) {
-        Message.warning(t('module.customer.assignRemain', { count: res }));
-      } else {
-        Message.success(t('common.distributeSuccess'));
-      }
-      showDistributeModal.value = false;
-      tableRefreshId.value += 1;
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(error);
-    } finally {
-      distributeLoading.value = false;
-    }
-  }
+  const showAssignByConditionModal = ref(false);
 
   // 批量删除
   function handleBatchDelete() {
@@ -542,9 +506,6 @@
       case 'batchClaim':
         handleBatchClaim();
         break;
-      case 'batchDistribute':
-        showDistributeModal.value = true;
-        break;
       case 'batchDelete':
         handleBatchDelete();
         break;
@@ -657,6 +618,26 @@
   });
   const { propsRes, propsEvent, tableQueryParams, loadList, setLoadListParams, setAdvanceFilter } = useTableRes;
   batchTableQueryParams.value = tableQueryParams.value;
+
+  const assignByConditionQueryParams = computed(() => ({
+    ...tableQueryParams.value,
+    poolId: openSea.value as string,
+  }));
+
+  function handleAssignByConditionClick() {
+    const total = propsRes.value.crmPagination?.itemCount || 0;
+    if (!total) {
+      Message.warning(t('customer.batchDeleteByConditionEmptyTip'));
+      return;
+    }
+    showAssignByConditionModal.value = true;
+  }
+
+  function handleAssignByConditionSuccess() {
+    checkedRowKeys.value = [];
+    tableRefreshId.value += 1;
+  }
+
   const filterColumns = computed(() => {
     const removedColumnKeys = new Set(['follower', 'followTime']);
     return propsRes.value.columns.filter(

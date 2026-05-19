@@ -43,6 +43,7 @@ export const BatchPickOpenSeaCustomerUrl = '/pool/account/batch-pick'; // 批量
 export const BatchDeleteOpenSeaCustomerUrl = '/pool/account/batch-delete'; // 批量删除公海客户
 export const BatchDeleteOpenSeaCustomerByConditionUrl = '/pool/account/batch-delete-by-condition'; // 按筛选条件批量删除公海客户
 export const BatchAssignOpenSeaCustomerUrl = '/pool/account/batch-assign'; // 批量分配公海客户
+export const BatchAssignOpenSeaCustomerByConditionUrl = '/pool/account/batch-assign-by-condition'; // 按筛选条件批量分配公海客户
 export const AssignOpenSeaCustomerUrl = '/pool/account/assign'; // 分配公海客户
 export const GetOpenSeaOptionsUrl = '/pool/account/options'; // 获取公海选项
 export const DeleteOpenSeaCustomerUrl = '/pool/account/delete'; // 删除公海客户
