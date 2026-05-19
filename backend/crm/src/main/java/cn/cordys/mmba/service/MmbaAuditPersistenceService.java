@@ -1,5 +1,6 @@
 package cn.cordys.mmba.service;
 
+import cn.cordys.common.constants.CrmLoggers;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.mmba.domain.MmbaCallRecordAudit;
 import cn.cordys.mmba.domain.MmbaDeviceInfoAudit;
@@ -22,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
  * 1. call/sms/wx* 这几张表直接按 esId 做主键和幂等；
  * 2. deviceInfo/deviceStatus/wxLogin 保留本地 id，但不再依赖 BaseModel 或 organization_id。
  */
-@Slf4j
+@Slf4j(topic = CrmLoggers.MMBA_CALLBACK)
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class MmbaAuditPersistenceService {

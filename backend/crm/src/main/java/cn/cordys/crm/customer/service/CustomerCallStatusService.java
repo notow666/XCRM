@@ -1,5 +1,6 @@
 package cn.cordys.crm.customer.service;
 
+import cn.cordys.common.constants.CrmLoggers;
 import cn.cordys.crm.customer.domain.Customer;
 import cn.cordys.crm.customer.mapper.ExtCustomerMapper;
 import cn.cordys.crm.system.domain.User;
@@ -58,7 +59,7 @@ public class CustomerCallStatusService {
         }
         Customer customer = findCustomer(customerTel, um);
         if (customer == null) {
-            log.warn("客户拨打状态更新跳过，未找到客户 customerId={} customerTel={} um={} targetStatus={}",
+            log.warn(CrmLoggers.MMBA_CALLBACK_MARKER, "客户拨打状态更新跳过，未找到客户 customerId={} customerTel={} um={} targetStatus={}",
                     customerId, customerTel, um, targetStatus);
             return;
         }
@@ -67,7 +68,7 @@ public class CustomerCallStatusService {
             return;
         }
         extCustomerMapper.updateCallStatusById(customer.getId(), targetStatus);
-        log.info("客户拨打状态升级 customerId={} customerTel={} from={} to={}",
+        log.info(CrmLoggers.MMBA_CALLBACK_MARKER, "客户拨打状态升级 customerId={} customerTel={} from={} to={}",
                 customer.getId(), customer.getMobile(), currentStatus, targetStatus);
     }
 

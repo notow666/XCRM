@@ -7,7 +7,8 @@ import cn.cordys.common.constants.MdcConstants;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * 仅放行 MDC 中带有非空 {@link MdcConstants#TENANT_ID_KEY} 的日志事件（租户侧）。
+ * 租户侧路由：MDC 含 tenantId 时返回 {@link FilterReply#NEUTRAL}，交由后续 {@code LevelFilter} 按级别落盘；
+ * 返回 {@link FilterReply#ACCEPT} 会短路过滤器链，导致 info/warn/error 写入相同内容。
  */
 public class MdcTenantLogFilter extends Filter<ILoggingEvent> {
 
@@ -15,7 +16,7 @@ public class MdcTenantLogFilter extends Filter<ILoggingEvent> {
     public FilterReply decide(ILoggingEvent event) {
         String tenantId = event.getMDCPropertyMap().get(MdcConstants.TENANT_ID_KEY);
         if (StringUtils.isNotBlank(tenantId)) {
-            return FilterReply.ACCEPT;
+            return FilterReply.NEUTRAL;
         }
         return FilterReply.DENY;
     }

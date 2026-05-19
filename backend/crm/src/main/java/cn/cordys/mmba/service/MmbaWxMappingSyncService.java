@@ -1,11 +1,14 @@
 package cn.cordys.mmba.service;
 
+import cn.cordys.common.constants.CrmLoggers;
 import cn.cordys.mmba.domain.MmbaDeviceMapping;
 import cn.cordys.mmba.dto.ZzyData;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -17,7 +20,6 @@ import java.util.List;
 @Slf4j
 @Service
 public class MmbaWxMappingSyncService {
-
     @Resource
     private MmbaDeviceService mmbaDeviceService;
 
@@ -43,7 +45,13 @@ public class MmbaWxMappingSyncService {
                 data.getQq(),
                 data.getTimestamp()
         );
-        saveMapping(mapping, userId, data.getTenantId(), data.getReqId(), data.getEsId());
+        if (StringUtils.isBlank(mapping.getUm()) && StringUtils.isBlank(mapping.getWxid())) {
+            log.warn(CrmLoggers.MMBA_CALLBACK_MARKER, "MMBA微信映射同步跳过，um 和 wxid 都为空 tenantId={} reqId={} esId={}", data.getTenantId(), data.getReqId(), data.getEsId());
+            return;
+        }
+        log.info(CrmLoggers.MMBA_CALLBACK_MARKER, "MMBA微信映射同步 tenantId={} um={} deviceId={} imei={} wxid={}",
+                data.getTenantId(), mapping.getUm(), mapping.getDeviceId(), mapping.getImei(), mapping.getWxid());
+        mmbaDeviceService.saveOrUpdateMapping(mapping, userId);
     }
 
     /**
@@ -94,17 +102,17 @@ public class MmbaWxMappingSyncService {
         String wxid = StringUtils.trimToNull(data.getStaffIdInApp());
         String mappingStatus = resolveMappingStatus(data.getLoginStatus());
         if (StringUtils.isBlank(um) || StringUtils.isBlank(wxid) || StringUtils.isBlank(mappingStatus)) {
-            log.warn("MMBA微信映射状态同步跳过 tenantId={} um={} wxid={} loginStatus={}",
+            log.warn(CrmLoggers.MMBA_CALLBACK_MARKER, "MMBA微信映射状态同步跳过 tenantId={} um={} wxid={} loginStatus={}",
                     data.getTenantId(), um, wxid, data.getLoginStatus());
             return;
         }
         boolean updated = mmbaDeviceService.updateMappingStatus(um, wxid, mappingStatus, userId);
         if (!updated) {
-            log.info("MMBA微信映射状态同步未命中现有映射 tenantId={} um={} wxid={} mappingStatus={}",
+            log.info(CrmLoggers.MMBA_CALLBACK_MARKER, "MMBA微信映射状态同步未命中现有映射 tenantId={} um={} wxid={} mappingStatus={}",
                     data.getTenantId(), um, wxid, mappingStatus);
             return;
         }
-        log.info("MMBA微信映射状态同步 tenantId={} um={} wxid={} mappingStatus={}",
+        log.info(CrmLoggers.MMBA_CALLBACK_MARKER, "MMBA微信映射状态同步 tenantId={} um={} wxid={} mappingStatus={}",
                 data.getTenantId(), um, wxid, mappingStatus);
     }
 

@@ -1,20 +1,13 @@
 package cn.cordys.common.context;
 
-
 import cn.cordys.common.constants.MdcConstants;
-
+import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.context.TenantContext;
-
 import cn.cordys.tenant.service.TenantMetaService;
-
 import jakarta.annotation.Resource;
-
 import lombok.extern.slf4j.Slf4j;
-
 import org.apache.commons.lang3.StringUtils;
-
 import org.slf4j.MDC;
-
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashSet;
@@ -35,61 +28,46 @@ public class TenantTaskExecutor {
     private TenantMetaService tenantMetaService;
 
     public void runForEachEnabledTenant(String taskName, Consumer<String> tenantTask) {
-
-        String previousTenantId = TenantContext.getTenantId();
-
-        String previousMdcTenantId = MDC.get(MdcConstants.TENANT_ID_KEY);
-
         Set<String> tenantIds = new LinkedHashSet<>();
-
         tenantIds.add(TenantContext.DEFAULT_TENANT_ID);
-
         tenantIds.addAll(tenantMetaService.listEnabledTenantIds());
 
         for (String tenantId : tenantIds) {
-
+            String previousTenantId = TenantContext.getTenantId();
+            String previousMdcTraceId = MDC.get(MdcConstants.TRACE_ID_KEY);
+            String previousMdcTenantId = MDC.get(MdcConstants.TENANT_ID_KEY);
             try {
-
-                TenantContext.setTenantId(tenantId);
-
-                MDC.put(MdcConstants.TENANT_ID_KEY, tenantId);
-
+                if (StringUtils.isNotBlank(tenantId)) {
+                    TenantContext.setTenantId(tenantId);
+                    MDC.put(MdcConstants.TRACE_ID_KEY, IDGenerator.nextStr());
+                    MDC.put(MdcConstants.TENANT_ID_KEY, tenantId);
+                } else {
+                    TenantContext.clear();
+                    MDC.remove(MdcConstants.TRACE_ID_KEY);
+                    MDC.remove(MdcConstants.TENANT_ID_KEY);
+                }
                 tenantTask.accept(tenantId);
-
             } catch (Exception e) {
-
                 log.error("执行多租户定时任务失败，taskName={}, tenantId={}", taskName, tenantId, e);
-
             } finally {
-
-                MDC.remove(MdcConstants.TENANT_ID_KEY);
-
+                if (StringUtils.isBlank(previousTenantId)) {
+                    TenantContext.clear();
+                } else {
+                    TenantContext.setTenantId(previousTenantId);
+                }
+                if (StringUtils.isBlank(previousMdcTraceId)) {
+                    MDC.remove(MdcConstants.TRACE_ID_KEY);
+                } else {
+                    MDC.put(MdcConstants.TRACE_ID_KEY, previousMdcTraceId);
+                }
+                if (StringUtils.isBlank(previousMdcTenantId)) {
+                    MDC.remove(MdcConstants.TENANT_ID_KEY);
+                } else {
+                    MDC.put(MdcConstants.TENANT_ID_KEY, previousMdcTenantId);
+                }
             }
-
         }
-
-        if (StringUtils.isBlank(previousTenantId)) {
-
-            TenantContext.clear();
-
-        } else {
-
-            TenantContext.setTenantId(previousTenantId);
-
-        }
-
-        if (StringUtils.isBlank(previousMdcTenantId)) {
-
-            MDC.remove(MdcConstants.TENANT_ID_KEY);
-
-        } else {
-
-            MDC.put(MdcConstants.TENANT_ID_KEY, previousMdcTenantId);
-
-        }
-
     }
-
 }
 
 

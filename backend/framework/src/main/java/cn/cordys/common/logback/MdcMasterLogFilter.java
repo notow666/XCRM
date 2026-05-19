@@ -8,7 +8,8 @@ import cn.cordys.common.constants.MdcConstants;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * 放行无租户 MDC 且非 MMBA 回调专用 Logger 的日志（平台/数据专员/定时任务等）。
+ * Master 侧路由：无 tenantId 且非 MMBA 专用 Logger 时返回 {@link FilterReply#NEUTRAL}，交由 {@code LevelFilter} 分级别；
+ * 不可返回 {@link FilterReply#ACCEPT}，否则会跳过后续级别过滤器。
  */
 public class MdcMasterLogFilter extends Filter<ILoggingEvent> {
 
@@ -19,7 +20,7 @@ public class MdcMasterLogFilter extends Filter<ILoggingEvent> {
         }
         String tenantId = event.getMDCPropertyMap().get(MdcConstants.TENANT_ID_KEY);
         if (StringUtils.isBlank(tenantId)) {
-            return FilterReply.ACCEPT;
+            return FilterReply.NEUTRAL;
         }
         return FilterReply.DENY;
     }

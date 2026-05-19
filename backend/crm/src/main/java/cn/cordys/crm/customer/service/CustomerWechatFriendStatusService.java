@@ -1,5 +1,6 @@
 package cn.cordys.crm.customer.service;
 
+import cn.cordys.common.constants.CrmLoggers;
 import cn.cordys.crm.customer.domain.Customer;
 import cn.cordys.crm.customer.mapper.ExtCustomerMapper;
 import cn.cordys.crm.system.domain.User;
@@ -76,7 +77,7 @@ public class CustomerWechatFriendStatusService {
         }
         List<Customer> customers = listOwnedCustomers(um, friendPhone);
         if (CollectionUtils.isEmpty(customers)) {
-            log.info("客户微信好友状态跳过，未找到匹配客户 um={} friendPhone={} processStatus={}",
+            log.warn(CrmLoggers.MMBA_CALLBACK_MARKER, "客户微信好友状态跳过，未找到匹配客户 um={} friendPhone={} processStatus={}",
                     um, friendPhone, processStatus);
             return;
         }
@@ -92,7 +93,7 @@ public class CustomerWechatFriendStatusService {
     public void handleFriendChangeAudit(String um, String friendPhone, String isFriend, Integer operFlag, String userId) {
         List<Customer> customers = listOwnedCustomers(um, friendPhone);
         if (CollectionUtils.isEmpty(customers)) {
-            log.info("客户微信好友状态跳过，未找到匹配客户 um={} friendPhone={} isFriend={} operFlag={}",
+            log.warn(CrmLoggers.MMBA_CALLBACK_MARKER, "客户微信好友状态跳过，未找到匹配客户 um={} friendPhone={} isFriend={} operFlag={}",
                     um, friendPhone, isFriend, operFlag);
             return;
         }

@@ -1,5 +1,6 @@
 package cn.cordys.mmba.service;
 
+import cn.cordys.common.constants.CrmLoggers;
 import cn.cordys.crm.customer.domain.Customer;
 import cn.cordys.crm.customer.domain.CustomerFollowWayConfig;
 import cn.cordys.crm.customer.service.CustomerFollowWayService;
@@ -23,7 +24,7 @@ import java.util.List;
  * MMBA 自动新增客户跟进记录。
  * 仅在回调首次进入成功态时触发，避免把现有回调幂等和业务副作用幂等混在一起。
  */
-@Slf4j
+@Slf4j(topic = CrmLoggers.MMBA_CALLBACK)
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class MmbaAutoCustomerFollowService {

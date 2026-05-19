@@ -1,1 +1,75 @@
-package cn.cordys.dataspecialist.service;import cn.cordys.common.exception.GenericException;import cn.cordys.common.security.ShiroSessionAttributes;import cn.cordys.dataspecialist.DataSpecialistConstants;import cn.cordys.dataspecialist.dto.DataSpecialistLoginRequest;import cn.cordys.security.SessionUser;import cn.cordys.security.SessionUtils;import org.apache.commons.lang3.StringUtils;import org.apache.shiro.SecurityUtils;import org.apache.shiro.authc.*;import org.apache.shiro.subject.Subject;import org.springframework.stereotype.Service;import cn.cordys.common.constants.LoginAuthenticateConstants.LoginAuthenticateType;@Servicepublic class DataSpecialistAuthService {    public SessionUser login(DataSpecialistLoginRequest request) {        String username = StringUtils.trimToEmpty(request.getUsername());        Subject subject = SecurityUtils.getSubject();        subject.getSession().setAttribute(ShiroSessionAttributes.AUTHENTICATE, LoginAuthenticateType.DATA_SPECIALIST.name());        try {            subject.login(new UsernamePasswordToken(username, request.getPassword()));            if (!subject.isAuthenticated()) {                throw new GenericException("账号或密码错误");            }            return SessionUtils.getUser();        } catch (UnknownAccountException | IncorrectCredentialsException e) {            throw new GenericException("账号或密码错误");        } catch (DisabledAccountException e) {            throw new GenericException("账号已禁用");        } catch (AuthenticationException e) {            throw new GenericException("账号或密码错误");        }    }    public void logout() {        SecurityUtils.getSubject().logout();    }    public SessionUser isLogin() {        SessionUser user = SessionUtils.getUser();        if (user == null || !LoginAuthenticateType.DATA_SPECIALIST.name().equalsIgnoreCase(StringUtils.defaultString(user.getSource()))) {            return null;        }        return user;    }}
+package cn.cordys.dataspecialist.service;
+
+
+import cn.cordys.common.exception.GenericException;
+
+import cn.cordys.common.security.ShiroSessionAttributes;
+
+import cn.cordys.dataspecialist.DataSpecialistConstants;
+
+import cn.cordys.dataspecialist.dto.DataSpecialistLoginRequest;
+
+import cn.cordys.security.SessionUser;
+import cn.cordys.security.SessionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.shiro.SecurityUtils;
+import org.apache.shiro.authc.*;
+import org.apache.shiro.subject.Subject;
+import org.springframework.stereotype.Service;
+
+import cn.cordys.common.constants.LoginAuthenticateConstants.LoginAuthenticateType;
+
+@Service
+
+public class DataSpecialistAuthService {
+
+    public SessionUser login(DataSpecialistLoginRequest request) {
+
+        String username = StringUtils.trimToEmpty(request.getUsername());
+
+        Subject subject = SecurityUtils.getSubject();
+
+        subject.getSession().setAttribute(ShiroSessionAttributes.AUTHENTICATE, LoginAuthenticateType.DATA_SPECIALIST.name());
+
+        try {
+
+            subject.login(new UsernamePasswordToken(username, request.getPassword()));
+
+            if (!subject.isAuthenticated()) {
+
+                throw new GenericException("账号或密码错误");
+
+            }
+
+            return SessionUtils.getUser();
+
+        } catch (UnknownAccountException | IncorrectCredentialsException e) {
+
+            throw new GenericException("账号或密码错误");
+
+        } catch (DisabledAccountException e) {
+
+            throw new GenericException("账号已禁用");
+
+        } catch (AuthenticationException e) {
+
+            throw new GenericException("账号或密码错误");
+
+        }
+    }
+
+
+    public void logout() {
+        SecurityUtils.getSubject().logout();
+    }
+
+
+    public SessionUser isLogin() {
+        SessionUser user = SessionUtils.getUser();
+        if (user == null || !LoginAuthenticateType.DATA_SPECIALIST.name().equalsIgnoreCase(StringUtils.defaultString(user.getSource()))) {
+            return null;
+        }
+        return user;
+    }
+}
+
