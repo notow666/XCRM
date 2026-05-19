@@ -149,7 +149,7 @@
           showModal.value = false;
           const transferredCount = props.sourceIds.length - (data || 0);
           if (data && data > 0) {
-            Message.warning(`成功转移 ${transferredCount} 个客户，由于库容不足，${data} 个未转移`);
+            Message.warning(`成功转移 ${transferredCount} 个客户，${data} 个未转移`);
           } else {
             Message.success(t('common.transferSuccess'));
           }

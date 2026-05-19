@@ -678,7 +678,8 @@ public class CustomerService {
                     originCustomer.getCreateSource(), StringUtils.defaultIfBlank(request.getOwner(), originCustomer.getOwner()), orgId);
         }
         if (ownerChanged && !mobileChanged) {
-            customerMobileRuleService.validateOwnerConflict(request.getId(), originCustomer.getMobile(), request.getOwner(), orgId);
+            customerMobileRuleService.validateOwnerConflict(request.getId(), originCustomer.getMobile(),
+                    originCustomer.getCreateSource(), request.getOwner(), orgId);
         }
         if (mobileChanged) {
             customer.setCallStatus(0);
@@ -804,20 +805,7 @@ public class CustomerService {
     }
 
     private void validatePoolMobileConflict(String customerId, String mobile, String orgId) {
-        String normalizedMobile = StringUtils.trimToNull(mobile);
-        if (normalizedMobile == null) {
-            return;
-        }
-        LambdaQueryWrapper<Customer> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(Customer::getOrganizationId, orgId)
-                .eq(Customer::getInSharedPool, true)
-                .eq(Customer::getMobile, normalizedMobile);
-        if (StringUtils.isNotBlank(customerId)) {
-            queryWrapper.nq(Customer::getId, customerId);
-        }
-        if (CollectionUtils.isNotEmpty(customerMapper.selectListByLambda(queryWrapper))) {
-            throw new GenericException(Translator.getWithArgs("common.field_value.repeat", "手机号"));
-        }
+        customerMobileRuleService.validateForSave(customerId, null, mobile, CustomerCreateSource.POOL_IMPORT, null, orgId);
     }
 
     @OperationLog(module = LogModule.CUSTOMER_INDEX, type = LogType.DELETE, resourceId = "{#id}")
@@ -838,7 +826,10 @@ public class CustomerService {
     public int batchTransfer(CustomerBatchTransferRequest request, String userId, String orgId) {
         List<Customer> originCustomers = customerMapper.selectByIds(request.getIds());
         List<String> owners = getOwners(originCustomers);
-        long processCount = originCustomers.stream().filter(customer -> !Strings.CS.equals(customer.getOwner(), request.getOwner())).count();
+        List<Customer> candidateCustomers = originCustomers.stream()
+                .filter(customer -> !Strings.CS.equals(customer.getOwner(), request.getOwner()))
+                .toList();
+        long processCount = candidateCustomers.size();
         if (processCount <= 0) {
             return 0;
         }
@@ -873,14 +864,21 @@ public class CustomerService {
 
         dataScopeService.checkDataPermission(userId, orgId, owners, PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE);
 
-        // 如果实际转移数量小于请求数量，截断列表
-        List<String> transferIds = request.getIds();
-        if (actualTransferCount < processCount) {
-            transferIds = originCustomers.stream()
-                    .filter(customer -> !Strings.CS.equals(customer.getOwner(), request.getOwner()))
-                    .limit(actualTransferCount)
-                    .map(Customer::getId)
-                    .collect(Collectors.toList());
+        List<Customer> ownerSnapshot = customerMobileRuleService.listOwnerOwnedCustomers(request.getOwner(), orgId, null);
+        List<Customer> transferableCustomers = new ArrayList<>();
+        for (Customer customer : candidateCustomers) {
+            if (transferableCustomers.size() >= actualTransferCount) {
+                break;
+            }
+            if (customerMobileRuleService.hasOwnerReceiveConflict(customer.getMobile(), ownerSnapshot, customer.getCreateSource())) {
+                continue;
+            }
+            transferableCustomers.add(customer);
+            ownerSnapshot.add(customer);
+        }
+        List<String> transferIds = transferableCustomers.stream().map(Customer::getId).toList();
+        if (transferIds.isEmpty()) {
+            return (int) processCount;
         }
 
         CustomerBatchTransferRequest transferRequest = new CustomerBatchTransferRequest();
@@ -909,7 +907,7 @@ public class CustomerService {
         logService.batchAdd(logs);
         sendTransferNotice(transferredCustomers, request.getOwner(), userId, orgId);
 
-        return (int) processCount - actualTransferCount;
+        return (int) processCount - transferIds.size();
     }
 
     private void sendTransferNotice(List<Customer> originCustomers, String toUser, String userId, String orgId) {

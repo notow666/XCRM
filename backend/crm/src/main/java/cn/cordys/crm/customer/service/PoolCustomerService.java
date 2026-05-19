@@ -326,11 +326,11 @@ public class PoolCustomerService {
                  customerWrapper.eq(Customer::getOwner, targetUserId).eq(Customer::getInSharedPool, false);
                  int ownCount = customerMapper.selectListByLambda(customerWrapper).size();
                  remainingCapacity = Math.max(0, customerCapacity.getCapacity() - (ownCount - excludeCount));
-             }
+            }
              userCapacitiesMap.put(targetUserId, remainingCapacity);
-             userOwnedPoolMobileMap.put(targetUserId, loadOwnerPoolMobiles(targetUserId, currentOrgId));
-             userPrivateConflictMobileMap.put(targetUserId,
-                     customerMobileRuleService.findConflictMobilesForOwnerPrivateSources(candidateMobiles, targetUserId, currentOrgId));
+            userOwnedPoolMobileMap.put(targetUserId, customerMobileRuleService.loadOwnerPoolMobiles(targetUserId, currentOrgId));
+            userPrivateConflictMobileMap.put(targetUserId,
+                     customerMobileRuleService.findPoolImportReceiveBlockingOwnerPrivateMobiles(candidateMobiles, targetUserId, currentOrgId));
          }
 
          int totalCustomers = request.getBatchIds().size();
@@ -347,16 +347,18 @@ public class PoolCustomerService {
              int attempts = 0;
              boolean success = false;
              while (attempts < userCount) {
-                 String currentUserId = assignUserIds.get(userIdx);
-                 Integer capacity = userCapacitiesMap.get(currentUserId);
-                 Set<String> ownedPoolMobiles = userOwnedPoolMobileMap.computeIfAbsent(currentUserId,
-                         key -> loadOwnerPoolMobiles(currentUserId, currentOrgId));
-                 Set<String> privateConflictMobiles = userPrivateConflictMobileMap.computeIfAbsent(currentUserId,
-                         key -> customerMobileRuleService.findConflictMobilesForOwnerPrivateSources(candidateMobiles, currentUserId, currentOrgId));
-                 if (capacity != null && capacity > 0 && !hasOwnerMobileConflict(customer, privateConflictMobiles, ownedPoolMobiles)) {
+                String currentUserId = assignUserIds.get(userIdx);
+                Integer capacity = userCapacitiesMap.get(currentUserId);
+                Set<String> ownedPoolMobiles = userOwnedPoolMobileMap.computeIfAbsent(currentUserId,
+                        key -> customerMobileRuleService.loadOwnerPoolMobiles(currentUserId, currentOrgId));
+                Set<String> privateConflictMobiles = userPrivateConflictMobileMap.computeIfAbsent(currentUserId,
+                        key -> customerMobileRuleService.findPoolImportReceiveBlockingOwnerPrivateMobiles(candidateMobiles, currentUserId, currentOrgId));
+                 if (capacity != null && capacity > 0
+                         && !customerMobileRuleService.hasPoolImportReceiveConflict(customer == null ? null : customer.getMobile(),
+                         privateConflictMobiles, ownedPoolMobiles)) {
                      ownCustomer(customerId, currentUserId, null, currentUser, LogType.ASSIGN, currentOrgId, false);
                      userCapacitiesMap.put(currentUserId, capacity - 1);
-                     addOwnedMobile(customer, ownedPoolMobiles);
+                     customerMobileRuleService.addOwnedMobile(customer, ownedPoolMobiles);
                      assignedCount++;
                      success = true;
                      userIdx = (userIdx + 1) % userCount;
@@ -695,12 +697,12 @@ public class PoolCustomerService {
         Map<String, Customer> customerMap = customerMapper.selectByIds(customerIds).stream()
                 .collect(Collectors.toMap(Customer::getId, customer -> customer));
         List<String> mobiles = customerMap.values().stream().map(Customer::getMobile).toList();
-        Set<String> ownerPrivateConflictMobiles = customerMobileRuleService.findConflictMobilesForOwnerPrivateSources(mobiles, ownerId, currentOrgId);
-        Set<String> ownedPoolMobiles = loadOwnerPoolMobiles(ownerId, currentOrgId);
+        Set<String> ownerPrivateConflictMobiles = customerMobileRuleService.findPoolImportReceiveBlockingOwnerPrivateMobiles(mobiles, ownerId, currentOrgId);
+        Set<String> ownedPoolMobiles = customerMobileRuleService.loadOwnerPoolMobiles(ownerId, currentOrgId);
         for (String customerId : customerIds) {
             Customer customer = customerMap.get(customerId);
             validateOwnerMobileConflict(customer, ownerId, currentOrgId, ownerPrivateConflictMobiles, ownedPoolMobiles);
-            addOwnedMobile(customer, ownedPoolMobiles);
+            customerMobileRuleService.addOwnedMobile(customer, ownedPoolMobiles);
         }
     }
 
@@ -712,38 +714,13 @@ public class PoolCustomerService {
         }
         Set<String> privateConflictMobiles = ownerPrivateConflictMobiles != null
                 ? ownerPrivateConflictMobiles
-                : customerMobileRuleService.findConflictMobilesForOwnerPrivateSources(List.of(mobile), ownerId, currentOrgId);
+                : customerMobileRuleService.findPoolImportReceiveBlockingOwnerPrivateMobiles(List.of(mobile), ownerId, currentOrgId);
         Set<String> poolMobiles = ownedPoolMobiles != null
                 ? ownedPoolMobiles
-                : loadOwnerPoolMobiles(ownerId, currentOrgId);
-        if (privateConflictMobiles.contains(mobile) || poolMobiles.contains(mobile)) {
+                : customerMobileRuleService.loadOwnerPoolMobiles(ownerId, currentOrgId);
+        if (customerMobileRuleService.hasPoolImportReceiveConflict(mobile, privateConflictMobiles, poolMobiles)) {
             throw new GenericException(Translator.getWithArgs("common.field_value.repeat", "手机号"));
         }
-    }
-
-    private boolean hasOwnerMobileConflict(Customer customer, Set<String> ownerPrivateConflictMobiles, Set<String> ownedPoolMobiles) {
-        String mobile = customer == null ? null : StringUtils.trimToNull(customer.getMobile());
-        return mobile != null && (ownerPrivateConflictMobiles.contains(mobile) || ownedPoolMobiles.contains(mobile));
-    }
-
-    private void addOwnedMobile(Customer customer, Set<String> ownedMobiles) {
-        String mobile = customer == null ? null : StringUtils.trimToNull(customer.getMobile());
-        if (mobile != null) {
-            ownedMobiles.add(mobile);
-        }
-    }
-
-    private Set<String> loadOwnerPoolMobiles(String ownerId, String currentOrgId) {
-        LambdaQueryWrapper<Customer> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(Customer::getOwner, ownerId)
-                .eq(Customer::getOrganizationId, currentOrgId)
-                .eq(Customer::getInSharedPool, false)
-                .eq(Customer::getCreateSource, CustomerCreateSource.POOL_IMPORT);
-        return customerMapper.selectListByLambda(queryWrapper).stream()
-                .map(Customer::getMobile)
-                .map(StringUtils::trimToNull)
-                .filter(StringUtils::isNotBlank)
-                .collect(Collectors.toCollection(HashSet::new));
     }
 
     public void batchUpdate(ResourceBatchEditRequest request, String userId, String organizationId) {
