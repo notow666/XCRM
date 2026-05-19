@@ -8,14 +8,12 @@ import cn.cordys.crm.system.mapper.ExtUserMapper;
 import cn.cordys.mmba.dto.MmbaMgmtSsoCheckRequest;
 import cn.cordys.mmba.dto.MmbaMgmtSsoRedirectVO;
 import cn.cordys.security.SessionUser;
-import cn.cordys.security.UserDTO;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.LinkedHashMap;
@@ -53,7 +51,7 @@ public class MmbaMgmtSsoService {
             throw new GenericException(CrmHttpResultCode.UNAUTHORIZED, "未登录");
         }
         String um = StringUtils.trimToNull(user.getUm());
-        um = "A001";
+//        um = "A001";
         if (StringUtils.isBlank(um)) {
             throw new GenericException(CrmHttpResultCode.VALIDATE_FAILED,
                     "缺少用户 MMBA 唯一标识(um)：请在「组织与成员」中为用户维护 um，且与指掌易管理员 loginName 一致；若已维护请重新登录后再试");
@@ -127,13 +125,5 @@ public class MmbaMgmtSsoService {
 
     private static String stripTrailingSlash(String raw) {
         return StringUtils.removeEnd(StringUtils.trimToEmpty(raw), "/");
-    }
-
-    private static String urlEncodePathSegment(String s) {
-        return URLEncoder.encode(s, StandardCharsets.UTF_8).replace("+", "%20");
-    }
-
-    private static String urlEncodeQuery(String s) {
-        return URLEncoder.encode(s, StandardCharsets.UTF_8);
     }
 }

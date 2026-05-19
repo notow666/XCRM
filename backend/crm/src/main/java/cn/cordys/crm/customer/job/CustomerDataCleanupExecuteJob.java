@@ -25,8 +25,8 @@ public class CustomerDataCleanupExecuteJob extends BaseScheduleJob {
 
     @Override
     protected void businessExecute(JobExecutionContext context) {
-        log.info("执行客户数据清理任务，tenantId={}", TenantContext.getTenantId());
         try {
+            log.info("执行客户数据清理任务，tenantId={}", TenantContext.getTenantId());
             customerDataCleanupService.executeCleanup();
         } catch (Exception e) {
             log.error("客户数据清理任务执行异常，tenantId={}", TenantContext.getTenantId(), e);

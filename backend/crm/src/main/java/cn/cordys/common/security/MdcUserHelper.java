@@ -47,6 +47,10 @@ public final class MdcUserHelper {
                 MDC.put(USER_ID_KEY, DataSpecialistConstants.specialistUserId(request.getParameter(USER_ID_KEY)));
                 MDC.put(USER_SOURCE_KEY, LoginAuthenticateConstants.LoginAuthenticateType.DATA_SPECIALIST.name());
             }
+            else if(SsePrincipalKind.TENANT.name().equals(kind)) {
+                MDC.put(USER_ID_KEY, request.getParameter(USER_ID_KEY));
+                MDC.put(USER_SOURCE_KEY, LoginAuthenticateConstants.LoginAuthenticateType.LOCAL.name());
+            }
         }
     }
 

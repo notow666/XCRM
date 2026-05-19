@@ -77,7 +77,7 @@ public class SessionJob {
                     userCount.merge(userId, 1L, Long::sum);
 
                     // 记录日志并检查会话的过期时间
-                    log.info("{} : {} 过期时间: {}", key, userId, expire);
+                    log.debug("{} : {} 过期时间: {}", key, userId, expire);
 
                     // 如果过期时间为 -1，则手动设置过期时间为 30 秒
                     if (expire != null && expire == -1) {
@@ -85,9 +85,9 @@ public class SessionJob {
                     }
                 }
             }
-            tenantTaskExecutor.runForEachEnabledTenant("SessionJob.clearFormCache", tenantId ->
-                    systemService.clearFormCache());
-            log.info("用户会话统计: {}", JSON.toJSONString(userCount));
+            tenantTaskExecutor.runForEachEnabledTenant("SessionJob.clearFormCache",
+                    tenantId -> systemService.clearFormCache());
+            log.debug("用户会话统计: {}", JSON.toJSONString(userCount));
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
