@@ -264,7 +264,7 @@ public class CustomerController {
     @Operation(summary = "导入检查")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_IMPORT)
     public ImportResponse preCheck(@RequestPart(value = "file") MultipartFile file) {
-        return customerService.importPreCheck(file, OrganizationContext.getOrganizationId());
+        return customerService.importPreCheck(file, OrganizationContext.getOrganizationId(), SessionUtils.getUserId());
     }
 
     @PostMapping("/import")

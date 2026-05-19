@@ -177,7 +177,7 @@
           .then((data: any) => {
             showModal.value = false;
             if (typeof data === 'number' && data > 0) {
-              Message.warning(t('module.customer.capacityOver', { count: data }));
+              Message.warning(t('module.customer.assignRemain', { count: data }));
             } else {
               Message.success(t('common.transferSuccess'));
             }

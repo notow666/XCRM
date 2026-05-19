@@ -15,8 +15,8 @@ public class MobileConflictDTO {
     
     /**
      * 冲突类型
-     * PRIVATE: 客户池冲突（in_shared_pool=false）
      * OTHER_POOL: 其他公海池冲突（in_shared_pool=true 且 pool_id!=目标公海池）
+     * POOL_SOURCE_PRIVATE: 公海来源客户冲突（in_shared_pool=false 且 create_source=POOL_IMPORT）
      */
     private String conflictType;
 }

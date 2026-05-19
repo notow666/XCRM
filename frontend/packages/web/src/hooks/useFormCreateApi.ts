@@ -92,6 +92,16 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
   const originFormDetail = ref<Record<string, any>>({});
   const moduleFormConfig = ref<FormDesignConfigDetailParams>();
 
+  const ownerFieldId = computed(() => fieldList.value.find((field) => field.businessKey === 'owner')?.id);
+
+  function getCurrentOwnerId() {
+    if (props.formKey.value !== FormDesignKeyEnum.CUSTOMER) {
+      return undefined;
+    }
+    const ownerFieldValue = ownerFieldId.value ? formDetail.value[ownerFieldId.value] : undefined;
+    return ownerFieldValue || props.otherSaveParams?.value?.owner || userStore.userInfo.id;
+  }
+
   // 详情
   const detail = ref<Record<string, any>>({});
   const linkFormFieldMap = ref<Record<string, any>>({}); // 关联表单字段信息映射
@@ -1268,6 +1278,8 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
                   id: item.id,
                   value,
                   formKey: props.formKey.value,
+                  resourceId: props.sourceId?.value,
+                  ownerId: getCurrentOwnerId(),
                 });
                 if (info.repeat) {
                   return Promise.reject(

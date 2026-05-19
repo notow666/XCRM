@@ -49,6 +49,9 @@ public class Customer extends BaseModel {
     @Schema(description = "手机号码")
     private String mobile;
 
+    @Schema(description = "创建来源")
+    private String createSource;
+
     @Schema(description = "阶段状态: NEW-待xxx, IN_PROGRESS-xxx中, COMPLETED-已xxx, FAILED-无效")
     private String stageStatus;
 

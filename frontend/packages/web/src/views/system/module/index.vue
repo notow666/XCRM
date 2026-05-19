@@ -76,15 +76,42 @@
         <CrmCard :content-height="null" no-content-padding hide-footer>
           <div class="module-config-header">
             <div class="font-medium text-[var(--text-n1)]">{{ t('menu.settings.moduleSetting') }}</div>
-            <div class="module-config-header-action">
-              <span class="text-[var(--text-n3)]">{{ t('module.globalPhoneMask') }}</span>
-              <n-switch
-                :value="globalPhoneMaskEnabled"
-                size="small"
-                :rubber-band="false"
-                :disabled="!hasAnyPermission(['MODULE_SETTING:UPDATE'])"
-                @update:value="setGlobalPhoneMaskSwitch"
-              />
+            <div class="module-config-header-action flex-col items-end gap-y-[8px]">
+              <div class="flex flex-col items-end gap-y-[8px]">
+                <div class="flex items-center gap-[12px]">
+                  <span class="text-[var(--text-n3)]">{{ t('module.customerRepeatRule') }}</span>
+                  <n-switch
+                    :value="customerRepeatRuleEnabled"
+                    size="small"
+                    :rubber-band="false"
+                    :disabled="!hasAnyPermission(['MODULE_SETTING:UPDATE'])"
+                    @update:value="setCustomerRepeatRuleSwitch"
+                  />
+                  <n-input-number
+                    :value="customerRepeatRuleDays"
+                    size="small"
+                    class="w-[120px]"
+                    :min="1"
+                    :max="365"
+                    :disabled="!customerRepeatRuleEnabled || !hasAnyPermission(['MODULE_SETTING:UPDATE'])"
+                    :placeholder="t('module.customerRepeatRulePlaceholder')"
+                    @update:value="setCustomerRepeatRuleDays"
+                  />
+                </div>
+                <div class="max-w-[420px] text-right text-[12px] text-[var(--text-n4)]">
+                  {{ t('module.customerRepeatRuleTip') }}
+                </div>
+              </div>
+              <div class="flex items-center gap-[8px]">
+                <span class="text-[var(--text-n3)]">{{ t('module.globalPhoneMask') }}</span>
+                <n-switch
+                  :value="globalPhoneMaskEnabled"
+                  size="small"
+                  :rubber-band="false"
+                  :disabled="!hasAnyPermission(['MODULE_SETTING:UPDATE'])"
+                  @update:value="setGlobalPhoneMaskSwitch"
+                />
+              </div>
             </div>
           </div>
           <div class="px-[24px] pb-[24px]">
@@ -99,7 +126,7 @@
 </template>
 
 <script setup lang="ts">
-  import { NButton, NDivider, NScrollbar, NSwitch, useMessage } from 'naive-ui';
+  import { NButton, NDivider, NInputNumber, NScrollbar, NSwitch, useMessage } from 'naive-ui';
   import { LanguageOutline } from '@vicons/ionicons5';
   import axios from 'axios';
   import { VueDraggable } from 'vue-draggable-plus';
@@ -118,8 +145,10 @@
   import desensitizationModal from './components/desensitizationModal.vue';
 
   import {
+    editCustomerRepeatRuleConfig,
     editGlobalPhoneMaskConfig,
     getAdvancedSwitch,
+    getCustomerRepeatRuleConfig,
     getGlobalPhoneMaskConfig,
     moduleNavListSort,
     setDisplayAdvanced,
@@ -306,6 +335,8 @@
   }
 
   const globalPhoneMaskEnabled = ref(false);
+  const customerRepeatRuleEnabled = ref(false);
+  const customerRepeatRuleDays = ref(5);
   function isRequestCanceled(error: unknown) {
     return (
       axios.isCancel(error) ||
@@ -331,6 +362,48 @@
       await editGlobalPhoneMaskConfig(value);
       globalPhoneMaskEnabled.value = value;
       Message.success(t('common.operationSuccess'));
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+    }
+  }
+
+  async function initCustomerRepeatRuleConfig() {
+    try {
+      const res = await getCustomerRepeatRuleConfig();
+      customerRepeatRuleEnabled.value = !!res.enabled;
+      customerRepeatRuleDays.value = res.repeatAfterDays || 5;
+    } catch (error) {
+      if (isRequestCanceled(error)) {
+        return;
+      }
+      // eslint-disable-next-line no-console
+      console.log(error);
+    }
+  }
+
+  async function persistCustomerRepeatRuleConfig(enabled: boolean, repeatAfterDays: number) {
+    await editCustomerRepeatRuleConfig(enabled, repeatAfterDays);
+    customerRepeatRuleEnabled.value = enabled;
+    customerRepeatRuleDays.value = repeatAfterDays;
+    Message.success(t('common.operationSuccess'));
+  }
+
+  async function setCustomerRepeatRuleSwitch(value: boolean) {
+    try {
+      await persistCustomerRepeatRuleConfig(value, customerRepeatRuleDays.value || 5);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+    }
+  }
+
+  async function setCustomerRepeatRuleDays(value: number | null) {
+    if (!value) {
+      return;
+    }
+    try {
+      await persistCustomerRepeatRuleConfig(customerRepeatRuleEnabled.value, value);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);
@@ -410,6 +483,7 @@
     // orgId 已有值时由下方 watch(immediate) 拉取，避免与 Axios 重复请求取消逻辑冲突触发 CanceledError
     if (!appStore.orgId) {
       initGlobalPhoneMaskConfig();
+      initCustomerRepeatRuleConfig();
     }
   });
 
@@ -420,6 +494,7 @@
         initModuleNavList();
         initNavTopList();
         initGlobalPhoneMaskConfig();
+        initCustomerRepeatRuleConfig();
       }
     },
     {

@@ -679,6 +679,8 @@ export const {
   getAdvancedSwitch,
   getGlobalPhoneMaskConfig,
   editGlobalPhoneMaskConfig,
+  getCustomerRepeatRuleConfig,
+  editCustomerRepeatRuleConfig,
   previewAttachment,
   addOpportunityRule,
   updateCustomerPool,

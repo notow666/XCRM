@@ -327,7 +327,7 @@
       });
       checkedRowKeys.value = [];
       if (typeof res === 'number' && res > 0) {
-        Message.warning(t('module.customer.capacityOver', { count: res }));
+        Message.warning(t('module.customer.assignRemain', { count: res }));
       } else {
         Message.success(t('common.distributeSuccess'));
       }

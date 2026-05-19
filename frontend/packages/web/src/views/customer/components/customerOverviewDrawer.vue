@@ -257,12 +257,13 @@
   const transferLoading = ref(false);
   const collaborationType = ref<CollaborationType>();
   const sourceName = ref('');
+  const createSource = ref('MANUAL_CREATE');
   const descriptionRef = ref<InstanceType<typeof CrmFormDescription>>();
   const buttonList = computed<ActionsItem[]>(() => {
     if (collaborationType.value || props.readonly) {
       return [];
     }
-    return [
+    const actions: ActionsItem[] = [
       {
         label: t('common.edit'),
         key: 'edit',
@@ -287,14 +288,6 @@
         popSlotContent: 'transferPopContent',
       },
       {
-        label: t('customer.moveToOpenSea'),
-        key: 'moveToOpenSea',
-        text: false,
-        ghost: true,
-        class: 'n-btn-outline-primary',
-        permission: ['CUSTOMER_MANAGEMENT:RECYCLE'],
-      },
-      {
         label: t('common.delete'),
         key: 'delete',
         text: false,
@@ -304,6 +297,17 @@
         permission: ['CUSTOMER_MANAGEMENT:DELETE'],
       },
     ];
+    if (!['MANUAL_CREATE', 'PRIVATE_IMPORT'].includes(createSource.value)) {
+      actions.splice(2, 0, {
+        label: t('customer.moveToOpenSea'),
+        key: 'moveToOpenSea',
+        text: false,
+        ghost: true,
+        class: 'n-btn-outline-primary',
+        permission: ['CUSTOMER_MANAGEMENT:RECYCLE'],
+      });
+    }
+    return actions;
   });
 
   const activeTab = ref('contact');
@@ -472,6 +476,7 @@
       if (detail?.failReason) {
         customerFailReason.value = detail.failReason;
       }
+      createSource.value = detail?.createSource || '';
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log('getCustomerDetailStage error:', error);
@@ -494,6 +499,7 @@
   ) {
     collaborationType.value = _collaborationType;
     sourceName.value = _sourceName || '';
+    createSource.value = detail?.createSource || '';
     if (detail?.stage) {
       currentStatus.value = detail.stage;
     }

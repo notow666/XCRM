@@ -301,7 +301,9 @@
     formCreateDrawerVisible.value = true;
   }
 
-  const actionConfig: BatchActionConfig = {
+  const selectedRows = ref<InternalRowData[]>([]);
+
+  const actionConfig = computed<BatchActionConfig>(() => ({
     baseAction: [
       {
         label: t('common.exportChecked'),
@@ -334,7 +336,7 @@
         permission: ['CUSTOMER_MANAGEMENT:DELETE'],
       },
     ],
-  };
+  }));
 
   const tableRefreshId = ref(0);
   const tableRemoveRefreshId = ref('');
@@ -413,7 +415,6 @@
     showEditModal.value = true;
   }
 
-  const selectedRows = ref<InternalRowData[]>([]);
   function handleRowKeyChange(keys: DataTableRowKey[], _rows: InternalRowData[]) {
     selectedRows.value = _rows;
   }
@@ -665,11 +666,15 @@
                   moreList: [
                     ...(activeTab.value !== CustomerSearchTypeEnum.CUSTOMER_COLLABORATION
                       ? [
-                          {
-                            label: t('customer.moveToOpenSea'),
-                            key: 'moveToOpenSea',
-                            permission: ['CUSTOMER_MANAGEMENT:RECYCLE'],
-                          },
+                          ...(['MANUAL_CREATE', 'PRIVATE_IMPORT'].includes(row.createSource)
+                            ? []
+                            : [
+                                {
+                                  label: t('customer.moveToOpenSea'),
+                                  key: 'moveToOpenSea',
+                                  permission: ['CUSTOMER_MANAGEMENT:RECYCLE'],
+                                },
+                              ]),
                           {
                             label: t('common.delete'),
                             key: 'delete',

@@ -10,6 +10,7 @@ import cn.cordys.common.mapper.CommonMapper;
 import cn.cordys.common.util.CommonBeanFactory;
 import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.Translator;
+import cn.cordys.crm.customer.service.CustomerMobileRuleService;
 import cn.cordys.crm.product.service.ProductPriceService;
 import cn.cordys.crm.product.service.ProductService;
 import cn.cordys.crm.system.constants.FieldSourceType;
@@ -81,6 +82,8 @@ public class ModuleFieldService {
     private BaseMapper<ModuleFieldBlob> moduleFieldBlobMapper;
     @Resource
     private CommonMapper commonMapper;
+    @Resource
+    private CustomerMobileRuleService customerMobileRuleService;
 
     /**
      * 获取不带用户的信息的部门树
@@ -135,6 +138,9 @@ public class ModuleFieldService {
         }
 
         BusinessModuleField businessField = BusinessModuleField.ofKey(field.getInternalKey());
+        if (FormKey.CUSTOMER.getKey().equals(request.getFormKey()) && businessField == BusinessModuleField.CUSTOMER_MOBILE) {
+            return customerMobileRuleService.checkRepeat(request.getResourceId(), value, request.getOwnerId(), currentOrg);
+        }
         String repeatName;
         if (businessField != null) {
             // 业务字段

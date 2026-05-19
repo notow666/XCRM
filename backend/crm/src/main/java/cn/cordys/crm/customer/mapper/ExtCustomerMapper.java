@@ -122,8 +122,7 @@ public interface ExtCustomerMapper {
     int countByOwnerAndStages(@Param("ownerId") String ownerId, @Param("stageIds") List<String> stageIds);
 
     /**
-     * 合并查询手机号冲突信息（客户池冲突 + 其他公海池冲突）
-     * 替代原来的 getPrivatePoolMobiles 和 getOtherPoolMobiles 两次查询
+     * 查询手机号在其他公海池中的冲突信息
      *
      * @param orgId   组织ID
      * @param poolId  目标公海池ID

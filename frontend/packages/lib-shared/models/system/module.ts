@@ -282,10 +282,17 @@ export interface GlobalPhoneMaskConfig {
   enabled: boolean;
 }
 
+export interface CustomerRepeatRuleConfig {
+  enabled: boolean;
+  repeatAfterDays: number;
+}
+
 export interface CheckRepeatParams {
   id: string;
   value: string;
   formKey: string;
+  resourceId?: string;
+  ownerId?: string;
 }
 
 export interface CheckRepeatInfo {

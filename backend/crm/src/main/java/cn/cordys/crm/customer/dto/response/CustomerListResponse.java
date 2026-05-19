@@ -91,6 +91,9 @@ public class CustomerListResponse {
     @Schema(description = "手机号码")
     private String mobile;
 
+    @Schema(description = "创建来源")
+    private String createSource;
+
     @Schema(description = "阶段ID")
     private String stage;
 

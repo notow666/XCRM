@@ -10,6 +10,9 @@ import cn.cordys.crm.system.dto.request.GlobalPhoneMaskConfigRequest;
 import cn.cordys.crm.system.dto.request.ModuleRequest;
 import cn.cordys.crm.system.dto.request.ModuleSortRequest;
 import cn.cordys.crm.system.dto.response.GlobalPhoneMaskConfigResponse;
+import cn.cordys.crm.customer.dto.request.CustomerRepeatRuleConfigRequest;
+import cn.cordys.crm.customer.dto.response.CustomerRepeatRuleConfigResponse;
+import cn.cordys.crm.customer.service.CustomerRepeatRuleConfigService;
 import cn.cordys.crm.system.service.GlobalPhoneMaskConfigService;
 import cn.cordys.crm.system.service.ModuleService;
 import cn.cordys.security.SessionUtils;
@@ -31,6 +34,8 @@ public class ModuleController {
     private ModuleService moduleService;
     @Resource
     private GlobalPhoneMaskConfigService globalPhoneMaskConfigService;
+    @Resource
+    private CustomerRepeatRuleConfigService customerRepeatRuleConfigService;
 
     @PostMapping("/list")
     @Operation(summary = "获取模块设置列表")
@@ -97,5 +102,19 @@ public class ModuleController {
     @RequiresPermissions(PermissionConstants.MODULE_SETTING_UPDATE)
     public void editGlobalPhoneMaskConfig(@Validated @RequestBody GlobalPhoneMaskConfigRequest request) {
         globalPhoneMaskConfigService.save(request.getEnabled(), OrganizationContext.getOrganizationId(), SessionUtils.getUserId());
+    }
+
+    @GetMapping("/customer-repeat-rule/settings")
+    @Operation(summary = "获取客户重复规则配置")
+    @RequiresPermissions(PermissionConstants.MODULE_SETTING_READ)
+    public CustomerRepeatRuleConfigResponse getCustomerRepeatRuleConfig() {
+        return customerRepeatRuleConfigService.getConfig();
+    }
+
+    @PostMapping("/customer-repeat-rule/edit")
+    @Operation(summary = "编辑客户重复规则配置")
+    @RequiresPermissions(PermissionConstants.MODULE_SETTING_UPDATE)
+    public void editCustomerRepeatRuleConfig(@Validated @RequestBody CustomerRepeatRuleConfigRequest request) {
+        customerRepeatRuleConfigService.save(request.getEnabled(), request.getRepeatAfterDays(), SessionUtils.getUserId());
     }
 }

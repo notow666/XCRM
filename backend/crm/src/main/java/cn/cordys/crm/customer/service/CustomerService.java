@@ -29,6 +29,7 @@ import cn.cordys.common.util.PhoneMaskUtil;
 
 import cn.cordys.common.util.Translator;
 import cn.cordys.common.utils.ConditionFilterUtils;
+import cn.cordys.crm.customer.constants.CustomerCreateSource;
 import cn.cordys.crm.customer.constants.CustomerResultCode;
 import cn.cordys.crm.customer.domain.*;
 import cn.cordys.crm.customer.dto.request.*;
@@ -69,6 +70,7 @@ import cn.cordys.crm.system.excel.listener.CustomFieldCheckEventListener;
 import cn.cordys.crm.system.excel.listener.CustomFieldImportEventListener;
 import cn.cordys.crm.system.notice.CommonNoticeSendService;
 import cn.cordys.crm.system.service.*;
+import cn.cordys.excel.domain.ExcelErrData;
 import cn.cordys.excel.utils.EasyExcelExporter;
 import cn.cordys.mmba.dto.CustomerWxSendRouteDTO;
 import cn.cordys.mmba.mapper.ExtMmbaAuditMapper;
@@ -77,6 +79,7 @@ import cn.cordys.mmba.service.MmbaFacadeService;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
 import cn.idev.excel.FastExcelFactory;
+import cn.idev.excel.context.AnalysisContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -84,6 +87,7 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -193,6 +197,8 @@ public class CustomerService {
     private MmbaFacadeService mmbaFacadeService;
     @Resource
     private CustomerWechatFriendStatusService customerWechatFriendStatusService;
+    @Resource
+    private CustomerMobileRuleService customerMobileRuleService;
 
     public PagerWithOption<List<CustomerListResponse>> list(CustomerPageRequest request, String userId, String orgId, DeptDataPermissionDTO deptDataPermission) {
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
@@ -531,6 +537,9 @@ public class CustomerService {
         if (StringUtils.isBlank(request.getOwner())) {
             customer.setOwner(userId);
         }
+        customer.setCreateSource(CustomerCreateSource.MANUAL_CREATE);
+        customerMobileRuleService.validateForSave(null, customer.getName(), customer.getMobile(),
+                customer.getCreateSource(), customer.getOwner(), orgId);
         poolCustomerService.validateCapacity(1, customer.getOwner(), orgId);
         customer.setCreateTime(System.currentTimeMillis());
         customer.setUpdateTime(System.currentTimeMillis());
@@ -549,7 +558,7 @@ public class CustomerService {
         }
 
         //保存自定义字段
-        customerFieldService.saveModuleField(customer, orgId, userId, request.getModuleFields(), false);
+        saveModuleFieldWithoutMobileRepeatCheck(customer, orgId, userId, request.getModuleFields(), false);
 
         customerMapper.insert(customer);
 
@@ -574,6 +583,7 @@ public class CustomerService {
         if (StringUtils.isBlank(request.getOwner())) {
             customer.setOwner(userId);
         }
+        validatePoolMobileConflict(null, customer.getMobile(), orgId);
 
         long now = System.currentTimeMillis();
         customer.setId(IDGenerator.nextStr());
@@ -586,6 +596,7 @@ public class CustomerService {
         customer.setInSharedPool(true);
         customer.setOwner(null);
         customer.setCollectionTime(null);
+        customer.setCreateSource(CustomerCreateSource.POOL_IMPORT);
 
         // 设置客户阶段为第一个阶段，状态为NEW（待跟进）
         List<StageConfigResponse> stageConfigList = extCustomerStageConfigMapper.getStageConfigList(orgId);
@@ -595,7 +606,7 @@ public class CustomerService {
         }
 
         //保存自定义字段
-        customerFieldService.saveModuleField(customer, orgId, userId, request.getModuleFields(), false);
+        saveModuleFieldWithoutMobileRepeatCheck(customer, orgId, userId, request.getModuleFields(), false);
 
         customerMapper.insert(customer);
 
@@ -659,8 +670,16 @@ public class CustomerService {
 
         Customer customer = BeanUtils.copyBean(new Customer(), request);
         boolean mobileChanged = isMobileChanged(originCustomer, request);
+        customer.setCreateSource(originCustomer.getCreateSource());
         boolean ownerChanged = StringUtils.isNotBlank(request.getOwner())
                 && !Strings.CS.equals(request.getOwner(), originCustomer.getOwner());
+        if (mobileChanged) {
+            customerMobileRuleService.validateForSave(request.getId(), request.getName(), request.getMobile(),
+                    originCustomer.getCreateSource(), StringUtils.defaultIfBlank(request.getOwner(), originCustomer.getOwner()), orgId);
+        }
+        if (ownerChanged && !mobileChanged) {
+            customerMobileRuleService.validateOwnerConflict(request.getId(), originCustomer.getMobile(), request.getOwner(), orgId);
+        }
         if (mobileChanged) {
             customer.setCallStatus(0);
             customer.setWechatFriendStatus(0);
@@ -770,7 +789,35 @@ public class CustomerService {
         // 先删除
         customerFieldService.deleteByResourceId(customer.getId());
         // 再保存
-        customerFieldService.saveModuleField(customer, orgId, userId, moduleFields, true);
+        saveModuleFieldWithoutMobileRepeatCheck(customer, orgId, userId, moduleFields, true);
+    }
+
+    private void saveModuleFieldWithoutMobileRepeatCheck(Customer customer, String orgId, String userId,
+                                                         List<BaseModuleFieldValue> moduleFields, boolean update) {
+        String mobile = customer.getMobile();
+        customer.setMobile(null);
+        try {
+            customerFieldService.saveModuleField(customer, orgId, userId, moduleFields, update);
+        } finally {
+            customer.setMobile(mobile);
+        }
+    }
+
+    private void validatePoolMobileConflict(String customerId, String mobile, String orgId) {
+        String normalizedMobile = StringUtils.trimToNull(mobile);
+        if (normalizedMobile == null) {
+            return;
+        }
+        LambdaQueryWrapper<Customer> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Customer::getOrganizationId, orgId)
+                .eq(Customer::getInSharedPool, true)
+                .eq(Customer::getMobile, normalizedMobile);
+        if (StringUtils.isNotBlank(customerId)) {
+            queryWrapper.nq(Customer::getId, customerId);
+        }
+        if (CollectionUtils.isNotEmpty(customerMapper.selectListByLambda(queryWrapper))) {
+            throw new GenericException(Translator.getWithArgs("common.field_value.repeat", "手机号"));
+        }
     }
 
     @OperationLog(module = LogModule.CUSTOMER_INDEX, type = LogType.DELETE, resourceId = "{#id}")
@@ -974,6 +1021,11 @@ public class CustomerService {
         List<LogDTO> logs = new ArrayList<>();
         List<String> customerIds = new ArrayList<>();
         for (Customer customer : customers) {
+            if (StringUtils.equalsAny(customer.getCreateSource(),
+                    CustomerCreateSource.MANUAL_CREATE,
+                    CustomerCreateSource.PRIVATE_IMPORT)) {
+                continue;
+            }
             CustomerPool customerPool = specifiedPool != null ? specifiedPool : ownersDefaultPoolMap.get(customer.getOwner());
             if (customerPool == null) {
                 // 未找到默认公海，不移入
@@ -1105,6 +1157,12 @@ public class CustomerService {
                 .collect(Collectors.toList());
     }
 
+    private void removeCustomerMobileUniqueRule(List<BaseField> fields) {
+        fields.stream()
+                .filter(field -> BusinessModuleField.CUSTOMER_MOBILE.getKey().equals(field.getInternalKey()))
+                .forEach(field -> field.getRules().removeIf(rule -> "unique".equals(rule.getKey())));
+    }
+
     /**
      * 导入检查
      *
@@ -1113,11 +1171,11 @@ public class CustomerService {
      *
      * @return 导入检查信息
      */
-    public ImportResponse importPreCheck(MultipartFile file, String currentOrg) {
+    public ImportResponse importPreCheck(MultipartFile file, String currentOrg, String currentUser) {
         if (file == null) {
             throw new GenericException(Translator.get("file_cannot_be_null"));
         }
-        return checkImportExcel(file, currentOrg);
+        return checkImportExcel(file, currentOrg, currentUser);
     }
 
     /**
@@ -1133,9 +1191,11 @@ public class CustomerService {
         try {
             List<BaseField> fields = moduleFormService.getAllFields(FormKey.CUSTOMER.getKey(), currentOrg);
             List<BaseField> filteredFields = filterOwnerField(fields);
+            removeCustomerMobileUniqueRule(filteredFields);
             // 获取默认阶段ID
             String defaultStageId = customerStageService.getDefaultStageId(currentOrg);
             CustomImportAfterDoConsumer<Customer, BaseResourceSubField> afterDo = (customers, customerFields, customerFieldBlobs) -> {
+                validatePrivateImportBatch(customers, currentUser, currentOrg);
                 List<LogDTO> logs = new ArrayList<>();
                 List<CustomerContact> contacts = new ArrayList<>();
                 customers.forEach(customer -> {
@@ -1143,6 +1203,7 @@ public class CustomerService {
                     customer.setCollectionTime(customer.getCreateTime());
                     customer.setInSharedPool(false);
                     customer.setOwner(currentUser);
+                    customer.setCreateSource(CustomerCreateSource.PRIVATE_IMPORT);
                     // 设置默认阶段
                     if (StringUtils.isBlank(customer.getStage()) && StringUtils.isNotBlank(defaultStageId)) {
                         customer.setStage(defaultStageId);
@@ -1197,17 +1258,125 @@ public class CustomerService {
      *
      * @return 检查信息
      */
-    private ImportResponse checkImportExcel(MultipartFile file, String currentOrg) {
+    private ImportResponse checkImportExcel(MultipartFile file, String currentOrg, String currentUser) {
         try {
             List<BaseField> fields = moduleFormService.getAllCustomImportFields(FormKey.CUSTOMER.getKey(), currentOrg);
             List<BaseField> filteredFields = filterOwnerField(fields);
-            CustomFieldCheckEventListener eventListener = new CustomFieldCheckEventListener(filteredFields, "customer", "customer_field", currentOrg);
+            removeCustomerMobileUniqueRule(filteredFields);
+            CustomerImportCheckEventListener eventListener = new CustomerImportCheckEventListener(filteredFields, "customer", "customer_field", currentOrg);
             FastExcelFactory.read(file.getInputStream(), eventListener).headRowNumber(1).ignoreEmptyRow(true).sheet().doRead();
+            int extraFailCount = appendPrivateImportMobileErrors(eventListener, currentOrg, currentUser);
             return ImportResponse.builder().errorMessages(eventListener.getErrList())
-                    .successCount(eventListener.getSuccess()).failCount(eventListener.getErrList().size()).build();
+                    .successCount(eventListener.getSuccess() - extraFailCount).failCount(eventListener.getErrList().size()).build();
         } catch (Exception e) {
             log.error("customer import pre-check error: {}", e.getMessage());
             throw new GenericException(e.getMessage());
+        }
+    }
+
+    private int appendPrivateImportMobileErrors(CustomerImportCheckEventListener eventListener, String currentOrg, String currentUser) {
+        Set<Integer> existingErrRows = new HashSet<>(eventListener.getErrRows());
+        int extraFailCount = 0;
+        Map<String, List<Integer>> mobileRowMap = new LinkedHashMap<>();
+        for (Map.Entry<Integer, String> entry : eventListener.getRowMobileMap().entrySet()) {
+            String mobile = StringUtils.trimToNull(entry.getValue());
+            if (mobile == null || existingErrRows.contains(entry.getKey())) {
+                continue;
+            }
+            mobileRowMap.computeIfAbsent(mobile, key -> new ArrayList<>()).add(entry.getKey());
+        }
+
+        Set<String> duplicateMobiles = mobileRowMap.entrySet().stream()
+                .filter(entry -> entry.getValue().size() > 1)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+        Set<String> conflictMobiles = customerMobileRuleService.findConflictMobilesForPrivateSources(
+                mobileRowMap.keySet().stream().filter(mobile -> !duplicateMobiles.contains(mobile)).toList()
+        );
+        Set<String> ownerConflictMobiles = customerMobileRuleService.findConflictMobilesForOwner(
+                mobileRowMap.keySet().stream().filter(mobile -> !duplicateMobiles.contains(mobile)).toList(),
+                currentUser,
+                currentOrg
+        );
+        String mobileFieldName = StringUtils.defaultIfBlank(eventListener.getMobileFieldName(), "手机号");
+
+        for (Map.Entry<String, List<Integer>> entry : mobileRowMap.entrySet()) {
+            boolean duplicateInExcel = duplicateMobiles.contains(entry.getKey());
+            boolean duplicateInDb = conflictMobiles.contains(entry.getKey());
+            boolean duplicateInOwner = ownerConflictMobiles.contains(entry.getKey());
+            if (!duplicateInExcel && !duplicateInDb && !duplicateInOwner) {
+                continue;
+            }
+            String message = duplicateInExcel
+                    ? mobileFieldName + Translator.get("cell.not.unique")
+                    : Translator.getWithArgs("common.field_value.repeat", mobileFieldName);
+            for (Integer rowIndex : entry.getValue()) {
+                if (!existingErrRows.add(rowIndex)) {
+                    continue;
+                }
+                eventListener.getErrRows().add(rowIndex);
+                eventListener.getErrList().add(new ExcelErrData(rowIndex,
+                        Translator.getWithArgs("row.error.tip", rowIndex + 1).concat(" " + message)));
+                extraFailCount++;
+            }
+        }
+        return extraFailCount;
+    }
+
+    private void validatePrivateImportBatch(List<Customer> customers, String currentUser, String currentOrg) {
+        Map<String, Long> duplicateMap = customers.stream()
+                .map(Customer::getMobile)
+                .map(StringUtils::trimToNull)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.groupingBy(mobile -> mobile, LinkedHashMap::new, Collectors.counting()));
+        if (duplicateMap.values().stream().anyMatch(count -> count > 1)) {
+            throw new GenericException(Translator.getWithArgs("common.field_value.repeat", "手机号"));
+        }
+        Set<String> conflictMobiles = customerMobileRuleService.findConflictMobilesForPrivateSources(
+                customers.stream().map(Customer::getMobile).toList()
+        );
+        Set<String> ownerConflictMobiles = customerMobileRuleService.findConflictMobilesForOwner(
+                customers.stream().map(Customer::getMobile).toList(),
+                currentUser,
+                currentOrg
+        );
+        if (!conflictMobiles.isEmpty() || !ownerConflictMobiles.isEmpty()) {
+            throw new GenericException(Translator.getWithArgs("common.field_value.repeat", "手机号"));
+        }
+    }
+
+    private static class CustomerImportCheckEventListener extends CustomFieldCheckEventListener {
+
+        @Getter
+        private final Map<Integer, String> rowMobileMap = new LinkedHashMap<>();
+
+        @Getter
+        private String mobileFieldName;
+
+        public CustomerImportCheckEventListener(List<BaseField> fields, String sourceTable, String fieldTable, String currentOrg) {
+            super(fields, sourceTable, fieldTable, currentOrg);
+            for (BaseField field : fields) {
+                if (BusinessModuleField.CUSTOMER_MOBILE.getKey().equals(field.getInternalKey())) {
+                    mobileFieldName = field.getName();
+                    break;
+                }
+            }
+        }
+
+        @Override
+        public void invoke(Map<Integer, String> data, AnalysisContext context) {
+            super.invoke(data, context);
+            Integer rowIndex = context.readRowHolder().getRowIndex();
+            String mobileValue = null;
+            if (mobileFieldName != null && this.headMap != null) {
+                for (Map.Entry<Integer, String> entry : this.headMap.entrySet()) {
+                    if (mobileFieldName.equals(entry.getValue())) {
+                        mobileValue = data.get(entry.getKey());
+                        break;
+                    }
+                }
+            }
+            rowMobileMap.put(rowIndex, mobileValue);
         }
     }
 

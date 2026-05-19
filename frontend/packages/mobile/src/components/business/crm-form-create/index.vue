@@ -91,6 +91,13 @@
     return fieldList.value.filter((item) => item.mobile !== false);
   });
 
+  const ownerFieldId = computed(() => fieldList.value.find((field) => field.businessKey === 'owner')?.id);
+
+  function getCurrentOwnerId() {
+    const ownerFieldValue = ownerFieldId.value ? formDetail.value[ownerFieldId.value] : undefined;
+    return ownerFieldValue || lastPageParams?.owner || userStore.userInfo.id;
+  }
+
   function getItemComponent(type: FieldTypeEnum) {
     if (type === FieldTypeEnum.INPUT) {
       return CrmFormCreateComponents.basicComponents.singleText;
@@ -231,6 +238,8 @@
             route.query.formKey !== FormDesignKeyEnum.CUSTOMER_CONTACT
               ? (route.query.formKey as FormDesignKeyEnum)
               : FormDesignKeyEnum.CONTACT,
+          resourceId: (route.query.id as string) || undefined,
+          ownerId: route.query.formKey === FormDesignKeyEnum.CUSTOMER ? getCurrentOwnerId() : undefined,
         });
         if (info.repeat) {
           return info.name.length

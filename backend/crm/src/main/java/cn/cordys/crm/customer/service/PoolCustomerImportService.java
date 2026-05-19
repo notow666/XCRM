@@ -100,14 +100,14 @@ public class PoolCustomerImportService {
      */
     private static final String ERROR_TYPE_FIELD_VALIDATION = "FIELD_VALIDATION";
     private static final String ERROR_TYPE_EXCEL_DUPLICATE = "EXCEL_DUPLICATE";
-    private static final String ERROR_TYPE_PRIVATE_CONFLICT = "PRIVATE_CONFLICT";
     private static final String ERROR_TYPE_OTHER_POOL_CONFLICT = "OTHER_POOL_CONFLICT";
+    private static final String ERROR_TYPE_POOL_SOURCE_CONFLICT = "POOL_SOURCE_CONFLICT";
     
     /**
      * 冲突类型常量（从数据库返回）
      */
-    private static final String CONFLICT_TYPE_PRIVATE = "PRIVATE";
     private static final String CONFLICT_TYPE_OTHER_POOL = "OTHER_POOL";
+    private static final String CONFLICT_TYPE_POOL_SOURCE_PRIVATE = "POOL_SOURCE_PRIVATE";
 
     /**
      * 下载公海导入模板（去除负责人字段）
@@ -230,8 +230,7 @@ public class PoolCustomerImportService {
      * 校验优先级：
      * 1. 基础字段校验（必填、手机号格式） - 最优先
      * 2. Excel内重复检查 - 第二优先
-     * 3. 客户池冲突检查 - 第三优先
-     * 4. 其他公海池冲突检查 - 最后
+     * 3. 其他公海池/公海来源客户冲突检查 - 第三优先
      * 
      * 如果第N层检查有错误，则不继续执行第N+1层检查
      */
@@ -245,7 +244,7 @@ public class PoolCustomerImportService {
         
         // 如果第一层有错误，直接返回，不继续后续校验
         if (!result.isPassed()) {
-            log.info("Layer 1 validation failed, skip layer 2/3/4. Error count: {}", result.getRowErrorCount());
+            log.info("Layer 1 validation failed, skip layer 2/3. Error count: {}", result.getRowErrorCount());
             return result;
         }
 
@@ -255,14 +254,14 @@ public class PoolCustomerImportService {
 
         // 如果第二层有错误，直接返回，不继续后续校验
         if (!result.isPassed()) {
-            log.info("Layer 2 validation failed, skip layer 3/4. Error count: {}", result.getRowErrorCount());
+            log.info("Layer 2 validation failed, skip layer 3. Error count: {}", result.getRowErrorCount());
             return result;
         }
 
-        // 第三层和第四层：数据库冲突检查
-        checkDatabaseConflictsLayered(rowMobileMap, orgId, poolId, result, view);
+        // 第三层：数据库冲突检查（其他公海池 + 公海来源客户）
+        checkDatabaseConflicts(rowMobileMap, orgId, poolId, result, view);
 
-        view.put("Layer3&4-数据库冲突错误数", result.getRowErrorCount());
+        view.put("Layer3-数据库冲突错误数", result.getRowErrorCount());
 
         log.info("基础校验详情: [{}]", JSON.toFormatJSONString(view));
 
@@ -270,14 +269,14 @@ public class PoolCustomerImportService {
     }
 
     /**
-     * 分层检查数据库冲突（第三层：客户池 + 第四层：其他公海池）
+     * 检查数据库冲突（其他公海池 + 公海来源客户）
      * 
      * 优化策略：
      * - 一次数据库查询获取所有冲突信息（性能优化）
-     * - 分层处理错误，客户池冲突优先（逻辑优化）
+     * - 分层处理错误，公海体系冲突优先（逻辑优化）
      */
-    private void checkDatabaseConflictsLayered(Map<Integer, String> rowMobileMap, String orgId, String poolId,
-                                                 ErrorCheckResult result, Map<String, Object> view) {
+    private void checkDatabaseConflicts(Map<Integer, String> rowMobileMap, String orgId, String poolId,
+                                        ErrorCheckResult result, Map<String, Object> view) {
         List<String> validMobiles = rowMobileMap.entrySet().stream()
                 .filter(e -> StringUtils.isNotBlank(e.getValue()) && !result.isInvalidMobileRow(e.getKey()))
                 .map(Map.Entry::getValue)
@@ -294,19 +293,9 @@ public class PoolCustomerImportService {
         Map<String, String> mobileConflictTypeMap = queryConflictsBatch(orgId, poolId, validMobiles);
         log.debug("冲突手机号数量: {}", mobileConflictTypeMap.size());
 
-        // 第三层：先处理客户池冲突
-        processPrivatePoolConflicts(rowMobileMap, mobileConflictTypeMap, result);
-        view.put("Layer3-客户池冲突数", result.getPrivateConflictCount());
-        
-        // 如果第三层有错误，直接返回，不处理第四层
-        if (!result.isPassed()) {
-            log.info("Layer 3 validation failed (private pool conflict), skip layer 4. Error count: {}", result.getRowErrorCount());
-            return;
-        }
-
-        // 第四层：处理其他公海池冲突
-        processOtherPoolConflicts(rowMobileMap, mobileConflictTypeMap, result);
-        view.put("Layer4-其他公海池冲突数", result.getOtherPoolConflictCount());
+        processPoolRelatedConflicts(rowMobileMap, mobileConflictTypeMap, result);
+        view.put("Layer3-其他公海池冲突数", result.getOtherPoolConflictCount());
+        view.put("Layer3-公海来源客户冲突数", result.getPoolSourceConflictCount());
     }
 
     /**
@@ -322,22 +311,22 @@ public class PoolCustomerImportService {
             int end = Math.min(i + BATCH_QUERY_SIZE, validMobiles.size());
             List<String> batchMobiles = validMobiles.subList(i, end);
             batchCount++;
-            
+
             batchStartTime = System.currentTimeMillis();
             List<MobileConflictDTO> conflicts = customerMapper.getMobileConflicts(orgId, poolId, batchMobiles);
             long batchTime = System.currentTimeMillis() - batchStartTime;
             totalDbQueryTime += batchTime;
-            
+
             for (MobileConflictDTO dto : conflicts) {
                 mobileConflictTypeMap.put(dto.getMobile(), dto.getConflictType());
             }
-            
+
             if (batchCount % 10 == 0 || i + BATCH_QUERY_SIZE >= validMobiles.size()) {
                 log.debug("[耗时] DB查询第{}批: {} ms, 本批手机号数: {}, 冲突数: {}",
                         batchCount, batchTime, batchMobiles.size(), conflicts.size());
             }
         }
-        
+
         log.debug("[耗时] DB查询总计: {} ms, 总批数: {}, 总手机号数: {}",
                 totalDbQueryTime, batchCount, validMobiles.size());
 
@@ -345,31 +334,10 @@ public class PoolCustomerImportService {
     }
 
     /**
-     * 第三层：处理客户池冲突
-     */
-    private void processPrivatePoolConflicts(Map<Integer, String> rowMobileMap, Map<String, String> mobileConflictTypeMap,
-                                              ErrorCheckResult result) {
-        for (Map.Entry<Integer, String> entry : rowMobileMap.entrySet()) {
-            if (result.hasRowError(entry.getKey())) {
-                continue;
-            }
-            String mobile = entry.getValue();
-            if (StringUtils.isBlank(mobile)) {
-                continue;
-            }
-            String conflictType = mobileConflictTypeMap.get(mobile);
-            if (CONFLICT_TYPE_PRIVATE.equals(conflictType)) {
-                result.addRowError(entry.getKey(), ERROR_TYPE_PRIVATE_CONFLICT, null);
-                result.incrementPrivateConflictCount();
-            }
-        }
-    }
-
-    /**
      * 第四层：处理其他公海池冲突
      */
-    private void processOtherPoolConflicts(Map<Integer, String> rowMobileMap, Map<String, String> mobileConflictTypeMap,
-                                            ErrorCheckResult result) {
+    private void processPoolRelatedConflicts(Map<Integer, String> rowMobileMap, Map<String, String> mobileConflictTypeMap,
+                                             ErrorCheckResult result) {
         for (Map.Entry<Integer, String> entry : rowMobileMap.entrySet()) {
             if (result.hasRowError(entry.getKey())) {
                 continue;
@@ -382,6 +350,9 @@ public class PoolCustomerImportService {
             if (CONFLICT_TYPE_OTHER_POOL.equals(conflictType)) {
                 result.addRowError(entry.getKey(), ERROR_TYPE_OTHER_POOL_CONFLICT, null);
                 result.incrementOtherPoolConflictCount();
+            } else if (CONFLICT_TYPE_POOL_SOURCE_PRIVATE.equals(conflictType)) {
+                result.addRowError(entry.getKey(), ERROR_TYPE_POOL_SOURCE_CONFLICT, null);
+                result.incrementPoolSourceConflictCount();
             }
         }
     }
@@ -456,8 +427,8 @@ public class PoolCustomerImportService {
         return PoolImportErrorSummary.builder()
                 .fieldValidationCount(result.getFieldValidationCount())
                 .excelDuplicateCount(result.getExcelDuplicateCount())
-                .privateConflictCount(result.getPrivateConflictCount())
                 .otherPoolConflictCount(result.getOtherPoolConflictCount())
+                .poolSourceConflictCount(result.getPoolSourceConflictCount())
                 .build();
     }
 
@@ -515,9 +486,9 @@ public class PoolCustomerImportService {
         @Getter
         private int excelDuplicateCount = 0;
         @Getter
-        private int privateConflictCount = 0;
-        @Getter
         private int otherPoolConflictCount = 0;
+        @Getter
+        private int poolSourceConflictCount = 0;
 
         public boolean isPassed() {
             return rowErrorTypeMap.isEmpty();
@@ -554,14 +525,14 @@ public class PoolCustomerImportService {
             excelDuplicateCount++;
         }
 
-        public void incrementPrivateConflictCount() {
-            privateConflictCount++;
-        }
-
         public void incrementOtherPoolConflictCount() {
             otherPoolConflictCount++;
         }
-}
+
+        public void incrementPoolSourceConflictCount() {
+            poolSourceConflictCount++;
+        }
+    }
 
     /**
      * 错误行样式处理器
@@ -611,9 +582,7 @@ public class PoolCustomerImportService {
                 return IndexedColors.RED.getIndex();
             } else if (ERROR_TYPE_EXCEL_DUPLICATE.equals(errorType)) {
                 return IndexedColors.LIGHT_YELLOW.getIndex();
-            } else if (ERROR_TYPE_PRIVATE_CONFLICT.equals(errorType)) {
-                return IndexedColors.ORANGE.getIndex();
-            } else if (ERROR_TYPE_OTHER_POOL_CONFLICT.equals(errorType)) {
+            } else if (ERROR_TYPE_OTHER_POOL_CONFLICT.equals(errorType) || ERROR_TYPE_POOL_SOURCE_CONFLICT.equals(errorType)) {
                 return IndexedColors.LIGHT_BLUE.getIndex();
             } else {
                 return IndexedColors.RED.getIndex();

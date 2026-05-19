@@ -106,4 +106,7 @@ public class CustomerGetResponse {
     @Schema(description = "手机号码")
     private String mobile;
 
+    @Schema(description = "创建来源")
+    private String createSource;
+
 }

@@ -473,8 +473,8 @@ export interface UpdateCustomerStageParams {
 export interface PoolImportErrorSummary {
   fieldValidationCount: number;
   excelDuplicateCount: number;
-  privateConflictCount: number;
   otherPoolConflictCount: number;
+  poolSourceConflictCount: number;
 }
 
 export interface PoolCustomerImportCheckResponse {

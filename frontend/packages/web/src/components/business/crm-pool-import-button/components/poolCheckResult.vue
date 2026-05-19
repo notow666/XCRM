@@ -39,16 +39,16 @@
               {{ t('poolImportButton.excelDuplicate') }}: {{ checkResponse.errorSummary.excelDuplicateCount }}
             </span>
           </div>
-          <div v-if="checkResponse.errorSummary.privateConflictCount > 0" class="flex items-center gap-[8px]">
-            <span class="inline-block h-[10px] w-[10px] rounded-full bg-[#FA8C16]"></span>
-            <span class="text-[var(--text-n2)]">
-              {{ t('poolImportButton.privateConflict') }}: {{ checkResponse.errorSummary.privateConflictCount }}
-            </span>
-          </div>
           <div v-if="checkResponse.errorSummary.otherPoolConflictCount > 0" class="flex items-center gap-[8px]">
             <span class="inline-block h-[10px] w-[10px] rounded-full bg-[#1890FF]"></span>
             <span class="text-[var(--text-n2)]">
               {{ t('poolImportButton.otherPoolConflict') }}: {{ checkResponse.errorSummary.otherPoolConflictCount }}
+            </span>
+          </div>
+          <div v-if="checkResponse.errorSummary.poolSourceConflictCount > 0" class="flex items-center gap-[8px]">
+            <span class="inline-block h-[10px] w-[10px] rounded-full bg-[#1890FF]"></span>
+            <span class="text-[var(--text-n2)]">
+              {{ t('poolImportButton.poolSourceConflict') }}: {{ checkResponse.errorSummary.poolSourceConflictCount }}
             </span>
           </div>
         </div>

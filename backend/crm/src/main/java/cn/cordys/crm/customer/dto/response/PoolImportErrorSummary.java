@@ -15,9 +15,9 @@ public class PoolImportErrorSummary {
     @Schema(description = "Excel内手机号重复数（黄色）")
     private int excelDuplicateCount;
 
-    @Schema(description = "客户池冲突数（橙色）")
-    private int privateConflictCount;
-
     @Schema(description = "其他公海池冲突数（蓝色）")
     private int otherPoolConflictCount;
+
+    @Schema(description = "公海来源客户冲突数（蓝色）")
+    private int poolSourceConflictCount;
 }

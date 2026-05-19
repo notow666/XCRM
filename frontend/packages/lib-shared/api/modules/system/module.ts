@@ -76,6 +76,8 @@ import {
   GetAdvancedSwitchUrl,
   GetGlobalPhoneMaskSwitchUrl,
   SetGlobalPhoneMaskSwitchUrl,
+  GetCustomerRepeatRuleConfigUrl,
+  SetCustomerRepeatRuleConfigUrl,
   GetFieldRefDetailListUrl,
   GetFieldOrderListUrl,
  } from '@lib/shared/api/requrls/system/module';
@@ -96,6 +98,7 @@ import type {
   FormDesignConfigDetailParams,
   FormDesignDataSourceTableQueryParams,
   GlobalPhoneMaskConfig,
+  CustomerRepeatRuleConfig,
   GetRefDataSourceFieldParams,
   ModuleNavBaseInfoItem,
   ModuleNavTopItem,
@@ -449,6 +452,14 @@ export default function useProductApi(CDR: CordysAxios) {
     return CDR.post({ url: SetGlobalPhoneMaskSwitchUrl, data: { enabled } });
   }
 
+  function getCustomerRepeatRuleConfig() {
+    return CDR.get<CustomerRepeatRuleConfig>({ url: GetCustomerRepeatRuleConfigUrl });
+  }
+
+  function editCustomerRepeatRuleConfig(enabled: boolean, repeatAfterDays: number) {
+    return CDR.post({ url: SetCustomerRepeatRuleConfigUrl, data: { enabled, repeatAfterDays } });
+  }
+
   return {
     getFieldDisplayList,
     getModuleNavConfigList,
@@ -513,6 +524,8 @@ export default function useProductApi(CDR: CordysAxios) {
     getAdvancedSwitch,
     getGlobalPhoneMaskConfig,
     editGlobalPhoneMaskConfig,
+    getCustomerRepeatRuleConfig,
+    editCustomerRepeatRuleConfig,
     uploadTempAttachment,
     previewAttachment,
     deleteAttachment,

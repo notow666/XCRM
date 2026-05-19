@@ -5,6 +5,7 @@ import cn.cordys.common.domain.BaseResourceSubField;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.BeanUtils;
+import cn.cordys.crm.customer.constants.CustomerCreateSource;
 import cn.cordys.crm.customer.domain.Customer;
 import cn.cordys.crm.customer.domain.CustomerContact;
 import cn.cordys.crm.customer.domain.CustomerField;
@@ -83,6 +84,7 @@ public class PoolCustomerImportExecutor {
                 customer.setCollectionTime(null);
                 customer.setStage(null);
                 customer.setStageStatus(null);
+                customer.setCreateSource(CustomerCreateSource.POOL_IMPORT);
             });
 
             List<String> mobileList = customers.stream()

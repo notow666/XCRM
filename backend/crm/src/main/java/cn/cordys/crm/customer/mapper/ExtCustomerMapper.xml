@@ -37,6 +37,7 @@
 
     <select id="list" resultType="cn.cordys.crm.customer.dto.response.CustomerListResponse">
         select c.id, c.`name`, if(c.in_shared_pool, null, c.owner) as owner, c.create_time, c.update_time, c.create_user, c.update_user, c.collection_time, c.pool_id,
+               c.create_source as createSource,
                c.follower, c.follow_time, c.reason_id, c.mobile, c.stage, c.stage_status, c.call_status as callStatus,
                c.wechat_friend_status as wechatFriendStatus,
                IFNULL(ssc.name, '') as stage_name
@@ -322,6 +323,7 @@
 
     <select id="sourceList" resultType="cn.cordys.crm.customer.dto.response.CustomerListResponse">
         select distinct c.id, c.`name`, if(c.in_shared_pool, null, c.owner) as owner, c.create_time, c.update_time, c.create_user, c.update_user, c.collection_time, c.pool_id,
+        c.create_source as createSource,
         c.follower, c.follow_time, c.mobile, c.stage, c.stage_status, c.wechat_friend_status as wechatFriendStatus,
         IFNULL(ssc.name, '') as stage_name
         from customer c left join customer_collaboration cc on c.id = cc.customer_id and cc.user_id = #{userId}
@@ -713,6 +715,7 @@
 
     <select id="getListByIds" resultType="cn.cordys.crm.customer.dto.response.CustomerListResponse">
         select c.id, c.`name`, c.owner, c.create_time, c.update_time, c.create_user, c.update_user, c.collection_time, c.pool_id,
+               c.create_source as createSource,
                c.follower, c.follow_time, c.in_shared_pool, c.organization_id, c.reason_id, c.mobile, c.stage, c.stage_status,
                IFNULL(ssc.name, '') as stage_name
         from customer c
@@ -1003,19 +1006,22 @@
         </foreach>
     </select>
 
-    <!-- 合并查询手机号冲突信息（客户池冲突 + 其他公海池冲突），一次查询替代原来两次查询 -->
+    <!-- 查询手机号在其他公海池或公海来源客户中的冲突信息 -->
     <select id="getMobileConflicts" resultType="cn.cordys.crm.customer.dto.MobileConflictDTO">
-        SELECT DISTINCT 
+        SELECT DISTINCT
             c.mobile,
-            CASE 
-                WHEN c.in_shared_pool = false THEN 'PRIVATE'
+            CASE
                 WHEN c.in_shared_pool = true AND c.pool_id != #{poolId} THEN 'OTHER_POOL'
-                ELSE 'NONE'
+                WHEN c.in_shared_pool = false AND c.create_source = 'POOL_IMPORT' THEN 'POOL_SOURCE_PRIVATE'
             END AS conflictType
         FROM customer c
         WHERE c.organization_id = #{orgId}
         AND c.mobile IS NOT NULL AND c.mobile != ''
-        AND (c.in_shared_pool = false OR (c.in_shared_pool = true AND c.pool_id != #{poolId}))
+        AND (
+            (c.in_shared_pool = true AND c.pool_id != #{poolId})
+            OR
+            (c.in_shared_pool = false AND c.create_source = 'POOL_IMPORT')
+        )
         AND c.mobile IN
         <foreach collection="mobiles" item="mobile" open="(" separator="," close=")">
             #{mobile}
