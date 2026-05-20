@@ -400,6 +400,8 @@ export const {
   batchDeleteOpenSeaCustomerByCondition,
   batchAssignOpenSeaCustomer,
   batchAssignOpenSeaCustomerByCondition,
+  batchUpdateOpenSeaCustomerByCondition,
+  batchTransferOpenSeaCustomerByCondition,
   getCustomerOpportunityPage,
   batchUpdateOpenSeaCustomer,
   getCustomerFollowRecordList,

@@ -41,6 +41,26 @@
           {{ t('customer.assignByCondition') }}
         </n-button>
         <n-button
+          v-if="hasAnyPermission(['CUSTOMER_MANAGEMENT_POOL:TRANSFER']) && !props.readonly"
+          type="primary"
+          ghost
+          class="n-btn-outline-primary"
+          :disabled="(propsRes.crmPagination?.itemCount || 0) === 0"
+          @click="handleTransferByConditionClick"
+        >
+          {{ t('customer.transferByCondition') }}
+        </n-button>
+        <n-button
+          v-if="hasAnyPermission(['CUSTOMER_MANAGEMENT_POOL:UPDATE']) && !props.readonly"
+          type="primary"
+          ghost
+          class="n-btn-outline-primary"
+          :disabled="(propsRes.crmPagination?.itemCount || 0) === 0"
+          @click="handleEditByConditionClick"
+        >
+          {{ t('customer.editByCondition') }}
+        </n-button>
+        <n-button
           v-if="hasAnyPermission(['CUSTOMER_MANAGEMENT_POOL:DELETE']) && !props.readonly"
           type="error"
           ghost
@@ -109,6 +129,21 @@
     :query-params="assignByConditionQueryParams"
     @success="handleAssignByConditionSuccess"
   />
+  <CrmPoolTransferByConditionModal
+    v-model:show="showTransferByConditionModal"
+    :total="propsRes.crmPagination?.itemCount || 0"
+    :query-params="assignByConditionQueryParams"
+    :current-pool-id="String(openSea || '')"
+    @success="handleTransferByConditionSuccess"
+  />
+  <CrmPoolBatchEditByConditionModal
+    v-model:show="showEditByConditionModal"
+    :total="propsRes.crmPagination?.itemCount || 0"
+    :query-params="assignByConditionQueryParams"
+    :field-list="fieldList"
+    :form-key="FormDesignKeyEnum.CUSTOMER_OPEN_SEA"
+    @success="handleEditByConditionSuccess"
+  />
   <CrmTableExportModal
     v-model:show="showExportModal"
     :params="exportParams"
@@ -156,7 +191,9 @@
   import CrmBatchEditModal from '@/components/business/crm-batch-edit-modal/index.vue';
   import CrmOperationButton from '@/components/business/crm-operation-button/index.vue';
   import CrmPoolAssignByConditionModal from '@/components/business/crm-pool-assign-by-condition-modal/index.vue';
+  import CrmPoolBatchEditByConditionModal from '@/components/business/crm-pool-batch-edit-by-condition-modal/index.vue';
   import CrmPoolImportButton from '@/components/business/crm-pool-import-button/index.vue';
+  import CrmPoolTransferByConditionModal from '@/components/business/crm-pool-transfer-by-condition-modal/index.vue';
   import CrmTableExportModal from '@/components/business/crm-table-export-modal/index.vue';
   import TransferForm from '@/components/business/crm-transfer-modal/transferForm.vue';
   import CrmTransferToPoolModal from '@/components/business/crm-transfer-to-pool-modal/index.vue';
@@ -213,6 +250,8 @@
   const checkedRowKeys = ref<DataTableRowKey[]>([]);
   const activeCustomerId = ref('');
   const showOverviewDrawer = ref(false);
+  const showTransferByConditionModal = ref(false);
+  const showEditByConditionModal = ref(false);
   const batchTableQueryParams = ref<TableQueryParams>({});
   const activeTab = ref();
 
@@ -252,11 +291,6 @@
         label: t('common.batchEdit'),
         key: 'batchEdit',
         permission: ['CUSTOMER_MANAGEMENT_POOL:UPDATE'],
-      },
-      {
-        label: t('common.batchTransfer'),
-        key: 'batchTransfer',
-        permission: ['CUSTOMER_MANAGEMENT_POOL:TRANSFER'],
       },
       {
         label: t('common.batchDelete'),
@@ -634,6 +668,34 @@
   }
 
   function handleAssignByConditionSuccess() {
+    checkedRowKeys.value = [];
+    tableRefreshId.value += 1;
+  }
+
+  function handleTransferByConditionClick() {
+    const total = propsRes.value.crmPagination?.itemCount || 0;
+    if (!total) {
+      Message.warning(t('customer.batchDeleteByConditionEmptyTip'));
+      return;
+    }
+    showTransferByConditionModal.value = true;
+  }
+
+  function handleTransferByConditionSuccess() {
+    checkedRowKeys.value = [];
+    tableRefreshId.value += 1;
+  }
+
+  function handleEditByConditionClick() {
+    const total = propsRes.value.crmPagination?.itemCount || 0;
+    if (!total) {
+      Message.warning(t('customer.batchDeleteByConditionEmptyTip'));
+      return;
+    }
+    showEditByConditionModal.value = true;
+  }
+
+  function handleEditByConditionSuccess() {
     checkedRowKeys.value = [];
     tableRefreshId.value += 1;
   }

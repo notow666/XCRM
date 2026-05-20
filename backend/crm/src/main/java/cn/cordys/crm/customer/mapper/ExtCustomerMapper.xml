@@ -23,6 +23,40 @@
         where id = #{id}
     </update>
 
+    <update id="batchAssignToOwner">
+        update customer
+        set pool_id = null,
+            in_shared_pool = false,
+            owner = #{ownerId},
+            collection_time = #{collectionTime},
+            reason_id = null,
+            follower = null,
+            follow_time = null,
+            update_user = #{updateUser},
+            update_time = #{updateTime},
+            stage = #{stage},
+            stage_status = #{stageStatus}
+        where id in
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </update>
+
+    <update id="batchTransferToPool">
+        update customer
+        set pool_id = #{targetPoolId},
+            owner = null,
+            collection_time = null,
+            stage = null,
+            stage_status = null,
+            update_user = #{updateUser},
+            update_time = #{updateTime}
+        where id in
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </update>
+
     <update id="batchTransfer">
         update customer
         set owner = #{request.owner},
@@ -969,6 +1003,21 @@
             </if>
             <if test="request.fieldName == 'name'">
                 name = #{request.fieldValue},
+            </if>
+            update_time = #{request.updateTime},
+            update_user = #{request.updateUser}
+        </set>
+        WHERE id IN
+        <foreach collection="request.ids" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </update>
+
+    <update id="batchUpdateByParam">
+        UPDATE customer
+        <set>
+            <if test="request.fieldName != null and request.fieldName != ''">
+                ${request.fieldName} = #{request.fieldValue},
             </if>
             update_time = #{request.updateTime},
             update_user = #{request.updateUser}

@@ -426,6 +426,18 @@
           and organization_id = #{orgId}
     </update>
 
+    <update id="batchUpdatePoolContactOwner">
+        update customer_contact cc
+        left join sys_user su on cc.owner = su.id
+        set cc.owner = #{newOwner}
+        where (cc.owner = #{oldOwner} or cc.owner = '' or su.id is null)
+          and customer_id in
+        <foreach collection="customerIds" item="customerId" open="(" close=")" separator=",">
+            #{customerId}
+        </foreach>
+          and organization_id = #{orgId}
+    </update>
+
     <update id="updateContactById">
         update customer_contact
         set owner = #{owner}

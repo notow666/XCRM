@@ -1,7 +1,10 @@
 package cn.cordys.crm.customer.mapper;
 
+import cn.cordys.crm.customer.domain.CustomerOwner;
 import cn.cordys.crm.customer.dto.request.CustomerBatchTransferRequest;
 import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 /**
  * @author jianxing
@@ -19,4 +22,6 @@ public interface ExtCustomerOwnerMapper {
      * @return 负责人ID
      */
     String getRecentOwner(@Param("customerId") String customerId);
+
+    List<CustomerOwner> listRecentOwners(@Param("customerIds") List<String> customerIds);
 }

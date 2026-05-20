@@ -8,12 +8,15 @@ import cn.cordys.aspectj.dto.LogDTO;
 import cn.cordys.common.constants.BusinessModuleField;
 import cn.cordys.common.constants.FormKey;
 import cn.cordys.common.constants.InternalUser;
+import cn.cordys.common.dto.BatchUpdateDbParam;
 import cn.cordys.common.dto.ChartAnalysisDbRequest;
 import cn.cordys.common.dto.DeptDataPermissionDTO;
 import cn.cordys.common.dto.chart.ChartResult;
 import cn.cordys.common.exception.GenericException;
+import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.service.BaseChartService;
 import cn.cordys.common.util.*;
+import cn.cordys.context.TenantContext;
 import cn.cordys.common.utils.ConditionFilterUtils;
 import cn.cordys.crm.customer.constants.CustomerCreateSource;
 import cn.cordys.crm.customer.domain.*;
@@ -24,6 +27,9 @@ import cn.cordys.crm.customer.dto.MobileConflictDTO;
 import cn.cordys.crm.customer.dto.request.CustomerChartAnalysisDbRequest;
 import cn.cordys.crm.customer.dto.request.CustomerPageRequest;
 import cn.cordys.crm.customer.dto.request.PoolBatchAssignByConditionRequest;
+import cn.cordys.crm.customer.dto.request.PoolBatchTransferRequest;
+import cn.cordys.crm.customer.dto.request.PoolBatchTransferByConditionRequest;
+import cn.cordys.crm.customer.dto.request.PoolBatchUpdateByConditionRequest;
 import cn.cordys.crm.customer.dto.request.PoolCustomerChartAnalysisRequest;
 import cn.cordys.crm.customer.dto.request.PoolCustomerPickRequest;
 import cn.cordys.crm.customer.mapper.ExtCustomerCapacityMapper;
@@ -33,6 +39,7 @@ import cn.cordys.crm.customer.mapper.ExtCustomerStageConfigMapper;
 import cn.cordys.crm.follow.service.FollowUpPlanService;
 import cn.cordys.crm.opportunity.dto.response.StageConfigResponse;
 import cn.cordys.crm.system.constants.NotificationConstants;
+import cn.cordys.crm.system.dto.MessageDetailDTO;
 import cn.cordys.crm.system.domain.User;
 import cn.cordys.crm.system.dto.FilterConditionDTO;
 import cn.cordys.crm.system.dto.RuleConditionDTO;
@@ -41,6 +48,9 @@ import cn.cordys.crm.system.dto.request.PoolBatchAssignRequest;
 import cn.cordys.crm.system.dto.request.PoolBatchPickRequest;
 import cn.cordys.crm.system.dto.request.ResourceBatchEditRequest;
 import cn.cordys.crm.system.dto.response.ModuleFormConfigDTO;
+import cn.cordys.crm.system.notice.common.NoticeModel;
+import cn.cordys.crm.system.notice.common.Receiver;
+import cn.cordys.crm.system.notice.sender.insite.InSiteNoticeSender;
 import cn.cordys.crm.system.notice.CommonNoticeSendService;
 import cn.cordys.crm.system.service.LogService;
 import cn.cordys.crm.system.service.ModuleFormCacheService;
@@ -53,13 +63,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
+import org.redisson.Redisson;
+import org.redisson.api.RLock;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -70,6 +85,12 @@ public class PoolCustomerService {
     public static final long DAY_MILLIS = 24 * 60 * 60 * 1000;
     private static final int BATCH_DELETE_BY_CONDITION_SIZE = 500;
     private static final int BATCH_ASSIGN_BY_CONDITION_MAX_SIZE = 2000;
+    private static final int BATCH_TRANSFER_BY_CONDITION_MAX_SIZE = 2000;
+    private static final int BATCH_UPDATE_BY_CONDITION_MAX_SIZE = 2000;
+    private static final int BATCH_ASSIGN_UPDATE_SIZE = 200;
+    private static final String BATCH_ASSIGN_LOCK_PREFIX = "crm:pool:batch-assign:";
+    private static final String BATCH_TRANSFER_LOCK_PREFIX = "crm:pool:batch-transfer:";
+    private static final String BATCH_UPDATE_LOCK_PREFIX = "crm:pool:batch-update:";
     @Resource
     private BaseMapper<Customer> customerMapper;
     @Resource
@@ -92,6 +113,8 @@ public class PoolCustomerService {
     private LogService logService;
     @Resource
     private CommonNoticeSendService commonNoticeSendService;
+    @Resource
+    private InSiteNoticeSender inSiteNoticeSender;
     @Resource
     private CustomerPoolService customerPoolService;
     @Resource
@@ -116,6 +139,12 @@ public class PoolCustomerService {
     private CustomerWechatFriendStatusService customerWechatFriendStatusService;
     @Resource
     private CustomerMobileRuleService customerMobileRuleService;
+    @Resource(name = "threadPoolTaskExecutor")
+    private Executor executor;
+    @Resource
+    private Redisson redisson;
+    @Resource
+    private TransactionTemplate transactionTemplate;
 
     /**
      * 获取当前用户公海选项
@@ -410,22 +439,84 @@ public class PoolCustomerService {
     }
 
     /**
-     * 按筛选条件批量分配客户（取当前筛选排序下的前 assignCount 条）
+     * 按筛选条件批量分配客户。
+     * 这里保留原有“先按筛选条件取前 N 条客户”的语义，
+     * 但真正执行时改走新的异步批量分配链路。
      *
-     * @return 未分配的客户数量，0 表示全部分配完成
+     * @return 任务受理结果，accepted=true 表示已提交异步任务
      */
-    public int batchAssignByCondition(PoolBatchAssignByConditionRequest request, String currentOrgId, String currentUser) {
+    public Map<String, Object> batchAssignByCondition(PoolBatchAssignByConditionRequest request, String currentOrgId, String currentUser) {
         int assignCount = Math.min(request.getAssignCount(), BATCH_ASSIGN_BY_CONDITION_MAX_SIZE);
         PageHelper.startPage(1, assignCount, false);
         List<String> ids = extCustomerMapper.listIds(request, currentOrgId, currentUser, null);
         if (CollectionUtils.isEmpty(ids)) {
-            return 0;
+            Map<String, Object> result = new HashMap<>(4);
+            result.put("accepted", false);
+            result.put("taskId", null);
+            result.put("message", "未查询到可分配客户");
+            return result;
         }
         PoolBatchAssignRequest batchAssignRequest = new PoolBatchAssignRequest();
         batchAssignRequest.setBatchIds(ids);
         batchAssignRequest.setAssignUserId(request.getAssignUserId());
         batchAssignRequest.setAssignUserIds(request.getAssignUserIds());
-        return batchAssign(batchAssignRequest, request.getAssignUserId(), currentOrgId, currentUser);
+        return batchAssign_new(batchAssignRequest, request.getAssignUserId(), currentOrgId, currentUser);
+    }
+
+    /**
+     * 按筛选条件批量转移客户（取当前筛选排序下的前 transferCount 条）。
+     */
+    public Map<String, Object> batchTransferByCondition(PoolBatchTransferByConditionRequest request, String currentUser, String currentOrgId) {
+        int transferCount = Math.min(request.getTransferCount(), BATCH_TRANSFER_BY_CONDITION_MAX_SIZE);
+        PageHelper.startPage(1, transferCount, false);
+        List<String> ids = extCustomerMapper.listIds(request, currentOrgId, currentUser, null);
+        if (CollectionUtils.isEmpty(ids)) {
+            return Map.of(
+                    "accepted", false,
+                    "taskId", "",
+                    "message", "未查询到可转移客户"
+            );
+        }
+        PoolBatchTransferRequest batchTransferRequest = new PoolBatchTransferRequest();
+        batchTransferRequest.setBatchIds(ids);
+        batchTransferRequest.setTargetPoolId(request.getTargetPoolId());
+        return batchTransfer_new(batchTransferRequest, currentUser, currentOrgId);
+    }
+
+    /**
+     * 按筛选条件批量编辑客户（取当前筛选排序下的前 updateCount 条）。
+     */
+    public Map<String, Object> batchUpdateByCondition(PoolBatchUpdateByConditionRequest request, String currentUser, String currentOrgId) {
+        CustomerPool pool = poolMapper.selectByPrimaryKey(request.getPoolId());
+        if (pool == null) {
+            throw new GenericException(Translator.get("customer_pool_not_exist"));
+        }
+
+        BaseField field = customerFieldService.getAndCheckField(request.getFieldId(), currentOrgId);
+
+        int updateCount = Math.min(request.getUpdateCount(), BATCH_UPDATE_BY_CONDITION_MAX_SIZE);
+        PageHelper.startPage(1, updateCount, false);
+        List<String> ids = extCustomerMapper.listIds(request, currentOrgId, currentUser, null);
+        if (CollectionUtils.isEmpty(ids)) {
+            return Map.of(
+                    "accepted", false,
+                    "taskId", "",
+                    "message", "未查询到可编辑客户"
+            );
+        }
+        if (Strings.CS.equals(field.getBusinessKey(), BusinessModuleField.CUSTOMER_MOBILE.getBusinessKey()) && ids.size() > 1) {
+            throw new GenericException(Translator.getWithArgs("common.field_value.repeat", field.getName()));
+        }
+        if (field.needRepeatCheck() && ids.size() > 1 && request.getFieldValue() != null
+                && StringUtils.isNotBlank(String.valueOf(request.getFieldValue()))) {
+            throw new GenericException(Translator.getWithArgs("common.field_value.repeat", field.getName()));
+        }
+
+        ResourceBatchEditRequest batchEditRequest = new ResourceBatchEditRequest();
+        batchEditRequest.setIds(ids);
+        batchEditRequest.setFieldId(request.getFieldId());
+        batchEditRequest.setFieldValue(request.getFieldValue());
+        return batchUpdate_new(batchEditRequest, pool, currentUser, currentOrgId);
     }
 
     /**
@@ -757,8 +848,7 @@ public class PoolCustomerService {
         }
 
         List<Customer> originCustomers = customerMapper.selectByIds(request.getIds());
-
-        customerFieldService.batchUpdate(request, field, originCustomers, Customer.class, LogModule.CUSTOMER_POOL, extCustomerMapper::batchUpdate, userId, organizationId);
+        executePoolBatchUpdate(request, originCustomers, field, userId, organizationId);
     }
 
     public List<ChartResult> chart(PoolCustomerChartAnalysisRequest request, String userId, String orgId, DeptDataPermissionDTO deptDataPermission) {
@@ -769,5 +859,912 @@ public class PoolCustomerService {
         customerChartAnalysisDbRequest.setPoolId(request.getPoolId());
         List<ChartResult> chartResults = extCustomerMapper.chart(customerChartAnalysisDbRequest, userId, orgId, deptDataPermission);
         return baseChartService.translateAxisName(formConfig, chartAnalysisDbRequest, chartResults);
+    }
+
+    /**
+     * 批量分配新链路：
+     * 1. 同步请求阶段只做参数校验、同池互斥锁、异步任务提交
+     * 2. 真正的分配逻辑放到异步线程执行，避免页面长时间阻塞
+     *
+     * @param request      批量分配请求
+     * @param assignUserId 兼容旧接口的单个分配用户ID
+     * @param currentOrgId 当前组织ID
+     * @param currentUser  当前操作人
+     * @return 仅返回是否受理、任务ID、提示文案
+     */
+    public Map<String, Object> batchAssign_new(PoolBatchAssignRequest request, String assignUserId, String currentOrgId, String currentUser) {
+        List<String> assignUserIds = resolveAssignUserIds(request, assignUserId);
+        if (CollectionUtils.isEmpty(assignUserIds)) {
+            throw new GenericException(Translator.get("user.not.exist"));
+        }
+        if (CollectionUtils.isEmpty(request.getBatchIds())) {
+            throw new GenericException(Translator.get("common.param.error"));
+        }
+
+        List<Customer> selectedCustomers = customerMapper.selectByIds(request.getBatchIds());
+        String poolId = resolvePoolIdForBatchAssign(selectedCustomers);
+        CustomerPool pool = poolMapper.selectByPrimaryKey(poolId);
+        if (pool == null) {
+            throw new GenericException(Translator.get("customer_pool_not_exist"));
+        }
+
+        String taskId = IDGenerator.nextStr();
+        long lockThreadId = Long.parseLong(taskId);
+        String lockKey = tenantRedisKey(BATCH_ASSIGN_LOCK_PREFIX + poolId);
+        RLock lock = redisson.getLock(lockKey);
+        // 同一个公海池同一时间只允许一个批量分配任务执行
+        boolean locked;
+        try {
+            // leaseTime 传 -1 时使用 Redisson watchdog 自动续期，threadId 用 taskId 透传给异步执行线程解锁。
+            locked = lock.tryLockAsync(0, -1, TimeUnit.MILLISECONDS, lockThreadId).get();
+        } catch (Exception ex) {
+            throw new GenericException("批量分配加锁失败");
+        }
+        if (!locked) {
+            log.info("[POOL_BATCH_ASSIGN_LOCK_REJECTED] poolId={}, operator={}, lockKey={}",
+                    poolId, currentUser, lockKey);
+            return Map.of(
+                    "accepted", false,
+                    "taskId", "",
+                    "message", "该公海池已有批量分配任务执行中，请稍后再试"
+            );
+        }
+
+        PoolBatchAssignRequest asyncRequest = new PoolBatchAssignRequest();
+        asyncRequest.setBatchIds(new ArrayList<>(request.getBatchIds()));
+        asyncRequest.setAssignUserId(assignUserId);
+        asyncRequest.setAssignUserIds(new ArrayList<>(assignUserIds));
+
+        try {
+            // 请求线程只负责提交任务，不在这里做重计算和批量落库
+            executor.execute(() -> doBatchAssignAsync(taskId, lockThreadId, pool, asyncRequest, currentOrgId, currentUser, lock));
+        } catch (Exception ex) {
+            releaseBatchAssignLock(lock, lockKey, lockThreadId);
+            throw ex;
+        }
+
+        log.info("[POOL_BATCH_ASSIGN_SUBMIT] taskId={}, poolId={}, operator={}, batchSize={}, assignUserCount={}",
+                taskId, poolId, currentUser, request.getBatchIds().size(), assignUserIds.size());
+
+        return Map.of(
+                "accepted", true,
+                "taskId", taskId,
+                "message", "批量分配任务已提交"
+        );
+    }
+
+    /**
+     * 批量转移新链路：
+     * 1. 同步请求阶段只做参数校验、同池互斥锁、异步任务提交
+     * 2. 真正的转移逻辑放到异步线程执行，避免页面长时间阻塞
+     */
+    public Map<String, Object> batchTransfer_new(PoolBatchTransferRequest request, String currentUser, String currentOrgId) {
+        if (CollectionUtils.isEmpty(request.getBatchIds()) || StringUtils.isBlank(request.getTargetPoolId())) {
+            throw new GenericException(Translator.get("common.param.error"));
+        }
+
+        List<Customer> selectedCustomers = customerMapper.selectByIds(request.getBatchIds());
+        String sourcePoolId = resolveSourcePoolIdForBatchTransfer(selectedCustomers);
+        CustomerPool sourcePool = poolMapper.selectByPrimaryKey(sourcePoolId);
+        if (sourcePool == null) {
+            throw new GenericException(Translator.get("customer_pool_not_exist"));
+        }
+        CustomerPool targetPool = poolMapper.selectByPrimaryKey(request.getTargetPoolId());
+        if (targetPool == null) {
+            throw new GenericException(Translator.get("pool_import_pool_not_exist"));
+        }
+        if (!Boolean.TRUE.equals(targetPool.getEnable())) {
+            throw new GenericException(Translator.get("pool_import_pool_disabled"));
+        }
+
+        String taskId = IDGenerator.nextStr();
+        long lockThreadId = Long.parseLong(taskId);
+        String lockKey = tenantRedisKey(BATCH_TRANSFER_LOCK_PREFIX + sourcePoolId);
+        RLock lock = redisson.getLock(lockKey);
+        boolean locked;
+        try {
+            // leaseTime 传 -1 时使用 Redisson watchdog 自动续期，threadId 用 taskId 透传给异步执行线程解锁。
+            locked = lock.tryLockAsync(0, -1, TimeUnit.MILLISECONDS, lockThreadId).get();
+        } catch (Exception ex) {
+            throw new GenericException("批量转移加锁失败");
+        }
+        if (!locked) {
+            log.info("[POOL_BATCH_TRANSFER_LOCK_REJECTED] sourcePoolId={}, operator={}, lockKey={}",
+                    sourcePoolId, currentUser, lockKey);
+            return Map.of(
+                    "accepted", false,
+                    "taskId", "",
+                    "message", "该公海池已有批量转移任务执行中，请稍后再试"
+            );
+        }
+
+        PoolBatchTransferRequest asyncRequest = new PoolBatchTransferRequest();
+        asyncRequest.setBatchIds(new ArrayList<>(request.getBatchIds()));
+        asyncRequest.setTargetPoolId(request.getTargetPoolId());
+        try {
+            executor.execute(() -> doBatchTransferAsync(taskId, lockThreadId, sourcePool, targetPool, asyncRequest,
+                    currentUser, currentOrgId, lock));
+        } catch (Exception ex) {
+            releaseBatchAssignLock(lock, lockKey, lockThreadId);
+            throw ex;
+        }
+
+        log.info("[POOL_BATCH_TRANSFER_SUBMIT] taskId={}, sourcePoolId={}, targetPoolId={}, operator={}, batchSize={}",
+                taskId, sourcePoolId, request.getTargetPoolId(), currentUser, request.getBatchIds().size());
+        return Map.of(
+                "accepted", true,
+                "taskId", taskId,
+                "message", "批量转移任务已提交"
+        );
+    }
+
+    /**
+     * 批量编辑新链路：
+     * 1. 同步请求阶段只做参数校验、同池互斥锁、异步任务提交
+     * 2. 真正的编辑逻辑放到异步线程执行，避免页面长时间阻塞
+     */
+    public Map<String, Object> batchUpdate_new(ResourceBatchEditRequest request, CustomerPool pool, String currentUser, String currentOrgId) {
+        if (CollectionUtils.isEmpty(request.getIds()) || StringUtils.isBlank(request.getFieldId())) {
+            throw new GenericException(Translator.get("common.param.error"));
+        }
+
+        String taskId = IDGenerator.nextStr();
+        long lockThreadId = Long.parseLong(taskId);
+        String lockKey = tenantRedisKey(BATCH_UPDATE_LOCK_PREFIX + pool.getId());
+        RLock lock = redisson.getLock(lockKey);
+        boolean locked;
+        try {
+            locked = lock.tryLockAsync(0, -1, TimeUnit.MILLISECONDS, lockThreadId).get();
+        } catch (Exception ex) {
+            throw new GenericException("批量编辑加锁失败");
+        }
+        if (!locked) {
+            log.info("[POOL_BATCH_UPDATE_LOCK_REJECTED] poolId={}, operator={}, lockKey={}",
+                    pool.getId(), currentUser, lockKey);
+            return Map.of(
+                    "accepted", false,
+                    "taskId", "",
+                    "message", "该公海池已有批量编辑任务执行中，请稍后再试"
+            );
+        }
+
+        ResourceBatchEditRequest asyncRequest = new ResourceBatchEditRequest();
+        asyncRequest.setIds(new ArrayList<>(request.getIds()));
+        asyncRequest.setFieldId(request.getFieldId());
+        asyncRequest.setFieldValue(request.getFieldValue());
+        try {
+            executor.execute(() -> doBatchUpdateAsync(taskId, lockThreadId, pool, asyncRequest, currentUser, currentOrgId, lock));
+        } catch (Exception ex) {
+            releaseBatchAssignLock(lock, lockKey, lockThreadId);
+            throw ex;
+        }
+
+        log.info("[POOL_BATCH_UPDATE_SUBMIT] taskId={}, poolId={}, operator={}, batchSize={}, fieldId={}",
+                taskId, pool.getId(), currentUser, request.getIds().size(), request.getFieldId());
+        return Map.of(
+                "accepted", true,
+                "taskId", taskId,
+                "message", "批量编辑任务已提交"
+        );
+    }
+
+    /**
+     * 异步执行批量分配主流程：
+     * 1. 一次性加载批量分配需要的基础数据
+     * 2. 在内存中计算每个客户最终应该分给谁
+     * 3. 按分配结果批量落库
+     * 4. 按用户聚合发送通知
+     */
+    private void doBatchAssignAsync(String taskId, long lockThreadId, CustomerPool pool, PoolBatchAssignRequest request,
+                                    String currentOrgId, String currentUser, RLock lock) {
+        long totalStart = System.currentTimeMillis();
+        List<String> assignUserIds = resolveAssignUserIds(request, request.getAssignUserId());
+        try {
+            log.info("[POOL_BATCH_ASSIGN_START] taskId={}, poolId={}, operator={}, batchSize={}, assignUserCount={}",
+                    taskId, pool.getId(), currentUser, request.getBatchIds().size(), assignUserIds.size());
+
+            long loadStart = System.currentTimeMillis();
+            Map<String, Integer> requestOrderMap = new HashMap<>();
+            for (int index = 0; index < request.getBatchIds().size(); index++) {
+                requestOrderMap.put(request.getBatchIds().get(index), index);
+            }
+            List<Customer> customers = customerMapper.selectByIds(request.getBatchIds());
+            // 候选客户必须仍然在当前公海池里，并按前端选中的顺序参与轮询分配
+            List<Customer> candidates = customers.stream()
+                    .filter(Objects::nonNull)
+                    .filter(customer -> Boolean.TRUE.equals(customer.getInSharedPool()))
+                    .filter(customer -> Strings.CS.equals(pool.getId(), customer.getPoolId()))
+                    .sorted(Comparator.comparingInt(customer -> requestOrderMap.getOrDefault(customer.getId(), Integer.MAX_VALUE)))
+                    .toList();
+            List<StageConfigResponse> stageConfigList = extCustomerStageConfigMapper.getStageConfigList(currentOrgId);
+            String defaultStage = CollectionUtils.isNotEmpty(stageConfigList) ? stageConfigList.getFirst().getId() : null;
+            String defaultStageStatus = CollectionUtils.isNotEmpty(stageConfigList) ? CustomerStageService.STATUS_NEW : null;
+            Map<String, String> recentOwnerMap = buildRecentOwnerMap(candidates);
+            BatchAssignPreparedData preparedData = prepareBatchAssignData(assignUserIds, candidates, currentOrgId);
+            log.info("[POOL_BATCH_ASSIGN_LOAD_COST] taskId={}, poolId={}, costMs={}, candidateSize={}",
+                    taskId, pool.getId(), System.currentTimeMillis() - loadStart, candidates.size());
+
+            long planStart = System.currentTimeMillis();
+            BatchAssignPlan plan = buildBatchAssignPlan(candidates, assignUserIds, preparedData, recentOwnerMap);
+            log.info("[POOL_BATCH_ASSIGN_PLAN_COST] taskId={}, poolId={}, costMs={}, assignedSize={}, unassignedSize={}",
+                    taskId, pool.getId(), System.currentTimeMillis() - planStart,
+                    plan.getAssignedCustomerIds().size(), plan.getUnassignedCustomerIds().size());
+
+            if (CollectionUtils.isNotEmpty(plan.getAssignedCustomerIds())) {
+                transactionTemplate.executeWithoutResult(status ->
+                        executeBatchAssignPlan(taskId, pool, plan, currentOrgId, currentUser, defaultStage, defaultStageStatus));
+                sendBatchAssignSummaryNotice(taskId, pool, plan, currentOrgId, currentUser);
+            }
+
+            log.info("[POOL_BATCH_ASSIGN_FINISH] taskId={}, poolId={}, successCount={}, failCount={}, totalCostMs={}",
+                    taskId, pool.getId(), plan.getAssignedCustomerIds().size(), plan.getUnassignedCustomerIds().size(),
+                    System.currentTimeMillis() - totalStart);
+        } catch (Exception ex) {
+            log.error("[POOL_BATCH_ASSIGN_FAILED] taskId={}, poolId={}, operator={}",
+                    taskId, pool.getId(), currentUser, ex);
+        } finally {
+            releaseBatchAssignLock(lock, lock.getName(), lockThreadId);
+        }
+    }
+
+    /**
+     * 异步执行批量转移主流程：
+     * 1. 一次性加载批量转移需要的基础数据
+     * 2. 过滤当前仍在源公海池中的客户
+     * 3. 按固定批次批量更新客户并批量写日志
+     */
+    private void doBatchTransferAsync(String taskId, long lockThreadId, CustomerPool sourcePool, CustomerPool targetPool,
+                                      PoolBatchTransferRequest request, String currentUser, String currentOrgId, RLock lock) {
+        long totalStart = System.currentTimeMillis();
+        try {
+            log.info("[POOL_BATCH_TRANSFER_START] taskId={}, sourcePoolId={}, targetPoolId={}, operator={}, batchSize={}",
+                    taskId, sourcePool.getId(), targetPool.getId(), currentUser, request.getBatchIds().size());
+
+            long loadStart = System.currentTimeMillis();
+            Map<String, Integer> requestOrderMap = new HashMap<>();
+            for (int index = 0; index < request.getBatchIds().size(); index++) {
+                requestOrderMap.put(request.getBatchIds().get(index), index);
+            }
+            List<Customer> customers = customerMapper.selectByIds(request.getBatchIds());
+            List<Customer> candidates = customers.stream()
+                    .filter(Objects::nonNull)
+                    .filter(customer -> Boolean.TRUE.equals(customer.getInSharedPool()))
+                    .filter(customer -> Strings.CS.equals(sourcePool.getId(), customer.getPoolId()))
+                    .sorted(Comparator.comparingInt(customer -> requestOrderMap.getOrDefault(customer.getId(), Integer.MAX_VALUE)))
+                    .toList();
+            log.info("[POOL_BATCH_TRANSFER_LOAD_COST] taskId={}, sourcePoolId={}, costMs={}, candidateSize={}",
+                    taskId, sourcePool.getId(), System.currentTimeMillis() - loadStart, candidates.size());
+
+            long planStart = System.currentTimeMillis();
+            BatchTransferPlan plan = buildBatchTransferPlan(request.getBatchIds(), candidates);
+            log.info("[POOL_BATCH_TRANSFER_PLAN_COST] taskId={}, sourcePoolId={}, costMs={}, transferSize={}, skippedSize={}",
+                    taskId, sourcePool.getId(), System.currentTimeMillis() - planStart,
+                    plan.transferCustomers().size(), plan.skippedCustomerIds().size());
+
+            if (CollectionUtils.isNotEmpty(plan.transferCustomers())) {
+                transactionTemplate.executeWithoutResult(status ->
+                        executeBatchTransferPlan(taskId, sourcePool, targetPool, plan, currentUser, currentOrgId));
+            }
+
+            log.info("[POOL_BATCH_TRANSFER_FINISH] taskId={}, sourcePoolId={}, targetPoolId={}, successCount={}, failCount={}, totalCostMs={}",
+                    taskId, sourcePool.getId(), targetPool.getId(), plan.transferCustomers().size(),
+                    plan.skippedCustomerIds().size(), System.currentTimeMillis() - totalStart);
+        } catch (Exception ex) {
+            log.error("[POOL_BATCH_TRANSFER_FAILED] taskId={}, sourcePoolId={}, targetPoolId={}, operator={}",
+                    taskId, sourcePool.getId(), targetPool.getId(), currentUser, ex);
+        } finally {
+            releaseBatchAssignLock(lock, lock.getName(), lockThreadId);
+        }
+    }
+
+    /**
+     * 异步执行批量编辑主流程：
+     * 1. 重新过滤当前仍在目标公海池中的客户
+     * 2. 走公海专用批量编辑逻辑，避免回退到老的全局唯一手机号规则
+     */
+    private void doBatchUpdateAsync(String taskId, long lockThreadId, CustomerPool pool, ResourceBatchEditRequest request,
+                                    String currentUser, String currentOrgId, RLock lock) {
+        long totalStart = System.currentTimeMillis();
+        boolean mobileBatchUpdate = false;
+        Customer targetCustomer = null;
+        try {
+            log.info("[POOL_BATCH_UPDATE_START] taskId={}, poolId={}, operator={}, batchSize={}, fieldId={}",
+                    taskId, pool.getId(), currentUser, request.getIds().size(), request.getFieldId());
+
+            BaseField field = customerFieldService.getAndCheckField(request.getFieldId(), currentOrgId);
+            mobileBatchUpdate = Strings.CS.equals(field.getBusinessKey(), BusinessModuleField.CUSTOMER_MOBILE.getBusinessKey());
+
+            long loadStart = System.currentTimeMillis();
+            Map<String, Integer> requestOrderMap = new HashMap<>();
+            for (int index = 0; index < request.getIds().size(); index++) {
+                requestOrderMap.put(request.getIds().get(index), index);
+            }
+            List<Customer> customers = customerMapper.selectByIds(request.getIds());
+            List<Customer> candidates = customers.stream()
+                    .filter(Objects::nonNull)
+                    .filter(customer -> Boolean.TRUE.equals(customer.getInSharedPool()))
+                    .filter(customer -> Strings.CS.equals(pool.getId(), customer.getPoolId()))
+                    .sorted(Comparator.comparingInt(customer -> requestOrderMap.getOrDefault(customer.getId(), Integer.MAX_VALUE)))
+                    .toList();
+            log.info("[POOL_BATCH_UPDATE_LOAD_COST] taskId={}, poolId={}, costMs={}, candidateSize={}",
+                    taskId, pool.getId(), System.currentTimeMillis() - loadStart, candidates.size());
+
+            if (CollectionUtils.isEmpty(candidates)) {
+                log.info("[POOL_BATCH_UPDATE_SKIP] taskId={}, poolId={}, reason=no_candidate", taskId, pool.getId());
+                return;
+            }
+            targetCustomer = candidates.getFirst();
+
+            ResourceBatchEditRequest batchEditRequest = new ResourceBatchEditRequest();
+            batchEditRequest.setIds(candidates.stream().map(Customer::getId).toList());
+            batchEditRequest.setFieldId(request.getFieldId());
+            batchEditRequest.setFieldValue(request.getFieldValue());
+            transactionTemplate.executeWithoutResult(status ->
+                    executePoolBatchUpdate(batchEditRequest, candidates, field, currentUser, currentOrgId));
+
+            if (mobileBatchUpdate) {
+                sendPoolMobileBatchUpdateNotice(taskId, pool, targetCustomer, currentOrgId, currentUser, true, null);
+            }
+
+            log.info("[POOL_BATCH_UPDATE_FINISH] taskId={}, poolId={}, successCount={}, totalCostMs={}",
+                    taskId, pool.getId(), candidates.size(), System.currentTimeMillis() - totalStart);
+        } catch (Exception ex) {
+            if (mobileBatchUpdate) {
+                sendPoolMobileBatchUpdateNotice(taskId, pool, targetCustomer, currentOrgId, currentUser, false, ex.getMessage());
+            }
+            log.error("[POOL_BATCH_UPDATE_FAILED] taskId={}, poolId={}, operator={}, fieldId={}",
+                    taskId, pool.getId(), currentUser, request.getFieldId(), ex);
+        } finally {
+            releaseBatchAssignLock(lock, lock.getName(), lockThreadId);
+        }
+    }
+
+    private void executePoolBatchUpdate(ResourceBatchEditRequest request, List<Customer> originCustomers,
+                                        String currentUser, String currentOrgId) {
+        BaseField field = customerFieldService.getAndCheckField(request.getFieldId(), currentOrgId);
+        executePoolBatchUpdate(request, originCustomers, field, currentUser, currentOrgId);
+    }
+
+    private void executePoolBatchUpdate(ResourceBatchEditRequest request, List<Customer> originCustomers, BaseField field,
+                                        String currentUser, String currentOrgId) {
+        if (Strings.CS.equals(field.getBusinessKey(), BusinessModuleField.CUSTOMER_MOBILE.getBusinessKey())) {
+            executePoolMobileBatchUpdate(request, originCustomers, field, currentUser, currentOrgId);
+            return;
+        }
+        customerFieldService.batchUpdate(request, field, originCustomers, Customer.class, LogModule.CUSTOMER_POOL,
+                this::executeCustomerBatchUpdate, currentUser, currentOrgId);
+    }
+
+    private void executePoolMobileBatchUpdate(ResourceBatchEditRequest request, List<Customer> originCustomers, BaseField field,
+                                              String currentUser, String currentOrgId) {
+        if (CollectionUtils.isEmpty(originCustomers)) {
+            return;
+        }
+        if (originCustomers.size() > 1) {
+            throw new GenericException(Translator.getWithArgs("common.field_value.repeat", field.getName()));
+        }
+
+        Customer originCustomer = originCustomers.get(0);
+        String targetMobile = normalizeBatchUpdateMobile(request.getFieldValue());
+        String originMobile = normalizeBatchUpdateMobile(originCustomer.getMobile());
+        boolean mobileChanged = !Objects.equals(originMobile, targetMobile);
+        if (mobileChanged && StringUtils.isNotBlank(targetMobile)) {
+            customerMobileRuleService.validateForSave(originCustomer.getId(), originCustomer.getName(), targetMobile,
+                    originCustomer.getCreateSource(), originCustomer.getOwner(), currentOrgId);
+        }
+
+        request.setFieldValue(targetMobile);
+        addPoolBusinessFieldBatchUpdateLog(originCustomers, field, request, currentUser, currentOrgId);
+
+        BatchUpdateDbParam updateParam = new BatchUpdateDbParam();
+        updateParam.setIds(List.of(originCustomer.getId()));
+        updateParam.setFieldName(field.getBusinessKey());
+        updateParam.setFieldValue(targetMobile);
+        updateParam.setUpdateTime(System.currentTimeMillis());
+        updateParam.setUpdateUser(currentUser);
+        executeCustomerBatchUpdate(updateParam);
+    }
+
+    private void executeCustomerBatchUpdate(BatchUpdateDbParam updateParam) {
+        if (StringUtils.isNotBlank(updateParam.getFieldName())) {
+            updateParam.setFieldName(CaseFormatUtils.camelToUnderscore(updateParam.getFieldName()));
+        }
+        extCustomerMapper.batchUpdateByParam(updateParam);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void addPoolBusinessFieldBatchUpdateLog(List<Customer> originCustomers, BaseField field,
+                                                    ResourceBatchEditRequest request, String userId, String orgId) {
+        List<LogDTO> logs = originCustomers.stream().map(customer -> {
+            Map originResource = new HashMap();
+            Object originValue = getCustomerFieldValue(customer, field.getBusinessKey());
+            if (isNotBlank(originValue)) {
+                originResource.put(field.getBusinessKey(), originValue);
+            }
+
+            Map modifiedResource = new HashMap();
+            if (isNotBlank(request.getFieldValue())) {
+                modifiedResource.put(field.getBusinessKey(), request.getFieldValue());
+            }
+
+            LogDTO logDTO = new LogDTO(orgId, customer.getId(), userId, LogType.UPDATE, LogModule.CUSTOMER_POOL, customer.getName());
+            logDTO.setOriginalValue(originResource);
+            logDTO.setModifiedValue(modifiedResource);
+            return logDTO;
+        }).toList();
+        logService.batchAdd(logs);
+    }
+
+    private Object getCustomerFieldValue(Customer customer, String fieldName) {
+        try {
+            return customer.getClass().getMethod("get" + CaseFormatUtils.capitalizeFirstLetter(fieldName)).invoke(customer);
+        } catch (Exception ex) {
+            log.error("读取客户字段失败, fieldName={}", fieldName, ex);
+            return null;
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    private boolean isNotBlank(Object value) {
+        switch (value) {
+            case null -> {
+                return false;
+            }
+            case String str -> {
+                return StringUtils.isNotBlank(str);
+            }
+            case List list -> {
+                return CollectionUtils.isNotEmpty(list);
+            }
+            default -> {
+                return true;
+            }
+        }
+    }
+
+    private String normalizeBatchUpdateMobile(Object value) {
+        if (value == null) {
+            return null;
+        }
+        return StringUtils.trimToNull(String.valueOf(value).replaceAll("[\\s\\uFEFF\\xA0]+", ""));
+    }
+
+    private void sendPoolMobileBatchUpdateNotice(String taskId, CustomerPool pool, Customer customer, String currentOrgId,
+                                                 String currentUser, boolean success, String errorMessage) {
+        String customerName = customer == null ? "客户" : StringUtils.defaultIfBlank(customer.getName(), "客户");
+        String poolName = pool == null ? "公海" : StringUtils.defaultIfBlank(pool.getName(), "公海");
+        String subjectText = "公海客户手机号编辑通知";
+        String resourceName = poolName + "手机号编辑：" + customerName;
+        String context = success
+                ? "公海客户【" + customerName + "】手机号修改成功。"
+                : "公海客户【" + customerName + "】手机号修改失败，原因：" + StringUtils.defaultIfBlank(errorMessage, "未知异常");
+        inSiteNoticeSender.sendAnnouncement(
+                buildPoolMobileBatchUpdateMessageDetail(taskId, currentOrgId),
+                buildPoolMobileBatchUpdateNoticeModel(currentUser, currentOrgId, resourceName),
+                context,
+                subjectText
+        );
+    }
+
+    private MessageDetailDTO buildPoolMobileBatchUpdateMessageDetail(String taskId, String currentOrgId) {
+        MessageDetailDTO messageDetailDTO = new MessageDetailDTO();
+        messageDetailDTO.setId(taskId);
+        messageDetailDTO.setEvent(NotificationConstants.Event.HIGH_SEAS_CUSTOMER_DISTRIBUTED);
+        messageDetailDTO.setTaskType(NotificationConstants.Module.CUSTOMER);
+        messageDetailDTO.setOrganizationId(currentOrgId);
+        messageDetailDTO.setSysEnable(true);
+        return messageDetailDTO;
+    }
+
+    private NoticeModel buildPoolMobileBatchUpdateNoticeModel(String currentUser, String currentOrgId, String resourceName) {
+        Map<String, Object> paramMap = new HashMap<>();
+        paramMap.put("organizationId", currentOrgId);
+        paramMap.put("name", resourceName);
+        return NoticeModel.builder()
+                .operator(currentUser)
+                .event(NotificationConstants.Event.HIGH_SEAS_CUSTOMER_DISTRIBUTED)
+                .paramMap(paramMap)
+                .receivers(List.of(new Receiver(currentUser, NotificationConstants.Type.SYSTEM_NOTICE.name())))
+                .excludeSelf(false)
+                .build();
+    }
+
+    private BatchTransferPlan buildBatchTransferPlan(List<String> requestIds, List<Customer> candidates) {
+        if (CollectionUtils.isEmpty(candidates)) {
+            return new BatchTransferPlan(List.of(), CollectionUtils.isEmpty(requestIds) ? List.of() : new ArrayList<>(requestIds));
+        }
+        List<Customer> transferCustomers = candidates.stream().filter(Objects::nonNull).toList();
+        Set<String> transferIdSet = transferCustomers.stream().map(Customer::getId).collect(Collectors.toSet());
+        List<String> skippedCustomerIds = CollectionUtils.isEmpty(requestIds)
+                ? List.of()
+                : requestIds.stream().filter(StringUtils::isNotBlank).filter(id -> !transferIdSet.contains(id)).toList();
+        return new BatchTransferPlan(transferCustomers, skippedCustomerIds);
+    }
+
+    private void executeBatchTransferPlan(String taskId, CustomerPool sourcePool, CustomerPool targetPool, BatchTransferPlan plan,
+                                          String currentUser, String currentOrgId) {
+        long updateCustomerStart = System.currentTimeMillis();
+        long now = System.currentTimeMillis();
+        List<String> transferIds = plan.transferCustomers().stream().map(Customer::getId).toList();
+        for (List<String> partitionIds : partition(transferIds, BATCH_ASSIGN_UPDATE_SIZE)) {
+            extCustomerMapper.batchTransferToPool(partitionIds, targetPool.getId(), currentUser, now);
+        }
+        log.info("[POOL_BATCH_TRANSFER_UPDATE_CUSTOMER_COST] taskId={}, sourcePoolId={}, costMs={}",
+                taskId, sourcePool.getId(), System.currentTimeMillis() - updateCustomerStart);
+
+        long logStart = System.currentTimeMillis();
+        List<LogDTO> logs = plan.transferCustomers().stream()
+                .map(customer -> new LogDTO(currentOrgId, customer.getId(), currentUser, LogType.UPDATE,
+                        LogModule.CUSTOMER_POOL, Translator.getWithArgs("pool_transfer_log", customer.getName(), targetPool.getName())))
+                .toList();
+        logService.batchAdd(logs);
+        log.info("[POOL_BATCH_TRANSFER_LOG_BATCH_COST] taskId={}, sourcePoolId={}, costMs={}",
+                taskId, sourcePool.getId(), System.currentTimeMillis() - logStart);
+    }
+
+    /**
+     * 预加载批量分配决策所需的用户侧数据。
+     * 这里的目标是把“循环里查数据库”提前挪到循环外，避免 2000 条客户逐条打库。
+     */
+    private BatchAssignPreparedData prepareBatchAssignData(List<String> assignUserIds, List<Customer> candidates, String currentOrgId) {
+        Map<String, Integer> userCapacitiesMap = new HashMap<>();
+        Map<String, Set<String>> userOwnedPoolMobileMap = new HashMap<>();
+        Map<String, Set<String>> userPrivateConflictMobileMap = new HashMap<>();
+        List<String> candidateMobiles = candidates.stream().map(Customer::getMobile).toList();
+        List<String> excludeStageIds = new ArrayList<>();
+        String paymentStageId = customerStageService.getPaymentStageId(currentOrgId);
+        String failStageId = customerStageService.getFailStageId(currentOrgId);
+        if (StringUtils.isNotEmpty(paymentStageId)) {
+            excludeStageIds.add(paymentStageId);
+        }
+        if (StringUtils.isNotEmpty(failStageId)) {
+            excludeStageIds.add(failStageId);
+        }
+
+        for (String targetUserId : assignUserIds) {
+            CustomerCapacity customerCapacity = getUserCapacity(targetUserId, currentOrgId);
+            int remainingCapacity = Integer.MAX_VALUE;
+            if (customerCapacity != null && customerCapacity.getCapacity() != null) {
+                int excludeCount = 0;
+                if (CollectionUtils.isNotEmpty(excludeStageIds)) {
+                    excludeCount = extCustomerMapper.countByOwnerAndStages(targetUserId, excludeStageIds);
+                }
+                LambdaQueryWrapper<Customer> customerWrapper = new LambdaQueryWrapper<>();
+                customerWrapper.eq(Customer::getOwner, targetUserId).eq(Customer::getInSharedPool, false);
+                int ownCount = customerMapper.selectListByLambda(customerWrapper).size();
+                remainingCapacity = Math.max(0, customerCapacity.getCapacity() - (ownCount - excludeCount));
+            }
+            userCapacitiesMap.put(targetUserId, remainingCapacity);
+            // 复用旧批量分配的重复规则：
+            // 预加载目标负责人名下“公海来源客户已占用手机号”集合，后面逐条分配时直接命中判断
+            userOwnedPoolMobileMap.put(targetUserId, customerMobileRuleService.loadOwnerPoolMobiles(targetUserId, currentOrgId));
+            // 复用旧批量分配的重复规则：
+            // 预加载目标负责人名下“私海来源客户冲突手机号”集合，避免把公海客户分配到会撞号的负责人
+            userPrivateConflictMobileMap.put(targetUserId,
+                    customerMobileRuleService.findPoolImportReceiveBlockingOwnerPrivateMobiles(candidateMobiles, targetUserId, currentOrgId));
+        }
+        return new BatchAssignPreparedData(userCapacitiesMap, userOwnedPoolMobileMap, userPrivateConflictMobileMap);
+    }
+
+    /**
+     * 在内存中完成轮询分配，不落库。
+     * 输出的是一个最终分配方案，后续批量 SQL 和批量通知都只依赖这个方案。
+     */
+    private BatchAssignPlan buildBatchAssignPlan(List<Customer> candidates, List<String> assignUserIds,
+                                                 BatchAssignPreparedData preparedData, Map<String, String> recentOwnerMap) {
+        Map<String, List<Customer>> ownerCustomersMap = new LinkedHashMap<>();
+        List<String> assignedCustomerIds = new ArrayList<>();
+        List<String> unassignedCustomerIds = new ArrayList<>();
+        if (CollectionUtils.isEmpty(candidates) || CollectionUtils.isEmpty(assignUserIds)) {
+            candidates.stream().map(Customer::getId).filter(Objects::nonNull).forEach(unassignedCustomerIds::add);
+            return new BatchAssignPlan(ownerCustomersMap, assignedCustomerIds, unassignedCustomerIds, recentOwnerMap);
+        }
+
+        int userIdx = 0;
+        int userCount = assignUserIds.size();
+        for (Customer customer : candidates) {
+            boolean success = false;
+            int attempts = 0;
+            while (attempts < userCount) {
+                // 按用户轮询尝试，保持旧逻辑“多负责人轮流分配”的业务语义
+                String currentUserId = assignUserIds.get(userIdx);
+                Integer capacity = preparedData.userCapacitiesMap().get(currentUserId);
+                Set<String> ownedPoolMobiles = preparedData.userOwnedPoolMobileMap().get(currentUserId);
+                Set<String> privateConflictMobiles = preparedData.userPrivateConflictMobileMap().get(currentUserId);
+                if (capacity != null && capacity > 0
+                        // 复用旧批量分配的最终重复规则判断：
+                        // 只要当前客户手机号命中“私海冲突集合”或“公海来源已占用集合”，本轮就不给这个负责人
+                        && !customerMobileRuleService.hasPoolImportReceiveConflict(StringUtils.trimToNull(customer.getMobile()),
+                        privateConflictMobiles, ownedPoolMobiles)) {
+                    ownerCustomersMap.computeIfAbsent(currentUserId, key -> new ArrayList<>()).add(customer);
+                    assignedCustomerIds.add(customer.getId());
+                    preparedData.userCapacitiesMap().put(currentUserId, capacity - 1);
+                    // 复用旧批量分配的批内防重逻辑：
+                    // 当前客户一旦成功分给该负责人，立刻把手机号加入内存占用集合，防止同一批后续客户再撞号
+                    customerMobileRuleService.addOwnedMobile(customer, ownedPoolMobiles);
+                    userIdx = (userIdx + 1) % userCount;
+                    success = true;
+                    break;
+                }
+                userIdx = (userIdx + 1) % userCount;
+                attempts++;
+            }
+            if (!success) {
+                unassignedCustomerIds.add(customer.getId());
+            }
+        }
+        return new BatchAssignPlan(ownerCustomersMap, assignedCustomerIds, unassignedCustomerIds, recentOwnerMap);
+    }
+
+    /**
+     * 按分配方案批量落库。
+     * 这里不再复用旧的 ownCustomer()，而是把客户更新、负责人历史删除、联系人负责人更新、
+     * 微信好友状态重算、日志写入拆成批量动作。
+     */
+    private void executeBatchAssignPlan(String taskId, CustomerPool pool, BatchAssignPlan plan, String currentOrgId,
+                                        String currentUser, String defaultStage, String defaultStageStatus) {
+        long updateCustomerStart = System.currentTimeMillis();
+        long now = System.currentTimeMillis();
+        for (Map.Entry<String, List<Customer>> entry : plan.getOwnerCustomersMap().entrySet()) {
+            String ownerId = entry.getKey();
+            List<String> customerIds = entry.getValue().stream().map(Customer::getId).toList();
+            for (List<String> partitionIds : partition(customerIds, BATCH_ASSIGN_UPDATE_SIZE)) {
+                // 同一个负责人一批一批更新客户，避免单条 update 和超大 SQL
+                extCustomerMapper.batchAssignToOwner(partitionIds, ownerId, ownerId, now, now, defaultStage, defaultStageStatus);
+            }
+        }
+        log.info("[POOL_BATCH_ASSIGN_UPDATE_CUSTOMER_COST] taskId={}, poolId={}, costMs={}",
+                taskId, pool.getId(), System.currentTimeMillis() - updateCustomerStart);
+
+        long deleteOwnerHistoryStart = System.currentTimeMillis();
+        customerOwnerHistoryService.deleteByCustomerIds(plan.getAssignedCustomerIds());
+        log.info("[POOL_BATCH_ASSIGN_DELETE_OWNER_HISTORY_COST] taskId={}, poolId={}, costMs={}",
+                taskId, pool.getId(), System.currentTimeMillis() - deleteOwnerHistoryStart);
+
+        long updateContactStart = System.currentTimeMillis();
+        for (Map.Entry<String, List<Customer>> ownerEntry : plan.getOwnerCustomersMap().entrySet()) {
+            String newOwner = ownerEntry.getKey();
+            Map<String, List<String>> oldOwnerCustomerIdsMap = new LinkedHashMap<>();
+            for (Customer customer : ownerEntry.getValue()) {
+                String oldOwner = plan.getRecentOwnerMap().get(customer.getId());
+                String ownerKey = StringUtils.defaultString(oldOwner);
+                oldOwnerCustomerIdsMap.computeIfAbsent(ownerKey, key -> new ArrayList<>()).add(customer.getId());
+            }
+            for (Map.Entry<String, List<String>> oldOwnerEntry : oldOwnerCustomerIdsMap.entrySet()) {
+                String oldOwner = StringUtils.trimToNull(oldOwnerEntry.getKey());
+                for (List<String> partitionIds : partition(oldOwnerEntry.getValue(), BATCH_ASSIGN_UPDATE_SIZE)) {
+                    // 联系人负责人只同步“最近负责人/空负责人/无效负责人”那部分记录
+                    customerContactService.batchUpdatePoolContactOwner(partitionIds, newOwner, oldOwner, currentOrgId);
+                }
+            }
+        }
+        log.info("[POOL_BATCH_ASSIGN_UPDATE_CONTACT_COST] taskId={}, poolId={}, costMs={}",
+                taskId, pool.getId(), System.currentTimeMillis() - updateContactStart);
+
+        long recalculateStart = System.currentTimeMillis();
+        customerWechatFriendStatusService.recalculateCustomers(plan.getAssignedCustomerIds(), currentUser);
+        log.info("[POOL_BATCH_ASSIGN_RECALCULATE_WECHAT_COST] taskId={}, poolId={}, costMs={}",
+                taskId, pool.getId(), System.currentTimeMillis() - recalculateStart);
+
+        long logStart = System.currentTimeMillis();
+        List<LogDTO> logs = plan.getOwnerCustomersMap().entrySet().stream()
+                .flatMap(entry -> entry.getValue().stream()
+                        .map(customer -> new LogDTO(currentOrgId, customer.getId(), currentUser, LogType.ASSIGN,
+                                LogModule.CUSTOMER_POOL, customer.getName())))
+                .toList();
+        logService.batchAdd(logs);
+        log.info("[POOL_BATCH_ASSIGN_LOG_BATCH_COST] taskId={}, poolId={}, costMs={}",
+                taskId, pool.getId(), System.currentTimeMillis() - logStart);
+    }
+
+    /**
+     * 聚合通知：
+     * 每个负责人只发一条通知，而不是每个客户一条，降低通知量和异步消息压力。
+     */
+    private void sendBatchAssignSummaryNotice(String taskId, CustomerPool pool, BatchAssignPlan plan, String currentOrgId, String currentUser) {
+        long noticeStart = System.currentTimeMillis();
+        for (Map.Entry<String, List<Customer>> entry : plan.getOwnerCustomersMap().entrySet()) {
+            String ownerId = entry.getKey();
+            List<Customer> customers = entry.getValue();
+            if (CollectionUtils.isEmpty(customers)) {
+                continue;
+            }
+            String resourceName = buildBatchAssignNoticeResourceName(pool, customers);
+            // 这里不再走通用通知中心分发链路，避免 message task 配置再次扩散成多条通知。
+            // 批量分配场景只需要“一人一条站内汇总通知”。
+            inSiteNoticeSender.sendAnnouncement(
+                    buildBatchAssignMessageDetail(taskId, currentOrgId),
+                    buildBatchAssignNoticeModel(currentUser, currentOrgId, ownerId, resourceName),
+                    resourceName,
+                    "公海客户分配通知"
+            );
+        }
+        log.info("[POOL_BATCH_ASSIGN_SEND_NOTICE_COST] taskId={}, poolId={}, costMs={}",
+                taskId, pool.getId(), System.currentTimeMillis() - noticeStart);
+    }
+
+    private MessageDetailDTO buildBatchAssignMessageDetail(String taskId, String currentOrgId) {
+        MessageDetailDTO messageDetailDTO = new MessageDetailDTO();
+        messageDetailDTO.setId(taskId);
+        messageDetailDTO.setEvent(NotificationConstants.Event.HIGH_SEAS_CUSTOMER_DISTRIBUTED);
+        messageDetailDTO.setTaskType(NotificationConstants.Module.CUSTOMER);
+        messageDetailDTO.setOrganizationId(currentOrgId);
+        messageDetailDTO.setSysEnable(true);
+        return messageDetailDTO;
+    }
+
+    private NoticeModel buildBatchAssignNoticeModel(String currentUser, String currentOrgId, String ownerId, String resourceName) {
+        Map<String, Object> paramMap = new HashMap<>();
+        paramMap.put("organizationId", currentOrgId);
+        paramMap.put("name", resourceName);
+        return NoticeModel.builder()
+                .operator(currentUser)
+                .event(NotificationConstants.Event.HIGH_SEAS_CUSTOMER_DISTRIBUTED)
+                .paramMap(paramMap)
+                .receivers(List.of(new Receiver(ownerId, NotificationConstants.Type.SYSTEM_NOTICE.name())))
+                .excludeSelf(true)
+                .build();
+    }
+
+    /**
+     * 构造聚合通知文案，保留少量客户名称摘要，避免通知内容过长。
+     */
+    private String buildBatchAssignNoticeResourceName(CustomerPool pool, List<Customer> customers) {
+        int total = customers.size();
+        List<String> names = customers.stream()
+                .map(Customer::getName)
+                .filter(StringUtils::isNotBlank)
+                .limit(3)
+                .toList();
+        String customerSummary = CollectionUtils.isEmpty(names) ? "客户" : String.join("、", names);
+        if (total > names.size()) {
+            customerSummary = customerSummary + "等" + total + "个客户";
+        }
+        return StringUtils.defaultString(pool.getName(), "公海") + "分配：" + customerSummary;
+    }
+
+    /**
+     * 一次性查出所有客户最近一次销售负责人。
+     * 后续批量更新联系人负责人时会按“新负责人 + 最近负责人”分组使用。
+     */
+    private Map<String, String> buildRecentOwnerMap(List<Customer> customers) {
+        if (CollectionUtils.isEmpty(customers)) {
+            return new HashMap<>();
+        }
+        List<String> customerIds = customers.stream().map(Customer::getId).filter(StringUtils::isNotBlank).toList();
+        Map<String, String> recentOwnerMap = new LinkedHashMap<>();
+        for (CustomerOwner customerOwner : extCustomerOwnerMapper.listRecentOwners(customerIds)) {
+            recentOwnerMap.putIfAbsent(customerOwner.getCustomerId(), customerOwner.getOwner());
+        }
+        return recentOwnerMap;
+    }
+
+    /**
+     * 统一解析前端传入的分配用户集合，兼容旧接口的单用户字段。
+     */
+    private List<String> resolveAssignUserIds(PoolBatchAssignRequest request, String assignUserId) {
+        List<String> assignUserIds = request.getAssignUserIds();
+        if (CollectionUtils.isEmpty(assignUserIds) && StringUtils.isNotBlank(assignUserId)) {
+            assignUserIds = List.of(assignUserId);
+        }
+        if (CollectionUtils.isEmpty(assignUserIds)) {
+            return List.of();
+        }
+        return assignUserIds.stream().filter(StringUtils::isNotBlank).distinct().toList();
+    }
+
+    /**
+     * 从本次选中的客户里反推出所属公海池，并强制要求只能来自同一个公海池。
+     */
+    private String resolvePoolIdForBatchAssign(List<Customer> customers) {
+        List<String> poolIds = customers.stream()
+                .filter(Objects::nonNull)
+                .filter(customer -> Boolean.TRUE.equals(customer.getInSharedPool()))
+                .map(Customer::getPoolId)
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .toList();
+        if (CollectionUtils.isEmpty(poolIds)) {
+            throw new GenericException("所选客户不在公海中，无法批量分配");
+        }
+        if (poolIds.size() > 1) {
+            throw new GenericException("批量分配仅支持同一公海池内的客户");
+        }
+        return poolIds.getFirst();
+    }
+
+    /**
+     * 从本次选中的客户里反推出源公海池，并强制要求只能来自同一个公海池。
+     */
+    private String resolveSourcePoolIdForBatchTransfer(List<Customer> customers) {
+        List<String> poolIds = customers.stream()
+                .filter(Objects::nonNull)
+                .filter(customer -> Boolean.TRUE.equals(customer.getInSharedPool()))
+                .map(Customer::getPoolId)
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .toList();
+        if (CollectionUtils.isEmpty(poolIds)) {
+            throw new GenericException("所选客户不在公海中，无法批量转移");
+        }
+        if (poolIds.size() > 1) {
+            throw new GenericException("按筛选批量转移仅支持同一公海池内的客户");
+        }
+        return poolIds.getFirst();
+    }
+
+    /**
+     * 统一拼租户隔离后的 Redis key，避免不同租户之间锁冲突。
+     */
+    private String tenantRedisKey(String rawKey) {
+        String tenantId = TenantContext.getTenantId();
+        return StringUtils.isNotBlank(tenantId) ? tenantId + ":" + rawKey : rawKey;
+    }
+
+    /**
+     * 统一释放当前批量分配持有的 Redisson 锁。
+     */
+    private void releaseBatchAssignLock(RLock lock, String lockKey, long lockThreadId) {
+        try {
+            if (lock != null && lock.isHeldByThread(lockThreadId)) {
+                lock.unlockAsync(lockThreadId).get();
+            }
+        } catch (Exception ex) {
+            log.warn("[POOL_BATCH_ASSIGN_UNLOCK_FAILED] lockKey={}", lockKey, ex);
+        }
+    }
+
+    /**
+     * 按固定大小切分 ID，避免单条 SQL 的 IN 过长。
+     */
+    private List<List<String>> partition(List<String> ids, int batchSize) {
+        List<List<String>> partitions = new ArrayList<>();
+        if (CollectionUtils.isEmpty(ids)) {
+            return partitions;
+        }
+        for (int index = 0; index < ids.size(); index += batchSize) {
+            partitions.add(ids.subList(index, Math.min(index + batchSize, ids.size())));
+        }
+        return partitions;
+    }
+
+    private record BatchAssignPreparedData(Map<String, Integer> userCapacitiesMap,
+                                           Map<String, Set<String>> userOwnedPoolMobileMap,
+                                           Map<String, Set<String>> userPrivateConflictMobileMap) {
+    }
+
+    private record BatchTransferPlan(List<Customer> transferCustomers, List<String> skippedCustomerIds) {
+    }
+
+    private static final class BatchAssignPlan {
+
+        private final Map<String, List<Customer>> ownerCustomersMap;
+        private final List<String> assignedCustomerIds;
+        private final List<String> unassignedCustomerIds;
+        private final Map<String, String> recentOwnerMap;
+
+        private BatchAssignPlan(Map<String, List<Customer>> ownerCustomersMap, List<String> assignedCustomerIds,
+                                List<String> unassignedCustomerIds, Map<String, String> recentOwnerMap) {
+            this.ownerCustomersMap = ownerCustomersMap;
+            this.assignedCustomerIds = assignedCustomerIds;
+            this.unassignedCustomerIds = unassignedCustomerIds;
+            this.recentOwnerMap = recentOwnerMap;
+        }
+
+        public Map<String, List<Customer>> getOwnerCustomersMap() {
+            return ownerCustomersMap;
+        }
+
+        public List<String> getAssignedCustomerIds() {
+            return assignedCustomerIds;
+        }
+
+        public List<String> getUnassignedCustomerIds() {
+            return unassignedCustomerIds;
+        }
+
+        public Map<String, String> getRecentOwnerMap() {
+            return recentOwnerMap;
+        }
     }
 }

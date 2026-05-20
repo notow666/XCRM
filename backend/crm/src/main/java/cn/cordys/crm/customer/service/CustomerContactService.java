@@ -554,6 +554,10 @@ public class CustomerContactService {
         extCustomerContactMapper.updatePoolContactOwner(customerId, newOwner, oldOwner, orgId);
     }
 
+    public void batchUpdatePoolContactOwner(List<String> customerIds, String newOwner, String oldOwner, String orgId) {
+        extCustomerContactMapper.batchUpdatePoolContactOwner(customerIds, newOwner, oldOwner, orgId);
+    }
+
     public List<CustomerContact> getContactListByNames(List<String> names) {
         LambdaQueryWrapper<CustomerContact> lambdaQueryWrapper = new LambdaQueryWrapper<>();
         lambdaQueryWrapper.in(CustomerContact::getName, names);

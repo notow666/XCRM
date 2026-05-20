@@ -282,6 +282,35 @@ export interface BatchAssignOpenSeaCustomerByConditionParams extends OpenSeaCust
   assignUserIds?: string[];
 }
 
+export interface BatchAssignOpenSeaCustomerSubmitResult {
+  accepted: boolean;
+  taskId: string;
+  message: string;
+}
+
+export interface BatchTransferOpenSeaCustomerByConditionParams extends OpenSeaCustomerTableParams {
+  targetPoolId: string;
+  transferCount: number;
+}
+
+export interface BatchTransferOpenSeaCustomerSubmitResult {
+  accepted: boolean;
+  taskId: string;
+  message: string;
+}
+
+export interface BatchUpdateOpenSeaCustomerByConditionParams extends OpenSeaCustomerTableParams {
+  updateCount: number;
+  fieldId: string | null;
+  fieldValue: any;
+}
+
+export interface BatchUpdateOpenSeaCustomerByConditionSubmitResult {
+  accepted: boolean;
+  taskId: string;
+  message: string;
+}
+
 export interface AssignOpenSeaCustomerParams {
   customerId: string;
   assignUserId: string;

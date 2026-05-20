@@ -40,6 +40,9 @@ public interface ExtCustomerMapper {
 
     void batchTransfer(@Param("request") CustomerBatchTransferRequest request, @Param("userId") String userId);
 
+    void batchTransferToPool(@Param("ids") List<String> ids, @Param("targetPoolId") String targetPoolId,
+                             @Param("updateUser") String updateUser, @Param("updateTime") long updateTime);
+
     List<AdvancedCustomerResponse> checkRepeatCustomer(@Param("request") CustomerPageRequest request, @Param("orgId") String orgId,
                                                        @Param("userId") String userId);
 
@@ -98,6 +101,8 @@ public interface ExtCustomerMapper {
 
     void batchUpdate(@Param("request") BatchUpdateDbParam request);
 
+    void batchUpdateByParam(@Param("request") BatchUpdateDbParam request);
+
     List<OptionDTO> getCustomerPoolId(@Param("ids") List<String> ids);
 
     List<ChartResult> chart(@Param("request") CustomerChartAnalysisDbRequest request, @Param("userId") String userId, @Param("orgId") String orgId,
@@ -138,5 +143,13 @@ public interface ExtCustomerMapper {
     void batchUpdateWechatFriendStatusByIds(@Param("ids") List<String> ids, @Param("wechatFriendStatus") Integer wechatFriendStatus);
 
     void updateCallStatusById(@Param("id") String id, @Param("callStatus") Integer callStatus);
+
+    void batchAssignToOwner(@Param("ids") List<String> ids,
+                            @Param("ownerId") String ownerId,
+                            @Param("updateUser") String updateUser,
+                            @Param("updateTime") long updateTime,
+                            @Param("collectionTime") long collectionTime,
+                            @Param("stage") String stage,
+                            @Param("stageStatus") String stageStatus);
 
 }

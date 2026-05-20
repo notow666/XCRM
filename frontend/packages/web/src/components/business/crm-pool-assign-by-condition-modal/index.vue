@@ -194,12 +194,14 @@
       assignUserIds: ownerValues.value,
     })
       .then((data) => {
-        showModal.value = false;
-        if (typeof data === 'number' && data > 0) {
-          Message.warning(t('module.customer.capacityOver', { count: data }));
-        } else {
-          Message.success(t('common.distributeSuccess'));
+        if (!data?.accepted) {
+          Message.warning(data?.message || t('common.operationFailed'));
+          showModal.value = false;
+          emit('success');
+          return;
         }
+        showModal.value = false;
+        Message.success(data.message || '批量分配任务已提交');
         emit('success');
       })
       .catch(() => {

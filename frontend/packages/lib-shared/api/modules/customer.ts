@@ -13,6 +13,8 @@ import {
   AssignOpenSeaCustomerUrl,
   BatchAssignOpenSeaCustomerUrl,
   BatchAssignOpenSeaCustomerByConditionUrl,
+  BatchTransferOpenSeaCustomerByConditionUrl,
+  BatchUpdateOpenSeaCustomerByConditionUrl,
   BatchDeleteCustomerCollaborationUrl,
   BatchDeleteCustomerUrl,
   BatchDeleteCustomerByConditionUrl,
@@ -173,8 +175,13 @@ import type {
   AddCustomerCollaborationParams,
   AddCustomerRelationItemParams,
   AssignOpenSeaCustomerParams,
+  BatchAssignOpenSeaCustomerSubmitResult,
   BatchAssignOpenSeaCustomerParams,
   BatchAssignOpenSeaCustomerByConditionParams,
+  BatchTransferOpenSeaCustomerByConditionParams,
+  BatchTransferOpenSeaCustomerSubmitResult,
+  BatchUpdateOpenSeaCustomerByConditionParams,
+  BatchUpdateOpenSeaCustomerByConditionSubmitResult,
   BatchMoveToPublicPoolParams,
   BatchOperationOpenSeaCustomerParams,
   BatchUpdatePoolAccountParams,
@@ -633,12 +640,25 @@ export default function useProductApi(CDR: CordysAxios) {
 
   // 批量分配公海客户
   function batchAssignOpenSeaCustomer(data: BatchAssignOpenSeaCustomerParams) {
-    return CDR.post<number>({ url: BatchAssignOpenSeaCustomerUrl, data });
+    return CDR.post<BatchAssignOpenSeaCustomerSubmitResult>({ url: BatchAssignOpenSeaCustomerUrl, data });
   }
 
   // 按筛选条件批量分配公海客户
   function batchAssignOpenSeaCustomerByCondition(data: BatchAssignOpenSeaCustomerByConditionParams) {
-    return CDR.post<number>({ url: BatchAssignOpenSeaCustomerByConditionUrl, data });
+    return CDR.post<BatchAssignOpenSeaCustomerSubmitResult>({ url: BatchAssignOpenSeaCustomerByConditionUrl, data });
+  }
+
+  // 按筛选条件批量转移公海客户
+  function batchTransferOpenSeaCustomerByCondition(data: BatchTransferOpenSeaCustomerByConditionParams) {
+    return CDR.post<BatchTransferOpenSeaCustomerSubmitResult>({ url: BatchTransferOpenSeaCustomerByConditionUrl, data });
+  }
+
+  // 按筛选条件批量编辑公海客户
+  function batchUpdateOpenSeaCustomerByCondition(data: BatchUpdateOpenSeaCustomerByConditionParams) {
+    return CDR.post<BatchUpdateOpenSeaCustomerByConditionSubmitResult>({
+      url: BatchUpdateOpenSeaCustomerByConditionUrl,
+      data,
+    });
   }
 
   // 分配公海客户
@@ -1112,6 +1132,7 @@ export default function useProductApi(CDR: CordysAxios) {
     batchDeleteOpenSeaCustomerByCondition,
     batchAssignOpenSeaCustomer,
     batchAssignOpenSeaCustomerByCondition,
+    batchUpdateOpenSeaCustomerByCondition,
     assignOpenSeaCustomer,
     getOpenSeaOptions,
     getOpenSeaCustomer,
@@ -1214,6 +1235,7 @@ export default function useProductApi(CDR: CordysAxios) {
     downloadPoolCustomerTemplate,
     downloadPoolImportErrorFile,
     transferPoolCustomer,
+    batchTransferOpenSeaCustomerByCondition,
     batchTransferPoolCustomer,
   };
 }

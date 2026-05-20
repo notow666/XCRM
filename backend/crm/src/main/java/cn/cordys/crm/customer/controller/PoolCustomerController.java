@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @Tag(name = "公海客户")
 @RestController
@@ -98,8 +99,8 @@ public class PoolCustomerController {
     @PostMapping("/batch-assign")
     @Operation(summary = "批量分配客户")
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_POOL_ASSIGN})
-    public int batchAssign(@Validated @RequestBody PoolBatchAssignRequest request) {
-        return poolCustomerService.batchAssign(request, request.getAssignUserId(), OrganizationContext.getOrganizationId(), SessionUtils.getUserId());
+    public Map<String, Object> batchAssign(@Validated @RequestBody PoolBatchAssignRequest request) {
+        return poolCustomerService.batchAssign_new(request, request.getAssignUserId(), OrganizationContext.getOrganizationId(), SessionUtils.getUserId());
     }
 
     @PostMapping("/batch-delete")
@@ -120,7 +121,7 @@ public class PoolCustomerController {
     @PostMapping("/batch-assign-by-condition")
     @Operation(summary = "按筛选条件批量分配公海客户")
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_POOL_ASSIGN})
-    public int batchAssignByCondition(@Validated @RequestBody PoolBatchAssignByConditionRequest request) {
+    public Map<String, Object> batchAssignByCondition(@Validated @RequestBody PoolBatchAssignByConditionRequest request) {
         ConditionFilterUtils.parseCondition(request);
         return poolCustomerService.batchAssignByCondition(request, OrganizationContext.getOrganizationId(), SessionUtils.getUserId());
     }
@@ -139,6 +140,22 @@ public class PoolCustomerController {
     public void batchTransfer(@Validated @RequestBody PoolBatchTransferRequest request) {
         poolCustomerService.batchTransfer(request.getBatchIds(), request.getTargetPoolId(),
                 SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
+    @PostMapping("/batch-transfer-by-condition")
+    @Operation(summary = "按筛选条件批量转移公海客户")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_POOL_TRANSFER)
+    public Map<String, Object> batchTransferByCondition(@Validated @RequestBody PoolBatchTransferByConditionRequest request) {
+        ConditionFilterUtils.parseCondition(request);
+        return poolCustomerService.batchTransferByCondition(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
+    @PostMapping("/batch-update-by-condition")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_POOL_UPDATE)
+    @Operation(summary = "按筛选条件批量更新客户")
+    public Map<String, Object> batchUpdateByCondition(@Validated @RequestBody PoolBatchUpdateByConditionRequest request) {
+        ConditionFilterUtils.parseCondition(request);
+        return poolCustomerService.batchUpdateByCondition(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
     @PostMapping("/batch-update")

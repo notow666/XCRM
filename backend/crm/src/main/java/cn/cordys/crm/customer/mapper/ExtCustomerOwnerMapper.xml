@@ -19,4 +19,14 @@
         order by collection_time desc
         limit 1
     </select>
+
+    <select id="listRecentOwners" resultType="cn.cordys.crm.customer.domain.CustomerOwner">
+        select customer_id as customerId, owner
+        from customer_owner
+        where customer_id in
+        <foreach collection="customerIds" item="customerId" open="(" close=")" separator=",">
+            #{customerId}
+        </foreach>
+        order by customer_id, collection_time desc, end_time desc, id desc
+    </select>
 </mapper>
