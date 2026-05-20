@@ -55,7 +55,7 @@ public class CustomerCapacityController {
 
     @GetMapping("/batch-user-capacity")
     @Operation(summary = "批量获取用户库容信息")
-    public List<UserCapacityResponse> batchUserCapacity() {
-        return customerCapacityService.batchUserCapacity();
+    public List<UserCapacityResponse> batchUserCapacity(@RequestParam(value = "poolId") String poolId) {
+        return customerCapacityService.batchUserCapacityByAssign(poolId);
     }
 }

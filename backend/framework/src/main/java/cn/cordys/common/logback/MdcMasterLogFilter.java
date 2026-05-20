@@ -5,6 +5,7 @@ import ch.qos.logback.core.filter.Filter;
 import ch.qos.logback.core.spi.FilterReply;
 import cn.cordys.common.constants.CrmLoggers;
 import cn.cordys.common.constants.MdcConstants;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
 /**
@@ -15,7 +16,8 @@ public class MdcMasterLogFilter extends Filter<ILoggingEvent> {
 
     @Override
     public FilterReply decide(ILoggingEvent event) {
-        if (CrmLoggers.MMBA_CALLBACK.equals(event.getLoggerName())) {
+        if (CrmLoggers.MMBA_CALLBACK.equals(event.getLoggerName()) ||
+                (CollectionUtils.isNotEmpty(event.getMarkerList()) && event.getMarkerList().contains(CrmLoggers.MMBA_CALLBACK_MARKER))) {
             return FilterReply.DENY;
         }
         String tenantId = event.getMDCPropertyMap().get(MdcConstants.TENANT_ID_KEY);

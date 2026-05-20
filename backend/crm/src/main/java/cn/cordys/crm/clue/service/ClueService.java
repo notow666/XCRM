@@ -6,11 +6,7 @@ import cn.cordys.aspectj.constants.LogType;
 import cn.cordys.aspectj.context.OperationLogContext;
 import cn.cordys.aspectj.dto.LogContextInfo;
 import cn.cordys.aspectj.dto.LogDTO;
-import cn.cordys.common.constants.BusinessModuleField;
-import cn.cordys.common.constants.FormKey;
-import cn.cordys.common.constants.InternalUser;
-import cn.cordys.common.constants.LinkScenarioKey;
-import cn.cordys.common.constants.PermissionConstants;
+import cn.cordys.common.constants.*;
 import cn.cordys.common.domain.BaseModuleFieldValue;
 import cn.cordys.common.domain.BaseResourceSubField;
 import cn.cordys.common.dto.*;
@@ -603,7 +599,7 @@ public class ClueService {
         return clue;
     }
 
-    @Async("threadPoolTaskExecutor")
+    @Async(ExecutorBeanNames.MAIN_ASYNC)
     @OperationLog(module = LogModule.CLUE_POOL_INDEX, type = LogType.ADD, resourceName = "{#request.phone}")
     public void push(CluePushRequest request, String userId, String orgId) {
         try {

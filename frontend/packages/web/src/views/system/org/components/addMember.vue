@@ -83,11 +83,12 @@
           :label="t('org.um')"
         >
           <n-select
-            v-model:value="form.um"
+            :value="form.um"
             filterable
             clearable
             :placeholder="t('common.pleaseSelect')"
             :options="umOptions"
+            @update:value="onUmUpdate"
           />
         </n-form-item>
         <CrmExpandButton v-model:expand="showForm">
@@ -384,6 +385,20 @@
 
   const roleOptions = ref<SelectOption[]>([]);
   const umOptions = ref<SelectOption[]>([]);
+
+  function onUmUpdate(value: string | null) {
+    form.value.um = value ?? null;
+  }
+
+  /** 编辑时保留当前已绑定的 UM，否则选项列表会过滤掉已占用项导致无法展示与清空 */
+  function ensureCurrentUmInOptions() {
+    const current = form.value.um;
+    if (!current || umOptions.value.some((o) => o.value === current)) {
+      return;
+    }
+    umOptions.value = [{ label: current, value: current }, ...umOptions.value];
+  }
+
   async function initUmOptions() {
     if (!canEditUm.value) {
       return;
@@ -391,6 +406,7 @@
     try {
       const list = await getMmbaDeviceOptionList();
       umOptions.value = list.map((e) => ({ label: e.name, value: e.id }));
+      ensureCurrentUmInOptions();
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);
@@ -426,7 +442,9 @@
           ...detail,
           name: detail.userName,
           roleIds: detail.roles.map((e) => e.id),
+          um: detail.um ?? null,
         };
+        ensureCurrentUmInOptions();
       } else {
         form.value.departmentId = props.activeDepId;
       }
@@ -438,12 +456,10 @@
 
   watch(
     () => showDrawer.value,
-    (val) => {
+    async (val) => {
       if (val) {
-        getDetail();
-        initDepartList();
-        initRoleList();
-        initUmOptions();
+        await Promise.all([getDetail(), initDepartList(), initRoleList(), initUmOptions()]);
+        ensureCurrentUmInOptions();
       }
     }
   );

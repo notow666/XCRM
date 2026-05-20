@@ -131,3 +131,7 @@ export function createDataSpecialist(data: DataSpecialistCreatePayload) {
 export function updateDataSpecialist(id: string, data: DataSpecialistUpdatePayload) {
   return CDR.put({ url: `/platform/admin/data-specialist/${id}`, data });
 }
+
+export function deleteDataSpecialist(id: string) {
+  return CDR.delete({ url: `/platform/admin/data-specialist/${id}` });
+}

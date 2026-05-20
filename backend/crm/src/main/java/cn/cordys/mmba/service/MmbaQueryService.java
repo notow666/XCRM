@@ -3,6 +3,7 @@ package cn.cordys.mmba.service;
 import cn.cordys.common.dto.OptionDTO;
 import cn.cordys.common.pager.PageUtils;
 import cn.cordys.common.pager.PagerWithOption;
+import cn.cordys.crm.system.mapper.ExtUserMapper;
 import cn.cordys.mmba.domain.MmbaCallRecordAudit;
 import cn.cordys.mmba.domain.MmbaCommandResult;
 import cn.cordys.mmba.domain.MmbaDevice;
@@ -53,13 +54,15 @@ public class MmbaQueryService {
     private ExtMmbaCommandResultMapper extMmbaCommandResultMapper;
     @Resource
     private ExtMmbaAuditMapper extMmbaAuditMapper;
+    @Resource
+    private ExtUserMapper extUserMapper;
 
     /**
      * 查询设备当前快照列表。
      */
-    public PagerWithOption<List<MmbaDevice>> pageDevice(MmbaDevicePageRequest request, String organizationId) {
+    public PagerWithOption<List<MmbaDevice>> pageDevice(MmbaDevicePageRequest request) {
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
-        List<MmbaDevice> list = extMmbaDeviceMapper.page(request, organizationId);
+        List<MmbaDevice> list = extMmbaDeviceMapper.page(request);
         return PageUtils.setPageInfoWithOption(page, list, EMPTY_OPTIONS);
     }
 
@@ -68,7 +71,15 @@ public class MmbaQueryService {
         if(CollectionUtils.isEmpty(list)) {
             return Collections.emptyList();
         }
+        List<String> ums = extUserMapper.getUmsByUsed();
+        if(CollectionUtils.isEmpty(ums)) {
+            return list.stream()
+                    .map(d -> {
+                        return new OptionDTO(d.getId(), d.getId() + "-" + MmbaDeviceImportDict.parseDeviceStatus(d.getDeviceStatus()));
+                    }).collect(Collectors.toList());
+        }
         return list.stream()
+                .filter(d -> !ums.contains(d.getId()))
                 .map(d -> {
                     return new OptionDTO(d.getId(), d.getId() + "-" + MmbaDeviceImportDict.parseDeviceStatus(d.getDeviceStatus()));
                 }).collect(Collectors.toList());

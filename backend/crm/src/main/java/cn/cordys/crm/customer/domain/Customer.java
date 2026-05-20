@@ -62,10 +62,10 @@ public class Customer extends BaseModel {
      * 拨打电话状态 -1:已发起拨打 0:未拨打 1:拨打未接通 2:拨打已接通
      */
     @Schema(description = "拨打电话状态 -1:已发起拨打 0:未拨打 1:拨打未接通 2:拨打已接通")
-    private Integer callStatus = 0;
+    private Integer callStatus;
     /**
      * 微信好友状态 -1:已发起添加 0:未添加 1:添加未通过 2:已添加
      */
     @Schema(description = "微信好友状态 -1:已发起添加 0:未添加 1:添加未通过 2:已添加")
-    private Integer wechatFriendStatus = 0;
+    private Integer wechatFriendStatus;
 }

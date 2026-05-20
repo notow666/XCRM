@@ -704,14 +704,14 @@ public class PoolCustomerService {
         logService.add(new LogDTO(currentOrgId, customer.getId(), operateUserId, logType,
                 LogModule.CUSTOMER_POOL, customer.getName()));
 
-        if (Strings.CS.equals(logType, LogType.ASSIGN)) {
-            commonNoticeSendService.sendNotice(
-                    NotificationConstants.Module.CUSTOMER,
-                    NotificationConstants.Event.HIGH_SEAS_CUSTOMER_DISTRIBUTED,
-                    customer.getName(), operateUserId, currentOrgId,
-                    List.of(ownerId), true
-            );
-        }
+//        if (Strings.CS.equals(logType, LogType.ASSIGN)) {
+//            commonNoticeSendService.sendNotice(
+//                    NotificationConstants.Module.CUSTOMER,
+//                    NotificationConstants.Event.HIGH_SEAS_CUSTOMER_DISTRIBUTED,
+//                    customer.getName(), operateUserId, currentOrgId,
+//                    List.of(ownerId), true
+//            );
+//        }
     }
 
     private void validateBatchPickMobileConflict(List<String> customerIds, String ownerId, String currentOrgId) {

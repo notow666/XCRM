@@ -1,5 +1,6 @@
 package cn.cordys.crm.clue.service;
 
+import cn.cordys.common.constants.ExecutorBeanNames;
 import cn.cordys.common.constants.FormKey;
 import cn.cordys.crm.clue.domain.Clue;
 import cn.cordys.crm.customer.service.PoolCustomerService;
@@ -32,7 +33,7 @@ public class PoolClueBatchDistributeService {
     /**
      * 批量分发（异步执行）：不校验分发规则，直接按目标公海池尝试分发。
      */
-    @Async("threadPoolTaskExecutor")
+    @Async(ExecutorBeanNames.BATCH)
     public void batchDistribute(PoolBatchDistributeRequest request, String orgId) {
         try {
             List<Clue> clues = clueMapper.selectByIds(request.getBatchIds().toArray(new String[0]));

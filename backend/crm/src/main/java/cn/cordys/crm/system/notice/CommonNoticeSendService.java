@@ -1,6 +1,7 @@
 package cn.cordys.crm.system.notice;
 
 
+import cn.cordys.common.constants.ExecutorBeanNames;
 import cn.cordys.common.util.Translator;
 import cn.cordys.crm.system.constants.NotificationConstants;
 import cn.cordys.crm.system.domain.DepartmentCommander;
@@ -49,7 +50,7 @@ public class CommonNoticeSendService {
         LocaleContextHolder.setLocale(locale);
     }
 
-    @Async("threadPoolTaskExecutor")
+    @Async(ExecutorBeanNames.MAIN_ASYNC)
     public void sendNotice(String module, String event, List<Map> resources, String userId, String currentOrganizationId) {
         User operator = userBaseMapper.selectByPrimaryKey(userId);
         setLanguage(operator.getLanguage());

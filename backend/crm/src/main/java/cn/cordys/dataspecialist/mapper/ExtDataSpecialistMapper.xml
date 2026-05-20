@@ -125,4 +125,8 @@
             AND id != #{excludeId}
         </if>
     </select>
+
+    <delete id="deleteById">
+        DELETE FROM data_specialist WHERE id = #{id}
+    </delete>
 </mapper>

@@ -1,132 +1,54 @@
 package cn.cordys.common.util;
 
-import cn.cordys.context.TenantContext;
-import org.slf4j.MDC;
-import org.springframework.util.StringUtils;
-
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * 异步工具类 - 支持 MDC 和租户上下文传递
+ * 异步工具类。MDC / 租户上下文由已包装的 {@link cn.cordys.common.context.ContextPropagatingExecutor} 传播。
  */
 public class AsyncUtils {
 
     /**
-     * 带上下文的 CompletableFuture.supplyAsync
+     * CompletableFuture.supplyAsync（上下文由 executor 负责传播）
      */
     public static <U> CompletableFuture<U> supplyAsync(Supplier<U> supplier, Executor executor) {
-        // 保存父线程上下文
-        Map<String, String> parentMdc = MDC.getCopyOfContextMap();
-        String tenantId = TenantContext.getTenantId();
-
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                // 恢复 MDC 上下文
-                if (parentMdc != null) {
-                    MDC.setContextMap(parentMdc);
-                }
-                // 恢复租户上下文
-                if (StringUtils.hasText(tenantId)) {
-                    TenantContext.setTenantId(tenantId);
-                }
-                return supplier.get();
-            } finally {
-                // 清理上下文
-                MDC.clear();
-                TenantContext.clear();
-            }
-        }, executor);
+        return CompletableFuture.supplyAsync(supplier, executor);
     }
 
     /**
-     * 带上下文的 CompletableFuture.runAsync
+     * CompletableFuture.runAsync（上下文由 executor 负责传播）
      */
     public static CompletableFuture<Void> runAsync(Runnable runnable, Executor executor) {
-        Map<String, String> parentMdc = MDC.getCopyOfContextMap();
-        String tenantId = TenantContext.getTenantId();
-
-        return CompletableFuture.runAsync(() -> {
-            try {
-                if (parentMdc != null) {
-                    MDC.setContextMap(parentMdc);
-                }
-                if (StringUtils.hasText(tenantId)) {
-                    TenantContext.setTenantId(tenantId);
-                }
-                runnable.run();
-            } finally {
-                MDC.clear();
-                TenantContext.clear();
-            }
-        }, executor);
+        return CompletableFuture.runAsync(runnable, executor);
     }
 
-
     /**
-     * 批量异步任务（带上下文）
+     * 批量异步任务
      */
     public static <T, R> List<Future<R>> submitAll(List<T> tasks,
                                                    Function<T, R> function,
                                                    Executor executor) {
-        Map<String, String> parentMdc = MDC.getCopyOfContextMap();
-        String tenantId = TenantContext.getTenantId();
-
         List<Future<R>> futures = new ArrayList<>();
         for (T task : tasks) {
-            CompletableFuture<R> future = CompletableFuture.supplyAsync(() -> {
-                try {
-                    if (parentMdc != null) {
-                        MDC.setContextMap(parentMdc);
-                    }
-                    if (StringUtils.hasText(tenantId)) {
-                        TenantContext.setTenantId(tenantId);
-                    }
-                    return function.apply(task);
-                } finally {
-                    MDC.clear();
-                    TenantContext.clear();
-                }
-            }, executor);
-            futures.add(future);
+            futures.add(CompletableFuture.supplyAsync(() -> function.apply(task), executor));
         }
         return futures;
     }
 
     /**
-     * 批量异步任务（带上下文和索引）
+     * 批量异步任务（带索引）
      */
     public static <T, R> List<Future<Pair<Integer, R>>> submitAllWithIndex(List<T> tasks,
                                                                            Function<T, R> function,
                                                                            Executor executor) {
-        Map<String, String> parentMdc = MDC.getCopyOfContextMap();
-        String tenantId = TenantContext.getTenantId();
-
         List<Future<Pair<Integer, R>>> futures = new ArrayList<>();
         for (int i = 0; i < tasks.size(); i++) {
             final int index = i;
             final T task = tasks.get(i);
-
-            CompletableFuture<Pair<Integer, R>> future = CompletableFuture.supplyAsync(() -> {
-                try {
-                    if (parentMdc != null) {
-                        MDC.setContextMap(parentMdc);
-                    }
-                    if (StringUtils.hasText(tenantId)) {
-                        TenantContext.setTenantId(tenantId);
-                    }
-                    R result = function.apply(task);
-                    return Pair.of(index, result);
-                } finally {
-                    MDC.clear();
-                    TenantContext.clear();
-                }
-            }, executor);
-            futures.add(future);
+            futures.add(CompletableFuture.supplyAsync(() -> Pair.of(index, function.apply(task)), executor));
         }
         return futures;
     }

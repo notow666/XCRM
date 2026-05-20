@@ -53,8 +53,7 @@ public class MmbaMgmtSsoService {
         String um = StringUtils.trimToNull(user.getUm());
 //        um = "A001";
         if (StringUtils.isBlank(um)) {
-            throw new GenericException(CrmHttpResultCode.VALIDATE_FAILED,
-                    "缺少用户 MMBA 唯一标识(um)：请在「组织与成员」中为用户维护 um，且与指掌易管理员 loginName 一致；若已维护请重新登录后再试");
+            throw new GenericException(CrmHttpResultCode.VALIDATE_FAILED, "缺少用户 MMBA 唯一标识；请联系管理员");
         }
         String orgCode = StringUtils.trimToNull(companyCode);
         if (StringUtils.isBlank(orgCode)) {

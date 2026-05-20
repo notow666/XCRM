@@ -121,7 +121,7 @@ public class DataScopeService {
 
         Map<String, List<RolePermissionDTO>> dataScopeRoleMap = getDataScopeRoleMap(userId, orgId);
 
-        boolean hasAllPermission = hasDataScopePermission(dataScopeRoleMap, RoleDataScope.ALL.name(), permissions);
+        boolean hasAllPermission = hasDataScopePermission(dataScopeRoleMap, RoleDataScope.DEPT_AND_CHILD.name(), permissions);
 
         if (hasAllPermission) {
             // 可以查看所有数据

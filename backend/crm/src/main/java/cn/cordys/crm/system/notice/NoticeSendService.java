@@ -1,5 +1,6 @@
 package cn.cordys.crm.system.notice;
 
+import cn.cordys.common.constants.ExecutorBeanNames;
 import cn.cordys.common.util.CommonBeanFactory;
 import cn.cordys.crm.integration.dingtalk.service.DingTalkNoticeSender;
 import cn.cordys.crm.integration.lark.service.LarkNoticeSender;
@@ -29,7 +30,7 @@ public class NoticeSendService {
     private final InSiteNoticeSender inSiteNoticeSender;
     private final MessageDetailService messageDetailService;
 
-    @Async("threadPoolTaskExecutor")
+    @Async(ExecutorBeanNames.MAIN_ASYNC)
     public void send(String module, NoticeModel noticeModel) {
         setLanguage(noticeModel.getParamMap().get("Language"));
         boolean useTemplate = Boolean.getBoolean((String) noticeModel.getParamMap().get("useTemplate"));
@@ -95,7 +96,7 @@ public class NoticeSendService {
         }
     }
 
-    @Async("threadPoolTaskExecutor")
+    @Async(ExecutorBeanNames.MAIN_ASYNC)
     public void send(String organizationId, String module, NoticeModel noticeModel) {
         setLanguage(noticeModel.getParamMap().get("Language"));
         boolean useTemplate = Boolean.getBoolean((String) noticeModel.getParamMap().get("useTemplate"));
@@ -112,7 +113,7 @@ public class NoticeSendService {
         }
     }
 
-    @Async("threadPoolTaskExecutor")
+    @Async(ExecutorBeanNames.MAIN_ASYNC)
     public void sendOther(String module, NoticeModel noticeModel, boolean excludeSelf) {
         setLanguage(noticeModel.getParamMap().get("Language"));
         boolean useTemplate = Boolean.parseBoolean((String) noticeModel.getParamMap().get("useTemplate"));

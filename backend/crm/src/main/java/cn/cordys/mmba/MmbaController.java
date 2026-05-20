@@ -210,7 +210,7 @@ public class MmbaController {
     @Operation(summary = "MMBA设备列表")
     @RequiresPermissions(PermissionConstants.MMBA_DEVICE_READ)
     public PagerWithOption<List<MmbaDevice>> pageDevice(@Valid @RequestBody MmbaDevicePageRequest request) {
-        return mmbaQueryService.pageDevice(request, OrganizationContext.getOrganizationId());
+        return mmbaQueryService.pageDevice(request);
     }
 
     /**

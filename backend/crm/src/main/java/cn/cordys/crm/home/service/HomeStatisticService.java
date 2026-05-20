@@ -36,8 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -47,7 +46,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class HomeStatisticService {
 
-    private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+    @Resource(name = "parallelTaskExecutor")
+    private Executor executor;
     @Resource
     private ExtClueMapper extClueMapper;
     @Resource

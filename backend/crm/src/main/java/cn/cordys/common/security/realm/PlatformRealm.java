@@ -67,7 +67,7 @@ public class PlatformRealm extends AuthorizingRealm {
 
         UserDTO user = new UserDTO();
         user.setId(userRow.getUsername());
-        user.setName(userRow.getId());
+        user.setName(StringUtils.isNotBlank(userRow.getNickname()) ? userRow.getNickname() : userRow.getUsername());
         user.setSource(LoginAuthenticateType.PLATFORM.name());
         user.setEnable(true);
         user.setTenantId("---");

@@ -16,9 +16,11 @@ import lombok.Getter;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
+import org.apache.commons.lang3.time.StopWatch;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -84,6 +86,8 @@ public class CustomFieldCheckEventListener extends AnalysisEventListener<Map<Int
     protected int maxHeadRow;
     protected final Map<Integer, Map<Integer, String>> mergeRowDataMap;
 
+    protected StopWatch watch;
+
     public CustomFieldCheckEventListener(List<BaseField> fields, String sourceTable, String fieldTable, String currentOrg) {
         this(fields, sourceTable, fieldTable, currentOrg, null, null);
     }
@@ -114,6 +118,11 @@ public class CustomFieldCheckEventListener extends AnalysisEventListener<Map<Int
         this.fieldTable = fieldTable;
         this.mergeCellMap = mergeCellMap;
         this.mergeRowDataMap = mergeRowDataMap;
+        this.watch = StopWatch.createStarted();
+    }
+
+    public long getSeconds() {
+        return this.watch.getTime(TimeUnit.SECONDS);
     }
 
     @Override
@@ -147,9 +156,16 @@ public class CustomFieldCheckEventListener extends AnalysisEventListener<Map<Int
 
     @Override
     public void doAfterAllAnalysed(AnalysisContext analysisContext) {
+        this.watch.stop();
         if (!atLeastOne) {
             throw new GenericException(Translator.get("import.data.cannot_be_null"));
         }
+    }
+
+    @Override
+    public void onException(Exception exception, AnalysisContext context) throws Exception {
+        this.watch.stop();
+        super.onException(exception, context);
     }
 
     /**

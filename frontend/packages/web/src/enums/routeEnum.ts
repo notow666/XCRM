@@ -108,6 +108,7 @@ export enum MMBAAuditRouteEnum {
 export enum ManagementCenterRouteEnum {
   MANAGEMENT_CENTER = 'managementCenter',
   MANAGEMENT_CENTER_OVERVIEW = 'managementCenterOverview',
+  MANAGEMENT_CENTER_PLATFORM_ADMIN = 'managementCenterPlatformAdmin',
   MANAGEMENT_CENTER_TENANT = 'managementCenterTenant',
   MANAGEMENT_CENTER_AUDIT = 'managementCenterAudit',
   MANAGEMENT_CENTER_DATA_SPECIALIST = 'managementCenterDataSpecialist',

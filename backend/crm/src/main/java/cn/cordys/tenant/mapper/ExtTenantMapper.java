@@ -47,4 +47,8 @@ public interface ExtTenantMapper {
     List<String> listActiveTenantIds();
 
     List<Map<String, Object>> listEnabledTenantWithOrgId();
+
+    List<Map<String, Object>> countGroupByStatus();
+
+    List<PlatformTenantItemResponse> listTenantBrief();
 }

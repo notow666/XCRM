@@ -59,6 +59,13 @@ public class DataSpecialistAdminController {
         dataSpecialistAdminService.update(id, request, operator);
     }
 
+    @DeleteMapping("/{id}")
+    @Operation(summary = "删除数据专员")
+    public void delete(@PathVariable("id") String id) {
+        assertPlatformAdmin();
+        dataSpecialistAdminService.delete(id);
+    }
+
     private String assertPlatformAdmin() {
         SessionUser user = SessionUtils.getUser();
         if (user == null || !LoginAuthenticateConstants.LoginAuthenticateType.PLATFORM.name().equalsIgnoreCase(StringUtils.defaultString(user.getSource()))

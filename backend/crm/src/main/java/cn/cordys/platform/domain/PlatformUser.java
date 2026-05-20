@@ -12,6 +12,7 @@ public class PlatformUser extends BaseModel {
     @Serial
     private static final long serialVersionUID = 419084329307808640L;
     private String username;
+    private String nickname;
     private String passwordHash;
     private String status;
 }
