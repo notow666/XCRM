@@ -188,8 +188,7 @@ public class FollowUpRecordService extends BaseFollowUpService {
         Customer customer = new Customer();
         customer.setId(request.getCustomerId());
         customer.setStageStatus(followResult);
-        customer.setCallStatus(null);
-        customer.setWechatFriendStatus(null);
+
 
         if (CustomerStageService.STATUS_FAILED.equals(followResult)) {
             customer.setFailReason(request.getFailReason());
@@ -218,8 +217,7 @@ public class FollowUpRecordService extends BaseFollowUpService {
             customer.setId(customerId);
             customer.setFollowTime(followTime);
             customer.setFollower(owner);
-            customer.setCallStatus(null);
-            customer.setWechatFriendStatus(null);
+
             customerMapper.update(customer);
         }
 
