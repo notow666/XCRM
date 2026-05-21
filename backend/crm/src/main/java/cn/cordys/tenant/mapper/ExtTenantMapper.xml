@@ -78,6 +78,17 @@
           AND org_id != ''
     </select>
 
+    <select id="countGroupByStatus" resultType="map">
+        SELECT status, COUNT(1) AS cnt
+        FROM tenant
+        GROUP BY status
+    </select>
+
+    <select id="listTenantBrief" resultType="cn.cordys.platform.dto.response.PlatformTenantItemResponse">
+        SELECT id AS tenantId, code, name
+        FROM tenant
+    </select>
+
     <update id="updateTenantStatus">
         UPDATE tenant
         SET status      = #{status},

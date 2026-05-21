@@ -301,6 +301,11 @@ export const pathMap: PathMapItem[] = [
         locale: 'menu.managementCenter.overview',
       },
       {
+        key: 'MANAGEMENT_CENTER_PLATFORM_ADMIN',
+        route: AppRouteEnum.MANAGEMENT_CENTER_PLATFORM_ADMIN,
+        locale: 'menu.managementCenter.platformAdmin',
+      },
+      {
         key: 'MANAGEMENT_CENTER_TENANT',
         route: AppRouteEnum.MANAGEMENT_CENTER_TENANT,
         locale: 'menu.managementCenter.tenant',

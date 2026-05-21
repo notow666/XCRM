@@ -39,10 +39,7 @@
   >
     <NSpace vertical class="max-w-[90vw]">
       <NInput v-model:value="createForm.username" :placeholder="t('managementCenter.dataSpecialist.username')" />
-      <NInput
-        v-model:value="createForm.name"
-        :placeholder="t('managementCenter.dataSpecialist.specialistName')"
-      />
+      <NInput v-model:value="createForm.name" :placeholder="t('managementCenter.dataSpecialist.specialistName')" />
       <NInput
         v-model:value="createForm.remark"
         type="textarea"
@@ -183,21 +180,25 @@
   } from 'naive-ui';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
+  import { characterLimit } from '@lib/shared/method';
 
   import CrmCard from '@/components/pure/crm-card/index.vue';
 
   import {
     createDataSpecialist,
     type DataSpecialistAdminItem,
+    deleteDataSpecialist,
     getDataSpecialist,
     pageDataSpecialists,
     pagePlatformTenants,
     type PlatformTenantItem,
     updateDataSpecialist,
   } from '@/api/modules';
+  import useModal from '@/hooks/useModal';
 
   const { t } = useI18n();
   const message = useMessage();
+  const { openModal } = useModal();
 
   type TenantOption = { label: string; value: string };
 
@@ -273,7 +274,9 @@
     if (ms == null) return '-';
     const d = new Date(ms);
     const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(
+      d.getMinutes()
+    )}:${pad(d.getSeconds())}`;
   }
 
   async function loadTenantOptions() {
@@ -436,6 +439,25 @@
     }
   }
 
+  function handleDelete(row: DataSpecialistAdminItem) {
+    const displayName = row.name || row.username;
+    openModal({
+      type: 'error',
+      title: t('common.deleteConfirmTitle', { name: characterLimit(displayName) }),
+      positiveText: t('common.confirmDelete'),
+      negativeText: t('common.cancel'),
+      onPositiveClick: async () => {
+        try {
+          await deleteDataSpecialist(row.id);
+          message.success(t('common.deleteSuccess'));
+          await loadData();
+        } catch {
+          // http layer shows error
+        }
+      },
+    });
+  }
+
   const columns = computed(() => [
     { title: t('managementCenter.dataSpecialist.username'), key: 'username', width: 120, ellipsis: { tooltip: true } },
     {
@@ -476,9 +498,16 @@
     {
       title: t('common.operation'),
       key: 'action',
-      width: 100,
+      width: 140,
       render: (row: DataSpecialistAdminItem) =>
-        h(NButton, { size: 'small', onClick: () => openEdit(row) }, { default: () => t('common.edit') }),
+        h('div', { class: 'flex gap-1' }, [
+          h(NButton, { size: 'small', onClick: () => openEdit(row) }, { default: () => t('common.edit') }),
+          h(
+            NButton,
+            { size: 'small', type: 'error', secondary: true, onClick: () => handleDelete(row) },
+            { default: () => t('common.delete') }
+          ),
+        ]),
     },
   ]);
 

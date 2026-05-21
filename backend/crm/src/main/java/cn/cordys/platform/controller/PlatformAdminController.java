@@ -8,10 +8,12 @@ import cn.cordys.platform.dto.request.PlatformAuditPageRequest;
 import cn.cordys.platform.dto.request.PlatformTenantOrgIdUpdateRequest;
 import cn.cordys.platform.dto.request.PlatformTenantPageRequest;
 import cn.cordys.platform.dto.response.PlatformAuditLogResponse;
+import cn.cordys.platform.dto.response.PlatformOverviewResponse;
 import cn.cordys.platform.dto.response.PlatformTenantHealthResponse;
 import cn.cordys.platform.dto.response.PlatformTenantItemResponse;
 import cn.cordys.platform.dto.response.PlatformTenantProvisionTaskResponse;
 import cn.cordys.platform.service.PlatformAdminService;
+import cn.cordys.platform.service.PlatformOverviewService;
 import cn.cordys.platform.service.PlatformTenantProvisionTaskExecutor;
 import cn.cordys.security.SessionUtils;
 import cn.cordys.security.SessionUser;
@@ -42,6 +44,16 @@ public class PlatformAdminController {
 
     @Resource
     private PlatformTenantProvisionTaskExecutor platformTenantProvisionTaskExecutor;
+
+    @Resource
+    private PlatformOverviewService platformOverviewService;
+
+    @GetMapping("/overview")
+    @Operation(summary = "平台概览驾驶舱")
+    public PlatformOverviewResponse overview() {
+        assertPlatformAdmin();
+        return platformOverviewService.getOverview();
+    }
 
     @PostMapping("/tenant/page")
     @Operation(summary = "租户分页")

@@ -126,6 +126,7 @@
   <CrmPoolAssignByConditionModal
     v-model:show="showAssignByConditionModal"
     :total="propsRes.crmPagination?.itemCount || 0"
+    :pool-id="openSea as string"
     :query-params="assignByConditionQueryParams"
     @success="handleAssignByConditionSuccess"
   />

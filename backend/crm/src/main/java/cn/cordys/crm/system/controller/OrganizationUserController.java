@@ -1,6 +1,5 @@
 package cn.cordys.crm.system.controller;
 
-import cn.cordys.common.constants.InternalRole;
 import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.dto.DeptUserTreeNode;
 import cn.cordys.common.dto.OptionDTO;
@@ -147,7 +146,7 @@ public class OrganizationUserController {
     @GetMapping(value = "/option/auth")
     @Operation(summary = "获取当前用户权限内的用户下拉option")
     public List<OptionDTO> getAuthUserList() {
-        return organizationUserService.getAuthUserOptions(SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+        return organizationUserService.getUserByAssign(SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
     @GetMapping(value = "/role/option")

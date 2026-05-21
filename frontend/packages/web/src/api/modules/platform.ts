@@ -118,3 +118,26 @@ export function platformLogout() {
 export function platformIsLogin() {
   return CDR.get<any>({ url: '/platform/auth/is-login' });
 }
+
+export interface PlatformOverviewSeriesItem {
+  name: string;
+  value: number;
+}
+
+export interface PlatformOverview {
+  tenantTotal: number;
+  tenantActive: number;
+  tenantFrozen: number;
+  tenantStatusSeries: PlatformOverviewSeriesItem[];
+  onlineUserTotal: number;
+  onlineTenantUserTotal: number;
+  onlineMultiDeviceUserCount: number;
+  onlinePlatformUserCount: number;
+  onlineDataSpecialistUserCount: number;
+  onlineByTenantSeries: PlatformOverviewSeriesItem[];
+  activeTenantOnlineCoverageSeries: PlatformOverviewSeriesItem[];
+}
+
+export function getPlatformOverview() {
+  return CDR.get<PlatformOverview>({ url: '/platform/admin/overview' });
+}

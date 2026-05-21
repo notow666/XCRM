@@ -3,6 +3,7 @@ package cn.cordys.crm.integration.sync.service;
 import cn.cordys.aspectj.constants.LogModule;
 import cn.cordys.aspectj.constants.LogType;
 import cn.cordys.aspectj.dto.LogDTO;
+import cn.cordys.common.constants.ExecutorBeanNames;
 import cn.cordys.common.constants.ThirdConfigTypeConstants;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.redis.TenantRedisKeyBuilder;
@@ -88,7 +89,7 @@ public class ThirdDepartmentService {
      * @param orgId      组织ID
      * @param type       同步类型(企业微信，钉钉，飞书)
      */
-    @Async("threadPoolTaskExecutor")
+    @Async(ExecutorBeanNames.MAIN_ASYNC)
     public void syncUser(String operatorId, String orgId, String type, Locale locale) {
         Redisson redisson = CommonBeanFactory.getBean(Redisson.class);
         assert redisson != null;

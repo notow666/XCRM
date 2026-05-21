@@ -21,6 +21,8 @@ export interface ChartProps {
   containerRef?: Ref<Element | undefined>;
   type: ChartTypeEnum;
   customConfig?: Ref<EChartsOption>;
+  /** 窄容器：图例置底，避免右侧百分比被裁切 */
+  chartLayout?: Ref<'default' | 'compact'>;
   data: Ref<any[]>;
   onClick?: (params: any) => void;
 }
@@ -84,6 +86,61 @@ export default function useChart(props: ChartProps) {
     });
     return map;
   });
+
+  const isCompactLayout = computed(() => props.chartLayout?.value === 'compact');
+
+  function legendFormatter(name: string) {
+    const item = props.data.value.find((e: any) => e.name === name);
+    if (!item) {
+      return name;
+    }
+    const { value, unit } = abbreviateNumber(item.value, '');
+    const percent = percentMap.value[item.name];
+    return `{name|${name}}  {value|${value}${unit}}  {percent|${percent}%}`;
+  }
+
+  const compactLegendRich = {
+    name: {
+      fontSize: 12,
+      width: 88,
+      overflow: 'truncate' as const,
+      color: getComputedStyle(document.documentElement).getPropertyValue('--text-n2').trim(),
+    },
+    value: {
+      fontSize: 12,
+      width: 40,
+      align: 'right' as const,
+      fontWeight: 500,
+      color: getComputedStyle(document.documentElement).getPropertyValue('--text-n1').trim(),
+    },
+    percent: {
+      fontSize: 12,
+      width: 52,
+      align: 'right' as const,
+      fontWeight: 500,
+      color: getComputedStyle(document.documentElement).getPropertyValue('--text-n1').trim(),
+    },
+  };
+
+  const defaultLegendRich = {
+    name: {
+      width: '33%',
+      fontSize: 12,
+      color: getComputedStyle(document.documentElement).getPropertyValue('--text-n2').trim(),
+    },
+    value: {
+      width: '33%',
+      fontSize: 12,
+      fontWeight: 500,
+      color: getComputedStyle(document.documentElement).getPropertyValue('--text-n1').trim(),
+    },
+    percent: {
+      width: '33%',
+      fontSize: 12,
+      fontWeight: 500,
+      color: getComputedStyle(document.documentElement).getPropertyValue('--text-n1').trim(),
+    },
+  };
 
   const xyAxis = computed<EChartsOption>(() => ({
     tooltip: {
@@ -186,50 +243,44 @@ export default function useChart(props: ChartProps) {
         return div;
       },
     },
-    legend: {
-      type: 'scroll',
-      orient: 'vertical',
-      left: '37%',
-      top: 'middle',
-      right: 0,
-      itemGap: 16,
-      itemWidth: 8,
-      itemHeight: 8,
-      itemStyle: {
-        borderRadius: 2,
-      },
-      height: '80%',
-      formatter(name) {
-        const item = props.data.value.find((e: any) => e.name === name);
-        return item
-          ? `{name|${name}}  {value|${abbreviateNumber(item.value, '').value}${
-              abbreviateNumber(item.value, '').unit
-            }} {percent|${percentMap.value[item.name]}%}`
-          : name;
-      },
-      textStyle: {
-        width: 400,
-        rich: {
-          name: {
-            width: '33%',
-            fontSize: 12,
-            color: getComputedStyle(document.documentElement).getPropertyValue('--text-n2').trim(),
+    legend: isCompactLayout.value
+      ? {
+          type: 'plain',
+          orient: 'horizontal',
+          left: 'center',
+          bottom: 4,
+          top: 'auto',
+          width: '96%',
+          itemGap: 10,
+          itemWidth: 8,
+          itemHeight: 8,
+          itemStyle: {
+            borderRadius: 2,
           },
-          value: {
-            width: '33%',
-            fontSize: 12,
-            fontWeight: 500,
-            color: getComputedStyle(document.documentElement).getPropertyValue('--text-n1').trim(),
+          formatter: legendFormatter,
+          textStyle: {
+            rich: compactLegendRich,
           },
-          percent: {
-            width: '33%',
-            fontSize: 12,
-            fontWeight: 500,
-            color: getComputedStyle(document.documentElement).getPropertyValue('--text-n1').trim(),
+        }
+      : {
+          type: 'scroll',
+          orient: 'vertical',
+          left: '37%',
+          top: 'middle',
+          right: 0,
+          itemGap: 16,
+          itemWidth: 8,
+          itemHeight: 8,
+          itemStyle: {
+            borderRadius: 2,
+          },
+          height: '80%',
+          formatter: legendFormatter,
+          textStyle: {
+            width: 400,
+            rich: defaultLegendRich,
           },
         },
-      },
-    },
   }));
   const funnelConfig = computed<EChartsOption>(() => ({
     tooltip: {
@@ -289,10 +340,20 @@ export default function useChart(props: ChartProps) {
       textStyle: {},
     };
     if (chartDom.value && [ChartTypeEnum.PIE, ChartTypeEnum.DONUT].includes(props.type)) {
-      const pieLeft = chartDom.value.clientHeight / 4 + 16;
-      seriesData.center = [pieLeft, '50%'];
-      legend.left = pieLeft * 2 + 20;
-      legend.textStyle!.width = Math.abs(chartDom.value.clientWidth - chartDom.value.clientHeight / 2 - 40);
+      if (isCompactLayout.value) {
+        seriesData.center = ['50%', '40%'];
+        seriesData.radius = ['28%', '38%'];
+        legend.orient = 'horizontal';
+        legend.left = 'center';
+        legend.bottom = 4;
+        legend.top = 'auto';
+        legend.width = chartDom.value.clientWidth * 0.96;
+      } else {
+        const pieLeft = chartDom.value.clientHeight / 4 + 16;
+        seriesData.center = [pieLeft, '50%'];
+        legend.left = pieLeft * 2 + 20;
+        legend.textStyle!.width = Math.abs(chartDom.value.clientWidth - chartDom.value.clientHeight / 2 - 40);
+      }
       chartOptions.value = deepMerge(chartOptions.value, {
         legend,
         series: Array.isArray(props.series.value)
@@ -324,7 +385,7 @@ export default function useChart(props: ChartProps) {
   }
 
   watch(
-    () => props.data.value,
+    () => [props.data.value, isCompactLayout.value],
     () => {
       chartOptions.value = deepMerge(
         {

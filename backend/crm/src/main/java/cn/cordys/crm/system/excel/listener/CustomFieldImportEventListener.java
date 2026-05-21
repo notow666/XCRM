@@ -82,8 +82,6 @@ public class CustomFieldImportEventListener<T> extends CustomFieldCheckEventList
     private T mergedTmpEntity;
     private int subRowId;
 
-    private StopWatch watch;
-
     public CustomFieldImportEventListener(List<BaseField> fields, Class<T> clazz, String currentOrg, String operator, String fieldTable,
                                           CustomImportAfterDoConsumer<T, BaseResourceSubField> consumer, int batchSize,
                                           Map<Integer, List<CellExtra>> mergeCellMap, Map<Integer, Map<Integer, String>> mergeRowDataMap) {
@@ -97,7 +95,6 @@ public class CustomFieldImportEventListener<T> extends CustomFieldCheckEventList
         this.dataList = new ArrayList<>(batchSize);
         this.fields = new ArrayList<>(batchSize);
         this.blobFields = new ArrayList<>(batchSize);
-        this.watch = StopWatch.createStarted();
         // 缓存方法, 频繁反射有开销
         cacheSetterMethods();
     }
@@ -129,14 +126,7 @@ public class CustomFieldImportEventListener<T> extends CustomFieldCheckEventList
         if (CollectionUtils.isNotEmpty(this.dataList) || CollectionUtils.isNotEmpty(this.fields) || CollectionUtils.isNotEmpty(this.blobFields)) {
             batchProcessData();
         }
-        this.watch.stop();
-        log.info("数据导入完成, 总耗时: {}s, 成功行数: {}", this.watch.getTime(TimeUnit.SECONDS), successCount);
-    }
-
-    @Override
-    public void onException(Exception exception, AnalysisContext context) throws Exception {
-        this.watch.stop();
-        super.onException(exception, context);
+        log.info("数据导入完成, 总耗时: {}s, 成功行数: {}", getSeconds(), successCount);
     }
 
     /**

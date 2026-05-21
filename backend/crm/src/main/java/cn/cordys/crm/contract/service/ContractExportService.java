@@ -23,8 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 
 @Service
@@ -39,7 +38,8 @@ public class ContractExportService extends BaseExportService {
     @Resource
     private ModuleFormService moduleFormService;
 
-	private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+    @Resource(name = "parallelTaskExecutor")
+    private Executor executor;
 
     @Override
     protected MergeResult getExportMergeData(String taskId, ExportDTO exportParam) {

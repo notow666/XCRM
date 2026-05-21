@@ -11,7 +11,7 @@ public final class CrmLoggers {
     /** MMBA 平台匿名回调链路（入队、消费、分发），独立写入 logs/mmba/ */
     public static final String MMBA_CALLBACK = "MMBA_CALLBACK_LOG";
 
-    public static Marker MMBA_CALLBACK_MARKER = MarkerFactory.getMarker(CrmLoggers.MMBA_CALLBACK);
+    public static Marker MMBA_CALLBACK_MARKER = MarkerFactory.getMarker(MMBA_CALLBACK);
 
     private CrmLoggers() {
     }

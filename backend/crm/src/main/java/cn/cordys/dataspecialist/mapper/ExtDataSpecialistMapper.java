@@ -35,4 +35,6 @@ public interface ExtDataSpecialistMapper {
     List<DataSpecialistTenantOption> listAllowedTenants(@Param("specialistId") String specialistId);
 
     Long countByUsernameExcludeId(@Param("username") String username, @Param("excludeId") String excludeId);
+
+    int deleteById(@Param("id") String id);
 }

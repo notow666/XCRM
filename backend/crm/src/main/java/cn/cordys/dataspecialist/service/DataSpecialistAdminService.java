@@ -133,6 +133,16 @@ public class DataSpecialistAdminService {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public void delete(String id) {
+        DataSpecialist row = extDataSpecialistMapper.selectById(id);
+        if (row == null) {
+            throw new GenericException("数据专员不存在");
+        }
+        extDataSpecialistMapper.deleteTenantLinks(id);
+        extDataSpecialistMapper.deleteById(id);
+    }
+
     private void replaceTenantLinks(String specialistId, List<String> tenantIds) {
         extDataSpecialistMapper.deleteTenantLinks(specialistId);
         for (String tenantId : tenantIds) {

@@ -1,6 +1,7 @@
 package cn.cordys.crm.customer.service;
 
 import cn.cordys.common.constants.BusinessModuleField;
+import cn.cordys.common.constants.ExecutorBeanNames;
 import cn.cordys.common.constants.FormKey;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.uid.IDGenerator;
@@ -82,7 +83,7 @@ public class PoolCustomerImportService {
     private BaseMapper<CustomerPool> customerPoolBaseMapper;
     @Resource
     private PoolCustomerImportExecutor poolCustomerImportExecutor;
-    @Resource(name = "threadPoolTaskExecutor")
+    @Resource(name = ExecutorBeanNames.BATCH)
     private Executor executor;
     @Resource
     private SseService sseService;
@@ -151,7 +152,6 @@ public class PoolCustomerImportService {
             throw new GenericException(Translator.get("file_cannot_be_null"));
         }
         Map<String, Object> view = new HashMap<>();
-        StopWatch started = StopWatch.createStarted();
         // 步骤1-校验公海池
         CustomerPool pool = validatePool(poolId);
         view.put("操作员", userId);
@@ -197,9 +197,8 @@ public class PoolCustomerImportService {
             response.setErrorSummary(buildErrorSummary(result));
         }
 
-        started.stop();
-        log.info("========== 公海导入预检查完成 ========== 总耗时: {} ms, 预检结果: {}, 预检详情: [{}]",
-                started.getTime(), result.isPassed() ? "全部通过" : "有异常", JSON.toFormatJSONString(view));
+        log.info("========== 公海导入预检查完成 ========== 总耗时: {} s, 预检结果: {}, 预检详情: [{}]",
+                checkListener.getSeconds(), result.isPassed() ? "全部通过" : "有异常", JSON.toFormatJSONString(view));
         return response;
     }
 

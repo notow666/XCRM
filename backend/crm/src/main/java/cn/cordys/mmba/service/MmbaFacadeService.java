@@ -1,5 +1,6 @@
 package cn.cordys.mmba.service;
 
+import cn.cordys.common.constants.ExecutorBeanNames;
 import cn.cordys.common.domain.BaseModel;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.JSON;
@@ -195,7 +196,7 @@ public class MmbaFacadeService {
      * 查询设备并同步（异步执行，结束后通过 SSE 推送 {@link MmbaConstants#SSE_EVENT_DEVICE_SYNC}）。
      * 使用设备列表查询方式一：按本地 UM 分批（每批最多 50）请求并落库。
      */
-    @Async("threadPoolTaskExecutor")
+    @Async(ExecutorBeanNames.MAIN_ASYNC)
     public void syncDevices(String userId) {
         String tenantId = StringUtils.trimToNull(TenantContext.getTenantId());
         if (tenantId == null) {

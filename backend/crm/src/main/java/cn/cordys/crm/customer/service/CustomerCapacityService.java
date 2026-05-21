@@ -5,25 +5,29 @@ import cn.cordys.aspectj.constants.LogModule;
 import cn.cordys.aspectj.constants.LogType;
 import cn.cordys.aspectj.context.OperationLogContext;
 import cn.cordys.aspectj.dto.LogContextInfo;
+import cn.cordys.common.constants.InternalUser;
 import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.dto.OptionDTO;
 import cn.cordys.common.exception.GenericException;
+import cn.cordys.common.permission.PermissionCache;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.Translator;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.crm.customer.domain.Customer;
 import cn.cordys.crm.customer.domain.CustomerCapacity;
+import cn.cordys.crm.customer.domain.CustomerPool;
 import cn.cordys.crm.customer.dto.CustomerCapacityDTO;
 import cn.cordys.crm.customer.dto.response.UserCapacityResponse;
 import cn.cordys.crm.customer.mapper.ExtCustomerCapacityMapper;
 import cn.cordys.crm.customer.mapper.ExtCustomerMapper;
-import cn.cordys.crm.system.domain.User;
 import cn.cordys.crm.system.dto.FilterConditionDTO;
 import cn.cordys.crm.system.dto.request.CapacityAddRequest;
 import cn.cordys.crm.system.dto.request.CapacityUpdateRequest;
+import cn.cordys.crm.system.mapper.ExtUserMapper;
 import cn.cordys.crm.system.service.OrganizationUserService;
 import cn.cordys.crm.system.service.UserExtendService;
+import org.apache.commons.lang3.Strings;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
 import cn.cordys.security.SessionUtils;
@@ -32,7 +36,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -40,6 +43,15 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class CustomerCapacityService {
+
+    private static final List<String> BATCH_USER_CAPACITY_PERMISSIONS = Arrays.asList(
+            PermissionConstants.CUSTOMER_MANAGEMENT_ADD,
+            PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE,
+            PermissionConstants.CUSTOMER_MANAGEMENT_TRANSFER,
+            PermissionConstants.CUSTOMER_MANAGEMENT_RECYCLE,
+            PermissionConstants.CUSTOMER_MANAGEMENT_DELETE,
+            PermissionConstants.CUSTOMER_MANAGEMENT_EXPORT
+    );
 
     @Resource
     private UserExtendService userExtendService;
@@ -57,6 +69,12 @@ public class CustomerCapacityService {
     private BaseMapper<Customer> customerMapper;
     @Resource
     private ExtCustomerMapper extCustomerMapper;
+    @Resource
+    private BaseMapper<CustomerPool> customerPoolMapper;
+    @Resource
+    private ExtUserMapper extUserMapper;
+    @Resource
+    private PermissionCache permissionCache;
 
     /**
      * 获取客户库容设置
@@ -151,21 +169,15 @@ public class CustomerCapacityService {
         OperationLogContext.setResourceName(Translator.get("module.customer.capacity.setting"));
     }
 
-    public List<UserCapacityResponse> batchUserCapacity() {
-        List<UserCapacityResponse> responses = new ArrayList<>();
+    public List<UserCapacityResponse> batchUserCapacityByAssign(String poolId) {
+        if(StringUtils.isBlank(poolId)) {
+
+            return Collections.emptyList();
+        }
         String orgId = OrganizationContext.getOrganizationId();
-        List<OptionDTO> authUserOptions = organizationUserService.getAuthUserOptions(SessionUtils.getUserId(), orgId,
-                PermissionConstants.CUSTOMER_MANAGEMENT_ADD,
-                PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE,
-                PermissionConstants.CUSTOMER_MANAGEMENT_TRANSFER,
-                PermissionConstants.CUSTOMER_MANAGEMENT_RECYCLE,
-                PermissionConstants.CUSTOMER_MANAGEMENT_DELETE,
-                PermissionConstants.CUSTOMER_MANAGEMENT_EXPORT
-                );
+        Map<String, String> userNameMap = getPoolScopeUserNameMap(poolId, orgId);
 
-        Map<String, String> userNameMap = authUserOptions.stream()
-                .collect(Collectors.toMap(OptionDTO::getId, OptionDTO::getName, (a, b) -> a));
-
+        List<UserCapacityResponse> responses = new ArrayList<>();
         List<String> excludeStageIds = new ArrayList<>();
         String paymentStageId = customerStageService.getPaymentStageId(orgId);
         String failStageId = customerStageService.getFailStageId(orgId);
@@ -197,5 +209,44 @@ public class CustomerCapacityService {
         return responses.stream()
                 .filter(u -> u.getRemainingCapacity() == null || u.getRemainingCapacity() > 0)
                 .sorted(new UserCapacityResponse.UserCapacityComparator().reversed()).collect(Collectors.toList());
+    }
+
+    private Map<String, String> getAssignUserNameMap(String orgId) {
+        List<OptionDTO> authUserOptions = organizationUserService.getUserByAssign(SessionUtils.getUserId(), orgId,
+                BATCH_USER_CAPACITY_PERMISSIONS.toArray(new String[0]));
+        return authUserOptions.stream()
+                .collect(Collectors.toMap(OptionDTO::getId, OptionDTO::getName, (a, b) -> a));
+    }
+
+    private Map<String, String> getPoolScopeUserNameMap(String poolId, String orgId) {
+        CustomerPool pool = customerPoolMapper.selectByPrimaryKey(poolId);
+        if (pool == null || !Strings.CS.equals(pool.getOrganizationId(), orgId)) {
+            return Collections.emptyMap();
+        }
+        List<String> scopeIds = JSON.parseArray(pool.getScopeId(), String.class);
+        if (CollectionUtils.isEmpty(scopeIds)) {
+            return Collections.emptyMap();
+        }
+        List<String> scopeUserIds = userExtendService.getScopeOwnerIds(scopeIds, orgId);
+        if (CollectionUtils.isEmpty(scopeUserIds)) {
+            return Collections.emptyMap();
+        }
+        List<String> permittedUserIds = scopeUserIds.stream()
+                .filter(userId -> hasAnyBatchUserCapacityPermission(userId, orgId))
+                .distinct()
+                .collect(Collectors.toList());
+        if (CollectionUtils.isEmpty(permittedUserIds)) {
+            return Collections.emptyMap();
+        }
+        return extUserMapper.selectUserOptionByIds(permittedUserIds).stream()
+                .collect(Collectors.toMap(OptionDTO::getId, OptionDTO::getName, (a, b) -> a));
+    }
+
+    private boolean hasAnyBatchUserCapacityPermission(String userId, String orgId) {
+        if (Strings.CS.equals(userId, InternalUser.ADMIN.getValue())) {
+            return true;
+        }
+        Set<String> permissionIds = permissionCache.getPermissionIds(userId, orgId);
+        return BATCH_USER_CAPACITY_PERMISSIONS.stream().anyMatch(permissionIds::contains);
     }
 }

@@ -5,6 +5,7 @@ import cn.cordys.aspectj.constants.LogModule;
 import cn.cordys.aspectj.dto.LogContextInfo;
 import cn.cordys.aspectj.dto.LogDTO;
 import cn.cordys.aspectj.handler.OperationLogHandler;
+import cn.cordys.common.constants.ExecutorBeanNames;
 import cn.cordys.common.constants.InternalUser;
 import cn.cordys.common.constants.MdcConstants;
 import cn.cordys.common.uid.IDGenerator;
@@ -109,7 +110,7 @@ public class LogService implements OperationLogHandler {
      *
      * @param log 日志数据传输对象
      */
-    @Async("threadPoolTaskExecutor")
+    @Async(ExecutorBeanNames.MAIN_ASYNC)
     public void add(LogDTO log) {
         log.setTraceId(MDC.get(MdcConstants.TRACE_ID_KEY));
         log.setPath(MDC.get(MdcConstants.REQUEST_URI_KEY));
@@ -159,7 +160,7 @@ public class LogService implements OperationLogHandler {
      *
      * @param logs 日志数据传输对象列表
      */
-    @Async("threadPoolTaskExecutor")
+    @Async(ExecutorBeanNames.MAIN_ASYNC)
     public void batchAdd(List<LogDTO> logs) {
         // 如果日志列表为空，直接返回
         if (CollectionUtils.isEmpty(logs)) {

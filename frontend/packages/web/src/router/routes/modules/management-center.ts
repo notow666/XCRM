@@ -25,6 +25,15 @@ const managementCenter: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'platform-admin',
+      name: ManagementCenterRouteEnum.MANAGEMENT_CENTER_PLATFORM_ADMIN,
+      component: () => import('@/views/management-center/platform-admin/index.vue'),
+      meta: {
+        locale: 'menu.managementCenter.platformAdmin',
+        permissions: ['PLATFORM_ADMIN:READ'],
+      },
+    },
+    {
       path: 'tenant',
       name: ManagementCenterRouteEnum.MANAGEMENT_CENTER_TENANT,
       component: () => import('@/views/management-center/tenant/index.vue'),

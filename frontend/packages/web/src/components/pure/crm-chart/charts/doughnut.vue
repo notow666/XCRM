@@ -14,15 +14,21 @@
   import { ChartTypeEnum } from '../type';
   import useChart from '../useChart';
 
-  const props = defineProps<{
-    groupName: string;
-    dataIndicatorName: string;
-    aggregationMethodName: string;
-    xData?: string[];
-    data: any[];
-    containerRef?: Element;
-    isFullScreen: boolean;
-  }>();
+  const props = withDefaults(
+    defineProps<{
+      groupName: string;
+      dataIndicatorName: string;
+      aggregationMethodName: string;
+      xData?: string[];
+      data: any[];
+      containerRef?: Element;
+      isFullScreen: boolean;
+      layout?: 'default' | 'compact';
+    }>(),
+    {
+      layout: 'default',
+    }
+  );
   const emit = defineEmits<{
     (e: 'chartClick', params: any): void;
   }>();
@@ -31,13 +37,15 @@
 
   const id = getGenerateId();
   const { containerRef, groupName, dataIndicatorName, aggregationMethodName, xData, data } = toRefs(props);
+  const isCompact = computed(() => props.layout === 'compact');
+
   const series = computed<PieSeriesOption>(() => ({
     name:
       props.aggregationMethodName === t('crmViewSelect.count') ? t('crmViewSelect.counts') : props.dataIndicatorName,
     type: ChartTypeEnum.PIE as any,
     data: props.data,
-    radius: ['30%', '40%'],
-    center: ['13%', '50%'],
+    radius: isCompact.value ? ['28%', '38%'] : ['30%', '40%'],
+    center: isCompact.value ? ['50%', '40%'] : ['13%', '50%'],
     label: {
       show: false,
     },
@@ -56,11 +64,16 @@
     data,
     series,
     containerRef,
-    customConfig: computed(() => ({
-      legend: {
-        left: '45%',
-      },
-    })),
+    chartLayout: computed(() => props.layout),
+    customConfig: computed(() =>
+      isCompact.value
+        ? {}
+        : {
+            legend: {
+              left: '45%',
+            },
+          }
+    ),
     onClick(params) {
       emit('chartClick', params);
     },

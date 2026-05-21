@@ -11,6 +11,7 @@
         :data="props.data"
         :container-ref="props.containerRef"
         :is-full-screen="isFullScreen"
+        :layout="props.layout"
         @chart-click="emit('chartClick', $event)"
       />
     </suspense>
@@ -43,6 +44,8 @@
     xData?: string[];
     data: any[];
     containerRef?: Element;
+    /** 窄容器环形/饼图：图例置底，完整显示百分比 */
+    layout?: 'default' | 'compact';
   }>();
   const emit = defineEmits<{
     (e: 'refresh'): void;

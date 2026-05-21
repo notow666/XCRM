@@ -27,7 +27,17 @@
         </div>
       </div>
       <div>
-        <div class="mb-[8px] text-[14px] text-[var(--text-n1)]">{{ t('customer.assignSelectUsers') }}</div>
+        <div class="mb-[8px] flex items-center justify-between">
+          <div class="text-[14px] text-[var(--text-n1)]">{{ t('customer.assignSelectUsers') }}</div>
+          <NCheckbox
+            v-if="selectableUserIds.length > 0"
+            :checked="isAllSelected"
+            :indeterminate="isIndeterminate"
+            @update:checked="handleSelectAll"
+          >
+            {{ t('common.allSelect') }}
+          </NCheckbox>
+        </div>
         <NSpin :show="loadingUserList">
           <div class="max-h-[280px] overflow-y-auto rounded border border-[var(--border-1)] p-[12px]">
             <div v-if="userCapacityList.length > 0" class="grid grid-cols-4 gap-[8px]">
@@ -73,13 +83,14 @@
 
   import { batchAssignOpenSeaCustomerByCondition, batchUserCapacity } from '@/api/modules';
 
-  const MAX_ASSIGN_COUNT = 2000;
+  const MAX_ASSIGN_COUNT = 500;
 
   const { t } = useI18n();
   const Message = useMessage();
 
   const props = defineProps<{
     total: number;
+    poolId: string;
     queryParams: OpenSeaCustomerTableParams;
   }>();
 
@@ -102,6 +113,30 @@
 
   function isUserSelectable(item: UserCapacityItem) {
     return (item.remainingCapacity ?? Infinity) > 0;
+  }
+
+  const selectableUserIds = computed(() =>
+    userCapacityList.value.filter(isUserSelectable).map((item) => item.userId)
+  );
+
+  const isAllSelected = computed(
+    () =>
+      selectableUserIds.value.length > 0 &&
+      selectableUserIds.value.every((id) => ownerValues.value.includes(id))
+  );
+
+  const isIndeterminate = computed(
+    () =>
+      !isAllSelected.value && selectableUserIds.value.some((id) => ownerValues.value.includes(id))
+  );
+
+  function handleSelectAll(checked: boolean) {
+    if (checked) {
+      ownerValues.value = [...selectableUserIds.value];
+    } else {
+      const selectableSet = new Set(selectableUserIds.value);
+      ownerValues.value = ownerValues.value.filter((id) => !selectableSet.has(id));
+    }
   }
 
   function formatUserLabel(item: UserCapacityItem) {
@@ -150,7 +185,7 @@
   async function loadUserCapacity() {
     try {
       loadingUserList.value = true;
-      userCapacityList.value = (await batchUserCapacity()) ?? [];
+      userCapacityList.value = (await batchUserCapacity(props.poolId)) ?? [];
     } catch {
       userCapacityList.value = [];
     } finally {

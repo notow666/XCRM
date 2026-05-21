@@ -299,4 +299,16 @@
         set email = #{user.id}
         where id = #{user.userId}
     </update>
+
+    <select id="getUmsByUsed" resultType="java.lang.String">
+        select um from sys_user where um is not null or um != ''
+    </select>
+
+    <update id="clearUserUm">
+        update sys_user
+        set um = null,
+            update_time = #{updateTime},
+            update_user = #{updateUser}
+        where id = #{userId}
+    </update>
 </mapper>

@@ -52,6 +52,7 @@ export interface CustomerDetail {
   stageName?: string;
   stageStatus?: string;
   failReason?: string;
+  createSource?: string;
 }
 
 export interface SaveCustomerFollowRecordParams {

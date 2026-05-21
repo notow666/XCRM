@@ -346,6 +346,9 @@ public class OrganizationUserService {
         List<UserRoleConvert> userRoles = extUserMapper.getUserRole(List.of(userDetail.getUserId()), userDetail.getOrganizationId());
         userRoles.forEach(role -> role.setName(roleService.translateInternalRole(role.getName())));
         userDetail.setRoles(userRoles);
+        if(StringUtils.isBlank(userDetail.getUm())) {
+            userDetail.setUm(null);
+        }
         return userDetail;
     }
 
@@ -421,8 +424,12 @@ public class OrganizationUserService {
     private void updateUserBaseData(UserUpdateRequest request, String operatorId, String userId) {
         User updateUser = BeanUtils.copyBean(new User(), request);
         updateUser.setId(userId);
-        updateUser.setUpdateTime(System.currentTimeMillis());
+        long updateTime = System.currentTimeMillis();
+        updateUser.setUpdateTime(updateTime);
         updateUser.setUpdateUser(operatorId);
+        if (StringUtils.isBlank(request.getUm())) {
+            updateUser.setUm("");
+        }
         userMapper.updateById(updateUser);
     }
 
@@ -872,7 +879,7 @@ public class OrganizationUserService {
      *
      * @return 用户选项列表
      */
-    public List<OptionDTO> getAuthUserOptions(String userId, String orgId) {
+    public List<OptionDTO> getUserByAssign(String userId, String orgId) {
         if (Strings.CS.equals(userId, InternalUser.ADMIN.getValue())) {
             return getUserOptions(orgId);
         }
@@ -909,7 +916,7 @@ public class OrganizationUserService {
         return extUserMapper.selectUserOptionByOrgId(orgId, defaultOrder);
     }
 
-    public List<OptionDTO> getAuthUserOptions(String userId, String orgId, String... permissions) {
+    public List<OptionDTO> getUserByAssign(String userId, String orgId, String... permissions) {
         if (Strings.CS.equals(userId, InternalUser.ADMIN.getValue())) {
             return getUserOptions(orgId);
         }

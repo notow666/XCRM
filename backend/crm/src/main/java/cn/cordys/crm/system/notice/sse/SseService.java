@@ -147,7 +147,7 @@ public class SseService {
         SseMessageDTO msg = buildMessage(userId, sendType);
         String tenantId = TenantContext.requireTenantId();
         sendToPrincipal(SsePrincipalKind.TENANT, tenantId, userId, msg);
-        log.info("Broadcast to tenant user {} at {}", userId, System.currentTimeMillis());
+        log.debug("Broadcast to tenant user {} at {}", userId, System.currentTimeMillis());
     }
 
     private SseMessageDTO buildMessage(String userId, String sendType) {

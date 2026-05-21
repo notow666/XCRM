@@ -611,6 +611,7 @@ export const {
 
 export * from './data-specialist';
 export * from './platform';
+export * from './platform-user';
 
 export const {
   getMessageTask,

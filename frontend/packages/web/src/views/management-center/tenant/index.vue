@@ -182,6 +182,13 @@
     showOrgSync.value = true;
   }
 
+  function formatDateTime(ms?: number) {
+    if (ms == null) return '-';
+    const d = new Date(ms);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+
   async function handleSaveOrgId() {
     const orgId = orgSyncForm.orgId.trim();
     if (!orgId) {
@@ -197,7 +204,12 @@
   const columns = computed(() => [
     { title: '租户名称', key: 'name' },
     { title: '唯一标识', key: 'tenantId' },
-    { title: 'org_id', key: 'orgId' },
+    {
+      title: '创建时间',
+      key: 'createTime',
+      render: (row: PlatformTenantItem) => formatDateTime(row.createTime),
+    },
+    { title: 'org_id', key: 'orgId'},
     { title: 'dbName', key: 'dbName' },
     {
       title: 'status',

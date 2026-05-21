@@ -2,6 +2,7 @@ package cn.cordys.common.service;
 
 import cn.cordys.aspectj.constants.LogType;
 import cn.cordys.aspectj.dto.LogDTO;
+import cn.cordys.common.constants.ExecutorBeanNames;
 import cn.cordys.common.context.CustomFunction;
 import cn.cordys.common.context.ExportTaskFunction;
 import cn.cordys.common.domain.BaseModuleFieldValue;
@@ -72,7 +73,7 @@ public abstract class BaseExportService {
     @Resource
     private ExportTaskService exportTaskService;
 
-    @Resource(name = "threadPoolTaskExecutor")
+    @Resource(name = ExecutorBeanNames.BATCH)
     private Executor executor;
 
     public Map<String, BaseField> getFieldConfigMap(String formKey, String orgId) {
@@ -657,8 +658,6 @@ public abstract class BaseExportService {
     }
 
     public void runExport(String orgId, String userId, String module, Locale locale, ExportTask exportTask, String fileName, ExportTaskFunction func) {
-        // 虚拟线程不继承发起线程的 ThreadLocal，须在提交前快照租户并在子线程内绑定/清理
-
         CompletableFuture.runAsync(() -> {
             try {
                 LocaleContextHolder.setLocale(locale);
