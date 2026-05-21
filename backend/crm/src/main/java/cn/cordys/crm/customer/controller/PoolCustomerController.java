@@ -92,8 +92,16 @@ public class PoolCustomerController {
     @PostMapping("/batch-pick")
     @Operation(summary = "批量领取客户")
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_POOL_PICK})
-    public void batchPick(@Validated @RequestBody PoolBatchPickRequest request) {
-        poolCustomerService.batchPick(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    public Map<String, Object> batchPick(@Validated @RequestBody PoolBatchPickRequest request) {
+        return poolCustomerService.batchPick_new(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
+    @PostMapping("/batch-pick-by-condition")
+    @Operation(summary = "按筛选条件批量领取公海客户")
+    @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_POOL_PICK})
+    public Map<String, Object> batchPickByCondition(@Validated @RequestBody PoolBatchPickByConditionRequest request) {
+        ConditionFilterUtils.parseCondition(request);
+        return poolCustomerService.batchPickByCondition(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
     @PostMapping("/batch-assign")
@@ -113,7 +121,7 @@ public class PoolCustomerController {
     @PostMapping("/batch-delete-by-condition")
     @Operation(summary = "按筛选条件批量删除公海客户")
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_POOL_DELETE})
-    public int batchDeleteByCondition(@Validated @RequestBody CustomerPageRequest request) {
+    public Map<String, Object> batchDeleteByCondition(@Validated @RequestBody CustomerPageRequest request) {
         ConditionFilterUtils.parseCondition(request);
         return poolCustomerService.batchDeleteByCondition(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }

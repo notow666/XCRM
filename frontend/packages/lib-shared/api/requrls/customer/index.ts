@@ -40,6 +40,7 @@ export const DeleteCustomerOpenSeaUrl = '/account-pool/delete'; // 删除公海
 export const GetOpenSeaCustomerListUrl = '/pool/account/page'; // 公海客户列表
 export const PickOpenSeaCustomerUrl = '/pool/account/pick'; // 领取公海客户
 export const BatchPickOpenSeaCustomerUrl = '/pool/account/batch-pick'; // 批量领取公海客户
+export const BatchPickOpenSeaCustomerByConditionUrl = '/pool/account/batch-pick-by-condition'; // 按筛选条件批量领取公海客户
 export const BatchDeleteOpenSeaCustomerUrl = '/pool/account/batch-delete'; // 批量删除公海客户
 export const BatchDeleteOpenSeaCustomerByConditionUrl = '/pool/account/batch-delete-by-condition'; // 按筛选条件批量删除公海客户
 export const BatchAssignOpenSeaCustomerUrl = '/pool/account/batch-assign'; // 批量分配公海客户

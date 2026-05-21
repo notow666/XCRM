@@ -27,6 +27,7 @@ import cn.cordys.crm.customer.dto.MobileConflictDTO;
 import cn.cordys.crm.customer.dto.request.CustomerChartAnalysisDbRequest;
 import cn.cordys.crm.customer.dto.request.CustomerPageRequest;
 import cn.cordys.crm.customer.dto.request.PoolBatchAssignByConditionRequest;
+import cn.cordys.crm.customer.dto.request.PoolBatchPickByConditionRequest;
 import cn.cordys.crm.customer.dto.request.PoolBatchTransferRequest;
 import cn.cordys.crm.customer.dto.request.PoolBatchTransferByConditionRequest;
 import cn.cordys.crm.customer.dto.request.PoolBatchUpdateByConditionRequest;
@@ -83,14 +84,13 @@ import java.util.stream.Stream;
 public class PoolCustomerService {
 
     public static final long DAY_MILLIS = 24 * 60 * 60 * 1000;
-    private static final int BATCH_DELETE_BY_CONDITION_SIZE = 500;
+    private static final int BATCH_DELETE_BY_CONDITION_SIZE = 2000;
+    private static final int BATCH_PICK_BY_CONDITION_MAX_SIZE = 2000;
     private static final int BATCH_ASSIGN_BY_CONDITION_MAX_SIZE = 2000;
     private static final int BATCH_TRANSFER_BY_CONDITION_MAX_SIZE = 2000;
     private static final int BATCH_UPDATE_BY_CONDITION_MAX_SIZE = 2000;
     private static final int BATCH_ASSIGN_UPDATE_SIZE = 200;
-    private static final String BATCH_ASSIGN_LOCK_PREFIX = "crm:pool:batch-assign:";
-    private static final String BATCH_TRANSFER_LOCK_PREFIX = "crm:pool:batch-transfer:";
-    private static final String BATCH_UPDATE_LOCK_PREFIX = "crm:pool:batch-update:";
+    private static final String BATCH_POOL_OPERATION_LOCK_PREFIX = "crm:pool:batch-op:";
     @Resource
     private BaseMapper<Customer> customerMapper;
     @Resource
@@ -425,17 +425,74 @@ public class PoolCustomerService {
         logService.batchAdd(logs);
     }
 
-    public int batchDeleteByCondition(CustomerPageRequest request, String userId, String orgId) {
-        int deletedCount = 0;
-        while (true) {
-            PageHelper.startPage(1, BATCH_DELETE_BY_CONDITION_SIZE, false);
-            List<String> deleteIds = extCustomerMapper.listIds(request, orgId, userId, null);
-            if (CollectionUtils.isEmpty(deleteIds)) {
-                return deletedCount;
-            }
-            batchDelete(deleteIds, userId, orgId);
-            deletedCount += deleteIds.size();
+    public Map<String, Object> batchDeleteByCondition(CustomerPageRequest request, String userId, String orgId) {
+        if (StringUtils.isBlank(request.getPoolId())) {
+            throw new GenericException(Translator.get("common.param.error"));
         }
+
+        PageHelper.startPage(1, 1, false);
+        List<String> previewIds = extCustomerMapper.listIds(request, orgId, userId, null);
+        if (CollectionUtils.isEmpty(previewIds)) {
+            return Map.of(
+                    "accepted", false,
+                    "taskId", "",
+                    "message", "未查询到可删除客户"
+            );
+        }
+
+        String taskId = IDGenerator.nextStr();
+        long lockThreadId = Long.parseLong(taskId);
+        String lockKey = tenantRedisKey(BATCH_POOL_OPERATION_LOCK_PREFIX + request.getPoolId());
+        RLock lock = redisson.getLock(lockKey);
+        boolean locked;
+        try {
+            locked = lock.tryLockAsync(0, -1, TimeUnit.MILLISECONDS, lockThreadId).get();
+        } catch (Exception ex) {
+            throw new GenericException("按筛选删除加锁失败");
+        }
+        if (!locked) {
+            return Map.of(
+                    "accepted", false,
+                    "taskId", "",
+                    "message", "该公海池已有批量任务执行中，请稍后再试"
+            );
+        }
+
+        CustomerPageRequest asyncRequest = BeanUtils.copyBean(new CustomerPageRequest(), request);
+        try {
+            executor.execute(() -> doBatchDeleteByConditionAsync(taskId, lockThreadId, asyncRequest, userId, orgId, lock));
+        } catch (Exception ex) {
+            releasePoolBatchLock(lock, lockKey, lockThreadId);
+            throw ex;
+        }
+
+        log.info("[POOL_BATCH_DELETE_SUBMIT] taskId={}, poolId={}, operator={}",
+                taskId, request.getPoolId(), userId);
+        return Map.of(
+                "accepted", true,
+                "taskId", taskId,
+                "message", "批量删除任务已提交"
+        );
+    }
+
+    /**
+     * 按筛选条件批量领取客户（取当前筛选排序下的前 pickCount 条）。
+     */
+    public Map<String, Object> batchPickByCondition(PoolBatchPickByConditionRequest request, String currentUser, String currentOrgId) {
+        int pickCount = Math.min(request.getPickCount(), BATCH_PICK_BY_CONDITION_MAX_SIZE);
+        PageHelper.startPage(1, pickCount, false);
+        List<String> ids = extCustomerMapper.listIds(request, currentOrgId, currentUser, null);
+        if (CollectionUtils.isEmpty(ids)) {
+            return Map.of(
+                    "accepted", false,
+                    "taskId", "",
+                    "message", "未查询到可领取客户"
+            );
+        }
+        PoolBatchPickRequest batchPickRequest = new PoolBatchPickRequest();
+        batchPickRequest.setBatchIds(ids);
+        batchPickRequest.setPoolId(request.getPoolId());
+        return batchPick_new(batchPickRequest, currentUser, currentOrgId);
     }
 
     /**
@@ -862,6 +919,62 @@ public class PoolCustomerService {
     }
 
     /**
+     * 批量领取新链路：
+     * 1. 同步请求阶段只做参数校验、手机号重复规则预校验、同池互斥锁、异步任务提交
+     * 2. 真正的领取逻辑放到异步线程执行，避免页面长时间阻塞
+     */
+    public Map<String, Object> batchPick_new(PoolBatchPickRequest request, String currentUser, String currentOrgId) {
+        if (CollectionUtils.isEmpty(request.getBatchIds()) || StringUtils.isBlank(request.getPoolId())) {
+            throw new GenericException(Translator.get("common.param.error"));
+        }
+
+        List<Customer> selectedCustomers = customerMapper.selectByIds(request.getBatchIds());
+        String poolId = resolvePoolIdForBatchPick(selectedCustomers, request.getPoolId());
+        CustomerPool pool = poolMapper.selectByPrimaryKey(poolId);
+        if (pool == null) {
+            throw new GenericException(Translator.get("customer_pool_not_exist"));
+        }
+
+        String taskId = IDGenerator.nextStr();
+        long lockThreadId = Long.parseLong(taskId);
+        String lockKey = tenantRedisKey(BATCH_POOL_OPERATION_LOCK_PREFIX + poolId);
+        RLock lock = redisson.getLock(lockKey);
+        boolean locked;
+        try {
+            locked = lock.tryLockAsync(0, -1, TimeUnit.MILLISECONDS, lockThreadId).get();
+        } catch (Exception ex) {
+            throw new GenericException("批量领取加锁失败");
+        }
+        if (!locked) {
+            log.info("[POOL_BATCH_PICK_LOCK_REJECTED] poolId={}, operator={}, lockKey={}",
+                    poolId, currentUser, lockKey);
+            return Map.of(
+                    "accepted", false,
+                    "taskId", "",
+                    "message", "该公海池已有批量任务执行中，请稍后再试"
+            );
+        }
+
+        PoolBatchPickRequest asyncRequest = new PoolBatchPickRequest();
+        asyncRequest.setBatchIds(new ArrayList<>(request.getBatchIds()));
+        asyncRequest.setPoolId(poolId);
+        try {
+            executor.execute(() -> doBatchPickAsync(taskId, lockThreadId, pool, asyncRequest, currentUser, currentOrgId, lock));
+        } catch (Exception ex) {
+            releasePoolBatchLock(lock, lockKey, lockThreadId);
+            throw ex;
+        }
+
+        log.info("[POOL_BATCH_PICK_SUBMIT] taskId={}, poolId={}, operator={}, batchSize={}",
+                taskId, poolId, currentUser, request.getBatchIds().size());
+        return Map.of(
+                "accepted", true,
+                "taskId", taskId,
+                "message", "批量领取任务已提交"
+        );
+    }
+
+    /**
      * 批量分配新链路：
      * 1. 同步请求阶段只做参数校验、同池互斥锁、异步任务提交
      * 2. 真正的分配逻辑放到异步线程执行，避免页面长时间阻塞
@@ -890,7 +1003,7 @@ public class PoolCustomerService {
 
         String taskId = IDGenerator.nextStr();
         long lockThreadId = Long.parseLong(taskId);
-        String lockKey = tenantRedisKey(BATCH_ASSIGN_LOCK_PREFIX + poolId);
+        String lockKey = tenantRedisKey(BATCH_POOL_OPERATION_LOCK_PREFIX + poolId);
         RLock lock = redisson.getLock(lockKey);
         // 同一个公海池同一时间只允许一个批量分配任务执行
         boolean locked;
@@ -919,7 +1032,7 @@ public class PoolCustomerService {
             // 请求线程只负责提交任务，不在这里做重计算和批量落库
             executor.execute(() -> doBatchAssignAsync(taskId, lockThreadId, pool, asyncRequest, currentOrgId, currentUser, lock));
         } catch (Exception ex) {
-            releaseBatchAssignLock(lock, lockKey, lockThreadId);
+            releasePoolBatchLock(lock, lockKey, lockThreadId);
             throw ex;
         }
 
@@ -959,7 +1072,7 @@ public class PoolCustomerService {
 
         String taskId = IDGenerator.nextStr();
         long lockThreadId = Long.parseLong(taskId);
-        String lockKey = tenantRedisKey(BATCH_TRANSFER_LOCK_PREFIX + sourcePoolId);
+        String lockKey = tenantRedisKey(BATCH_POOL_OPERATION_LOCK_PREFIX + sourcePoolId);
         RLock lock = redisson.getLock(lockKey);
         boolean locked;
         try {
@@ -985,7 +1098,7 @@ public class PoolCustomerService {
             executor.execute(() -> doBatchTransferAsync(taskId, lockThreadId, sourcePool, targetPool, asyncRequest,
                     currentUser, currentOrgId, lock));
         } catch (Exception ex) {
-            releaseBatchAssignLock(lock, lockKey, lockThreadId);
+            releasePoolBatchLock(lock, lockKey, lockThreadId);
             throw ex;
         }
 
@@ -1010,7 +1123,7 @@ public class PoolCustomerService {
 
         String taskId = IDGenerator.nextStr();
         long lockThreadId = Long.parseLong(taskId);
-        String lockKey = tenantRedisKey(BATCH_UPDATE_LOCK_PREFIX + pool.getId());
+        String lockKey = tenantRedisKey(BATCH_POOL_OPERATION_LOCK_PREFIX + pool.getId());
         RLock lock = redisson.getLock(lockKey);
         boolean locked;
         try {
@@ -1035,7 +1148,7 @@ public class PoolCustomerService {
         try {
             executor.execute(() -> doBatchUpdateAsync(taskId, lockThreadId, pool, asyncRequest, currentUser, currentOrgId, lock));
         } catch (Exception ex) {
-            releaseBatchAssignLock(lock, lockKey, lockThreadId);
+            releasePoolBatchLock(lock, lockKey, lockThreadId);
             throw ex;
         }
 
@@ -1046,6 +1159,115 @@ public class PoolCustomerService {
                 "taskId", taskId,
                 "message", "批量编辑任务已提交"
         );
+    }
+
+    /**
+     * 异步执行批量领取主流程：
+     * 1. 重新过滤当前仍在目标公海池中的客户
+     * 2. 在内存中按顺序应用手机号重复规则、领取规则、库容和每日领取限制
+     * 3. 按最终领取方案批量落库并补充联系人、状态和日志
+     */
+    private void doBatchPickAsync(String taskId, long lockThreadId, CustomerPool pool, PoolBatchPickRequest request,
+                                  String currentUser, String currentOrgId, RLock lock) {
+        long totalStart = System.currentTimeMillis();
+        try {
+            log.info("[POOL_BATCH_PICK_START] taskId={}, poolId={}, operator={}, batchSize={}",
+                    taskId, pool.getId(), currentUser, request.getBatchIds().size());
+
+            long loadStart = System.currentTimeMillis();
+            Map<String, Integer> requestOrderMap = new HashMap<>();
+            for (int index = 0; index < request.getBatchIds().size(); index++) {
+                requestOrderMap.put(request.getBatchIds().get(index), index);
+            }
+            List<Customer> customers = customerMapper.selectByIds(request.getBatchIds());
+            List<Customer> candidates = customers.stream()
+                    .filter(Objects::nonNull)
+                    .filter(customer -> Boolean.TRUE.equals(customer.getInSharedPool()))
+                    .filter(customer -> Strings.CS.equals(pool.getId(), customer.getPoolId()))
+                    .sorted(Comparator.comparingInt(customer -> requestOrderMap.getOrDefault(customer.getId(), Integer.MAX_VALUE)))
+                    .toList();
+            Map<String, String> recentOwnerMap = buildRecentOwnerMap(candidates);
+            List<StageConfigResponse> stageConfigList = extCustomerStageConfigMapper.getStageConfigList(currentOrgId);
+            String defaultStage = CollectionUtils.isNotEmpty(stageConfigList) ? stageConfigList.getFirst().getId() : null;
+            String defaultStageStatus = CollectionUtils.isNotEmpty(stageConfigList) ? CustomerStageService.STATUS_NEW : null;
+            CustomerPoolPickRule pickRule = loadPoolPickRule(pool.getId());
+            boolean poolAdmin = userExtendService.isPoolAdmin(JSON.parseArray(pool.getOwnerId(), String.class), currentUser, currentOrgId);
+            BatchPickPreparedData preparedData = prepareBatchPickData(candidates, currentUser, currentOrgId, pickRule, poolAdmin);
+            log.info("[POOL_BATCH_PICK_LOAD_COST] taskId={}, poolId={}, costMs={}, candidateSize={}",
+                    taskId, pool.getId(), System.currentTimeMillis() - loadStart, candidates.size());
+
+            long planStart = System.currentTimeMillis();
+            BatchPickPlan plan = buildBatchPickPlan(candidates, currentUser, pickRule, poolAdmin, preparedData);
+            log.info("[POOL_BATCH_PICK_PLAN_COST] taskId={}, poolId={}, costMs={}, pickedSize={}, skippedSize={}",
+                    taskId, pool.getId(), System.currentTimeMillis() - planStart,
+                    plan.pickedCustomers().size(), plan.skippedCustomerIds().size());
+
+            if (CollectionUtils.isNotEmpty(plan.pickedCustomers())) {
+                transactionTemplate.executeWithoutResult(status ->
+                        executeBatchPickPlan(taskId, pool, plan, recentOwnerMap, currentUser, currentOrgId, defaultStage, defaultStageStatus));
+            }
+
+            log.info("[POOL_BATCH_PICK_FINISH] taskId={}, poolId={}, successCount={}, failCount={}, totalCostMs={}",
+                    taskId, pool.getId(), plan.pickedCustomers().size(), plan.skippedCustomerIds().size(),
+                    System.currentTimeMillis() - totalStart);
+        } catch (Exception ex) {
+            log.error("[POOL_BATCH_PICK_FAILED] taskId={}, poolId={}, operator={}",
+                    taskId, pool.getId(), currentUser, ex);
+        } finally {
+            releasePoolBatchLock(lock, lock.getName(), lockThreadId);
+        }
+    }
+
+    /**
+     * 异步执行按筛选条件批量删除：
+     * 1. 保留当前“先按筛选条件取一批 ID，再走现有删除链路”的语义
+     * 2. 同步请求阶段只负责提交任务，不阻塞页面
+     */
+    private void doBatchDeleteByConditionAsync(String taskId, long lockThreadId, CustomerPageRequest request,
+                                               String userId, String orgId, RLock lock) {
+        long totalStart = System.currentTimeMillis();
+        int deletedCount = 0;
+        try {
+            log.info("[POOL_BATCH_DELETE_START] taskId={}, poolId={}, operator={}",
+                    taskId, request.getPoolId(), userId);
+
+            long collectStart = System.currentTimeMillis();
+            List<String> matchedIds = collectDeleteIdsByCondition(request, userId, orgId);
+            log.info("[POOL_BATCH_DELETE_COLLECT_COST] taskId={}, poolId={}, costMs={}, candidateSize={}",
+                    taskId, request.getPoolId(), System.currentTimeMillis() - collectStart, matchedIds.size());
+
+            for (int start = 0; start < matchedIds.size(); start += BATCH_DELETE_BY_CONDITION_SIZE) {
+                int end = Math.min(start + BATCH_DELETE_BY_CONDITION_SIZE, matchedIds.size());
+                List<String> currentBatchIds = new ArrayList<>(matchedIds.subList(start, end));
+                batchDelete(currentBatchIds, userId, orgId);
+                deletedCount += currentBatchIds.size();
+            }
+
+            log.info("[POOL_BATCH_DELETE_FINISH] taskId={}, poolId={}, successCount={}, totalCostMs={}",
+                    taskId, request.getPoolId(), deletedCount, System.currentTimeMillis() - totalStart);
+        } catch (Exception ex) {
+            log.error("[POOL_BATCH_DELETE_FAILED] taskId={}, poolId={}, operator={}, deletedCount={}",
+                    taskId, request.getPoolId(), userId, deletedCount, ex);
+        } finally {
+            releasePoolBatchLock(lock, lock.getName(), lockThreadId);
+        }
+    }
+
+    private List<String> collectDeleteIdsByCondition(CustomerPageRequest request, String userId, String orgId) {
+        List<String> matchedIds = new ArrayList<>();
+        int pageNum = 1;
+        PageHelper.startPage(pageNum, BATCH_DELETE_BY_CONDITION_SIZE, false);
+        List<String> pageIds = extCustomerMapper.listIds(request, orgId, userId, null);
+        while (CollectionUtils.isNotEmpty(pageIds)) {
+            matchedIds.addAll(pageIds);
+            if (pageIds.size() < BATCH_DELETE_BY_CONDITION_SIZE) {
+                return matchedIds;
+            }
+            pageNum++;
+            PageHelper.startPage(pageNum, BATCH_DELETE_BY_CONDITION_SIZE, false);
+            pageIds = extCustomerMapper.listIds(request, orgId, userId, null);
+        }
+        return matchedIds;
     }
 
     /**
@@ -1103,7 +1325,7 @@ public class PoolCustomerService {
             log.error("[POOL_BATCH_ASSIGN_FAILED] taskId={}, poolId={}, operator={}",
                     taskId, pool.getId(), currentUser, ex);
         } finally {
-            releaseBatchAssignLock(lock, lock.getName(), lockThreadId);
+            releasePoolBatchLock(lock, lock.getName(), lockThreadId);
         }
     }
 
@@ -1153,7 +1375,7 @@ public class PoolCustomerService {
             log.error("[POOL_BATCH_TRANSFER_FAILED] taskId={}, sourcePoolId={}, targetPoolId={}, operator={}",
                     taskId, sourcePool.getId(), targetPool.getId(), currentUser, ex);
         } finally {
-            releaseBatchAssignLock(lock, lock.getName(), lockThreadId);
+            releasePoolBatchLock(lock, lock.getName(), lockThreadId);
         }
     }
 
@@ -1215,7 +1437,7 @@ public class PoolCustomerService {
             log.error("[POOL_BATCH_UPDATE_FAILED] taskId={}, poolId={}, operator={}, fieldId={}",
                     taskId, pool.getId(), currentUser, request.getFieldId(), ex);
         } finally {
-            releaseBatchAssignLock(lock, lock.getName(), lockThreadId);
+            releasePoolBatchLock(lock, lock.getName(), lockThreadId);
         }
     }
 
@@ -1367,6 +1589,192 @@ public class PoolCustomerService {
                 .receivers(List.of(new Receiver(currentUser, NotificationConstants.Type.SYSTEM_NOTICE.name())))
                 .excludeSelf(false)
                 .build();
+    }
+
+    private BatchPickPreparedData prepareBatchPickData(List<Customer> candidates, String currentUser, String currentOrgId,
+                                                       CustomerPoolPickRule pickRule, boolean poolAdmin) {
+        List<String> customerIds = candidates.stream().map(Customer::getId).filter(StringUtils::isNotBlank).toList();
+        Map<String, CustomerOwner> lastOwnerMap = new HashMap<>();
+        if (CollectionUtils.isNotEmpty(customerIds)) {
+            LambdaQueryWrapper<CustomerOwner> ownerWrapper = new LambdaQueryWrapper<>();
+            ownerWrapper.in(CustomerOwner::getCustomerId, customerIds);
+            List<CustomerOwner> customerOwners = ownerMapper.selectListByLambda(ownerWrapper);
+            lastOwnerMap = customerOwners.stream()
+                    .collect(Collectors.groupingBy(CustomerOwner::getCustomerId))
+                    .entrySet()
+                    .stream()
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            entry -> entry.getValue().stream()
+                                    .max(Comparator.comparingLong(CustomerOwner::getCollectionTime))
+                                    .orElse(null)
+                    ));
+        }
+
+        List<String> mobiles = candidates.stream().map(Customer::getMobile).toList();
+        Set<String> privateConflictMobiles =
+                customerMobileRuleService.findPoolImportReceiveBlockingOwnerPrivateMobiles(mobiles, currentUser, currentOrgId);
+        Set<String> ownedPoolMobiles = customerMobileRuleService.loadOwnerPoolMobiles(currentUser, currentOrgId);
+        int remainingCapacity = calculateRemainingCapacity(currentUser, currentOrgId);
+        Integer remainingDailyPick = null;
+        if (!poolAdmin && pickRule != null && Boolean.TRUE.equals(pickRule.getLimitOnNumber())) {
+            int pickedToday = countTodayPicked(currentUser);
+            remainingDailyPick = Math.max(0, pickRule.getPickNumber() - pickedToday);
+        }
+        return new BatchPickPreparedData(lastOwnerMap, privateConflictMobiles, ownedPoolMobiles, remainingCapacity, remainingDailyPick);
+    }
+
+    private BatchPickPlan buildBatchPickPlan(List<Customer> candidates, String currentUser, CustomerPoolPickRule pickRule,
+                                             boolean poolAdmin, BatchPickPreparedData preparedData) {
+        if (CollectionUtils.isEmpty(candidates)) {
+            return new BatchPickPlan(List.of(), List.of());
+        }
+
+        List<Customer> pickedCustomers = new ArrayList<>();
+        List<String> skippedCustomerIds = new ArrayList<>();
+        int remainingCapacity = preparedData.remainingCapacity();
+        Integer remainingDailyPick = preparedData.remainingDailyPick();
+        Set<String> ownedPoolMobiles = new HashSet<>(preparedData.ownedPoolMobiles());
+
+        for (Customer customer : candidates) {
+            if (remainingCapacity <= 0) {
+                skippedCustomerIds.add(customer.getId());
+                continue;
+            }
+            if (remainingDailyPick != null && remainingDailyPick <= 0) {
+                skippedCustomerIds.add(customer.getId());
+                continue;
+            }
+            if (!canPickCustomer(customer, currentUser, pickRule, poolAdmin, preparedData.lastOwnerMap())) {
+                skippedCustomerIds.add(customer.getId());
+                continue;
+            }
+            if (customerMobileRuleService.hasPoolImportReceiveConflict(StringUtils.trimToNull(customer.getMobile()),
+                    preparedData.privateConflictMobiles(), ownedPoolMobiles)) {
+                skippedCustomerIds.add(customer.getId());
+                continue;
+            }
+            pickedCustomers.add(customer);
+            remainingCapacity--;
+            if (remainingDailyPick != null) {
+                remainingDailyPick--;
+            }
+            customerMobileRuleService.addOwnedMobile(customer, ownedPoolMobiles);
+        }
+        return new BatchPickPlan(pickedCustomers, skippedCustomerIds);
+    }
+
+    private boolean canPickCustomer(Customer customer, String ownerId, CustomerPoolPickRule pickRule, boolean poolAdmin,
+                                    Map<String, CustomerOwner> lastOwnerMap) {
+        if (customer == null) {
+            return false;
+        }
+        if (poolAdmin || pickRule == null) {
+            return true;
+        }
+        if (Boolean.TRUE.equals(pickRule.getLimitNew())) {
+            LocalDateTime joinPoolTime = Instant.ofEpochMilli(customer.getUpdateTime())
+                    .atZone(ZoneId.systemDefault()).toLocalDateTime();
+            LocalDateTime releaseDate = joinPoolTime.plusDays(pickRule.getNewPickInterval());
+            if (releaseDate.isAfter(LocalDateTime.now())) {
+                return false;
+            }
+        }
+        if (Boolean.TRUE.equals(pickRule.getLimitPreOwner())) {
+            CustomerOwner lastOwner = lastOwnerMap.get(customer.getId());
+            if (lastOwner != null && Strings.CS.equals(lastOwner.getOwner(), ownerId)) {
+                long nextPickMillis = lastOwner.getEndTime() + pickRule.getPickIntervalDays() * DAY_MILLIS;
+                return System.currentTimeMillis() >= nextPickMillis;
+            }
+        }
+        return true;
+    }
+
+    private void executeBatchPickPlan(String taskId, CustomerPool pool, BatchPickPlan plan, Map<String, String> recentOwnerMap,
+                                      String currentUser, String currentOrgId, String defaultStage, String defaultStageStatus) {
+        long updateCustomerStart = System.currentTimeMillis();
+        long now = System.currentTimeMillis();
+        List<String> pickedCustomerIds = plan.pickedCustomers().stream().map(Customer::getId).toList();
+        for (List<String> partitionIds : partition(pickedCustomerIds, BATCH_ASSIGN_UPDATE_SIZE)) {
+            extCustomerMapper.batchAssignToOwner(partitionIds, currentUser, currentUser, now, now, defaultStage, defaultStageStatus);
+        }
+        log.info("[POOL_BATCH_PICK_UPDATE_CUSTOMER_COST] taskId={}, poolId={}, costMs={}",
+                taskId, pool.getId(), System.currentTimeMillis() - updateCustomerStart);
+
+        long deleteOwnerHistoryStart = System.currentTimeMillis();
+        customerOwnerHistoryService.deleteByCustomerIds(pickedCustomerIds);
+        log.info("[POOL_BATCH_PICK_DELETE_OWNER_HISTORY_COST] taskId={}, poolId={}, costMs={}",
+                taskId, pool.getId(), System.currentTimeMillis() - deleteOwnerHistoryStart);
+
+        long updateContactStart = System.currentTimeMillis();
+        Map<String, List<String>> oldOwnerCustomerIdsMap = new LinkedHashMap<>();
+        for (Customer customer : plan.pickedCustomers()) {
+            String oldOwner = recentOwnerMap.get(customer.getId());
+            String ownerKey = StringUtils.defaultString(oldOwner);
+            oldOwnerCustomerIdsMap.computeIfAbsent(ownerKey, key -> new ArrayList<>()).add(customer.getId());
+        }
+        for (Map.Entry<String, List<String>> oldOwnerEntry : oldOwnerCustomerIdsMap.entrySet()) {
+            String oldOwner = StringUtils.trimToNull(oldOwnerEntry.getKey());
+            for (List<String> partitionIds : partition(oldOwnerEntry.getValue(), BATCH_ASSIGN_UPDATE_SIZE)) {
+                customerContactService.batchUpdatePoolContactOwner(partitionIds, currentUser, oldOwner, currentOrgId);
+            }
+        }
+        log.info("[POOL_BATCH_PICK_UPDATE_CONTACT_COST] taskId={}, poolId={}, costMs={}",
+                taskId, pool.getId(), System.currentTimeMillis() - updateContactStart);
+
+        long recalculateStart = System.currentTimeMillis();
+        customerWechatFriendStatusService.recalculateCustomers(pickedCustomerIds, currentUser);
+        log.info("[POOL_BATCH_PICK_RECALCULATE_WECHAT_COST] taskId={}, poolId={}, costMs={}",
+                taskId, pool.getId(), System.currentTimeMillis() - recalculateStart);
+
+        long logStart = System.currentTimeMillis();
+        List<LogDTO> logs = plan.pickedCustomers().stream()
+                .map(customer -> new LogDTO(currentOrgId, customer.getId(), currentUser, LogType.PICK,
+                        LogModule.CUSTOMER_POOL, customer.getName()))
+                .toList();
+        logService.batchAdd(logs);
+        log.info("[POOL_BATCH_PICK_LOG_BATCH_COST] taskId={}, poolId={}, costMs={}",
+                taskId, pool.getId(), System.currentTimeMillis() - logStart);
+    }
+
+    private CustomerPoolPickRule loadPoolPickRule(String poolId) {
+        LambdaQueryWrapper<CustomerPoolPickRule> pickRuleWrapper = new LambdaQueryWrapper<>();
+        pickRuleWrapper.eq(CustomerPoolPickRule::getPoolId, poolId);
+        List<CustomerPoolPickRule> customerPoolPickRules = pickRuleMapper.selectListByLambda(pickRuleWrapper);
+        return CollectionUtils.isEmpty(customerPoolPickRules) ? null : customerPoolPickRules.getFirst();
+    }
+
+    private int countTodayPicked(String ownerId) {
+        LambdaQueryWrapper<Customer> customerWrapper = new LambdaQueryWrapper<>();
+        customerWrapper
+                .eq(Customer::getOwner, ownerId)
+                .eq(Customer::getInSharedPool, false)
+                .between(Customer::getCollectionTime, TimeUtils.getTodayStart(), TimeUtils.getTodayStart() + DAY_MILLIS);
+        return customerMapper.selectListByLambda(customerWrapper).size();
+    }
+
+    private int calculateRemainingCapacity(String ownerId, String currentOrgId) {
+        CustomerCapacity customerCapacity = getUserCapacity(ownerId, currentOrgId);
+        if (customerCapacity == null || customerCapacity.getCapacity() == null) {
+            return Integer.MAX_VALUE;
+        }
+        List<String> excludeStageIds = new ArrayList<>();
+        String paymentStageId = customerStageService.getPaymentStageId(currentOrgId);
+        String failStageId = customerStageService.getFailStageId(currentOrgId);
+        if (StringUtils.isNotEmpty(paymentStageId)) {
+            excludeStageIds.add(paymentStageId);
+        }
+        if (StringUtils.isNotEmpty(failStageId)) {
+            excludeStageIds.add(failStageId);
+        }
+        int excludeCount = 0;
+        if (CollectionUtils.isNotEmpty(excludeStageIds)) {
+            excludeCount = extCustomerMapper.countByOwnerAndStages(ownerId, excludeStageIds);
+        }
+        LambdaQueryWrapper<Customer> customerWrapper = new LambdaQueryWrapper<>();
+        customerWrapper.eq(Customer::getOwner, ownerId).eq(Customer::getInSharedPool, false);
+        int ownCount = customerMapper.selectListByLambda(customerWrapper).size();
+        return Math.max(0, customerCapacity.getCapacity() - (ownCount - excludeCount));
     }
 
     private BatchTransferPlan buildBatchTransferPlan(List<String> requestIds, List<Customer> candidates) {
@@ -1673,6 +2081,27 @@ public class PoolCustomerService {
         return poolIds.getFirst();
     }
 
+    private String resolvePoolIdForBatchPick(List<Customer> customers, String requestPoolId) {
+        List<String> poolIds = customers.stream()
+                .filter(Objects::nonNull)
+                .filter(customer -> Boolean.TRUE.equals(customer.getInSharedPool()))
+                .map(Customer::getPoolId)
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .toList();
+        if (CollectionUtils.isEmpty(poolIds)) {
+            throw new GenericException("所选客户不在公海中，无法批量领取");
+        }
+        if (poolIds.size() > 1) {
+            throw new GenericException("按筛选批量领取仅支持同一公海池内的客户");
+        }
+        String actualPoolId = poolIds.getFirst();
+        if (StringUtils.isNotBlank(requestPoolId) && !Strings.CS.equals(requestPoolId, actualPoolId)) {
+            throw new GenericException("领取客户所属公海池已变化，请刷新后重试");
+        }
+        return actualPoolId;
+    }
+
     /**
      * 从本次选中的客户里反推出源公海池，并强制要求只能来自同一个公海池。
      */
@@ -1704,13 +2133,13 @@ public class PoolCustomerService {
     /**
      * 统一释放当前批量分配持有的 Redisson 锁。
      */
-    private void releaseBatchAssignLock(RLock lock, String lockKey, long lockThreadId) {
+    private void releasePoolBatchLock(RLock lock, String lockKey, long lockThreadId) {
         try {
             if (lock != null && lock.isHeldByThread(lockThreadId)) {
                 lock.unlockAsync(lockThreadId).get();
             }
         } catch (Exception ex) {
-            log.warn("[POOL_BATCH_ASSIGN_UNLOCK_FAILED] lockKey={}", lockKey, ex);
+            log.warn("[POOL_BATCH_UNLOCK_FAILED] lockKey={}", lockKey, ex);
         }
     }
 
@@ -1726,6 +2155,16 @@ public class PoolCustomerService {
             partitions.add(ids.subList(index, Math.min(index + batchSize, ids.size())));
         }
         return partitions;
+    }
+
+    private record BatchPickPreparedData(Map<String, CustomerOwner> lastOwnerMap,
+                                         Set<String> privateConflictMobiles,
+                                         Set<String> ownedPoolMobiles,
+                                         int remainingCapacity,
+                                         Integer remainingDailyPick) {
+    }
+
+    private record BatchPickPlan(List<Customer> pickedCustomers, List<String> skippedCustomerIds) {
     }
 
     private record BatchAssignPreparedData(Map<String, Integer> userCapacitiesMap,

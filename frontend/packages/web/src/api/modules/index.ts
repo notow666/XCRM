@@ -389,6 +389,7 @@ export const {
   deleteCustomerFollowPlan,
   cancelCustomerFollowPlan,
   batchPickOpenSeaCustomer,
+  batchPickOpenSeaCustomerByCondition,
   addCustomerCollaboration,
   exportCustomerOpenSeaAll,
   getAccountPoolViewDetail,

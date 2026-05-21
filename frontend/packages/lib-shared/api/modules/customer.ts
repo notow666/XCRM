@@ -13,6 +13,7 @@ import {
   AssignOpenSeaCustomerUrl,
   BatchAssignOpenSeaCustomerUrl,
   BatchAssignOpenSeaCustomerByConditionUrl,
+  BatchPickOpenSeaCustomerByConditionUrl,
   BatchTransferOpenSeaCustomerByConditionUrl,
   BatchUpdateOpenSeaCustomerByConditionUrl,
   BatchDeleteCustomerCollaborationUrl,
@@ -178,6 +179,9 @@ import type {
   BatchAssignOpenSeaCustomerSubmitResult,
   BatchAssignOpenSeaCustomerParams,
   BatchAssignOpenSeaCustomerByConditionParams,
+  BatchPickOpenSeaCustomerByConditionParams,
+  BatchDeleteOpenSeaCustomerByConditionSubmitResult,
+  BatchPickOpenSeaCustomerSubmitResult,
   BatchTransferOpenSeaCustomerByConditionParams,
   BatchTransferOpenSeaCustomerSubmitResult,
   BatchUpdateOpenSeaCustomerByConditionParams,
@@ -625,7 +629,12 @@ export default function useProductApi(CDR: CordysAxios) {
 
   // 批量领取公海客户
   function batchPickOpenSeaCustomer(data: BatchOperationOpenSeaCustomerParams) {
-    return CDR.post({ url: BatchPickOpenSeaCustomerUrl, data });
+    return CDR.post<BatchPickOpenSeaCustomerSubmitResult>({ url: BatchPickOpenSeaCustomerUrl, data });
+  }
+
+  // 按筛选条件批量领取公海客户
+  function batchPickOpenSeaCustomerByCondition(data: BatchPickOpenSeaCustomerByConditionParams) {
+    return CDR.post<BatchPickOpenSeaCustomerSubmitResult>({ url: BatchPickOpenSeaCustomerByConditionUrl, data });
   }
 
   // 批量删除公海客户
@@ -635,7 +644,7 @@ export default function useProductApi(CDR: CordysAxios) {
 
   // 按筛选条件批量删除公海客户
   function batchDeleteOpenSeaCustomerByCondition(data: OpenSeaCustomerTableParams) {
-    return CDR.post<number>({ url: BatchDeleteOpenSeaCustomerByConditionUrl, data });
+    return CDR.post<BatchDeleteOpenSeaCustomerByConditionSubmitResult>({ url: BatchDeleteOpenSeaCustomerByConditionUrl, data });
   }
 
   // 批量分配公海客户
@@ -1128,6 +1137,7 @@ export default function useProductApi(CDR: CordysAxios) {
     getCustomerOpportunityPage,
     pickOpenSeaCustomer,
     batchPickOpenSeaCustomer,
+    batchPickOpenSeaCustomerByCondition,
     batchDeleteOpenSeaCustomer,
     batchDeleteOpenSeaCustomerByCondition,
     batchAssignOpenSeaCustomer,

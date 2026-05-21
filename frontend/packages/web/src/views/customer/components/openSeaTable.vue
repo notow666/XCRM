@@ -31,6 +31,16 @@
         />
         <CrmPoolImportButton @import-success="searchData" />
         <n-button
+          v-if="hasAnyPermission(['CUSTOMER_MANAGEMENT_POOL:PICK']) && !props.readonly"
+          type="primary"
+          ghost
+          class="n-btn-outline-primary"
+          :disabled="(propsRes.crmPagination?.itemCount || 0) === 0"
+          @click="handlePickByConditionClick"
+        >
+          {{ t('customer.pickByCondition') }}
+        </n-button>
+        <n-button
           v-if="hasAnyPermission(['CUSTOMER_MANAGEMENT_POOL:ASSIGN']) && !props.readonly"
           type="primary"
           ghost
@@ -130,6 +140,12 @@
     :query-params="assignByConditionQueryParams"
     @success="handleAssignByConditionSuccess"
   />
+  <CrmPoolPickByConditionModal
+    v-model:show="showPickByConditionModal"
+    :total="propsRes.crmPagination?.itemCount || 0"
+    :query-params="assignByConditionQueryParams"
+    @success="handlePickByConditionSuccess"
+  />
   <CrmPoolTransferByConditionModal
     v-model:show="showTransferByConditionModal"
     :total="propsRes.crmPagination?.itemCount || 0"
@@ -169,6 +185,7 @@
 </template>
 
 <script setup lang="ts">
+  // eslint-disable-next-line simple-import-sort/imports
   import { computed, VNodeChild } from 'vue';
   import { useRoute } from 'vue-router';
   import { DataTableRowKey, NButton, NSelect, NTooltip, useMessage } from 'naive-ui';
@@ -181,32 +198,32 @@
   import { ExportTableColumnItem, TableQueryParams } from '@lib/shared/models/common';
   import { CluePoolItem } from '@lib/shared/models/system/module';
 
-  import CrmAdvanceFilter from '@/components/pure/crm-advance-filter/index.vue';
-  import { FilterForm, FilterFormItem, FilterResult } from '@/components/pure/crm-advance-filter/type';
-  import CrmIcon from '@/components/pure/crm-icon-font/index.vue';
-  import { ActionsItem } from '@/components/pure/crm-more-action/type';
-  import CrmNameTooltip from '@/components/pure/crm-name-tooltip/index.vue';
-  import CrmTable from '@/components/pure/crm-table/index.vue';
-  import { BatchActionConfig } from '@/components/pure/crm-table/type';
-  import CrmTableButton from '@/components/pure/crm-table-button/index.vue';
   import CrmBatchEditModal from '@/components/business/crm-batch-edit-modal/index.vue';
   import CrmOperationButton from '@/components/business/crm-operation-button/index.vue';
   import CrmPoolAssignByConditionModal from '@/components/business/crm-pool-assign-by-condition-modal/index.vue';
   import CrmPoolBatchEditByConditionModal from '@/components/business/crm-pool-batch-edit-by-condition-modal/index.vue';
   import CrmPoolImportButton from '@/components/business/crm-pool-import-button/index.vue';
+  import CrmPoolPickByConditionModal from '@/components/business/crm-pool-pick-by-condition-modal/index.vue';
   import CrmPoolTransferByConditionModal from '@/components/business/crm-pool-transfer-by-condition-modal/index.vue';
   import CrmTableExportModal from '@/components/business/crm-table-export-modal/index.vue';
   import TransferForm from '@/components/business/crm-transfer-modal/transferForm.vue';
   import CrmTransferToPoolModal from '@/components/business/crm-transfer-to-pool-modal/index.vue';
   import CrmViewSelect from '@/components/business/crm-view-select/index.vue';
-  import openSeaOverviewDrawer from './openSeaOverviewDrawer.vue';
+  import CrmAdvanceFilter from '@/components/pure/crm-advance-filter/index.vue';
+  import { FilterForm, FilterFormItem, FilterResult } from '@/components/pure/crm-advance-filter/type';
+  import CrmIcon from '@/components/pure/crm-icon-font/index.vue';
+  import { ActionsItem } from '@/components/pure/crm-more-action/type';
+  import CrmNameTooltip from '@/components/pure/crm-name-tooltip/index.vue';
+  import CrmTableButton from '@/components/pure/crm-table-button/index.vue';
+  import CrmTable from '@/components/pure/crm-table/index.vue';
+  import { BatchActionConfig } from '@/components/pure/crm-table/type';
   import addOrEditPoolDrawer from '@/views/system/module/components/addOrEditPoolDrawer.vue';
+  import openSeaOverviewDrawer from './openSeaOverviewDrawer.vue';
 
   import {
     assignOpenSeaCustomer,
     batchDeleteOpenSeaCustomer,
     batchDeleteOpenSeaCustomerByCondition,
-    batchPickOpenSeaCustomer,
     deleteOpenSeaCustomer,
     getOpenSeaOptions,
     pickOpenSeaCustomer,
@@ -251,6 +268,7 @@
   const checkedRowKeys = ref<DataTableRowKey[]>([]);
   const activeCustomerId = ref('');
   const showOverviewDrawer = ref(false);
+  const showPickByConditionModal = ref(false);
   const showTransferByConditionModal = ref(false);
   const showEditByConditionModal = ref(false);
   const batchTableQueryParams = ref<TableQueryParams>({});
@@ -284,16 +302,6 @@
         permission: ['CUSTOMER_MANAGEMENT_POOL:EXPORT'],
       },
       {
-        label: t('common.batchClaim'),
-        key: 'batchClaim',
-        permission: ['CUSTOMER_MANAGEMENT_POOL:PICK'],
-      },
-      {
-        label: t('common.batchEdit'),
-        key: 'batchEdit',
-        permission: ['CUSTOMER_MANAGEMENT_POOL:UPDATE'],
-      },
-      {
         label: t('common.batchDelete'),
         key: 'batchDelete',
         permission: ['CUSTOMER_MANAGEMENT_POOL:DELETE'],
@@ -303,32 +311,6 @@
 
   const tableRefreshId = ref(0);
   const tableRemoveRefreshId = ref('');
-
-  // 批量领取
-  function handleBatchClaim() {
-    openModal({
-      type: 'default',
-      title: t('customer.batchClaimTip', { count: checkedRowKeys.value.length }),
-      content: t('customer.claimTipContent'),
-      positiveText: t('common.confirmClaim'),
-      negativeText: t('common.cancel'),
-      onPositiveClick: async () => {
-        try {
-          await batchPickOpenSeaCustomer({
-            ...batchTableQueryParams.value,
-            batchIds: checkedRowKeys.value,
-            poolId: openSea.value,
-          });
-          tableRefreshId.value += 1;
-          checkedRowKeys.value = [];
-          Message.success(t('common.claimSuccess'));
-        } catch (error) {
-          // eslint-disable-next-line no-console
-          console.error(error);
-        }
-      },
-    });
-  }
 
   // 批量分配
   const distributeLoading = ref(false);
@@ -381,14 +363,18 @@
       negativeText: t('common.cancel'),
       onPositiveClick: async () => {
         try {
-          await batchDeleteOpenSeaCustomerByCondition({
+          const data = await batchDeleteOpenSeaCustomerByCondition({
             // eslint-disable-next-line no-use-before-define
             ...tableQueryParams.value,
             poolId: openSea.value as string,
           });
+          if (!data?.accepted) {
+            Message.warning(data?.message || t('common.operationFailed'));
+            return;
+          }
           checkedRowKeys.value = [];
           tableRefreshId.value += 1;
-          Message.success(t('common.deleteSuccess'));
+          Message.success(data.message || '批量删除任务已提交');
         } catch (error) {
           // eslint-disable-next-line no-console
           console.error(error);
@@ -538,9 +524,6 @@
 
   function handleBatchAction(item: ActionsItem) {
     switch (item.key) {
-      case 'batchClaim':
-        handleBatchClaim();
-        break;
       case 'batchDelete':
         handleBatchDelete();
         break;
@@ -666,6 +649,20 @@
       return;
     }
     showAssignByConditionModal.value = true;
+  }
+
+  function handlePickByConditionClick() {
+    const total = propsRes.value.crmPagination?.itemCount || 0;
+    if (!total) {
+      Message.warning(t('customer.batchDeleteByConditionEmptyTip'));
+      return;
+    }
+    showPickByConditionModal.value = true;
+  }
+
+  function handlePickByConditionSuccess() {
+    checkedRowKeys.value = [];
+    tableRefreshId.value += 1;
   }
 
   function handleAssignByConditionSuccess() {

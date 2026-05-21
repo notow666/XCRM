@@ -71,6 +71,11 @@ export default {
   'customer.stageHasData': 'Current customer stage has customer data, deletion is prohibited!',
   'customer.failReason': 'Failure Reason',
   'customer.deleteByCondition': 'Delete by Filter',
+  'customer.pickByCondition': 'Claim by Filter',
+  'customer.pickByConditionTotal': '{total} account(s) in the current filter',
+  'customer.pickCount': 'Claim count',
+  'customer.pickCountHint': 'Claim the first N rows in list order, up to {limit} per batch',
+  'customer.pickCountInvalid': 'Enter a number between 1 and {max}',
   'customer.assignByCondition': 'Assign by Filter',
   'customer.assignByConditionTotal': '{total} account(s) in the current filter',
   'customer.assignCount': 'Assign count',
@@ -135,8 +140,7 @@ export default {
   'customer.reach.verifyInfoLengthTip':
     'The verification message can contain up to 50 Chinese characters or 100 English characters',
   'customer.reach.friendNotePlaceholder': 'Please enter the remark',
-  'customer.reach.friendNoteLengthTip':
-    'The remark can contain up to 16 Chinese characters or 32 English characters',
+  'customer.reach.friendNoteLengthTip': 'The remark can contain up to 16 Chinese characters or 32 English characters',
   'customer.reach.friendDescription': 'Memo (Description)',
   'customer.reach.friendDescriptionPlaceholder': 'Please enter the memo description',
   'customer.reach.selectWechat': 'Select WeChat',

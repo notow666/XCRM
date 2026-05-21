@@ -341,11 +341,12 @@ public class CustomerContactService {
         if (CollectionUtils.isEmpty(customerIds)) {
             return;
         }
-        // 删除联系人字段
-        customerIds.forEach(customerId -> {
-            List<CustomerContact> contacts = customerContactMapper.selectListByLambda(new LambdaQueryWrapper<CustomerContact>().eq(CustomerContact::getCustomerId, customerId));
-            contacts.forEach(contact -> customerContactFieldService.deleteByResourceId(contact.getId()));
-        });
+        List<CustomerContact> contacts = customerContactMapper.selectListByLambda(
+                new LambdaQueryWrapper<CustomerContact>().in(CustomerContact::getCustomerId, customerIds));
+        List<String> contactIds = contacts.stream()
+                .map(CustomerContact::getId)
+                .toList();
+        customerContactFieldService.deleteByResourceIds(contactIds);
         // 删除联系人
         customerContactMapper.deleteByLambda(new LambdaQueryWrapper<CustomerContact>().in(CustomerContact::getCustomerId, customerIds));
     }
