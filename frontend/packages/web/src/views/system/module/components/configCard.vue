@@ -84,6 +84,7 @@
     type="failReason"
   />
   <CustomerDataCleanupDrawer v-model:visible="customerDataCleanupVisible" />
+  <CustomerAutoDeleteDrawer v-model:visible="customerAutoDeleteVisible" />
   <stateFlowDrawer v-model:visible="orderStateFlowVisible" :type="FormDesignKeyEnum.ORDER" />
   <ContractFormFormDrawer v-model:visible="contractFormVisible" />
   <OrderFormFormDrawer v-model:visible="orderFormVisible" />
@@ -93,6 +94,7 @@
 </template>
 
 <script setup lang="ts">
+  /* eslint-disable simple-import-sort/imports */
   import { RendererElement } from 'vue';
   import { useRoute } from 'vue-router';
   import { NButton, NDivider, NSwitch, NTooltip, useMessage } from 'naive-ui';
@@ -102,13 +104,19 @@
   import { useI18n } from '@lib/shared/hooks/useI18n';
   import type { ModuleNavItem } from '@lib/shared/models/system/module';
 
+  import { getReasonConfig, toggleModuleNavStatus, updateReasonEnable } from '@/api/modules';
+  import CustomerAutoDeleteDrawer from '@/components/business/crm-customer-auto-delete-drawer/index.vue';
+  import CustomerConfigDrawer from '@/components/business/crm-customer-config-drawer/index.vue';
+  import CustomerDataCleanupDrawer from '@/components/business/crm-customer-data-cleanup-drawer/index.vue';
+  import stateFlowDrawer from '@/components/business/crm-status-config-drawer/index.vue';
   import CrmButtonGroup from '@/components/pure/crm-button-group/index.vue';
   import CrmIcon from '@/components/pure/crm-icon-font/index.vue';
   import CrmMoreAction from '@/components/pure/crm-more-action/index.vue';
   import type { ActionsItem } from '@/components/pure/crm-more-action/type';
-  import CustomerConfigDrawer from '@/components/business/crm-customer-config-drawer/index.vue';
-  import CustomerDataCleanupDrawer from '@/components/business/crm-customer-data-cleanup-drawer/index.vue';
-  import stateFlowDrawer from '@/components/business/crm-status-config-drawer/index.vue';
+  import useModal from '@/hooks/useModal';
+  import useAppStore from '@/store/modules/app';
+  import { hasAnyPermission } from '@/utils/permission';
+
   import approvalSwitch, { approvalConfigType } from './approvalSwitch.vue';
   import businessTitleValidate from './businessTitleValidate.vue';
   import CapacitySetDrawer from './capacitySetDrawer.vue';
@@ -130,12 +138,7 @@
   import OrderFormFormDrawer from './order/orderFormFormDrawer.vue';
   import ProductFromDrawer from './productManagement/formDrawer.vue';
   import priceTableFormDrawer from './productManagement/priceTableFormDrawer.vue';
-
-  import { getReasonConfig, toggleModuleNavStatus, updateReasonEnable } from '@/api/modules';
-  import useModal from '@/hooks/useModal';
-  import useAppStore from '@/store/modules/app';
   // import useLicenseStore from '@/store/modules/setting/license';
-  import { hasAnyPermission } from '@/utils/permission';
 
   const { openModal } = useModal();
   const Message = useMessage();
@@ -379,7 +382,7 @@
           label: t('module.clue.cluePool'),
           key: 'cluePool',
         },
-          // 隐藏线索池库容设置
+        // 隐藏线索池库容设置
         // {
         //   label: t('module.clue.capacitySet'),
         //   key: 'capacitySet',
@@ -423,6 +426,10 @@
         {
           label: t('module.customerDataCleanup'),
           key: 'customerDataCleanup',
+        },
+        {
+          label: t('module.customerAutoDelete'),
+          key: 'customerAutoDelete',
         },
         {
           label: t('common.more'),
@@ -643,6 +650,7 @@
   const customerFollowWayConfigVisible = ref(false);
   const customerFailReasonConfigVisible = ref(false);
   const customerDataCleanupVisible = ref(false);
+  const customerAutoDeleteVisible = ref(false);
   const orderFormVisible = ref(false);
   const orderStateFlowVisible = ref(false);
 
@@ -674,6 +682,8 @@
           customerFailReasonConfigVisible.value = true;
         } else if (key === 'customerDataCleanup') {
           customerDataCleanupVisible.value = true;
+        } else if (key === 'customerAutoDelete') {
+          customerAutoDeleteVisible.value = true;
         }
         break;
       case ModuleConfigEnum.CONTRACT:

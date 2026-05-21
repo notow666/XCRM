@@ -145,12 +145,18 @@ export default {
   'module.tender': 'Tender',
   'module.contract.businessNameValidateConfig': 'Business Title Form Required Settings',
   'module.contract.invoiceFormSetting': 'Invoice Form Settings',
+  'module.customerAutoDelete': 'Scheduled Customer Deletion',
+  'module.customerAutoDeleteDays': 'Deletion days',
+  'module.customerAutoDeleteDaysPlaceholder': 'Enter days (1-365)',
+  'module.customerAutoDeleteDaysRequired': 'Please enter deletion days',
+  'module.customerAutoDeleteTip':
+    'The system deletes customers created from POOL_IMPORT whose create time exceeds the configured days. The task runs daily at 00:30',
   'module.dataCleanupDays': 'Cleanup days',
   'module.dataCleanupFields': 'Cleanup fields',
   'module.dataCleanupDaysRequired': 'Please enter cleanup days',
   'module.dataCleanupFieldsRequired': 'Please select at least one cleanup field',
   'module.dataCleanupTip':
-    'When the data storage time exceeds the set cleanup days, the checked field contents will be automatically cleaned. The system executes daily at 00:00-01:00, and cleaned data will not be counted',
+    'When the data storage time exceeds the set cleanup days, the checked field contents will be automatically cleaned. The system executes daily from 01:00 to 02:00, and cleaned data will not be counted',
   'module.invoice': 'Invoice Records',
   'module.poolImport': 'Pool Import',
 };

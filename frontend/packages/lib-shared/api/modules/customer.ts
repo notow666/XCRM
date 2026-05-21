@@ -160,6 +160,9 @@ import {
   GetCustomerDataCleanupUrl,
   SaveCustomerDataCleanupUrl,
   DeleteCustomerDataCleanupUrl,
+  GetCustomerAutoDeleteUrl,
+  SaveCustomerAutoDeleteUrl,
+  DeleteCustomerAutoDeleteUrl,
   TransferPoolCustomerUrl,
   BatchTransferPoolCustomerUrl,
 } from '@lib/shared/api/requrls/customer';
@@ -349,6 +352,23 @@ export default function useProductApi(CDR: CordysAxios) {
   // 删除客户数据清理配置
   function deleteCustomerDataCleanup() {
     return CDR.delete({ url: DeleteCustomerDataCleanupUrl });
+  }
+
+  function getCustomerAutoDelete(): Promise<{ days: number } | null> {
+    return CDR.get<any>({ url: GetCustomerAutoDeleteUrl }).then((res) => {
+      if (!res) return null;
+      return {
+        days: res.days,
+      };
+    });
+  }
+
+  function saveCustomerAutoDelete(data: { days: number }) {
+    return CDR.post({ url: SaveCustomerAutoDeleteUrl, data });
+  }
+
+  function deleteCustomerAutoDelete() {
+    return CDR.delete({ url: DeleteCustomerAutoDeleteUrl });
   }
 
   // 添加客户
@@ -1240,6 +1260,9 @@ export default function useProductApi(CDR: CordysAxios) {
     getCustomerDataCleanup,
     saveCustomerDataCleanup,
     deleteCustomerDataCleanup,
+    getCustomerAutoDelete,
+    saveCustomerAutoDelete,
+    deleteCustomerAutoDelete,
     preCheckImportPoolCustomer,
     importPoolCustomer,
     downloadPoolCustomerTemplate,

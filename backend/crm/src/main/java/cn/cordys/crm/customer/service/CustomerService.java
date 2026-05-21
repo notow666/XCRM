@@ -112,6 +112,7 @@ import java.util.stream.Stream;
 public class CustomerService {
 
     private static final int BATCH_DELETE_BY_CONDITION_SIZE = 500;
+    private static final int AUTO_DELETE_POOL_IMPORT_BATCH_SIZE = 500;
 
     @Resource
     private BaseMapper<Customer> customerMapper;
@@ -957,6 +958,37 @@ public class CustomerService {
             }
             batchDelete(deleteIds, userId, orgId);
             deletedCount += deleteIds.size();
+        }
+    }
+
+    public int autoDeletePoolImportCustomers(long cutoffTime, String operator) {
+        int deletedCount = 0;
+        while (true) {
+            PageHelper.startPage(1, AUTO_DELETE_POOL_IMPORT_BATCH_SIZE, false);
+            LambdaQueryWrapper<Customer> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(Customer::getCreateSource, CustomerCreateSource.POOL_IMPORT)
+                    .ltT(Customer::getCreateTime, cutoffTime)
+                    .orderByAsc(Customer::getCreateTime);
+            List<Customer> customers = customerMapper.selectListByLambda(wrapper);
+            if (CollectionUtils.isEmpty(customers)) {
+                return deletedCount;
+            }
+
+            List<String> ids = customers.stream().map(Customer::getId).toList();
+            deleteCustomerResource(ids);
+
+            List<LogDTO> logs = customers.stream()
+                    .map(customer -> new LogDTO(
+                            customer.getOrganizationId(),
+                            customer.getId(),
+                            operator,
+                            LogType.DELETE,
+                            LogModule.CUSTOMER_INDEX,
+                            customer.getName()
+                    ))
+                    .toList();
+            logService.batchAdd(logs);
+            deletedCount += ids.size();
         }
     }
 
