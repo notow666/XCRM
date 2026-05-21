@@ -4,6 +4,108 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="cn.cordys.mmba.mapper.ExtMmbaAuditMapper">
 
+    <insert id="upsertCallRecordAudit" parameterType="cn.cordys.mmba.domain.MmbaCallRecordAudit">
+        INSERT INTO mmba_call_record_audit (
+            behavior_type, tenancy_name, answer_time, answer_timestamp, begin_time, begin_timestamp,
+            biz_ext_info, call_status, call_type, customer, customer_tel, customer_id, dept_id,
+            dept_id_path, dept_info, device_id, direction, duration, end_time, end_timestamp, es_id,
+            iccid, iccid_phone, imei, imei2, insert_time, is_connected, mobile_vendor, org_name,
+            org_names, phone_location, record, req_id, retry, ring_duration, sound_channel,
+            staff_name, timestamp, um, callback_record_id
+        ) VALUES (
+            #{behaviorType}, #{tenancyName}, #{answerTime}, #{answerTimestamp}, #{beginTime}, #{beginTimestamp},
+            #{bizExtInfo}, #{callStatus}, #{callType}, #{customer}, #{customerTel}, #{customerId}, #{deptId},
+            #{deptIdPath}, #{deptInfo}, #{deviceId}, #{direction}, #{duration}, #{endTime}, #{endTimestamp}, #{esId},
+            #{iccid}, #{iccidPhone}, #{imei}, #{imei2}, #{insertTime}, #{isConnected}, #{mobileVendor}, #{orgName},
+            #{orgNames}, #{phoneLocation}, #{record}, #{reqId}, #{retry}, #{ringDuration}, #{soundChannel},
+            #{staffName}, #{timestamp}, #{um}, #{callbackRecordId}
+        )
+        ON DUPLICATE KEY UPDATE
+            behavior_type = VALUES(behavior_type),
+            tenancy_name = VALUES(tenancy_name),
+            answer_time = VALUES(answer_time),
+            answer_timestamp = VALUES(answer_timestamp),
+            begin_time = VALUES(begin_time),
+            begin_timestamp = VALUES(begin_timestamp),
+            biz_ext_info = VALUES(biz_ext_info),
+            call_status = VALUES(call_status),
+            call_type = VALUES(call_type),
+            customer = VALUES(customer),
+            customer_tel = VALUES(customer_tel),
+            customer_id = VALUES(customer_id),
+            dept_id = VALUES(dept_id),
+            dept_id_path = VALUES(dept_id_path),
+            dept_info = VALUES(dept_info),
+            device_id = VALUES(device_id),
+            direction = VALUES(direction),
+            duration = VALUES(duration),
+            end_time = VALUES(end_time),
+            end_timestamp = VALUES(end_timestamp),
+            iccid = VALUES(iccid),
+            iccid_phone = VALUES(iccid_phone),
+            imei = VALUES(imei),
+            imei2 = VALUES(imei2),
+            insert_time = VALUES(insert_time),
+            is_connected = VALUES(is_connected),
+            mobile_vendor = VALUES(mobile_vendor),
+            org_name = VALUES(org_name),
+            org_names = VALUES(org_names),
+            phone_location = VALUES(phone_location),
+            record = VALUES(record),
+            req_id = VALUES(req_id),
+            retry = VALUES(retry),
+            ring_duration = VALUES(ring_duration),
+            sound_channel = VALUES(sound_channel),
+            staff_name = VALUES(staff_name),
+            timestamp = VALUES(timestamp),
+            um = VALUES(um),
+            callback_record_id = VALUES(callback_record_id)
+    </insert>
+
+    <insert id="upsertSmsRecordAudit" parameterType="cn.cordys.mmba.domain.MmbaSmsRecordAudit">
+        INSERT INTO mmba_sms_record_audit (
+            behavior_type, tenancy_name, biz_ext_info, card_slot_num, content, create_time, customer,
+            customer_tel, dept_id, dept_id_path, dept_info, device_id, direction, es_id, iccid,
+            iccid_phone, imei, imei2, insert_time, net_sms, org_name, org_names, req_id, sent_status,
+            staff_name, subject, timestamp, type, um, callback_record_id
+        ) VALUES (
+            #{behaviorType}, #{tenancyName}, #{bizExtInfo}, #{cardSlotNum}, #{content}, #{createTime}, #{customer},
+            #{customerTel}, #{deptId}, #{deptIdPath}, #{deptInfo}, #{deviceId}, #{direction}, #{esId}, #{iccid},
+            #{iccidPhone}, #{imei}, #{imei2}, #{insertTime}, #{netSms}, #{orgName}, #{orgNames}, #{reqId}, #{sentStatus},
+            #{staffName}, #{subject}, #{timestamp}, #{type}, #{um}, #{callbackRecordId}
+        )
+        ON DUPLICATE KEY UPDATE
+            behavior_type = VALUES(behavior_type),
+            tenancy_name = VALUES(tenancy_name),
+            biz_ext_info = VALUES(biz_ext_info),
+            card_slot_num = VALUES(card_slot_num),
+            content = VALUES(content),
+            create_time = VALUES(create_time),
+            customer = VALUES(customer),
+            customer_tel = VALUES(customer_tel),
+            dept_id = VALUES(dept_id),
+            dept_id_path = VALUES(dept_id_path),
+            dept_info = VALUES(dept_info),
+            device_id = VALUES(device_id),
+            direction = VALUES(direction),
+            iccid = VALUES(iccid),
+            iccid_phone = VALUES(iccid_phone),
+            imei = VALUES(imei),
+            imei2 = VALUES(imei2),
+            insert_time = VALUES(insert_time),
+            net_sms = VALUES(net_sms),
+            org_name = VALUES(org_name),
+            org_names = VALUES(org_names),
+            req_id = VALUES(req_id),
+            sent_status = VALUES(sent_status),
+            staff_name = VALUES(staff_name),
+            subject = VALUES(subject),
+            timestamp = VALUES(timestamp),
+            type = VALUES(type),
+            um = VALUES(um),
+            callback_record_id = VALUES(callback_record_id)
+    </insert>
+
     <insert id="upsertWxChatAudit" parameterType="cn.cordys.mmba.domain.MmbaWxChatAudit">
         INSERT INTO mmba_wx_chat_audit (
             es_id, app_name, behavior_type, chat_sources_type, chat_type, contact_description,

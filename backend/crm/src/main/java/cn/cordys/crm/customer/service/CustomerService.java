@@ -24,6 +24,7 @@ import cn.cordys.common.service.BaseService;
 import cn.cordys.common.service.DataScopeService;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.BeanUtils;
+import cn.cordys.common.util.CaseFormatUtils;
 import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.PhoneMaskUtil;
 
@@ -1391,8 +1392,82 @@ public class CustomerService {
         }
 
         List<Customer> originCustomers = customerMapper.selectByIds(request.getIds());
+        if (Strings.CS.equals(field.getBusinessKey(), BusinessModuleField.CUSTOMER_MOBILE.getBusinessKey())) {
+            executeCustomerMobileBatchUpdate(request, originCustomers, field, userId, organizationId);
+            return;
+        }
 
         customerFieldService.batchUpdate(request, field, originCustomers, Customer.class, LogModule.CUSTOMER_INDEX, extCustomerMapper::batchUpdate, userId, organizationId);
+    }
+
+    private void executeCustomerMobileBatchUpdate(ResourceBatchEditRequest request, List<Customer> originCustomers, BaseField field,
+                                                  String userId, String organizationId) {
+        if (CollectionUtils.isEmpty(originCustomers)) {
+            return;
+        }
+        if (originCustomers.size() > 1) {
+            throw new GenericException(Translator.getWithArgs("common.field_value.repeat", field.getName()));
+        }
+
+        Customer originCustomer = originCustomers.getFirst();
+        String targetMobile = normalizeBatchUpdateMobile(request.getFieldValue());
+        String originMobile = normalizeBatchUpdateMobile(originCustomer.getMobile());
+        boolean mobileChanged = !Objects.equals(originMobile, targetMobile);
+        if (mobileChanged && StringUtils.isNotBlank(targetMobile)) {
+            customerMobileRuleService.validateForSave(originCustomer.getId(), originCustomer.getName(), targetMobile,
+                    originCustomer.getCreateSource(), originCustomer.getOwner(), organizationId);
+        }
+
+        request.setFieldValue(targetMobile);
+        addCustomerBusinessFieldBatchUpdateLog(originCustomers, field, request, userId, organizationId);
+
+        BatchUpdateDbParam updateParam = new BatchUpdateDbParam();
+        updateParam.setIds(List.of(originCustomer.getId()));
+        updateParam.setFieldName(field.getBusinessKey());
+        updateParam.setFieldValue(targetMobile);
+        updateParam.setUpdateTime(System.currentTimeMillis());
+        updateParam.setUpdateUser(userId);
+        executeCustomerBatchUpdate(updateParam);
+    }
+
+    private void executeCustomerBatchUpdate(BatchUpdateDbParam updateParam) {
+        if (StringUtils.isNotBlank(updateParam.getFieldName())) {
+            updateParam.setFieldName(CaseFormatUtils.camelToUnderscore(updateParam.getFieldName()));
+        }
+        extCustomerMapper.batchUpdateByParam(updateParam);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void addCustomerBusinessFieldBatchUpdateLog(List<Customer> originCustomers, BaseField field,
+                                                        ResourceBatchEditRequest request, String userId, String orgId) {
+        List<LogDTO> logs = originCustomers.stream().map(customer -> {
+            Map originResource = new HashMap();
+            if (StringUtils.isNotBlank(customer.getMobile())) {
+                originResource.put(field.getBusinessKey(), customer.getMobile());
+            }
+
+            Map modifiedResource = new HashMap();
+            if (StringUtils.isNotBlank((String) request.getFieldValue())) {
+                modifiedResource.put(field.getBusinessKey(), request.getFieldValue());
+            }
+
+            LogDTO logDTO = new LogDTO(orgId, customer.getId(), userId, LogType.UPDATE, LogModule.CUSTOMER_INDEX, customer.getName());
+            logDTO.setOriginalValue(originResource);
+            logDTO.setModifiedValue(modifiedResource);
+            return logDTO;
+        }).toList();
+        logService.batchAdd(logs);
+    }
+
+    private String normalizeBatchUpdateMobile(Object value) {
+        if (value == null) {
+            return null;
+        }
+        String mobile = StringUtils.trimToNull(value.toString());
+        if (mobile == null) {
+            return null;
+        }
+        return StringUtils.deleteWhitespace(mobile);
     }
 
     /**

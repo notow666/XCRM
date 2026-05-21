@@ -29,6 +29,10 @@ import java.util.List;
  */
 public interface ExtMmbaAuditMapper {
 
+    int upsertCallRecordAudit(MmbaCallRecordAudit record);
+
+    int upsertSmsRecordAudit(MmbaSmsRecordAudit record);
+
     int upsertWxChatAudit(MmbaWxChatAudit record);
 
     int upsertWxAccountAudit(MmbaWxAccountAudit record);

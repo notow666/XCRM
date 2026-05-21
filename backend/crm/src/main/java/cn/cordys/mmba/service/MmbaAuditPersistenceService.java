@@ -72,11 +72,14 @@ public class MmbaAuditPersistenceService {
     private ExtMmbaAuditMapper extMmbaAuditMapper;
 
     public MmbaCallRecordAudit saveOrUpdateCallAudit(MmbaCallRecordAudit record, String userId) {
-        return saveOrReplaceByEsId(record, mmbaCallRecordAuditMapper);
+        extMmbaAuditMapper.upsertCallRecordAudit(record);
+        return record;
     }
 
     public SaveOrUpdateResult<MmbaCallRecordAudit> saveOrUpdateCallAuditWithResult(MmbaCallRecordAudit record, String userId) {
-        return saveOrReplaceByEsIdWithResult(record, mmbaCallRecordAuditMapper);
+        MmbaCallRecordAudit previous = loadByEsId(record.getEsId(), mmbaCallRecordAuditMapper);
+        extMmbaAuditMapper.upsertCallRecordAudit(record);
+        return new SaveOrUpdateResult<>(previous, record, previous == null);
     }
 
     public MmbaCallRecordAudit findCallAuditByEsId(String esId) {
@@ -84,11 +87,14 @@ public class MmbaAuditPersistenceService {
     }
 
     public MmbaSmsRecordAudit saveOrUpdateSmsAudit(MmbaSmsRecordAudit record, String userId) {
-        return saveOrReplaceByEsId(record, mmbaSmsRecordAuditMapper);
+        extMmbaAuditMapper.upsertSmsRecordAudit(record);
+        return record;
     }
 
     public SaveOrUpdateResult<MmbaSmsRecordAudit> saveOrUpdateSmsAuditWithResult(MmbaSmsRecordAudit record, String userId) {
-        return saveOrReplaceByEsIdWithResult(record, mmbaSmsRecordAuditMapper);
+        MmbaSmsRecordAudit previous = loadByEsId(record.getEsId(), mmbaSmsRecordAuditMapper);
+        extMmbaAuditMapper.upsertSmsRecordAudit(record);
+        return new SaveOrUpdateResult<>(previous, record, previous == null);
     }
 
     public MmbaSmsRecordAudit findSmsAuditByEsId(String esId) {
