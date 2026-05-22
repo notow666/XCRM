@@ -27,10 +27,10 @@ import cn.cordys.crm.system.dto.request.CapacityUpdateRequest;
 import cn.cordys.crm.system.mapper.ExtUserMapper;
 import cn.cordys.crm.system.service.OrganizationUserService;
 import cn.cordys.crm.system.service.UserExtendService;
+import cn.cordys.security.SessionUtils;
 import org.apache.commons.lang3.Strings;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
-import cn.cordys.security.SessionUtils;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -60,8 +60,6 @@ public class CustomerCapacityService {
     @Resource
     private ExtCustomerCapacityMapper extCustomerCapacityMapper;
     @Resource
-    private OrganizationUserService organizationUserService;
-    @Resource
     private CustomerStageService customerStageService;
     @Resource
     private PoolCustomerService poolCustomerService;
@@ -75,6 +73,8 @@ public class CustomerCapacityService {
     private ExtUserMapper extUserMapper;
     @Resource
     private PermissionCache permissionCache;
+    @Resource
+    private OrganizationUserService organizationUserService;
 
     /**
      * 获取客户库容设置
@@ -169,14 +169,20 @@ public class CustomerCapacityService {
         OperationLogContext.setResourceName(Translator.get("module.customer.capacity.setting"));
     }
 
-    public List<UserCapacityResponse> batchUserCapacityByAssign(String poolId) {
-        if(StringUtils.isBlank(poolId)) {
-
-            return Collections.emptyList();
-        }
+    /**
+     * 批量获取用户库容。
+     * 公海分配：必须传 poolId，按公海成员范围 + 权限筛选。
+     * 客户转移：不传 poolId，按当前租户内权限筛选，排除当前用户，且仅返回有剩余库容的用户。
+     */
+    public List<UserCapacityResponse> batchUserCapacity(String poolId) {
         String orgId = OrganizationContext.getOrganizationId();
-        Map<String, String> userNameMap = getPoolScopeUserNameMap(poolId, orgId);
+        Map<String, String> userNameMap = StringUtils.isNotBlank(poolId)
+                ? getPoolScopeUserNameMap(poolId, orgId)
+                : getTransferUserNameMap(orgId);
+        return buildUserCapacityResponses(userNameMap, orgId);
+    }
 
+    private List<UserCapacityResponse> buildUserCapacityResponses(Map<String, String> userNameMap, String orgId) {
         List<UserCapacityResponse> responses = new ArrayList<>();
         List<String> excludeStageIds = new ArrayList<>();
         String paymentStageId = customerStageService.getPaymentStageId(orgId);
@@ -191,7 +197,7 @@ public class CustomerCapacityService {
             UserCapacityResponse response = new UserCapacityResponse();
             response.setUserId(userId);
             response.setUserName(userNameMap.getOrDefault(userId, ""));
-            var capacity = poolCustomerService.getUserCapacity(userId, orgId);
+            CustomerCapacity capacity = poolCustomerService.getUserCapacity(userId, orgId);
             if (capacity != null && capacity.getCapacity() != null) {
                 response.setCapacity(capacity.getCapacity());
                 LambdaQueryWrapper<Customer> wrapper = new LambdaQueryWrapper<>();
@@ -209,13 +215,6 @@ public class CustomerCapacityService {
         return responses.stream()
                 .filter(u -> u.getRemainingCapacity() == null || u.getRemainingCapacity() > 0)
                 .sorted(new UserCapacityResponse.UserCapacityComparator().reversed()).collect(Collectors.toList());
-    }
-
-    private Map<String, String> getAssignUserNameMap(String orgId) {
-        List<OptionDTO> authUserOptions = organizationUserService.getUserByAssign(SessionUtils.getUserId(), orgId,
-                BATCH_USER_CAPACITY_PERMISSIONS.toArray(new String[0]));
-        return authUserOptions.stream()
-                .collect(Collectors.toMap(OptionDTO::getId, OptionDTO::getName, (a, b) -> a));
     }
 
     private Map<String, String> getPoolScopeUserNameMap(String poolId, String orgId) {
@@ -239,6 +238,17 @@ public class CustomerCapacityService {
             return Collections.emptyMap();
         }
         return extUserMapper.selectUserOptionByIds(permittedUserIds).stream()
+                .collect(Collectors.toMap(OptionDTO::getId, OptionDTO::getName, (a, b) -> a));
+    }
+
+    /**
+     * 客户转移可选接收人：当前租户内具备客户管理相关权限、排除当前登录用户（是否有库容在 buildUserCapacityResponses 中过滤）。
+     */
+    private Map<String, String> getTransferUserNameMap(String orgId) {
+        String currentUserId = SessionUtils.getUserId();
+        return organizationUserService.getUserOptions(orgId).stream()
+                .filter(user -> !Strings.CS.equals(user.getId(), currentUserId))
+                .filter(user -> hasAnyBatchUserCapacityPermission(user.getId(), orgId))
                 .collect(Collectors.toMap(OptionDTO::getId, OptionDTO::getName, (a, b) -> a));
     }
 

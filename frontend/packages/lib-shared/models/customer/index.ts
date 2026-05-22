@@ -257,9 +257,16 @@ export type FollowDetailItem = FollowDetailItemType<CustomerFollowRecordListItem
 
 export interface TransferParams {
   ids?: (string | number)[];
-  owner: string | null; // 负责人（单个，用于兼容旧逻辑）
+  owner?: string | null; // 负责人（单个，用于兼容旧逻辑）
+  ownerUserIds?: string[]; // 转移用户列表（多选）
   owners?: string[]; // 负责人列表（多选，用于公海批量分发）
   [key: string]: any;
+}
+
+export interface BatchTransferCustomerByConditionParams extends CustomerTableParams {
+  transferCount: number;
+  owner?: string;
+  ownerUserIds?: string[];
 }
 
 export interface PickOpenSeaCustomerParams {

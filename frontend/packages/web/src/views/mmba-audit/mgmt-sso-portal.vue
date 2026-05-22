@@ -5,6 +5,7 @@
     <n-alert v-else-if="openedInNewTab" type="success">{{ t('mmbaMgmtSso.openedNewTab') }}</n-alert>
   </div>
 </template>
+
 <script setup lang="ts">
   import { onMounted, ref } from 'vue';
   import { NAlert, NSpin } from 'naive-ui';
@@ -37,4 +38,5 @@
       errMsg.value = t('mmbaMgmtSso.loadFailed');
     }
     loading.value = false;
-  });</script>
+  });
+</script>

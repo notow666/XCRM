@@ -126,7 +126,9 @@ public class UserLoginService {
         } catch (ExpiredCredentialsException e) {
             throw new ExpiredCredentialsException(Translator.get("password_is_incorrect"));
         } catch (AuthenticationException e) {
-            throw new AuthenticationException(e.getMessage());
+            throw new AuthenticationException(Translator.get("password_is_incorrect"));
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
         }
     }
 

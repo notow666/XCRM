@@ -351,6 +351,7 @@ export const {
   fixedAccountPoolView,
   getCustomerFormConfig,
   batchTransferCustomer,
+  batchTransferCustomerByCondition,
   addCustomerFollowPlan,
   getCustomerFollowPlan,
   updateCustomerContact,

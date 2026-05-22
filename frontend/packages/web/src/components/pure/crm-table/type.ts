@@ -53,6 +53,7 @@ export type CrmDataTableColumn<T = any> = (
     showTooltip?: (rowData: T) => boolean;
   };
   filedType?: FieldTypeEnum; // 字段类型
+  dateType?: FormCreateField['dateType']; // 日期类型（月/日/日期时间）
   fieldId?: string; // 字段ID
   fieldConfig?: FormCreateField; // 字段配置
   resourceFieldId?: string; // 数据源显示字段所属数据源ID

@@ -32,12 +32,7 @@
       <n-scrollbar style="max-height: 400px">
         <n-checkbox-group v-model:value="selectedFields">
           <div class="flex flex-wrap gap-[12px]">
-            <n-checkbox
-              v-for="field in fieldList"
-              :key="field.id"
-              :value="field.id"
-              class="min-w-[120px]"
-            >
+            <n-checkbox v-for="field in fieldList" :key="field.id" :value="field.id" class="min-w-[120px]">
               {{ field.name }}
             </n-checkbox>
           </div>
@@ -54,7 +49,12 @@
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
 
-  import { getCustomerDataCleanup, getCustomerFormConfig, saveCustomerDataCleanup, deleteCustomerDataCleanup } from '@/api/modules';
+  import {
+    getCustomerDataCleanup,
+    getCustomerFormConfig,
+    saveCustomerDataCleanup,
+    deleteCustomerDataCleanup,
+  } from '@/api/modules';
   import CrmDrawer from '@/components/pure/crm-drawer/index.vue';
 
   const EXCLUDED_FIELDS = ['name', 'mobile', 'owner'];
@@ -71,16 +71,21 @@
   const selectedFields = ref<string[]>([]);
   const configExists = ref(false);
   const saveLoading = ref(false);
-const fieldList = ref<{ id: string; name: string }[]>([]);
+  const fieldList = ref<{ id: string; name: string }[]>([]);
 
-async function loadConfig() {
+  async function loadConfig() {
     try {
       const res = await getCustomerFormConfig();
       const fields: { id: string; name: string }[] = [];
 
       if (res.fields) {
         res.fields.forEach((field: any) => {
-          if (field.id && field.name && !EXCLUDED_FIELDS.includes(field.businessKey) && !EXCLUDED_TYPES.includes(field.type)) {
+          if (
+            field.id &&
+            field.name &&
+            !EXCLUDED_FIELDS.includes(field.businessKey) &&
+            !EXCLUDED_TYPES.includes(field.type)
+          ) {
             fields.push({ id: field.id, name: field.name });
           }
         });

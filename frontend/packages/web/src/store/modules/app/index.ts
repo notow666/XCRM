@@ -2,7 +2,12 @@ import { defineStore } from 'pinia';
 import { cloneDeep } from 'lodash-es';
 
 import { SubscribeMessageUrl } from '@lib/shared/api/requrls/system/message';
-import { MMBA_DEVICE_SYNC_DOM_EVENT, SSE_EVENT_MMBA_DEVICE_SYNC } from '@lib/shared/constants/sseEventType';
+import {
+  MMBA_DEVICE_SYNC_DOM_EVENT,
+  POOL_BATCH_BY_CONDITION_DOM_EVENT,
+  SSE_EVENT_MMBA_DEVICE_SYNC,
+  SSE_EVENT_POOL_BATCH_BY_CONDITION_DONE,
+} from '@lib/shared/constants/sseEventType';
 import { SSE_KIND_DATA_SPECIALIST, SSE_KIND_PLATFORM, SSE_KIND_TENANT } from '@lib/shared/constants/ssePrincipalKind';
 import { CompanyTypeEnum } from '@lib/shared/enums/commonEnum';
 import { ModuleConfigEnum } from '@lib/shared/enums/moduleEnum';
@@ -351,6 +356,21 @@ const useAppStore = defineStore('app', {
               return;
             }
 
+            if (data.type === SSE_EVENT_POOL_BATCH_BY_CONDITION_DONE) {
+              window.dispatchEvent(
+                new CustomEvent(POOL_BATCH_BY_CONDITION_DOM_EVENT, {
+                  detail: {
+                    poolId: String(data.poolId ?? ''),
+                    operation: data.operation,
+                    submittedCount: Number(data.submittedCount ?? 0),
+                    successCount: Number(data.successCount ?? 0),
+                    failCount: Number(data.failCount ?? 0),
+                  },
+                })
+              );
+              return;
+            }
+
             this.handleIncomingMessageInfo(data, callback);
           } catch (error) {
             // eslint-disable-next-line no-console
@@ -494,8 +514,10 @@ const useAppStore = defineStore('app', {
         const userStore = useUserStore();
         userStore.showSystemNotify();
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.log(error);
+        if (!isCanceledError(error)) {
+          // eslint-disable-next-line no-console
+          console.log(error);
+        }
       }
     },
     setRestoreMenuTimeStamp(timeStamp: number) {

@@ -12,10 +12,10 @@
     @saved="() => (refreshKey += 1)"
   >
     <template #distributePopContent>
-      <TransferForm
-        ref="distributeFormRef"
-        v-model:form="distributeForm"
-        :single="true"
+      <CrmPoolAssignUserSelect
+        v-model:selected-ids="distributeSelectedUserIds"
+        class="mt-[16px] min-w-[480px]"
+        :pool-id="String(props.poolId)"
       />
     </template>
     <template #left>
@@ -67,8 +67,8 @@
   import CrmFormDescription from '@/components/business/crm-form-description/index.vue';
   import CrmHeaderTable from '@/components/business/crm-header-table/index.vue';
   import CrmOverviewDrawer from '@/components/business/crm-overview-drawer/index.vue';
+  import CrmPoolAssignUserSelect from '@/components/business/crm-pool-assign-user-select/index.vue';
   import type { TabContentItem } from '@/components/business/crm-tab-setting/type';
-  import TransferForm from '@/components/business/crm-transfer-modal/transferForm.vue';
 
   import {
     assignOpenSeaCustomer,
@@ -169,10 +169,7 @@
     },
   ];
 
-  const distributeFormRef = ref<InstanceType<typeof TransferForm>>();
-  const distributeForm = ref<any>({
-    owner: null,
-  });
+  const distributeSelectedUserIds = ref<string[]>([]);
 
   // 删除
   function handleDelete() {
@@ -218,11 +215,15 @@
   }
 
   async function handleDistribute(id: string) {
+    if (!distributeSelectedUserIds.value[0]) {
+      Message.warning(t('opportunity.selectReceiverPlaceholder'));
+      return;
+    }
     try {
       distributeLoading.value = true;
       await assignOpenSeaCustomer({
         customerId: id,
-        assignUserId: distributeForm.value.owner,
+        assignUserId: distributeSelectedUserIds.value[0] || '',
       });
       Message.success(t('common.distributeSuccess'));
       emit('delete');

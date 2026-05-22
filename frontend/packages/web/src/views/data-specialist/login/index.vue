@@ -8,12 +8,7 @@
             <n-input v-model:value="form.username" type="text" placeholder="用户名" maxlength="64" />
           </n-form-item>
           <n-form-item>
-            <n-input
-              v-model:value="form.password"
-              type="password"
-              placeholder="密码"
-              @keydown.enter="handleLogin"
-            />
+            <n-input v-model:value="form.password" type="password" placeholder="密码" @keydown.enter="handleLogin" />
           </n-form-item>
           <n-button type="primary" size="large" block :loading="loading" @click="handleLogin">登录</n-button>
         </n-form>

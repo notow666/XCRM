@@ -2,7 +2,7 @@
   <div class="min-w-[350px]">
     <div v-if="!showCapacity">
       <CrmUserSelect
-        :value="form.owner"
+        :value="form.owner ?? null"
         :placeholder="t('opportunity.selectReceiverPlaceholder')"
         value-field="id"
         label-field="name"
@@ -84,7 +84,7 @@
 </template>
 
 <script lang="ts" setup>
-  import { onMounted, ref } from 'vue';
+  import { onMounted, ref, watch } from 'vue';
   import { NCheckbox, NRadio, NSpin } from 'naive-ui';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
@@ -102,6 +102,8 @@
   const props = defineProps<{
     showCapacity?: boolean;
     single?: boolean;
+    /** 公海池 ID，showCapacity 为 true 时必传 */
+    poolId?: string;
   }>();
 
   const form = defineModel<TransferParams>('form', {
@@ -119,7 +121,7 @@
     if (!props.showCapacity) return;
     try {
       loadingUserList.value = true;
-      userCapacityList.value = (await batchUserCapacity()) ?? [];
+      userCapacityList.value = (await batchUserCapacity(props.poolId)) ?? [];
     } catch {
       userCapacityList.value = [];
     } finally {
@@ -130,6 +132,15 @@
   onMounted(() => {
     loadUserCapacity();
   });
+
+  watch(
+    () => props.poolId,
+    () => {
+      if (props.showCapacity) {
+        loadUserCapacity();
+      }
+    }
+  );
 
   function selectSingleUser(userId: string) {
     if (props.single) {

@@ -60,7 +60,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-
 @Service("organizationUserService")
 @Transactional(rollbackFor = Exception.class)
 @Slf4j
@@ -916,44 +915,6 @@ public class OrganizationUserService {
         return extUserMapper.selectUserOptionByOrgId(orgId, defaultOrder);
     }
 
-    public List<OptionDTO> getUserByAssign(String userId, String orgId, String... permissions) {
-        if (Strings.CS.equals(userId, InternalUser.ADMIN.getValue())) {
-            return getUserOptions(orgId);
-        }
-        // 注：此处使用CUSTOMER_MANAGEMENT_READ作为基础权限标识，因为转移功能主要应用于客户模块
-        // 如需支持其他模块（线索、商机等），可后续扩展为动态传入权限标识
-        DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(userId, orgId, permissions);
-        if (deptDataPermission.getAll()) {
-            // 全部数据权限：返回组织内所有用户
-            List<String> allDpIds = getSortDepartmentIds(orgId);
-            String defaultOrder = CollectionUtils.isEmpty(allDpIds) ? StringUtils.EMPTY : buildOrderByFieldClause(allDpIds);
-            return extUserMapper.selectUserOptionByOrgId(orgId, defaultOrder);
-        }
-        if (deptDataPermission.getSelf()) {
-            // 仅本人数据权限：只返回当前用户自己
-            List<OptionDTO> result = new ArrayList<>();
-            List<String> allDpIds = getSortDepartmentIds(orgId);
-            String defaultOrder = CollectionUtils.isEmpty(allDpIds) ? StringUtils.EMPTY : buildOrderByFieldClause(allDpIds);
-            List<OptionDTO> allUsers = extUserMapper.selectUserOptionByOrgId(orgId, defaultOrder);
-            for (OptionDTO user : allUsers) {
-                if (Strings.CS.equals(user.getId(), userId)) {
-                    result.add(user);
-                    break;
-                }
-            }
-            return result;
-        }
-        if (CollectionUtils.isNotEmpty(deptDataPermission.getDeptIds())) {
-            // 部门数据权限：返回指定部门下的用户
-            return extUserMapper.selectUserOptionByDeptIdsAndOrgId(new ArrayList<>(deptDataPermission.getDeptIds()), orgId);
-        }
-        // 默认返回组织内所有用户
-        List<String> allDpIds = getSortDepartmentIds(orgId);
-        String defaultOrder = CollectionUtils.isEmpty(allDpIds) ? StringUtils.EMPTY : buildOrderByFieldClause(allDpIds);
-        return extUserMapper.selectUserOptionByOrgId(orgId, defaultOrder);
-    }
-
-
     /**
      * 删除用户（单个）
      *
@@ -976,7 +937,6 @@ public class OrganizationUserService {
 
         permissionCache.clearCache(user.getUserId(), orgId);
     }
-
 
     /**
      * 删除用户全部数据

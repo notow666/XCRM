@@ -598,10 +598,12 @@
               {
                 distributePopContent: () => {
                   return h(TransferForm, {
-                    class: 'w-[320px] mt-[16px]',
-                    form: distributeForm.value,
-                    'onUpdate:form': (val: any) => { distributeForm.value = val; },
-                    ref: distributeFormRef,
+                    'class': 'w-[320px] mt-[16px]',
+                    'form': distributeForm.value,
+                    'onUpdate:form': (val: any) => {
+                      distributeForm.value = val;
+                    },
+                    'ref': distributeFormRef,
                   });
                 },
               }

@@ -873,7 +873,7 @@
 
   const moreActions = computed(() => {
     return [
-        // 隐藏同步
+      // 隐藏同步
       // ...(hasAnyPermission(['SYS_ORGANIZATION:SYNC'])
       //   ? [
       //       {

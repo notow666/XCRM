@@ -2,11 +2,13 @@
   <CrmTable
     ref="crmTableRef"
     v-model:checked-row-keys="checkedRowKeys"
-    v-bind="propsRes"
-    class="crm-customer-table"
+    v-bind="tableBindProps"
+    class="crm-customer-table h-full min-h-0"
     :columns="tableColumns"
-    :not-show-table-filter="isAdvancedSearchMode"
+    :not-show-table="useListLayout"
+    :not-show-table-filter="useListLayout || isAdvancedSearchMode"
     :action-config="props.readonly ? undefined : actionConfig"
+    @change-columns-setting="handleListColumnsSettingChange"
     @row-key-change="handleRowKeyChange"
     @page-change="propsEvent.pageChange"
     @page-size-change="propsEvent.pageSizeChange"
@@ -30,6 +32,20 @@
           @click="handleNewClick"
         >
           {{ t('customer.new') }}
+        </n-button>
+        <n-button
+          v-if="
+            activeTab !== CustomerSearchTypeEnum.CUSTOMER_COLLABORATION &&
+            hasAnyPermission(['CUSTOMER_MANAGEMENT:TRANSFER']) &&
+            !props.readonly
+          "
+          type="primary"
+          ghost
+          class="n-btn-outline-primary"
+          :disabled="(propsRes.crmPagination?.itemCount || 0) === 0"
+          @click="handleTransferByConditionClick"
+        >
+          {{ t('customer.transferByCondition') }}
         </n-button>
         <CrmImportButton
           v-if="hasAnyPermission(['CUSTOMER_MANAGEMENT:IMPORT'])"
@@ -90,20 +106,148 @@
         @generated-chart="handleGeneratedChart"
       />
     </template>
+    <template v-if="useListLayout" #other>
+      <div class="customer-list-panel flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div class="customer-list-table-header b-0 flex shrink-0 border border-[var(--text-n8)]">
+          <div
+            class="customer-list-dynamic-th customer-list-table-header__info flex shrink-0 items-center border-r border-[var(--text-n8)]"
+            :style="{ width: `${listInfoColumnWidth}px` }"
+          >
+            <n-checkbox
+              v-if="showListCheckbox"
+              class="mr-[8px]"
+              :checked="listHeaderCheckState.checked"
+              :indeterminate="listHeaderCheckState.indeterminate"
+              :disabled="!listSelectableIds.length"
+              @update:checked="handleListSelectAll"
+            />
+            <span class="one-line-text">{{ t('customer.list.customerInfo') }}</span>
+          </div>
+          <div
+            class="customer-list-table-header__middle flex min-w-0 flex-1 overflow-hidden"
+            @wheel="handleDynamicWheel"
+          >
+            <div class="customer-list-dynamic-header-track flex" :style="dynamicMiddleTrackStyle">
+              <CrmCustomerListDynamicTh
+                v-for="column in listMiddleColumns"
+                :key="String(column.key)"
+                :column="column"
+                :title="getListColumnTitle(column)"
+                :width="getListColumnWidth(column)"
+                @sort="handleListColumnSort"
+              />
+            </div>
+          </div>
+          <div
+            class="customer-list-dynamic-th customer-list-table-header__operation flex shrink-0 items-center justify-center border-l border-[var(--text-n8)] text-center"
+            :style="{ width: `${listOperationColumnWidth}px` }"
+          >
+            <span class="one-line-text">{{ t('common.operation') }}</span>
+          </div>
+        </div>
+        <CrmList
+          v-if="propsRes.data.length"
+          :key="String(activeTab ?? '')"
+          v-model:data="propsRes.data"
+          key-field="id"
+          mode="remote"
+          :item-height="listItemHeight"
+          :loading="!!propsRes.loading"
+          :no-more-data="isCustomerListNoMoreData"
+          virtual-scroll-height="100%"
+          class="customer-list-scroll min-h-0 flex-1"
+          @reach-bottom="handleListReachBottom"
+        >
+          <template #item="{ item }">
+            <div :key="item.id" class="customer-list-item-wrap" :style="{ height: `${listItemHeight}px` }">
+              <CrmCustomerListItem
+                :item="item"
+                :row-index="0"
+                :middle-columns="listMiddleColumns"
+                :dynamic-scroll-left="dynamicScrollLeft"
+                :middle-total-width="listMiddleTotalWidth"
+                :info-column-width="listInfoColumnWidth"
+                :operation-column-width="listOperationColumnWidth"
+                :show-checkbox="showListCheckbox"
+                :show-reach="showReachColumn"
+                :checked="checkedRowKeys.includes(item.id)"
+                :checkbox-disabled="item.collaborationType === 'READ_ONLY'"
+                :limit-show-detail="!!props.isLimitShowDetail"
+                :show-operation="showListItemOperation(item)"
+                :follow-up-disabled="excludeStageIds.includes(item.stage)"
+                :stage-config-list="stageConfig?.stageConfigList ?? []"
+                :customer-level-field-id="customerLevelFieldId"
+                :level-updating="updatingCustomerLevelId === item.id"
+                :can-edit-tags="canEditListTags"
+                :editable-tag-field-ids="editableTagFieldIds"
+                :tag-updating-row-id="updatingCustomerTag?.rowId"
+                :tag-updating-field-id="updatingCustomerTag?.fieldId"
+                :hide-edit-transfer="activeTab === CustomerSearchTypeEnum.CUSTOMER_COLLABORATION"
+                :operation-more-list="getListOperationMoreList(item)"
+                @open-detail="() => handleOpenCustomerDetail(item)"
+                @check-change="(checked) => handleListItemCheckChange(item, checked)"
+                @operation-select="(key) => handleActionSelect(item, key)"
+                @customer-level-change="(level) => handleCustomerLevelChange(item, level)"
+                @tag-change="(fieldId, tags) => handleCustomerTagChange(item, fieldId, tags)"
+                @dynamic-wheel="handleDynamicWheel"
+              >
+                <template v-if="showReachColumn" #reach>
+                  <CrmCustomerListReach
+                    :call-status="readCallStatus(item)"
+                    :wechat-friend-status="readWechatFriendStatus(item)"
+                    :can-operate="isReachOwner(item)"
+                    @dial="(slot) => handleDialCustomer(item, slot)"
+                    @sms="(slot) => handleSmsCustomer(item, slot)"
+                    @wechat="() => handleWechatCustomer(item)"
+                    @add-wechat="() => handleWechatFriendCustomer(item)"
+                  />
+                </template>
+              </CrmCustomerListItem>
+            </div>
+          </template>
+        </CrmList>
+        <div
+          v-else-if="propsRes.loading"
+          class="customer-list-panel__loading flex min-h-0 flex-1 items-center justify-center border border-t-0 border-[var(--text-n8)] py-[48px]"
+        >
+          <n-spin size="medium" />
+        </div>
+        <div
+          v-else
+          class="customer-list-panel__empty flex min-h-0 flex-1 items-center justify-center border border-t-0 border-[var(--text-n8)] py-[48px] text-[14px] text-[var(--text-n4)]"
+        >
+          {{ t('common.noData') }}
+        </div>
+        <div
+          v-if="propsRes.data.length && listMiddleColumns.length"
+          class="customer-list-dynamic-scrollbar-row flex shrink-0"
+        >
+          <div class="shrink-0" :style="{ width: `${listInfoColumnWidth}px` }" />
+          <div
+            ref="dynamicScrollRef"
+            class="customer-list-dynamic-scrollbar min-w-0 flex-1"
+            @scroll="handleDynamicScroll"
+          >
+            <div class="customer-list-dynamic-scrollbar__inner" :style="{ width: `${listMiddleTotalWidth}px` }" />
+          </div>
+          <div class="shrink-0" :style="{ width: `${listOperationColumnWidth}px` }" />
+        </div>
+      </div>
+    </template>
   </CrmTable>
 
-  <CrmTransferCustomerModal
-    v-model:show="showTransferModal"
-    :source-ids="checkedRowKeys"
-    :save-api="batchTransferCustomer"
-    @load-list="searchData"
-  />
   <CrmTransferCustomerModal
     v-model:show="showSingleTransferModal"
     :source-ids="checkedRowKeys"
     :save-api="batchTransferCustomer"
     :title="t('common.transfer')"
     @load-list="searchData"
+  />
+  <CrmCustomerTransferByConditionModal
+    v-model:show="showTransferByConditionModal"
+    :total="propsRes.crmPagination?.itemCount || 0"
+    :query-params="transferByConditionQueryParams"
+    @success="handleTransferByConditionSuccess"
   />
   <customerOverviewDrawer
     v-model:show="showOverviewDrawer"
@@ -172,13 +316,13 @@
 
 <script setup lang="ts">
   import { useRoute } from 'vue-router';
-  import { DataTableRowKey, NButton, NDropdown, NIcon, useMessage } from 'naive-ui';
+  import { DataTableRowKey, NButton, NCheckbox, NDropdown, NIcon, NSpin, useMessage } from 'naive-ui';
   import { LogoWechat } from '@vicons/ionicons5';
 
   import { CustomerSearchTypeEnum } from '@lib/shared/enums/customerEnum';
   import { FieldTypeEnum, FormDesignKeyEnum, FormLinkScenarioEnum } from '@lib/shared/enums/formDesignEnum';
   import { ReasonTypeEnum } from '@lib/shared/enums/moduleEnum';
-  import { SpecialColumnEnum } from '@lib/shared/enums/tableEnum';
+  import { SpecialColumnEnum, TableKeyEnum } from '@lib/shared/enums/tableEnum';
   import { useI18n } from '@lib/shared/hooks/useI18n';
   import useLocale from '@lib/shared/locale/useLocale';
   import { characterLimit } from '@lib/shared/method';
@@ -187,12 +331,17 @@
   import CrmAdvanceFilter from '@/components/pure/crm-advance-filter/index.vue';
   import { FilterForm, FilterFormItem, FilterResult } from '@/components/pure/crm-advance-filter/type';
   import CrmIcon from '@/components/pure/crm-icon-font/index.vue';
+  import CrmList from '@/components/pure/crm-list/index.vue';
   import type { ActionsItem } from '@/components/pure/crm-more-action/type';
   import CrmNameTooltip from '@/components/pure/crm-name-tooltip/index.vue';
   import CrmTable from '@/components/pure/crm-table/index.vue';
-  import { BatchActionConfig } from '@/components/pure/crm-table/type';
+  import { BatchActionConfig, type CrmDataTableColumn } from '@/components/pure/crm-table/type';
   import CrmTableButton from '@/components/pure/crm-table-button/index.vue';
   import CrmBatchEditModal from '@/components/business/crm-batch-edit-modal/index.vue';
+  import CrmCustomerListDynamicTh from '@/components/business/crm-customer-list-dynamic-th/index.vue';
+  import CrmCustomerListItem from '@/components/business/crm-customer-list-item/index.vue';
+  import CrmCustomerListReach from '@/components/business/crm-customer-list-reach/index.vue';
+  import CrmCustomerTransferByConditionModal from '@/components/business/crm-customer-transfer-by-condition-modal/index.vue';
   import CrmFormCreateDrawer from '@/components/business/crm-form-create-drawer/index.vue';
   import CrmImportButton from '@/components/business/crm-import-button/index.vue';
   import CrmMoveModal from '@/components/business/crm-move-modal/index.vue';
@@ -210,6 +359,7 @@
     batchDeleteCustomer,
     batchDeleteCustomerByCondition,
     batchTransferCustomer,
+    batchUpdateAccount,
     deleteCustomer,
     dialCustomerPhone,
     getCustomerNextStage,
@@ -219,18 +369,27 @@
     sendCustomerWechat,
   } from '@/api/modules';
   import { baseFilterConfigList } from '@/config/clue';
+  import useCustomerListColumns from '@/hooks/useCustomerListColumns';
+  import {
+    getCustomerLevelStarCount,
+    setCustomerLevelOnRow,
+    setInputMultipleTagsOnRow,
+  } from '@/hooks/useCustomerListDescription';
   import useFormCreateApi from '@/hooks/useFormCreateApi';
   import useFormCreateTable from '@/hooks/useFormCreateTable';
   import useModal from '@/hooks/useModal';
   import useViewChartParams, { STORAGE_VIEW_CHART_KEY, ViewChartResult } from '@/hooks/useViewChartParams';
+  import useUserStore from '@/store/modules/user';
+  import useViewStore from '@/store/modules/view';
   import { getExportColumns } from '@/utils/export';
   import { hasAnyPermission } from '@/utils/permission';
 
   import { CustomerRouteEnum } from '@/enums/routeEnum';
 
-  import { InternalRowData } from 'naive-ui/es/data-table/src/interface';
+  import type { InternalRowData } from 'naive-ui/es/data-table/src/interface';
 
   const Message = useMessage();
+  const userStore = useUserStore();
   const { openModal } = useModal();
   const { t } = useI18n();
   const route = useRoute();
@@ -255,12 +414,22 @@
     hiddenTotal?: boolean;
   }>();
 
+  const useListLayout = computed(() => props.formKey === FormDesignKeyEnum.CUSTOMER && !props.readonly);
+  /** 虚拟列表行高，须与 .customer-list-item-wrap 高度一致 */
+  const listItemHeight = 96;
+  const listInfoColumnWidth = 280;
+  const listOperationColumnWidth = 120;
+
   const emit = defineEmits<{
     (e: 'init', val: { filterConfigList: FilterFormItem[]; customFieldsFilterConfig: FilterFormItem[] }): void;
     (e: 'showCountDetail', row: Record<string, any>, type: 'opportunity' | 'clue'): void;
   }>();
 
   const activeTab = ref();
+
+  const showListCheckbox = computed(
+    () => useListLayout.value && activeTab.value !== CustomerSearchTypeEnum.CUSTOMER_COLLABORATION
+  );
 
   const checkedRowKeys = ref<DataTableRowKey[]>([]);
   const keyword = ref('');
@@ -309,11 +478,6 @@
         label: t('common.exportChecked'),
         key: 'exportChecked',
         permission: ['CUSTOMER_MANAGEMENT:EXPORT'],
-      },
-      {
-        label: t('common.batchTransfer'),
-        key: 'batchTransfer',
-        permission: ['CUSTOMER_MANAGEMENT:TRANSFER'],
       },
       {
         label: t('customer.moveToOpenSea'),
@@ -440,16 +604,12 @@
     });
   }
 
-  // 批量转移
-  const showTransferModal = ref<boolean>(false);
+  const showTransferByConditionModal = ref(false);
   const showExportModal = ref<boolean>(false);
 
   const isExportAll = ref(false);
   function handleBatchAction(item: ActionsItem) {
     switch (item.key) {
-      case 'batchTransfer':
-        showTransferModal.value = true;
-        break;
       case 'batchEdit':
         handleBatchEdit();
         break;
@@ -763,12 +923,261 @@
       'CUSTOMER_MANAGEMENT:DELETE',
       'CUSTOMER_MANAGEMENT:TRANSFER',
     ],
-    containerClass: '.crm-customer-table',
+    // 列表模式使用虚拟滚动，勿设置 containerClass，避免 useTable 按 .v-vl 高度自动连页请求
+    containerClass: props.formKey === FormDesignKeyEnum.CUSTOMER && !props.readonly ? '' : '.crm-customer-table',
     hiddenTotal: ref(!!props.hiddenTotal),
     readonly: props.readonly,
     customerStage: stageConfig.value?.stageConfigList || [],
   });
   const { propsRes, propsEvent, tableQueryParams, loadList, setLoadListParams, setAdvanceFilter } = useTableRes;
+
+  const customerLevelFieldId = computed(
+    () => fieldList.value.find((field) => field.internalKey === 'customerLevel')?.id
+  );
+
+  const updatingCustomerLevelId = ref<string | null>(null);
+
+  const editableTagFieldIds = computed(
+    () =>
+      new Set(
+        fieldList.value
+          .filter(
+            (field) => field.type === FieldTypeEnum.INPUT_MULTIPLE && field.editable !== false && !field.resourceFieldId
+          )
+          .map((field) => field.id)
+      )
+  );
+
+  const canEditListTags = computed(
+    () =>
+      hasAnyPermission(['CUSTOMER_MANAGEMENT:UPDATE']) &&
+      activeTab.value !== CustomerSearchTypeEnum.CUSTOMER_COLLABORATION
+  );
+
+  const updatingCustomerTag = ref<{ rowId: string; fieldId: string } | null>(null);
+
+  function normalizeTagList(tags: string[]) {
+    return tags.map((tag) => String(tag).trim()).filter(Boolean);
+  }
+
+  function isSameTagList(current: string[], next: string[]) {
+    const a = normalizeTagList(current);
+    const b = normalizeTagList(next);
+    if (a.length !== b.length) return false;
+    return a.every((tag, index) => tag === b[index]);
+  }
+
+  function getRowTags(row: Record<string, any>, fieldId: string): string[] {
+    const moduleField = row.moduleFields?.find(
+      (field: { fieldId?: string; fieldValue?: unknown }) => field.fieldId === fieldId
+    );
+    const raw = moduleField?.fieldValue ?? row[fieldId];
+    if (!Array.isArray(raw)) return [];
+    return raw.map((item) => String(item));
+  }
+
+  async function handleCustomerTagChange(row: Record<string, any>, fieldId: string, tags: string[]) {
+    if (!fieldId || updatingCustomerTag.value || !canEditListTags.value || !editableTagFieldIds.value.has(fieldId)) {
+      return;
+    }
+    const normalizedTags = normalizeTagList(tags);
+    if (normalizedTags.length > 10) {
+      Message.warning(t('crmFormCreate.basic.tagInputLimitTip'));
+      return;
+    }
+    const currentTags = getRowTags(row, fieldId);
+    if (isSameTagList(currentTags, normalizedTags)) {
+      return;
+    }
+    updatingCustomerTag.value = { rowId: row.id, fieldId };
+    try {
+      await batchUpdateAccount({
+        ids: [row.id],
+        fieldId,
+        fieldValue: normalizedTags,
+      });
+      setInputMultipleTagsOnRow(row, fieldId, normalizedTags);
+      Message.success(t('common.updateSuccess'));
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+    } finally {
+      updatingCustomerTag.value = null;
+    }
+  }
+
+  async function handleCustomerLevelChange(row: Record<string, any>, level: number) {
+    const fieldId = customerLevelFieldId.value;
+    if (
+      !fieldId ||
+      updatingCustomerLevelId.value ||
+      !hasAnyPermission(['CUSTOMER_MANAGEMENT:UPDATE']) ||
+      activeTab.value === CustomerSearchTypeEnum.CUSTOMER_COLLABORATION
+    ) {
+      return;
+    }
+    const currentLevel = getCustomerLevelStarCount(row, fieldId);
+    if (currentLevel === level) {
+      return;
+    }
+    updatingCustomerLevelId.value = row.id;
+    try {
+      await batchUpdateAccount({
+        ids: [row.id],
+        fieldId,
+        fieldValue: String(level),
+      });
+      setCustomerLevelOnRow(row, fieldId, level);
+      Message.success(t('common.updateSuccess'));
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+    } finally {
+      updatingCustomerLevelId.value = null;
+    }
+  }
+
+  function getListColumnWidth(column: CrmDataTableColumn) {
+    const w = column.width;
+    if (typeof w === 'number') return Math.max(w, 80);
+    return 120;
+  }
+
+  const dynamicScrollRef = ref<HTMLElement | null>(null);
+  const dynamicScrollLeft = ref(0);
+
+  const viewStore = useViewStore();
+
+  const isCustomerListNoMoreData = computed(() => {
+    const pagination = propsRes.value.crmPagination;
+    if (!pagination?.page || !pagination.pageSize || pagination.itemCount == null) {
+      return false;
+    }
+    return pagination.page * pagination.pageSize >= pagination.itemCount;
+  });
+
+  const tableBindProps = computed(() => ({
+    ...propsRes.value,
+  }));
+
+  function showListItemOperation(row: Record<string, any>) {
+    return (
+      !['convertedToCustomer', 'convertedToOpportunity'].includes(activeTab.value) &&
+      row.collaborationType !== 'READ_ONLY'
+    );
+  }
+
+  function getListOperationMoreList(row: Record<string, any>) {
+    if (activeTab.value === CustomerSearchTypeEnum.CUSTOMER_COLLABORATION) {
+      return [];
+    }
+    return [
+      ...(['MANUAL_CREATE', 'PRIVATE_IMPORT'].includes(row.createSource)
+        ? []
+        : [
+            {
+              label: t('customer.moveToOpenSea'),
+              key: 'moveToOpenSea',
+              permission: ['CUSTOMER_MANAGEMENT:RECYCLE'],
+            },
+          ]),
+      {
+        label: t('common.delete'),
+        key: 'delete',
+        danger: true,
+        permission: ['CUSTOMER_MANAGEMENT:DELETE'],
+      },
+    ];
+  }
+
+  function handleOpenCustomerDetail(row: Record<string, any>) {
+    if (props.isLimitShowDetail && row.hasPermission === false) {
+      return;
+    }
+    activeFormKey.value = FormDesignKeyEnum.CUSTOMER;
+    activeSourceId.value = row.id;
+    showOverviewDrawer.value = true;
+  }
+
+  function isListRowSelectable(row: Record<string, any>) {
+    return row.collaborationType !== 'READ_ONLY';
+  }
+
+  const listSelectableIds = computed(() =>
+    propsRes.value.data.filter(isListRowSelectable).map((row) => row.id as DataTableRowKey)
+  );
+
+  const listHeaderCheckState = computed(() => {
+    const selectableIds = listSelectableIds.value;
+    const selectedCount = selectableIds.filter((id) => checkedRowKeys.value.includes(id)).length;
+    return {
+      checked: selectableIds.length > 0 && selectedCount === selectableIds.length,
+      indeterminate: selectedCount > 0 && selectedCount < selectableIds.length,
+    };
+  });
+
+  function syncListSelectedRows() {
+    selectedRows.value = propsRes.value.data.filter((item) =>
+      checkedRowKeys.value.includes(item.id)
+    ) as InternalRowData[];
+    handleRowKeyChange(checkedRowKeys.value, selectedRows.value);
+  }
+
+  function handleListSelectAll(checked: boolean) {
+    const currentSelected = new Set(checkedRowKeys.value);
+    listSelectableIds.value.forEach((id) => {
+      if (checked) {
+        currentSelected.add(id);
+      } else {
+        currentSelected.delete(id);
+      }
+    });
+    checkedRowKeys.value = Array.from(currentSelected);
+    syncListSelectedRows();
+  }
+
+  function handleListItemCheckChange(row: Record<string, any>, checked: boolean) {
+    const id = row.id as DataTableRowKey;
+    if (checked) {
+      if (!checkedRowKeys.value.includes(id)) {
+        checkedRowKeys.value = [...checkedRowKeys.value, id];
+      }
+    } else {
+      checkedRowKeys.value = checkedRowKeys.value.filter((key) => key !== id);
+    }
+    syncListSelectedRows();
+  }
+
+  function handleListReachBottom() {
+    const pagination = propsRes.value.crmPagination;
+    if (!pagination?.page || !pagination.pageSize || !pagination.itemCount || propsRes.value.loading) {
+      return;
+    }
+    if (pagination.page * pagination.pageSize >= pagination.itemCount) {
+      return;
+    }
+    propsEvent.value.pageChange(pagination.page + 1);
+  }
+
+  const transferByConditionQueryParams = computed(() => ({
+    ...tableQueryParams.value,
+    viewId: activeTab.value as CustomerSearchTypeEnum,
+  }));
+
+  function handleTransferByConditionClick() {
+    const total = propsRes.value.crmPagination?.itemCount || 0;
+    if (!total) {
+      Message.warning(t('customer.batchDeleteByConditionEmptyTip'));
+      return;
+    }
+    showTransferByConditionModal.value = true;
+  }
+
+  function handleTransferByConditionSuccess() {
+    checkedRowKeys.value = [];
+    tableRefreshId.value += 1;
+  }
+
   const advancedNumberFilterFields = new Set(['callStatus', 'wechatFriendStatus']);
   const customerAdvancedFilterConfig = computed<FilterFormItem[]>(() =>
     (customFieldsFilterConfig.value as FilterFormItem[]).map((item) =>
@@ -1093,12 +1502,14 @@
     } as any;
   }
 
-  const showDialColumn = computed(() => {
-    return (
-      !props.readonly &&
-      activeTab.value === CustomerSearchTypeEnum.SELF
-    );
-  });
+  /** 非协作视图均展示「沟通」列（含新增自定义视图） */
+  const showReachColumn = computed(
+    () => !props.readonly && activeTab.value !== CustomerSearchTypeEnum.CUSTOMER_COLLABORATION
+  );
+
+  function isReachOwner(row: Record<string, any>) {
+    return String(row.owner ?? '') === String(userStore.userInfo.id ?? '');
+  }
 
   const showStatusColumns = computed(() => true);
 
@@ -1125,7 +1536,7 @@
       insertIndex = orderIndex + 1;
     }
 
-    if (showDialColumn.value) {
+    if (showReachColumn.value) {
       const dialColumn = buildReachColumn();
       baseColumns.splice(insertIndex, 0, dialColumn);
       insertIndex += 1;
@@ -1149,6 +1560,107 @@
     }
     return baseColumns;
   });
+
+  const { listMiddleColumns, refreshListMiddleColumns } = useCustomerListColumns(tableColumns, {
+    enabled: useListLayout,
+  });
+
+  const listMiddleTotalWidth = computed(() =>
+    listMiddleColumns.value.reduce((sum, column) => sum + getListColumnWidth(column), 0)
+  );
+
+  const dynamicMiddleTrackStyle = computed(() => ({
+    width: `${listMiddleTotalWidth.value}px`,
+    transform: `translateX(-${dynamicScrollLeft.value}px)`,
+  }));
+
+  function handleDynamicScroll() {
+    dynamicScrollLeft.value = dynamicScrollRef.value?.scrollLeft ?? 0;
+  }
+
+  function getHorizontalWheelDelta(event: WheelEvent) {
+    if (event.deltaX !== 0) {
+      return event.deltaX;
+    }
+    if (event.shiftKey) {
+      return event.deltaY;
+    }
+    return 0;
+  }
+
+  function handleDynamicWheel(event: WheelEvent) {
+    const el = dynamicScrollRef.value;
+    if (!el || listMiddleTotalWidth.value <= el.clientWidth) return;
+    const horizontalDelta = getHorizontalWheelDelta(event);
+    if (!horizontalDelta) return;
+    event.preventDefault();
+    el.scrollLeft += horizontalDelta;
+    dynamicScrollLeft.value = el.scrollLeft;
+  }
+
+  watch(listMiddleColumns, () => {
+    dynamicScrollLeft.value = 0;
+    if (dynamicScrollRef.value) {
+      dynamicScrollRef.value.scrollLeft = 0;
+    }
+  });
+
+  function getListColumnTitle(column: CrmDataTableColumn) {
+    const { title } = column;
+    if (typeof title === 'string') return title;
+    return String(column.key ?? '');
+  }
+
+  function syncListColumnSortOrder(columnKey: string, order: 'ascend' | 'descend' | false) {
+    const apply = (cols: CrmDataTableColumn[]) => {
+      cols.forEach((col) => {
+        if (!col.sorter && col.sortOrder === undefined) return;
+        col.sortOrder = col.key === columnKey ? order : false;
+      });
+    };
+    apply(listMiddleColumns.value);
+    apply(propsRes.value.columns as CrmDataTableColumn[]);
+    apply(tableColumns.value);
+  }
+
+  function handleListColumnSort(column: CrmDataTableColumn) {
+    if (!column.sorter || column.key == null) return;
+    const columnKey = String(column.key);
+    const current = column.sortOrder ?? false;
+    let next: 'ascend' | 'descend' | false = false;
+    if (current === false) {
+      next = 'ascend';
+    } else if (current === 'ascend') {
+      next = 'descend';
+    }
+    syncListColumnSortOrder(columnKey, next);
+    let sortType = '';
+    if (next === 'ascend') {
+      sortType = 'asc';
+    } else if (next === 'descend') {
+      sortType = 'desc';
+    }
+    propsEvent.value.sorterChange(!next ? {} : { name: columnKey, type: sortType });
+  }
+
+  async function applyListColumnSortFromView(viewId: string) {
+    await refreshListMiddleColumns();
+    const sortObj = await viewStore.getViewSort(TableKeyEnum.CUSTOMER, viewId);
+    if (sortObj && Object.keys(sortObj).length) {
+      const order = sortObj.type === 'desc' ? 'descend' : 'ascend';
+      syncListColumnSortOrder(sortObj.name as string, order);
+      await propsEvent.value.sorterChange(sortObj);
+      return;
+    }
+    syncListColumnSortOrder('', false);
+    await propsEvent.value.sorterChange({});
+  }
+
+  function handleListColumnsSettingChange() {
+    if (useListLayout.value) {
+      refreshListMiddleColumns();
+    }
+  }
 
   const exportParams = computed(() => {
     return {
@@ -1291,15 +1803,32 @@
   }
 
   watch(
+    () => [propsRes.value.columns, tableColumns.value],
+    () => {
+      if (useListLayout.value) {
+        refreshListMiddleColumns();
+      }
+    },
+    { deep: true }
+  );
+
+  watch(
     () => activeTab.value,
     (val) => {
       if (val) {
         checkedRowKeys.value = [];
         setLoadListParams({ keyword: keyword.value, viewId: getChartViewId() ?? activeTab.value });
         initTableViewChartParams(viewChartCallBack);
-        crmTableRef.value?.setColumnSort(val);
+        if (useListLayout.value) {
+          setTimeout(() => {
+            applyListColumnSortFromView(val);
+          }, 300);
+        } else {
+          crmTableRef.value?.setColumnSort(val);
+        }
       }
-    }
+    },
+    { immediate: true }
   );
 
   watch(
@@ -1347,5 +1876,104 @@
 <style lang="less" scoped>
   :deep(.n-tabs-scroll-padding) {
     width: 16px !important;
+  }
+  .customer-list-panel {
+    flex: 1;
+    min-height: 0;
+    :deep(.n-spin) {
+      height: 100%;
+      min-height: 0;
+    }
+    :deep(.n-spin-content) {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .customer-list-table-header {
+      border-radius: var(--border-radius-small) var(--border-radius-small) 0 0;
+    }
+    /* 表头（客户信息 / 操作）：与公海池 CrmTable / DataTable 主题一致 */
+    .customer-list-table-header__info.customer-list-dynamic-th,
+    .customer-list-table-header__operation.customer-list-dynamic-th {
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-n4);
+      white-space: nowrap;
+      background-color: var(--text-n10);
+    }
+    /* 动态列单元格：与公海池 n-data-table-td 文本一致 */
+    :deep(.customer-list-dynamic-td) {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      height: 100%;
+      padding: 0 16px;
+      font-size: 14px;
+      color: var(--text-n1);
+      vertical-align: middle;
+    }
+    :deep(.customer-list-dynamic-td .crm-customer-list-cell),
+    :deep(.customer-list-dynamic-td .customer-list-dynamic-cell),
+    :deep(.customer-list-dynamic-td .n-ellipsis) {
+      font-size: 14px;
+      color: var(--text-n1);
+    }
+    .customer-list-dynamic-header-track {
+      flex-shrink: 0;
+      will-change: transform;
+    }
+    .customer-list-dynamic-scrollbar-row {
+      flex-shrink: 0;
+      min-height: 14px;
+      border: 1px solid var(--text-n8);
+      border-top: none;
+      background-color: var(--text-n10);
+      border-radius: 0 0 var(--border-radius-small) var(--border-radius-small);
+    }
+    .customer-list-dynamic-scrollbar {
+      height: 14px;
+      min-height: 14px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: thin;
+      &::-webkit-scrollbar {
+        height: 8px;
+      }
+      &::-webkit-scrollbar-thumb {
+        border-radius: 4px;
+        background-color: var(--text-n6);
+      }
+      &::-webkit-scrollbar-track {
+        background-color: transparent;
+      }
+    }
+    .customer-list-dynamic-scrollbar__inner {
+      height: 1px;
+      pointer-events: none;
+    }
+    .customer-list-scroll {
+      width: calc(100% + 5px);
+      min-height: 0;
+      border: 1px solid var(--text-n8);
+      border-top: none;
+      border-bottom: none;
+      :deep(.crm-list),
+      :deep(.n-virtual-list) {
+        height: 100% !important;
+        min-height: 0;
+      }
+      :deep(.v-vl) {
+        overflow-y: auto !important;
+      }
+    }
+    .customer-list-item-wrap {
+      box-sizing: border-box;
+      overflow: hidden;
+      :deep(.crm-customer-list-item) {
+        height: 100%;
+      }
+    }
   }
 </style>

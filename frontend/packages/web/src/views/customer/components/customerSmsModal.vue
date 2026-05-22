@@ -69,16 +69,7 @@
 
 <script setup lang="ts">
   import { nextTick } from 'vue';
-  import {
-    FormInst,
-    FormItemRule,
-    FormRules,
-    NForm,
-    NFormItem,
-    NInput,
-    NSelect,
-    SelectOption,
-  } from 'naive-ui';
+  import { FormInst, FormItemRule, FormRules, NForm, NFormItem, NInput, NSelect, SelectOption } from 'naive-ui';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
 

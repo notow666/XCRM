@@ -168,6 +168,10 @@ public class CustomFieldCheckEventListener extends AnalysisEventListener<Map<Int
         super.onException(exception, context);
     }
 
+    public String successMsg() {
+        return "耗时：" + getSeconds() + " s，导入：" + getSuccess() + " 条";
+    }
+
     /**
      * 缓存一些比对值
      */

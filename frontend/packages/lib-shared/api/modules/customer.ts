@@ -23,6 +23,7 @@ import {
   BatchDeleteOpenSeaCustomerByConditionUrl,
   BatchMoveCustomerUrl,
   BatchPickOpenSeaCustomerUrl,
+  BatchTransferCustomerByConditionUrl,
   BatchTransferCustomerUrl,
   BatchUpdateAccountUrl,
   BatchUpdateContactUrl,
@@ -189,6 +190,7 @@ import type {
   BatchTransferOpenSeaCustomerSubmitResult,
   BatchUpdateOpenSeaCustomerByConditionParams,
   BatchUpdateOpenSeaCustomerByConditionSubmitResult,
+  BatchTransferCustomerByConditionParams,
   BatchMoveToPublicPoolParams,
   BatchOperationOpenSeaCustomerParams,
   BatchUpdatePoolAccountParams,
@@ -441,6 +443,11 @@ export default function useProductApi(CDR: CordysAxios) {
   // 批量转移客户
   function batchTransferCustomer(data: TransferParams) {
     return CDR.post({ url: BatchTransferCustomerUrl, data });
+  }
+
+  // 按筛选条件批量转移客户
+  function batchTransferCustomerByCondition(data: BatchTransferCustomerByConditionParams) {
+    return CDR.post<number>({ url: BatchTransferCustomerByConditionUrl, data });
   }
 
   // 批量移入公海
@@ -1123,6 +1130,7 @@ export default function useProductApi(CDR: CordysAxios) {
     batchDeleteCustomer,
     batchDeleteCustomerByCondition,
     batchTransferCustomer,
+    batchTransferCustomerByCondition,
     batchMoveCustomer,
     addCustomerFollowRecord,
     updateCustomerFollowRecord,

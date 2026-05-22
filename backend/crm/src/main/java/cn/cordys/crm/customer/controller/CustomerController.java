@@ -172,6 +172,17 @@ public class CustomerController {
         return customerService.batchTransfer(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
+    @PostMapping("/batch/transfer-by-condition")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_TRANSFER)
+    @Operation(summary = "按筛选条件批量转移客户")
+    public int batchTransferByCondition(@Validated @RequestBody CustomerBatchTransferByConditionRequest request) {
+        ConditionFilterUtils.parseCondition(request);
+        DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(SessionUtils.getUserId(),
+                OrganizationContext.getOrganizationId(), request.getViewId(), PermissionConstants.CUSTOMER_MANAGEMENT_READ);
+        return customerService.batchTransferByCondition(request, SessionUtils.getUserId(),
+                OrganizationContext.getOrganizationId(), deptDataPermission);
+    }
+
     @PostMapping("/batch/update")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE)
     @Operation(summary = "批量更新客户")

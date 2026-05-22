@@ -1,5 +1,10 @@
 <template>
-  <div v-if="listData.length" class="crm-follow-record-list" :style="{ height: props.virtualScrollHeight }" @scroll="handleScroll">
+  <div
+    v-if="listData.length"
+    class="crm-follow-record-list"
+    :style="{ height: props.virtualScrollHeight }"
+    @scroll="handleScroll"
+  >
     <div
       v-for="item in listData"
       :key="String(item[props.keyField as keyof FollowDetailItem] ?? item.id)"
@@ -13,13 +18,15 @@
         <div class="crm-follow-record-title h-[32px]">
           <div class="flex items-center gap-[16px]">
             <slot name="titleLeft" :item="item"></slot>
-<!--            <StatusTagSelect
+            <!--            <StatusTagSelect
               v-if="item.status && props.type === 'followRecord'"
               v-model:status="item.status"
               :disabled="!props.getDisabledFun?.(item) || !!item.converted"
               @change="() => emit('change', item)"
             />-->
-            <CrmTag v-if="isPlanItem(item) && item.status && item.converted"> {{ t('common.hasConvertToRecord') }} </CrmTag>
+            <CrmTag v-if="isPlanItem(item) && item.status && item.converted">
+              {{ t('common.hasConvertToRecord') }}
+            </CrmTag>
             <div class="text-[var(--text-n1)]">{{ getShowTime(item) }}</div>
             <div class="crm-follow-record-method">
               {{ getFollowMethod(item) ?? '-' }}
@@ -146,8 +153,8 @@
         COMPLETED: '',
       };
       const status = stageStatus || '';
-      const prefix = status ? (prefixMap[status] || '') : '';
-      const suffix = status ? (suffixMap[status] || '') : '';
+      const prefix = status ? prefixMap[status] || '' : '';
+      const suffix = status ? suffixMap[status] || '' : '';
       const name = stageName || '';
       return `${prefix}${name}${suffix}` || '-';
     }
@@ -166,8 +173,8 @@
       COMPLETED: '',
     };
     const status = item.stageStatus || '';
-    const prefix = status ? (prefixMap[status] || '') : '';
-    const suffix = status ? (suffixMap[status] || '') : '';
+    const prefix = status ? prefixMap[status] || '' : '';
+    const suffix = status ? suffixMap[status] || '' : '';
     const name = item.stageName || '';
     return `${prefix}${name}${suffix}` || '-';
   }

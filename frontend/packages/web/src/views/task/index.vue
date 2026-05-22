@@ -14,11 +14,7 @@
         />
       </div>
     </CrmCard>
-    <customerOverviewDrawer
-      v-model:show="showCustomerDrawer"
-      :source-id="activeCustomerId"
-      @saved="loadList"
-    />
+    <customerOverviewDrawer v-model:show="showCustomerDrawer" :source-id="activeCustomerId" @saved="loadList" />
     <CrmFormCreateDrawer
       v-model:visible="planFormDrawerVisible"
       :form-key="FormDesignKeyEnum.FOLLOW_PLAN_CUSTOMER"

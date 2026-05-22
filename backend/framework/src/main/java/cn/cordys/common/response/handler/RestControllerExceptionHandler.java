@@ -131,7 +131,7 @@ public class RestControllerExceptionHandler {
                     .body(ResultHolder.error(code, message, e.getMessage()));
         } else {
             // 其他类型的错误，返回 500 状态码
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            return ResponseEntity.status(CrmHttpResultCode.FAILED.getCode())
                     .body(ResultHolder.error(code, Translator.get(message, message), e.getMessage()));
         }
     }

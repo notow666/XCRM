@@ -109,7 +109,7 @@
     allowRepeat: false,
     sizeUnit: 'MB',
     showFileList: false,
-    defaultContent: true
+    defaultContent: true,
   });
 
   const emit = defineEmits<{

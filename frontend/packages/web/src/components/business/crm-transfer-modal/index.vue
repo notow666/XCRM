@@ -80,12 +80,14 @@
     isBatch?: boolean;
     positiveText?: string;
     showCapacity?: boolean;
+    /** 公海池 ID；showCapacity 为 true 时必传 */
+    poolId?: string;
     saveApi?: (params: TransferParams) => Promise<any>;
   }
 
   const props = withDefaults(defineProps<TransferModalProps>(), {
     isBatch: true,
-    showCapacity: true,
+    showCapacity: false,
   });
 
   const emit = defineEmits<{
@@ -126,10 +128,10 @@
   }
 
   async function loadUserCapacity() {
-    if (!props.showCapacity) return;
+    if (!props.showCapacity || !props.poolId) return;
     try {
       loadingUserList.value = true;
-      userCapacityList.value = (await batchUserCapacity()) ?? [];
+      userCapacityList.value = (await batchUserCapacity(props.poolId)) ?? [];
     } catch {
       userCapacityList.value = [];
     } finally {

@@ -7,7 +7,11 @@
     :loading="loading"
     :footer="false"
   >
-    <div v-if="props.type === ModuleConfigEnum.CUSTOMER_MANAGEMENT" class="mb-[16px] text-[12px] leading-[20px]" style="color: #e88080 !important">
+    <div
+      v-if="props.type === ModuleConfigEnum.CUSTOMER_MANAGEMENT"
+      class="mb-[16px] text-[12px] leading-[20px]"
+      style="color: #e88080 !important"
+    >
       {{ t('module.capacitySetTip') }}
     </div>
     <CrmBatchForm

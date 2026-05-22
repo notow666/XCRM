@@ -1,16 +1,15 @@
 <template>
-  <n-spin :show="props.loading" content-class="h-full">
+  <n-spin :show="props.loading" class="h-full min-h-0" content-class="h-full min-h-0 flex flex-col">
     <n-virtual-list
-      v-bind="props"
       ref="listRef"
-      :class="['crm-list', containerStatusClass, props.class]"
+      :class="['crm-list min-h-0 flex-1', containerStatusClass, props.class]"
       :item-size="props.itemHeight"
       :items="listData"
       :style="{
         height: props.virtualScrollHeight,
       }"
-      item-resizable
-      @scroll="handleScroll"
+      :item-resizable="props.itemResizable"
+      @scroll="handleReachBottomScroll"
       @wheel="handleWheel"
     >
       <template #default="{ item }">
@@ -86,8 +85,9 @@
       class?: string;
       itemClass?: string;
       activeItemClass?: string;
-      virtualScrollHeight: string;
+      virtualScrollHeight?: string;
       loading?: boolean;
+      itemResizable?: boolean;
     }>(),
     {
       mode: 'static',
@@ -97,6 +97,8 @@
       draggable: false,
       maxHeight: '300px',
       activeItemClass: 'crm-list-item--active',
+      itemResizable: false,
+      virtualScrollHeight: '100%',
     }
   );
 
@@ -142,31 +144,110 @@
   }
 
   const listRef: Ref = ref(null);
+  /** 提前约 2 条的高度触发加载，减少滚到底部才请求的迟钝感 */
+  const REACH_PRELOAD_ITEMS = 2;
+  let reachBottomLocked = false;
+  let scrollRafId = 0;
+
+  function getScrollContainer() {
+    return (listRef.value?.$el?.querySelector('.v-vl') as HTMLElement | null) ?? null;
+  }
+
+  function getVirtualContentHeight() {
+    return listData.value.length * props.itemHeight;
+  }
+
+  function handleReachBottom() {
+    if (
+      reachBottomLocked ||
+      props.mode !== 'remote' ||
+      props.noMoreData ||
+      props.loading ||
+      listData.value.length === 0
+    ) {
+      return;
+    }
+    reachBottomLocked = true;
+    emit('reachBottom');
+  }
+
+  function isContentUnderfill() {
+    const scrollContainer = getScrollContainer();
+    if (!scrollContainer) {
+      return false;
+    }
+    return getVirtualContentHeight() <= scrollContainer.clientHeight + props.itemHeight;
+  }
+
+  function isReachedBottom(target: HTMLElement) {
+    const { scrollTop, clientHeight } = target;
+    const virtualTotalHeight = getVirtualContentHeight();
+    if (virtualTotalHeight <= clientHeight) {
+      return true;
+    }
+    const preloadPx = props.itemHeight * REACH_PRELOAD_ITEMS;
+    return scrollTop + clientHeight >= virtualTotalHeight - preloadPx;
+  }
+
+  function handleReachBottomScroll(event: Event) {
+    const target = (event.currentTarget || event.target) as HTMLElement;
+    if (!target) {
+      return;
+    }
+    cancelAnimationFrame(scrollRafId);
+    scrollRafId = requestAnimationFrame(() => {
+      if (!isReachedBottom(target)) {
+        return;
+      }
+      handleReachBottom();
+    });
+  }
+
+  function bindScrollContainer() {
+    const listContent = getScrollContainer();
+    if (!listContent) {
+      return;
+    }
+    setContainer(listContent);
+    if (!isInitListener.value) {
+      initScrollListener();
+    }
+  }
+
+  function tryLoadWhenContentUnderfill() {
+    if (!isContentUnderfill()) {
+      return;
+    }
+    handleReachBottom();
+  }
+
+  function scheduleUnderfillCheck() {
+    nextTick(() => {
+      requestAnimationFrame(() => {
+        tryLoadWhenContentUnderfill();
+      });
+    });
+  }
+
   // TODO 暂时还未做拖拽
   watch(
-    listData.value,
+    () => [listData.value.length, props.virtualScrollHeight],
     () => {
-      if (listData.value.length > 0 && !isInitListener.value) {
-        // 如果数据不为空，且没有初始化容器的滚动监听器
+      if (listData.value.length > 0) {
         if (props.draggable) {
-          // 如果开启拖拽
           if (props.virtualScrollHeight) {
-            // 如果开启虚拟滚动，需要将拖拽的容器设置为虚拟滚动的容器
             useDraggable('.crm-list .v-vl', listData, {
               ghostClass: 'crm-list-ghost',
             });
           } else {
-            // 否则直接设置为列表容器
             useDraggable('.v-vl', listData, {
               ghostClass: 'crm-list-ghost',
             });
           }
         }
         nextTick(() => {
-          const listContent = listRef.value?.$el.querySelector('.v-vl');
-
-          setContainer(listContent);
-          initScrollListener();
+          bindScrollContainer();
+          scheduleUnderfillCheck();
         });
       }
     },
@@ -175,20 +256,15 @@
     }
   );
 
-  function handleReachBottom() {
-    if (props.mode === 'remote' && !props.noMoreData && listData.value.length > 0) {
-      emit('reachBottom');
+  watch(
+    () => [listData.value.length, props.loading, props.noMoreData],
+    ([, loading]) => {
+      if (!loading) {
+        reachBottomLocked = false;
+        scheduleUnderfillCheck();
+      }
     }
-  }
-
-  function handleScroll(event: Event) {
-    const target = event.target as HTMLElement;
-    const { scrollTop, scrollHeight, clientHeight } = target;
-    // 判断是否触底
-    if (scrollTop + clientHeight >= scrollHeight - 24) {
-      handleReachBottom();
-    }
-  }
+  );
 
   function handleWheel(event: Event) {
     emit('wheel', event);

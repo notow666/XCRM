@@ -1,0 +1,41 @@
+@font-face {
+  font-family: 'iconfont-reach';
+  src: url('./iconfont.ttf') format('truetype');
+}
+
+.iconfont-reach {
+  font-family: 'iconfont-reach' !important;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@font-face {
+  font-family: 'iconfont-reach-sms';
+  src: url('./iconfont-sms.ttf') format('truetype');
+}
+
+/* 短信：docs/font_vklwe67pjs demo &#xe67b */
+.icon-duanxin:before {
+  font-family: 'iconfont-reach-sms' !important;
+  content: '\e67b';
+}
+
+.icon-weixin:before {
+  content: '\e607';
+}
+
+.icon-a-dianhuadianhua-icon:before {
+  content: '\e505';
+}
+
+@font-face {
+  font-family: 'iconfont-reach-star';
+  src: url('./iconfont-star.ttf') format('truetype');
+}
+
+/* 星星：docs/font_egyt213zrx8 demo icon-xingxing */
+.icon-xingxing:before {
+  font-family: 'iconfont-reach-star' !important;
+  content: '\e870';
+}

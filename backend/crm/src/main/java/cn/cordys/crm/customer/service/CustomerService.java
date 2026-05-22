@@ -112,6 +112,7 @@ import java.util.stream.Stream;
 public class CustomerService {
 
     private static final int BATCH_DELETE_BY_CONDITION_SIZE = 500;
+    private static final int BATCH_TRANSFER_BY_CONDITION_MAX_SIZE = 2000;
     private static final int AUTO_DELETE_POOL_IMPORT_BATCH_SIZE = 500;
 
     @Resource
@@ -826,6 +827,46 @@ public class CustomerService {
     }
 
     public int batchTransfer(CustomerBatchTransferRequest request, String userId, String orgId) {
+        List<String> ownerUserIds = resolveTransferOwnerIds(request);
+        if (CollectionUtils.isEmpty(ownerUserIds)) {
+            throw new GenericException(Translator.get("owner.required"));
+        }
+        if (ownerUserIds.size() == 1) {
+            request.setOwner(ownerUserIds.get(0));
+            return batchTransferSingleOwner(request, userId, orgId);
+        }
+        return batchTransferMultipleOwners(request.getIds(), ownerUserIds, userId, orgId);
+    }
+
+    public int batchTransferByCondition(CustomerBatchTransferByConditionRequest request, String userId, String orgId,
+                                        DeptDataPermissionDTO deptDataPermission) {
+        int transferCount = Math.min(request.getTransferCount(), BATCH_TRANSFER_BY_CONDITION_MAX_SIZE);
+        PageHelper.startPage(1, transferCount, false);
+        List<String> ids = extCustomerMapper.listIds(request, orgId, userId, deptDataPermission);
+        if (CollectionUtils.isEmpty(ids)) {
+            return 0;
+        }
+        CustomerBatchTransferRequest transferRequest = new CustomerBatchTransferRequest();
+        transferRequest.setIds(ids);
+        transferRequest.setOwner(request.getOwner());
+        transferRequest.setOwnerUserIds(request.getOwnerUserIds());
+        return batchTransfer(transferRequest, userId, orgId);
+    }
+
+    private List<String> resolveTransferOwnerIds(CustomerBatchTransferRequest request) {
+        if (CollectionUtils.isNotEmpty(request.getOwnerUserIds())) {
+            return request.getOwnerUserIds().stream()
+                    .filter(StringUtils::isNotBlank)
+                    .distinct()
+                    .collect(Collectors.toList());
+        }
+        if (StringUtils.isNotBlank(request.getOwner())) {
+            return List.of(request.getOwner());
+        }
+        return Collections.emptyList();
+    }
+
+    private int batchTransferSingleOwner(CustomerBatchTransferRequest request, String userId, String orgId) {
         List<Customer> originCustomers = customerMapper.selectByIds(request.getIds());
         List<String> owners = getOwners(originCustomers);
         List<Customer> candidateCustomers = originCustomers.stream()
@@ -864,7 +905,7 @@ public class CustomerService {
             throw new GenericException(Translator.getWithArgs("customer.capacity.over", remainingCapacity));
         }
 
-        dataScopeService.checkDataPermission(userId, orgId, owners, PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE);
+        dataScopeService.checkDataPermission(userId, orgId, owners, PermissionConstants.CUSTOMER_MANAGEMENT_TRANSFER);
 
         List<Customer> ownerSnapshot = customerMobileRuleService.listOwnerOwnedCustomers(request.getOwner(), orgId, null);
         List<Customer> transferableCustomers = new ArrayList<>();
@@ -907,9 +948,93 @@ public class CustomerService {
                 }).toList();
 
         logService.batchAdd(logs);
-        sendTransferNotice(transferredCustomers, request.getOwner(), userId, orgId);
+//        sendTransferNotice(transferredCustomers, request.getOwner(), userId, orgId);
 
         return (int) processCount - transferIds.size();
+    }
+
+    private int batchTransferMultipleOwners(List<String> customerIds, List<String> ownerUserIds, String userId, String orgId) {
+        List<Customer> originCustomers = customerMapper.selectByIds(customerIds);
+        List<String> owners = getOwners(originCustomers);
+        dataScopeService.checkDataPermission(userId, orgId, owners, PermissionConstants.CUSTOMER_MANAGEMENT_TRANSFER);
+
+        Set<String> targetOwnerSet = new HashSet<>(ownerUserIds);
+        List<Customer> candidateCustomers = originCustomers.stream()
+                .filter(customer -> customer.getOwner() == null || !targetOwnerSet.contains(customer.getOwner()))
+                .toList();
+        int totalCandidates = candidateCustomers.size();
+        if (totalCandidates <= 0) {
+            return 0;
+        }
+
+        Map<String, Integer> userCapacitiesMap = new HashMap<>();
+        Map<String, List<Customer>> ownerSnapshotMap = new HashMap<>();
+        for (String targetUserId : ownerUserIds) {
+            userCapacitiesMap.put(targetUserId, getRemainingTransferCapacity(targetUserId, orgId));
+            ownerSnapshotMap.put(targetUserId, customerMobileRuleService.listOwnerOwnedCustomers(targetUserId, orgId, null));
+        }
+
+        Map<String, List<String>> ownerToCustomerIds = new LinkedHashMap<>();
+        int userIdx = 0;
+        int userCount = ownerUserIds.size();
+
+        for (Customer customer : candidateCustomers) {
+            int attempts = 0;
+            boolean success = false;
+            while (attempts < userCount) {
+                String targetUserId = ownerUserIds.get(userIdx);
+                Integer capacity = userCapacitiesMap.get(targetUserId);
+                List<Customer> ownerSnapshot = ownerSnapshotMap.get(targetUserId);
+                if (capacity != null && capacity > 0
+                        && !customerMobileRuleService.hasOwnerReceiveConflict(customer.getMobile(), ownerSnapshot, customer.getCreateSource())) {
+                    ownerToCustomerIds.computeIfAbsent(targetUserId, key -> new ArrayList<>()).add(customer.getId());
+                    userCapacitiesMap.put(targetUserId, capacity - 1);
+                    ownerSnapshot.add(customer);
+                    success = true;
+                    userIdx = (userIdx + 1) % userCount;
+                    break;
+                }
+                userIdx = (userIdx + 1) % userCount;
+                attempts++;
+            }
+            if (!success) {
+                // 所有选中用户库容均不足或存在手机号冲突，该客户无法转移
+            }
+        }
+
+        int transferredCount = 0;
+        for (Map.Entry<String, List<String>> entry : ownerToCustomerIds.entrySet()) {
+            CustomerBatchTransferRequest subRequest = new CustomerBatchTransferRequest();
+            subRequest.setIds(entry.getValue());
+            subRequest.setOwner(entry.getKey());
+            int failCount = batchTransferSingleOwner(subRequest, userId, orgId);
+            transferredCount += entry.getValue().size() - failCount;
+        }
+        return totalCandidates - transferredCount;
+    }
+
+    private int getRemainingTransferCapacity(String targetUserId, String orgId) {
+        CustomerCapacity customerCapacity = poolCustomerService.getUserCapacity(targetUserId, orgId);
+        if (customerCapacity == null || customerCapacity.getCapacity() == null) {
+            return Integer.MAX_VALUE;
+        }
+        List<String> excludeStageIds = new ArrayList<>();
+        String paymentStageId = customerStageService.getPaymentStageId(orgId);
+        String failStageId = customerStageService.getFailStageId(orgId);
+        if (StringUtils.isNotEmpty(paymentStageId)) {
+            excludeStageIds.add(paymentStageId);
+        }
+        if (StringUtils.isNotEmpty(failStageId)) {
+            excludeStageIds.add(failStageId);
+        }
+        int excludeCount = 0;
+        if (CollectionUtils.isNotEmpty(excludeStageIds)) {
+            excludeCount = extCustomerMapper.countByOwnerAndStages(targetUserId, excludeStageIds);
+        }
+        LambdaQueryWrapper<Customer> customerWrapper = new LambdaQueryWrapper<>();
+        customerWrapper.eq(Customer::getOwner, targetUserId).eq(Customer::getInSharedPool, false);
+        int ownCount = customerMapper.selectListByLambda(customerWrapper).size();
+        return Math.max(0, customerCapacity.getCapacity() - (ownCount - excludeCount));
     }
 
     private void sendTransferNotice(List<Customer> originCustomers, String toUser, String userId, String orgId) {
@@ -1075,9 +1200,9 @@ public class CustomerService {
             logDTO.setDetail(detail);
             logs.add(logDTO);
             // 消息通知
-            commonNoticeSendService.sendNotice(NotificationConstants.Module.CUSTOMER,
-                    NotificationConstants.Event.CUSTOMER_MOVED_HIGH_SEAS, customer.getName(), currentUser,
-                    orgId, List.of(customer.getOwner()), true);
+//            commonNoticeSendService.sendNotice(NotificationConstants.Module.CUSTOMER,
+//                    NotificationConstants.Event.CUSTOMER_MOVED_HIGH_SEAS, customer.getName(), currentUser,
+//                    orgId, List.of(customer.getOwner()), true);
             // 插入责任人历史
             customer.setReasonId(request.getReasonId());
             customerOwnerHistoryService.add(customer, currentUser, true);
@@ -1097,7 +1222,7 @@ public class CustomerService {
 
         // 删除跟进记录和跟进计划
         if (CollectionUtils.isNotEmpty(customerIds)) {
-            log.info("批量移入公海删除跟进记录，客户IDs: {}", String.join(",", customerIds));
+            log.debug("批量移入公海删除跟进记录，客户IDs: {}", String.join(",", customerIds));
             followUpRecordService.deleteByCustomerIds(customerIds);
             followUpPlanService.deleteByCustomerIds(customerIds);
         }

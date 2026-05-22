@@ -1,6 +1,6 @@
 <template>
   <div :class="`crm-follow-detail ${props.wrapperClass}`">
-    <div class="p-[24px] pb-[16px] flex items-center justify-between">
+    <div class="flex items-center justify-between p-[24px] pb-[16px]">
       <div>
         <n-button v-if="showAdd" type="primary" @click="handleAdd">
           {{ t(props.activeType === 'followPlan' ? 'crmFollowRecord.writePlan' : 'crmFollowRecord.writeRecord') }}
@@ -215,17 +215,25 @@
 
   const planFormSaveParams = ref<Record<string, any>>({ converted: false });
 
-  watch(() => props.customerStageStatus, (val) => {
-    if (val) {
-      otherFollowRecordSaveParams.value.customerStageStatus = val;
-    }
-  }, { immediate: true });
+  watch(
+    () => props.customerStageStatus,
+    (val) => {
+      if (val) {
+        otherFollowRecordSaveParams.value.customerStageStatus = val;
+      }
+    },
+    { immediate: true }
+  );
 
-  watch(() => props.customerStage, (val) => {
-    if (val) {
-      otherFollowRecordSaveParams.value.customerStage = val;
-    }
-  }, { immediate: true });
+  watch(
+    () => props.customerStage,
+    (val) => {
+      if (val) {
+        otherFollowRecordSaveParams.value.customerStage = val;
+      }
+    },
+    { immediate: true }
+  );
 
   const otherSaveParams = computed(() => {
     if (realFormKey.value === FormDesignKeyEnum.FOLLOW_PLAN_CUSTOMER) {
@@ -303,7 +311,10 @@
       ...descriptionList
         .filter((descItem) => {
           // 跟进记录场景下过滤掉 ownerName 和 processorName
-          if (props.activeType === 'followRecord' && (descItem.key === 'ownerName' || descItem.key === 'processorName')) {
+          if (
+            props.activeType === 'followRecord' &&
+            (descItem.key === 'ownerName' || descItem.key === 'processorName')
+          ) {
             return false;
           }
           return true;
@@ -413,7 +424,7 @@
     [FormDesignKeyEnum.BUSINESS]: ['OPPORTUNITY_MANAGEMENT:UPDATE'],
   };
 
-function getShowAction(item: FollowDetailItem) {
+  function getShowAction(item: FollowDetailItem) {
     // 跟进计划场景下隐藏编辑删除按钮
     if (props.activeType === 'followPlan') {
       return false;
@@ -425,7 +436,7 @@ function getShowAction(item: FollowDetailItem) {
     return props.showAction;
   }
 
-function showEditAndDelete(item: FollowDetailItem) {
+  function showEditAndDelete(item: FollowDetailItem) {
     if (props.activeType === 'followPlan' || props.activeType === 'followRecord') {
       return false;
     }

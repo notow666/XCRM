@@ -1,63 +1,28 @@
 <template>
   <CrmModal
     v-model:show="showModal"
-    size="small"
+    size="medium"
     :title="title"
     :ok-loading="loading"
     :positive-text="props.positiveText || t('common.transfer')"
     @confirm="confirmHandler"
     @cancel="closeHandler"
   >
-    <div class="w-full min-w-[350px]">
-      <NSpin :show="loadingUserList">
-        <div class="max-h-[200px] space-y-1 overflow-y-auto rounded border p-2">
-          <div
-            v-for="item in userCapacityList"
-            :key="item.userId"
-            class="flex cursor-pointer items-center justify-between rounded p-2"
-            :class="[
-              (item.remainingCapacity ?? Infinity) <= 0 ? '!cursor-not-allowed opacity-50' : '',
-              selectedUserId === item.userId ? 'bg-blue-100 ring-1 ring-blue-300' : 'hover:bg-gray-50',
-            ]"
-            @click="(item.remainingCapacity ?? Infinity) > 0 && selectUser(item.userId)"
-          >
-            <div class="flex items-center">
-              <NRadio
-                :checked="selectedUserId === item.userId"
-                :disabled="(item.remainingCapacity ?? Infinity) <= 0"
-                @update:checked="selectUser(item.userId)"
-              />
-              <span class="ml-2 text-sm font-medium">{{ item.userName }}</span>
-            </div>
-            <span
-              v-if="item.capacity"
-              class="text-xs"
-              :class="(item.remainingCapacity ?? Infinity) > 0 ? 'text-gray-500' : 'text-red-500'"
-              >{{ t('module.capacitySet.remaining') }}: {{ item.remainingCapacity ?? '-' }}
-              {{ t('module.capacitySet.count') }}</span
-            >
-            <span v-else class="text-xs text-gray-400">{{ t('module.capacitySet.notConfigured') }}</span>
-          </div>
-          <div v-if="userCapacityList.length === 0 && !loadingUserList" class="py-4 text-center text-gray-400">
-            {{ t('common.noData') }}
-          </div>
-        </div>
-      </NSpin>
+    <div class="w-full">
+      <CrmPoolAssignUserSelect v-model:selected-ids="selectedUserIds" />
     </div>
   </CrmModal>
 </template>
 
 <script lang="ts" setup>
   import { computed, ref, watch } from 'vue';
-  import { DataTableRowKey, NRadio, NSpin, useMessage } from 'naive-ui';
+  import { DataTableRowKey, useMessage } from 'naive-ui';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
   import type { TransferParams } from '@lib/shared/models/customer/index';
-  import type { UserCapacityItem } from '@lib/shared/models/system/module';
 
   import CrmModal from '@/components/pure/crm-modal/index.vue';
-
-  import { batchUserCapacity } from '@/api/modules';
+  import CrmPoolAssignUserSelect from '@/components/business/crm-pool-assign-user-select/index.vue';
 
   const { t } = useI18n();
   const Message = useMessage();
@@ -80,45 +45,23 @@
     default: false,
   });
 
-  const title = computed(() => {
-    if (props.title) {
-      return props.title;
-    }
-    return t('common.batchTransfer');
-  });
+  const title = computed(() => props.title || t('common.transfer'));
 
-  const selectedUserId = ref<string | null>(null);
+  const selectedUserIds = ref<string[]>([]);
   const loading = ref<boolean>(false);
-  const userCapacityList = ref<UserCapacityItem[]>([]);
-  const loadingUserList = ref(false);
-
-  function closeHandler() {
-    selectedUserId.value = null;
-  }
-
-  function selectUser(userId: string) {
-    selectedUserId.value = userId;
-  }
-
-  async function loadUserCapacity() {
-    try {
-      loadingUserList.value = true;
-      userCapacityList.value = (await batchUserCapacity()) ?? [];
-    } catch {
-      userCapacityList.value = [];
-    } finally {
-      loadingUserList.value = false;
-    }
-  }
 
   watch(showModal, (val) => {
     if (val) {
-      loadUserCapacity();
+      selectedUserIds.value = [];
     }
   });
 
+  function closeHandler() {
+    selectedUserIds.value = [];
+  }
+
   function confirmHandler() {
-    if (!selectedUserId.value) {
+    if (!selectedUserIds.value[0]) {
       Message.warning(t('opportunity.selectReceiverPlaceholder'));
       return;
     }
@@ -127,13 +70,14 @@
       props
         .saveApi({
           ids: props.sourceIds,
-          owner: selectedUserId.value,
+          owner: selectedUserIds.value[0],
+          ownerUserIds: selectedUserIds.value,
         })
         .then((data: any) => {
           showModal.value = false;
-          const transferredCount = props.sourceIds.length - (data || 0);
-          if (data && data > 0) {
-            Message.warning(`成功转移 ${transferredCount} 个客户，${data} 个未转移`);
+          const failCount = typeof data === 'number' ? data : 0;
+          if (failCount > 0) {
+            Message.warning(t('customer.transferPartial', { count: failCount }));
           } else {
             Message.success(t('common.transferSuccess'));
           }
@@ -148,5 +92,3 @@
     }
   }
 </script>
-
-<style lang="less" scoped></style>

@@ -16,7 +16,7 @@ const lead: AppRouteRecordRaw = {
     collapsedLocale: 'menu.clue',
   },
   children: [
-      // 隐藏线索
+    // 隐藏线索
     // {
     //   path: 'index',
     //   name: ClueRouteEnum.CLUE_MANAGEMENT_CLUE,

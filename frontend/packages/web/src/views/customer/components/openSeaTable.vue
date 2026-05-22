@@ -186,6 +186,10 @@
 
 <script setup lang="ts">
   // eslint-disable-next-line simple-import-sort/imports
+  import {
+    POOL_BATCH_BY_CONDITION_DOM_EVENT,
+    type PoolBatchByConditionSseDetail,
+  } from '@lib/shared/constants/sseEventType';
   import { computed, VNodeChild } from 'vue';
   import { useRoute } from 'vue-router';
   import { DataTableRowKey, NButton, NSelect, NTooltip, useMessage } from 'naive-ui';
@@ -202,11 +206,11 @@
   import CrmOperationButton from '@/components/business/crm-operation-button/index.vue';
   import CrmPoolAssignByConditionModal from '@/components/business/crm-pool-assign-by-condition-modal/index.vue';
   import CrmPoolBatchEditByConditionModal from '@/components/business/crm-pool-batch-edit-by-condition-modal/index.vue';
+  import CrmPoolAssignUserSelect from '@/components/business/crm-pool-assign-user-select/index.vue';
   import CrmPoolImportButton from '@/components/business/crm-pool-import-button/index.vue';
   import CrmPoolPickByConditionModal from '@/components/business/crm-pool-pick-by-condition-modal/index.vue';
   import CrmPoolTransferByConditionModal from '@/components/business/crm-pool-transfer-by-condition-modal/index.vue';
   import CrmTableExportModal from '@/components/business/crm-table-export-modal/index.vue';
-  import TransferForm from '@/components/business/crm-transfer-modal/transferForm.vue';
   import CrmTransferToPoolModal from '@/components/business/crm-transfer-to-pool-modal/index.vue';
   import CrmViewSelect from '@/components/business/crm-view-select/index.vue';
   import CrmAdvanceFilter from '@/components/pure/crm-advance-filter/index.vue';
@@ -314,11 +318,7 @@
 
   // 批量分配
   const distributeLoading = ref(false);
-  const distributeFormRef = ref<InstanceType<typeof TransferForm>>();
-  const distributeForm = ref<any>({
-    owner: null,
-    owners: [],
-  });
+  const distributeSelectedUserIds = ref<string[]>([]);
   const distributeFormKey = ref(0);
   const showAssignByConditionModal = ref(false);
 
@@ -474,11 +474,15 @@
   }
 
   async function handleDistribute(id: string) {
+    if (!distributeSelectedUserIds.value[0]) {
+      Message.warning(t('opportunity.selectReceiverPlaceholder'));
+      return;
+    }
     try {
       distributeLoading.value = true;
       await assignOpenSeaCustomer({
         customerId: id,
-        assignUserId: distributeForm.value.owner,
+        assignUserId: distributeSelectedUserIds.value[0] || '',
       });
       Message.success(t('common.distributeSuccess'));
       tableRemoveRefreshId.value = id;
@@ -592,22 +596,20 @@
                 groupList: operationGroupList.value,
                 onSelect: (key: string) => handleActionSelect(row, key),
                 onCancel: () => {
-                  distributeForm.value.owner = null;
+                  distributeSelectedUserIds.value = [];
                   distributeFormKey.value += 1;
                 },
               },
               {
                 distributePopContent: () => {
-                  return h(TransferForm, {
+                  return h(CrmPoolAssignUserSelect, {
                     'key': distributeFormKey.value,
-                    'class': 'w-[320px] mt-[16px]',
-                    'form': distributeForm.value,
-                    'onUpdate:form': (val: any) => {
-                      distributeForm.value = val;
+                    'class': 'mt-[16px] min-w-[480px]',
+                    'poolId': openSea.value as string,
+                    'selectedIds': distributeSelectedUserIds.value,
+                    'onUpdate:selectedIds': (ids: string[]) => {
+                      distributeSelectedUserIds.value = ids;
                     },
-                    'ref': distributeFormRef,
-                    'show-capacity': true,
-                    'single': true,
                   });
                 },
               }
@@ -662,12 +664,10 @@
 
   function handlePickByConditionSuccess() {
     checkedRowKeys.value = [];
-    tableRefreshId.value += 1;
   }
 
   function handleAssignByConditionSuccess() {
     checkedRowKeys.value = [];
-    tableRefreshId.value += 1;
   }
 
   function handleTransferByConditionClick() {
@@ -681,7 +681,6 @@
 
   function handleTransferByConditionSuccess() {
     checkedRowKeys.value = [];
-    tableRefreshId.value += 1;
   }
 
   function handleEditByConditionClick() {
@@ -832,6 +831,18 @@
     }
   });
 
+  function onPoolBatchByConditionDone(event: Event) {
+    if (route.name !== CustomerRouteEnum.CUSTOMER_OPEN_SEA || props.readonly) {
+      return;
+    }
+    const { detail } = event as CustomEvent<PoolBatchByConditionSseDetail>;
+    if (!detail?.poolId || String(detail.poolId) !== String(openSea.value)) {
+      return;
+    }
+    checkedRowKeys.value = [];
+    searchData();
+  }
+
   onMounted(() => {
     emit('init', {
       filterConfigList: filterConfigList.value,
@@ -843,9 +854,12 @@
       openSea.value = route.query.poolId as string;
       showOverviewDrawer.value = true;
     }
+
+    window.addEventListener(POOL_BATCH_BY_CONDITION_DOM_EVENT, onPoolBatchByConditionDone);
   });
 
   onBeforeUnmount(() => {
+    window.removeEventListener(POOL_BATCH_BY_CONDITION_DOM_EVENT, onPoolBatchByConditionDone);
     sessionStorage.removeItem(STORAGE_VIEW_CHART_KEY);
   });
 </script>

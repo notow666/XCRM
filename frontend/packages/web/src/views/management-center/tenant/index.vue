@@ -186,7 +186,9 @@
     if (ms == null) return '-';
     const d = new Date(ms);
     const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(
+      d.getMinutes()
+    )}:${pad(d.getSeconds())}`;
   }
 
   async function handleSaveOrgId() {
@@ -209,7 +211,7 @@
       key: 'createTime',
       render: (row: PlatformTenantItem) => formatDateTime(row.createTime),
     },
-    { title: 'org_id', key: 'orgId'},
+    { title: 'org_id', key: 'orgId' },
     { title: 'dbName', key: 'dbName' },
     {
       title: 'status',

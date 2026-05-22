@@ -578,7 +578,7 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
         if (!asyncApi || !props.sourceId?.value) return;
         form = await asyncApi(props.sourceId?.value);
       }
-        // 计算客户阶段显示名称
+      // 计算客户阶段显示名称
       if (
         [FormDesignKeyEnum.CUSTOMER, FormDesignKeyEnum.SEARCH_ADVANCED_CUSTOMER].includes(
           props.formKey.value as FormDesignKeyEnum
@@ -598,8 +598,8 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
           FAILED: '',
         };
         const status = form.stageStatus || '';
-        const prefix = status ? (prefixMap[status] || '') : '';
-        const suffix = status ? (suffixMap[status] || '') : '';
+        const prefix = status ? prefixMap[status] || '' : '';
+        const suffix = status ? suffixMap[status] || '' : '';
         const name = form.stageName || '';
         form.stageDisplayName = prefix + name + suffix || '-';
       }
@@ -1007,7 +1007,8 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
       }
       if (field.businessKey === 'customerId') {
         const customerId = props.sourceId?.value || props.otherSaveParams?.value?.customerId;
-        const customerName = sourceName.value || props.initialSourceName?.value || props.otherSaveParams?.value?.customerName;
+        const customerName =
+          sourceName.value || props.initialSourceName?.value || props.otherSaveParams?.value?.customerName;
         specialInitialOptions.value = [
           {
             id: customerId,
@@ -1027,19 +1028,26 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
       if (field.businessKey === 'owner' && props.otherSaveParams?.value?.owner) {
         return {
           defaultValue: props.otherSaveParams.value.owner,
-          initialOptions: [{ id: props.otherSaveParams.value.owner, name: props.otherSaveParams.value.ownerName || '' }],
+          initialOptions: [
+            { id: props.otherSaveParams.value.owner, name: props.otherSaveParams.value.ownerName || '' },
+          ],
         };
       }
       if (field.businessKey === 'processor' && props.otherSaveParams?.value?.owner) {
         return {
           defaultValue: props.otherSaveParams.value.owner,
-          initialOptions: [{ id: props.otherSaveParams.value.owner, name: props.otherSaveParams.value.ownerName || '' }],
+          initialOptions: [
+            { id: props.otherSaveParams.value.owner, name: props.otherSaveParams.value.ownerName || '' },
+          ],
         };
       }
       // 无效客户和已完成客户场景下，跟进结果默认"跟进中"且不可更改
       // 根据 customerStage 判断（stage_fail 或 stage_payment）
       const customerStage = props.otherSaveParams?.value?.customerStage;
-      if (field.businessKey === 'recordResult' && (customerStage === 'stage_fail' || customerStage === 'stage_payment')) {
+      if (
+        field.businessKey === 'recordResult' &&
+        (customerStage === 'stage_fail' || customerStage === 'stage_payment')
+      ) {
         return {
           defaultValue: 'IN_PROGRESS',
           initialOptions: field.initialOptions,

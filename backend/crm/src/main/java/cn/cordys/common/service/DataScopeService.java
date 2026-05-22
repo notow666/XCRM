@@ -14,7 +14,6 @@ import cn.cordys.crm.system.service.RoleService;
 import cn.cordys.mybatis.BaseMapper;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections4.SetUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.springframework.stereotype.Service;
@@ -110,38 +109,6 @@ public class DataScopeService {
         return getDeptDataPermissionForDept(userId, orgId, dataScopeRoleMap, permission);
     }
 
-    public DeptDataPermissionDTO getDeptDataPermission(String userId, String orgId, String... permissions) {
-        DeptDataPermissionDTO deptDataPermission = new DeptDataPermissionDTO();
-
-        if (Strings.CS.equals(userId, InternalUser.ADMIN.getValue())) {
-            // 超级管理员查看所有数据
-            deptDataPermission.setAll(true);
-            return deptDataPermission;
-        }
-
-        Map<String, List<RolePermissionDTO>> dataScopeRoleMap = getDataScopeRoleMap(userId, orgId);
-
-        boolean hasAllPermission = hasDataScopePermission(dataScopeRoleMap, RoleDataScope.DEPT_AND_CHILD.name(), permissions);
-
-        if (hasAllPermission) {
-            // 可以查看所有数据
-            deptDataPermission.setAll(true);
-            return deptDataPermission;
-        }
-
-        List<RolePermissionDTO> userDeptRoles = dataScopeRoleMap.get(RoleDataScope.DEPT_AND_CHILD.name());
-        List<RolePermissionDTO> customDeptRoles = dataScopeRoleMap.get(RoleDataScope.DEPT_CUSTOM.name());
-
-        if (CollectionUtils.isEmpty(userDeptRoles)
-                && CollectionUtils.isEmpty(customDeptRoles)) {
-            // 如果没有部门权限,则默认只能查看自己的数据
-            deptDataPermission.setSelf(true);
-            return deptDataPermission;
-        }
-
-        return getDeptDataPermissionForDept(userId, orgId, dataScopeRoleMap, permissions);
-    }
-
     private DeptDataPermissionDTO getDeptDataPermissionForAllPermission(String userId, String orgId) {
         DeptDataPermissionDTO deptDataPermission = new DeptDataPermissionDTO();
         // 查询部门树
@@ -186,36 +153,6 @@ public class DataScopeService {
         return deptDataPermission;
     }
 
-    private DeptDataPermissionDTO getDeptDataPermissionForDept(String userId, String orgId,
-                                                               Map<String, List<RolePermissionDTO>> dataScopeRoleMap,
-                                                               String... permissions) {
-        DeptDataPermissionDTO deptDataPermission = new DeptDataPermissionDTO();
-        // 查询部门树
-        List<BaseTreeNode> tree = departmentService.getTree(orgId);
-
-        boolean hasDeptAndChildPermission = hasDataScopePermission(dataScopeRoleMap, RoleDataScope.DEPT_AND_CHILD.name(), permissions);
-
-        if (hasDeptAndChildPermission) {
-            // 查看用户部门及其子部门数据
-            OrganizationUser organizationUser = getOrganizationUser(userId, orgId);
-            List<String> deptIds = getDeptIdsWithChild(tree, Set.of(organizationUser.getDepartmentId()));
-            deptDataPermission.getDeptIds().addAll(deptIds);
-        }
-
-        List<RolePermissionDTO> customDeptRoles = dataScopeRoleMap.get(RoleDataScope.DEPT_CUSTOM.name());
-        boolean hasDeptCustomPermission = hasDataScopePermission(dataScopeRoleMap, RoleDataScope.DEPT_CUSTOM.name(), permissions);
-
-        if (hasDeptCustomPermission) {
-            // 查看指定部门及其子部门数据
-            List<String> customDeptRolesIds = customDeptRoles.stream()
-                    .map(RoleDataScopeDTO::getId)
-                    .toList();
-            List<String> parentDeptIds = roleService.getDeptIdsByRoleIds(customDeptRolesIds);
-            List<String> deptIds = getDeptIdsWithChild(tree, new HashSet<>(parentDeptIds));
-            deptDataPermission.getDeptIds().addAll(deptIds);
-        }
-        return deptDataPermission;
-    }
 
     public boolean hasDataScopePermission(Map<String, List<RolePermissionDTO>> dataScopeRoleMap, String dataScope, String permission) {
         List<RolePermissionDTO> roleDataScopes = dataScopeRoleMap.get(dataScope);
@@ -224,21 +161,6 @@ public class DataScopeService {
         }
         for (RolePermissionDTO roleDataScope : roleDataScopes) {
             if (roleDataScope.getPermissions().contains(permission)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public boolean hasDataScopePermission(Map<String, List<RolePermissionDTO>> dataScopeRoleMap, String dataScope, String... permissions) {
-        List<RolePermissionDTO> roleDataScopes = dataScopeRoleMap.get(dataScope);
-        if (roleDataScopes == null) {
-            return false;
-        }
-        Set<String> stringSet = Arrays.stream(permissions).collect(Collectors.toSet());
-        for (RolePermissionDTO roleDataScope : roleDataScopes) {
-            Set<String> intersection = SetUtils.intersection(roleDataScope.getPermissions(), stringSet).toSet();
-            if (CollectionUtils.isNotEmpty(intersection)) {
                 return true;
             }
         }

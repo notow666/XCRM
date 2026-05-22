@@ -641,10 +641,12 @@
                   {
                     transferPopContent: () => {
                       return h(TransferForm, {
-                        class: 'w-[320px] mt-[16px]',
-                        form: transferForm.value,
-                        'onUpdate:form': (val: any) => { transferForm.value = val; },
-                        ref: transferFormRef,
+                        'class': 'w-[320px] mt-[16px]',
+                        'form': transferForm.value,
+                        'onUpdate:form': (val: any) => {
+                          transferForm.value = val;
+                        },
+                        'ref': transferFormRef,
                       });
                     },
                   }

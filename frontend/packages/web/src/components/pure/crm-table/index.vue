@@ -73,7 +73,10 @@
       </n-button>
     </div>
     <slot name="view"></slot>
-    <slot name="other"></slot>
+    <div v-if="props.notShowTable" class="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <slot name="other"></slot>
+    </div>
+    <slot v-else name="other"></slot>
     <template v-if="!props.notShowTable">
       <n-data-table
         ref="tableRef"
@@ -198,6 +201,7 @@
     (e: 'rowKeyChange', keys: DataTableRowKey[], rows: InternalRowData[]): void;
     (e: 'drag', params: TableDraggedParams): void;
     (e: 'refresh'): void;
+    (e: 'changeColumnsSetting'): void;
   }>();
   const attrs = useAttrs();
   const { t } = useI18n();
@@ -214,6 +218,16 @@
   const { toggleFullScreen, isFullScreen } = useFullScreen(actualTargetRef, !!attrs.hiddenAllScreen);
 
   function scrollTo(options: { top?: number; left?: number }) {
+    if (props.notShowTable) {
+      const listScroller = tableFullRef.value?.querySelector('.v-vl') as HTMLElement | null;
+      if (listScroller) {
+        listScroller.scrollTop = options.top ?? 0;
+        if (options.left !== undefined) {
+          listScroller.scrollLeft = options.left;
+        }
+        return;
+      }
+    }
     tableRef.value?.scrollTo(options);
   }
 
@@ -548,6 +562,7 @@
   function changeColumnsSetting() {
     initColumn();
     initLayoutType();
+    emit('changeColumnsSetting');
   }
 
   function patchColKeys() {

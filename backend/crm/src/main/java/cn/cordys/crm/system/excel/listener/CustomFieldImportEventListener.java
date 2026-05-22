@@ -20,11 +20,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
-import org.apache.commons.lang3.time.StopWatch;
 
 import java.lang.reflect.Method;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 自定义字段导入处理器
@@ -123,6 +121,7 @@ public class CustomFieldImportEventListener<T> extends CustomFieldCheckEventList
 
     @Override
     public void doAfterAllAnalysed(AnalysisContext analysisContext) {
+        super.doAfterAllAnalysed(analysisContext);
         if (CollectionUtils.isNotEmpty(this.dataList) || CollectionUtils.isNotEmpty(this.fields) || CollectionUtils.isNotEmpty(this.blobFields)) {
             batchProcessData();
         }

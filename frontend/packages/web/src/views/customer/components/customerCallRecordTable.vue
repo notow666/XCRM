@@ -75,7 +75,9 @@
       loadingAudioRowId.value = row.id;
       try {
         const res = await previewAccountCallRecordAudio(row.id);
-        const audioUrl = URL.createObjectURL(new Blob([res.data], { type: res.headers['content-type'] || 'audio/mpeg' }));
+        const audioUrl = URL.createObjectURL(
+          new Blob([res.data], { type: res.headers['content-type'] || 'audio/mpeg' })
+        );
         audioUrlMap.value = {
           ...audioUrlMap.value,
           [row.id]: audioUrl,

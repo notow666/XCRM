@@ -1,7 +1,6 @@
 package cn.cordys.crm.customer.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -20,8 +19,10 @@ public class CustomerBatchTransferRequest {
     @Schema(description = "ids", requiredMode = Schema.RequiredMode.REQUIRED)
     private List<String> ids;
 
-    @NotBlank
     @Size(max = 32)
-    @Schema(description = "修改负责人", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "修改负责人（单选）")
     private String owner;
+
+    @Schema(description = "转移用户ID列表（多选）")
+    private List<String> ownerUserIds;
 }

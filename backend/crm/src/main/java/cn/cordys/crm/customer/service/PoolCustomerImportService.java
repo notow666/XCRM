@@ -645,15 +645,15 @@ public class PoolCustomerImportService {
                 Locale locale = resolveUserLocale(operator);
                 LocaleContextHolder.setLocale(locale);
 
-                int success = poolCustomerImportExecutor.executeImport(file, poolId, userId, orgId);
-                sendImportNotice(userId, orgId, pool,true, success,null);
+                String success = poolCustomerImportExecutor.executeImport(file, poolId, userId, orgId);
+                sendImportNotice(userId, orgId, pool,true, success);
             } catch (Exception e) {
                 log.error("pool customer import error", e);
                 User operator = userBaseMapper.selectByPrimaryKey(userId);
                 Locale locale = resolveUserLocale(operator);
                 LocaleContextHolder.setLocale(locale);
                 String errMsg = e.getMessage() != null ? StringUtils.abbreviate(e.getMessage(), 500) : "";
-                sendImportNotice(userId, orgId, pool, false, 0, errMsg);
+                sendImportNotice(userId, orgId, pool, false, errMsg);
             } finally {
                 LocaleContextHolder.setLocale(prevLocale);
             }
@@ -676,14 +676,14 @@ public class PoolCustomerImportService {
         return Locale.SIMPLIFIED_CHINESE;
     }
 
-    private void sendImportNotice(String userId, String orgId, CustomerPool pool, boolean success, int successCount, String errorMessage) {
+    private void sendImportNotice(String userId, String orgId, CustomerPool pool, boolean success, String msg) {
         if (DataSpecialistConstants.isSpecialistUserId(userId)) {
-            sendDataSpecialistPoolImportSse(userId, pool, success, successCount, errorMessage);
+            sendDataSpecialistPoolImportSse(userId, pool, success, msg);
             return;
         }
         String resultSuffix = success
-                ? Translator.get("pool.import.notify.result.success") + successCount
-                : Translator.get("pool.import.notify.result.failure") + (StringUtils.isNotBlank(errorMessage) ? errorMessage : "");
+                ? Translator.get("pool.import.notify.result.success") + msg
+                : Translator.get("pool.import.notify.result.failure") + (StringUtils.isNotBlank(msg) ? msg : "");
         Map<String, Object> resource = new HashMap<>();
         resource.put("poolId", pool.getId());
         resource.put("poolName", pool.getName());
@@ -697,15 +697,13 @@ public class PoolCustomerImportService {
     /**
      * 数据专员不属于租户用户，不走站内通知；按数据专员主体推送 SSE（与当前操作租户无关）。
      */
-    private void sendDataSpecialistPoolImportSse(String userId, CustomerPool pool, boolean success, int successCount, String errorMessage) {
+    private void sendDataSpecialistPoolImportSse(String userId, CustomerPool pool, boolean success, String msg) {
         String text = success
-                ? Translator.get("pool.import.notify.result.success") + successCount
-                : Translator.get("pool.import.notify.result.failure") + (StringUtils.isNotBlank(errorMessage) ? errorMessage : "");
+                ? Translator.get("pool.import.notify.result.success") + msg
+                : Translator.get("pool.import.notify.result.failure") + (StringUtils.isNotBlank(msg) ? msg : "");
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("type", DataSpecialistConstants.SSE_POOL_IMPORT_RESULT_TYPE);
         payload.put("success", success);
-        payload.put("successCount", successCount);
-        payload.put("errorMessage", StringUtils.trimToNull(errorMessage));
         payload.put("poolId", pool.getId());
         payload.put("poolName", pool.getName());
         payload.put("message", text);

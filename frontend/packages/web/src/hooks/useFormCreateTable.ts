@@ -185,7 +185,7 @@ export default async function useFormCreateTable(props: FormCreateTableProps) {
       },
       sortOrder: false,
       sorter: true,
-      render: (row: any) => (row.followTime ? dayjs(row.followTime).format('YYYY-MM-DD') : '-'),
+      render: (row: any) => (row.followTime ? dayjs(row.followTime).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
     {
       title: t('customer.remainingVesting'),
@@ -289,7 +289,7 @@ export default async function useFormCreateTable(props: FormCreateTableProps) {
       },
       sortOrder: false,
       sorter: true,
-      render: (row: any) => (row.followTime ? dayjs(row.followTime).format('YYYY-MM-DD') : '-'),
+      render: (row: any) => (row.followTime ? dayjs(row.followTime).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
     {
       title: t('customer.stage'),
@@ -638,7 +638,7 @@ export default async function useFormCreateTable(props: FormCreateTableProps) {
         },
         sortOrder: false,
         sorter: true,
-        render: (row: any) => (row.followTime ? dayjs(row.followTime).format('YYYY-MM-DD') : '-'),
+        render: (row: any) => (row.followTime ? dayjs(row.followTime).format('YYYY-MM-DD HH:mm:ss') : '-'),
       },
     ],
     [FormDesignKeyEnum.PRODUCT]: [],
@@ -676,7 +676,7 @@ export default async function useFormCreateTable(props: FormCreateTableProps) {
         },
         sortOrder: false,
         sorter: true,
-        render: (row: any) => (row.followTime ? dayjs(row.followTime).format('YYYY-MM-DD') : '-'),
+        render: (row: any) => (row.followTime ? dayjs(row.followTime).format('YYYY-MM-DD HH:mm:ss') : '-'),
       },
     ],
     [FormDesignKeyEnum.CLUE_POOL]: [
@@ -713,7 +713,7 @@ export default async function useFormCreateTable(props: FormCreateTableProps) {
         },
         sortOrder: false,
         sorter: true,
-        render: (row: any) => (row.followTime ? dayjs(row.followTime).format('YYYY-MM-DD') : '-'),
+        render: (row: any) => (row.followTime ? dayjs(row.followTime).format('YYYY-MM-DD HH:mm:ss') : '-'),
       },
     ],
     [FormDesignKeyEnum.CUSTOMER_OPPORTUNITY]: opportunityInternalColumns,
@@ -1276,6 +1276,7 @@ export default async function useFormCreateTable(props: FormCreateTableProps) {
               sortOrder: false,
               sorter: sorter && !field.resourceFieldId,
               filedType: field.type,
+              dateType: field.dateType,
               resourceFieldId: field.resourceFieldId,
             };
           }

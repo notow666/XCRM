@@ -7,6 +7,7 @@ export const DeleteCustomerUrl = '/account/delete'; // 删除客户
 export const BatchDeleteCustomerUrl = '/account/batch/delete'; // 批量删除客户
 export const BatchDeleteCustomerByConditionUrl = '/account/batch/delete-by-condition'; // 按筛选条件批量删除客户
 export const BatchTransferCustomerUrl = '/account/batch/transfer'; // 批量转移客户
+export const BatchTransferCustomerByConditionUrl = '/account/batch/transfer-by-condition'; // 按筛选条件批量转移客户
 export const BatchMoveCustomerUrl = '/account/batch/to-pool'; // 批量移入公海
 export const MoveToCustomerUrl = '/account/to-pool'; // 移入公海
 export const UpdateCustomerFollowRecordUrl = '/account/follow/record/update'; // 更新跟进记录

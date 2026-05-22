@@ -13,11 +13,7 @@
     @saved="handleSaved"
   >
     <template #transferPopContent>
-      <TransferForm
-        ref="transferFormRef"
-        v-model:form="transferForm"
-        :module-type="ModuleConfigEnum.CUSTOMER_MANAGEMENT"
-      />
+      <CrmPoolAssignUserSelect v-model:selected-ids="transferSelectedUserIds" class="mt-[16px] min-w-[480px]" />
     </template>
     <template #left>
       <div class="h-full overflow-hidden">
@@ -171,9 +167,9 @@
   import CrmHeaderTable from '@/components/business/crm-header-table/index.vue';
   import CrmMoveModal from '@/components/business/crm-move-modal/index.vue';
   import CrmOverviewDrawer from '@/components/business/crm-overview-drawer/index.vue';
+  import CrmPoolAssignUserSelect from '@/components/business/crm-pool-assign-user-select/index.vue';
   import CrmSelectPoolModal from '@/components/business/crm-select-pool-modal/index.vue';
   import type { TabContentItem } from '@/components/business/crm-tab-setting/type';
-  import TransferForm from '@/components/business/crm-transfer-modal/transferForm.vue';
   import CrmWorkflowCard from '@/components/business/crm-workflow-card/index.vue';
   import collaborator from './collaborator.vue';
   import CustomerCallRecordTable from './customerCallRecordTable.vue';
@@ -184,11 +180,11 @@
   import OrderTable from '@/views/order/order/components/orderTable.vue';
 
   import {
+    batchTransferCustomer,
     deleteCustomer,
     getCustomer,
     getCustomerHeaderList,
     getCustomerStageConfig,
-    updateCustomer,
   } from '@/api/modules';
   import useModal from '@/hooks/useModal';
   import { hasAnyPermission } from '@/utils/permission';
@@ -394,19 +390,20 @@
     return fullList;
   });
 
-  const transferFormRef = ref<InstanceType<typeof TransferForm>>();
-  const transferForm = ref<any>({
-    owner: null,
-    belongToPublicPool: null,
-  });
+  const transferSelectedUserIds = ref<string[]>([]);
 
   // 转移
   async function transfer() {
+    if (!transferSelectedUserIds.value[0]) {
+      Message.warning(t('opportunity.selectReceiverPlaceholder'));
+      return;
+    }
     try {
       transferLoading.value = true;
-      await updateCustomer({
-        id: props.sourceId,
-        owner: transferForm.value.owner,
+      await batchTransferCustomer({
+        ids: [props.sourceId],
+        owner: transferSelectedUserIds.value[0],
+        ownerUserIds: transferSelectedUserIds.value,
       });
       Message.success(t('common.transferSuccess'));
       descriptionRef.value?.initFormDescription();

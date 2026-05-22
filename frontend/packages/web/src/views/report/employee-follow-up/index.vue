@@ -264,7 +264,9 @@
     drilldownState.metricType = metricType;
     // 客户来源汇总里显示为 "-" 的行，真实维度键是空串；下钻时改传约定值，避免被后端 @NotBlank 拦截。
     drilldownState.dimensionKey =
-      form.dimension === Dimension.CUSTOMER_SOURCE && !row.dimensionKey ? EMPTY_CUSTOMER_SOURCE_DIMENSION_KEY : row.dimensionKey;
+      form.dimension === Dimension.CUSTOMER_SOURCE && !row.dimensionKey
+        ? EMPTY_CUSTOMER_SOURCE_DIMENSION_KEY
+        : row.dimensionKey;
     drilldownState.title = resolveDrilldownTitle(metricType);
     drilldownState.current = 1;
     drilldownState.pageSize = 10;
