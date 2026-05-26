@@ -27,6 +27,7 @@ import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
 import cn.cordys.security.SessionUser;
 import cn.cordys.security.SessionUtils;
 import cn.cordys.security.UserDTO;
+import cn.cordys.tenant.domain.Tenant;
 import cn.cordys.tenant.service.TenantMetaService;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections.CollectionUtils;
@@ -158,13 +159,13 @@ public class UserLoginService {
 
         // 确定当前租户ID并校验绑定关系
         String tenantId = determineTenantId();
-        validateTenantBinding(tenantId);
+        Tenant tenant = validateTenantBinding(tenantId);
 
         // 确定当前使用的组织ID
         String organizationId = determineOrganizationId(userDTO, orgIds);
 
         // 设置用户权限和角色信息
-        setupUserPermissions(userDTO, organizationId, orgIds, tenantId);
+        setupUserPermissions(userDTO, organizationId, orgIds, tenant);
 
         //默认密码检查
         checkDefaultPwd(userDTO);
@@ -296,7 +297,7 @@ public class UserLoginService {
     /**
      * 设置用户的权限和角色信息
      */
-    private void setupUserPermissions(UserDTO userDTO, String organizationId, Set<String> orgIds, String tenantId) {
+    private void setupUserPermissions(UserDTO userDTO, String organizationId, Set<String> orgIds, Tenant tenant) {
         // 设置用户角色
         List<RoleDataScopeDTO> roleOptions = roleService.getRoleOptions(userDTO.getId(), organizationId);
         userDTO.setRoles(roleOptions);
@@ -315,8 +316,8 @@ public class UserLoginService {
         userDTO.setOrganizationIds(orgIds);
 
         // 设置租户信息
-        userDTO.setTenantId(tenantId);
-        userDTO.setTenantIds(Sets.newHashSet(tenantId));
+        userDTO.setTenantId(tenant.getId());
+        userDTO.setTenantName(tenant.getName());
     }
 
     private String determineTenantId() {
@@ -328,10 +329,13 @@ public class UserLoginService {
         return tenantId;
     }
 
-    private void validateTenantBinding(String tenantId) {
-        if (!tenantMetaService.isTenantEnabled(tenantId)) {
+    private Tenant validateTenantBinding(String tenantId) {
+        Tenant one = tenantMetaService.getOne(tenantId);
+        boolean status = one != null && one.getStatus() != null && "ACTIVE".equalsIgnoreCase(one.getStatus());
+        if (!status) {
             throw new DisabledAccountException(Translator.get("tenant.disabled"));
         }
+        return one;
     }
 
     /**

@@ -31,6 +31,14 @@ export default function useTableStore() {
     [TableKeyEnum.CLUE_POOL]: ['createUser', 'createTime', 'updateUser', 'updateTime'],
   };
 
+  /** 客户列表已下线、仅固定信息区展示的列，需从表头配置中剔除 */
+  const REMOVED_CUSTOMER_COLUMN_KEYS = ['stageStatus'];
+
+  function pruneCustomerColumns(columns: CrmDataTableColumn[], tableKey: TableKeyEnum) {
+    if (tableKey !== TableKeyEnum.CUSTOMER) return columns;
+    return columns.filter((item) => !REMOVED_CUSTOMER_COLUMN_KEYS.includes(String(item.key)));
+  }
+
   function columnsTransform(columns: CrmDataTableColumn[], tableKey: TableKeyEnum) {
     const hiddenColumnKeys = DEFAULT_HIDDEN_COLUMN_KEYS[tableKey] || [];
     columns.forEach((item) => {
@@ -94,20 +102,21 @@ export default function useTableStore() {
       const tableColumnsMap = await getTableColumnsMap(tableKey);
       if (!tableColumnsMap) {
         // 如果没有在indexDB里初始化
-        column = columnsTransform(column, tableKey);
+        column = pruneCustomerColumns(columnsTransform(column, tableKey), tableKey);
         await setTableColumnsMap(tableKey, {
           column,
           columnBackup: cloneDeep(column),
         });
       } else {
         // 初始化过了，但是可能有新变动，如列的顺序，列的显示隐藏，列的拖拽
-        column = columnsTransform(column, tableKey);
+        column = pruneCustomerColumns(columnsTransform(column, tableKey), tableKey);
+        const prunedStoredColumn = pruneCustomerColumns(tableColumnsMap.column, tableKey);
         const { columnBackup: oldColumn } = tableColumnsMap;
-        // 比较页面上定义的 column 和 浏览器备份的column 是否相同
         const isEqual = isArraysEqualWithOrder(oldColumn, column);
-        if (!isEqual) {
+        if (!isEqual || prunedStoredColumn.length !== tableColumnsMap.column.length) {
           // 如果不相等，说明有变动将新的column存入indexDB
-          const newColumns = sortByOldOrder(tableColumnsMap.column, column).map((e) => {
+          const newColumns = pruneCustomerColumns(
+            sortByOldOrder(prunedStoredColumn, column).map((e) => {
             const sameItem = tableColumnsMap.column.find((item) => item.key === e.key);
             if (sameItem) {
               // 如果是相同的列，则更新除了宽度、显隐、固定以外的属性
@@ -127,7 +136,9 @@ export default function useTableStore() {
               };
             }
             return e;
-          });
+            }),
+            tableKey
+          );
           await setTableColumnsMap(tableKey, {
             ...tableColumnsMap,
             column: newColumns,
@@ -145,11 +156,14 @@ export default function useTableStore() {
   async function getCanSetColumns(tableKey: TableKeyEnum) {
     const tableColumnsMap = await getTableColumnsMap(tableKey);
     if (tableColumnsMap) {
-      return tableColumnsMap.column.filter(
-        (item) =>
-          item.type !== SpecialColumnEnum.SELECTION &&
-          item.key !== SpecialColumnEnum.ORDER &&
-          item.key !== SpecialColumnEnum.DRAG
+      return pruneCustomerColumns(
+        tableColumnsMap.column.filter(
+          (item) =>
+            item.type !== SpecialColumnEnum.SELECTION &&
+            item.key !== SpecialColumnEnum.ORDER &&
+            item.key !== SpecialColumnEnum.DRAG
+        ),
+        tableKey
       );
     }
     return [];
@@ -159,7 +173,10 @@ export default function useTableStore() {
   async function getShowInTableColumns(tableKey: TableKeyEnum) {
     const tableColumnsMap = await getTableColumnsMap(tableKey);
     if (tableColumnsMap) {
-      return tableColumnsMap.column.filter((i) => i.showInTable);
+      return pruneCustomerColumns(
+        tableColumnsMap.column.filter((i) => i.showInTable),
+        tableKey
+      );
     }
     return [];
   }

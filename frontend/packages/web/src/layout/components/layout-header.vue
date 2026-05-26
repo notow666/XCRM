@@ -3,9 +3,21 @@
     <div class="flex min-w-[180px] max-w-[300px] justify-center px-[24px] py-[14px]">
       <img :src="innerLogo" class="h-[28px]" />
     </div>
-    <div class="flex flex-1 items-center justify-between px-[16px]">
-      <CrmTopMenu v-if="!isPlatformUser" />
-      <div v-if="!props.isPreview && !isPlatformUser" class="flex items-center gap-[8px]">
+    <div class="flex flex-1 items-center justify-between gap-[16px] px-[16px]">
+      <div class="flex min-w-0 flex-1 items-center gap-[16px]">
+        <CrmTopMenu v-if="!isPlatformUser" />
+      </div>
+      <div class="flex shrink-0 items-center gap-[8px]">
+         <span
+             v-if="!isPlatformUser && currentTenantName"
+             class="tenant-name-label truncate text-[14px] font-medium text-[var(--text-n1)]"
+             :style="{ fontSize: '18px', fontWeight: '600' }"
+             :title="currentTenantName"
+         >
+          {{ currentTenantName }}
+        </span>
+      </div>
+      <div v-if="!props.isPreview && !isPlatformUser" class="flex shrink-0 items-center gap-[8px]">
         <CrmButtonGroup not-show-divider class="gap-[8px]" :list="appStore.getNavTopConfigList">
           <template #searchSlot>
             <n-button v-if="showSearch" class="p-[8px]" quaternary @click="showDuplicateCheckDrawer = true">
@@ -215,6 +227,8 @@
   const licenseStore = useLicenseStore();
   const isPlatformUser = computed(() => userStore.userInfo.source === 'PLATFORM');
 
+  const currentTenantName = computed(() => userStore.userInfo.tenantName?.trim() || '');
+
   const props = defineProps<{
     isPreview?: boolean;
     logo?: string;
@@ -363,7 +377,6 @@
     }
     appStore.initMessage();
     appStore.connectSystemMessageSSE(userStore.showSystemNotify);
-    appStore.showSQLBot();
     userStore.initApiKeyList();
   });
 

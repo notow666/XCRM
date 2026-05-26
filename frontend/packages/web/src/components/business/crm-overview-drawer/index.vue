@@ -16,6 +16,7 @@
       </n-tooltip>
     </template>
     <template #titleRight>
+      <slot name="titleRightPrefix" />
       <CrmButtonGroup :list="props.buttonList" not-show-divider @select="handleButtonClick">
         <template v-for="item in props.buttonList" #[item.popSlotContent]>
           <slot :name="item.popSlotContent"></slot>

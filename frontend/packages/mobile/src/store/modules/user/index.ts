@@ -38,6 +38,7 @@ const useUserStore = defineStore('user', {
       updateTime: 0,
       language: '',
       tenantId: '',
+      tenantName: '',
       tenantIds: [],
       lastOrganizationId: '',
       phone: '',

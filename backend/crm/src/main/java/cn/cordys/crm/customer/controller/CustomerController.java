@@ -118,6 +118,7 @@ public class CustomerController {
         ConditionFilterUtils.parseCondition(request);
         DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(SessionUtils.getUserId(),
                 OrganizationContext.getOrganizationId(), request.getViewId(), PermissionConstants.CUSTOMER_MANAGEMENT_READ);
+        request.setSort(SortRequest.customerPage());
         return customerService.list(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), deptDataPermission);
     }
 
@@ -142,34 +143,11 @@ public class CustomerController {
         return customerService.add(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
-    @PostMapping("/update")
-    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE)
-    @Operation(summary = "更新客户")
-    public Customer update(@Validated @RequestBody CustomerUpdateRequest request) {
-        return customerService.update(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
-    }
-
-    // 【已禁用】客户详情页面阶段跳转功能已禁用，此接口不再被调用
-    // 客户阶段变更现在通过跟进流程自动触发（FollowUpPlanService.handleCustomerStageTransition）
-    // @PostMapping("/update-stage")
-    // @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE)
-    // @Operation(summary = "更新客户阶段")
-    // public void updateStage(@Validated @RequestBody CustomerStageRequest request) {
-    //     customerService.updateStage(request, OrganizationContext.getOrganizationId());
-    // }
-
-    @GetMapping("/delete/{id}")
-    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_DELETE)
-    @Operation(summary = "删除客户")
-    public void delete(@PathVariable("id") String id) {
-        customerService.delete(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
-    }
-
     @PostMapping("/batch/transfer")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_TRANSFER)
-    @Operation(summary = "批量转移客户")
+    @Operation(summary = "转移客户")
     public int batchTransfer(@RequestBody CustomerBatchTransferRequest request) {
-        return customerService.batchTransfer(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+        return customerService.batchTransferSingleOwner(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
     @PostMapping("/batch/transfer-by-condition")
@@ -183,6 +161,13 @@ public class CustomerController {
                 OrganizationContext.getOrganizationId(), deptDataPermission);
     }
 
+    @PostMapping("/update")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE)
+    @Operation(summary = "更新客户")
+    public Customer update(@Validated @RequestBody CustomerUpdateRequest request) {
+        return customerService.update(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
     @PostMapping("/batch/update")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE)
     @Operation(summary = "批量更新客户")
@@ -190,11 +175,11 @@ public class CustomerController {
         customerService.batchUpdate(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
-    @PostMapping("/batch/delete")
+    @GetMapping("/delete/{id}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_DELETE)
-    @Operation(summary = "批量删除客户")
-    public void batchDelete(@RequestBody @NotNull List<String> ids) {
-        customerService.batchDelete(ids, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    @Operation(summary = "删除客户")
+    public void delete(@PathVariable("id") String id) {
+        customerService.delete(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
     @PostMapping("/batch/delete-by-condition")
@@ -207,18 +192,18 @@ public class CustomerController {
         return customerService.batchDeleteByCondition(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), deptDataPermission);
     }
 
-    @PostMapping("/batch/to-pool")
-    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_RECYCLE)
-    @Operation(summary = "批量移入公海")
-    public BatchAffectResponse batchToPool(@RequestBody BatchPoolReasonRequest request) {
-        return customerService.batchToPool(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
-    }
-
     @PostMapping("/to-pool")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_RECYCLE)
     @Operation(summary = "移入公海")
     public BatchAffectResponse toPool(@Validated @RequestBody PoolReasonRequest request) {
         return customerService.toPool(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
+    @PostMapping("/batch/to-pool")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_RECYCLE)
+    @Operation(summary = "批量移入公海")
+    public BatchAffectResponse batchToPool(@RequestBody BatchPoolReasonRequest request) {
+        return customerService.batchToPool(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
     @PostMapping("/option")

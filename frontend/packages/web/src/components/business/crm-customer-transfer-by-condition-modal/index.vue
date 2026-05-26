@@ -112,7 +112,6 @@
     batchTransferCustomerByCondition({
       ...props.queryParams,
       transferCount: count,
-      owner: selectedUserIds.value[0] || '',
       ownerUserIds: selectedUserIds.value,
     })
       .then((data) => {

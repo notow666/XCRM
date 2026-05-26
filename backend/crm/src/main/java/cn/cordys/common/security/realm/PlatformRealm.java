@@ -71,6 +71,7 @@ public class PlatformRealm extends AuthorizingRealm {
         user.setSource(LoginAuthenticateType.PLATFORM.name());
         user.setEnable(true);
         user.setTenantId("---");
+        user.setTenantName("---");
         user.setPermissionIds(Collections.singleton("PLATFORM_ADMIN:READ"));
         user.setOrganizationIds(Collections.emptySet());
         user.setTenantIds(Collections.emptySet());

@@ -3,11 +3,9 @@ import { cloneDeep } from 'lodash-es';
 
 import { SubscribeMessageUrl } from '@lib/shared/api/requrls/system/message';
 import { SSE_KIND_TENANT } from '@lib/shared/constants/ssePrincipalKind';
-import { CompanyTypeEnum } from '@lib/shared/enums/commonEnum';
 import { ModuleConfigEnum } from '@lib/shared/enums/moduleEnum';
 import { getSSE } from '@lib/shared/method/index';
 import { setLocalStorage } from '@lib/shared/method/local-storage';
-import { loadScript } from '@lib/shared/method/scriptLoader';
 
 import {
   closeMessageSubscribe,
@@ -15,7 +13,6 @@ import {
   getKey,
   getModuleNavConfigList,
   getOpportunityStageConfig,
-  getThirdConfigByType,
   getUnReadAnnouncement,
 } from '@/api/modules';
 import useUserStore from '@/store/modules/user';
@@ -194,27 +191,6 @@ const useAppStore = defineStore('app', {
         this.messageInfo.announcementDTOList = announcements;
         this.messageInfo.read = !(announcements?.length || notifications?.length);
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.log(error);
-      }
-    },
-    // 显示 SQLBot
-    async showSQLBot() {
-      // TODO license 先放开
-      // const licenseStore = useLicenseStore();
-      // if (!licenseStore.hasLicense()) return;
-      try {
-        const res = await getThirdConfigByType(CompanyTypeEnum.SQLBot);
-        if (res?.config && res.config.sqlBotChatEnable) {
-          await loadScript(res.config?.appSecret as string, { identifier: CompanyTypeEnum.SQLBot });
-        }
-      } catch (error) {
-        if (typeof error === 'string' && error.includes('当前类型应用未配置')) {
-          return;
-        }
-        if ((error as any)?.code === 100500 || (error as any)?.response?.data?.code === 100500) {
-          return;
-        }
         // eslint-disable-next-line no-console
         console.log(error);
       }

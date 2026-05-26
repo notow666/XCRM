@@ -137,25 +137,42 @@ export function setInputMultipleTagsOnRow(row: Record<string, any>, fieldId: str
   row[fieldId] = fieldValue;
 }
 
-export function formatCustomerStageLabel(row: Record<string, any>) {
+const STAGE_STATUS_PREFIX_MAP: Record<string, string> = {
+  NEW: '待',
+  IN_PROGRESS: '',
+  COMPLETED: '已',
+  FAILED: '',
+};
+
+const STAGE_STATUS_SUFFIX_MAP: Record<string, string> = {
+  NEW: '',
+  IN_PROGRESS: '中',
+  COMPLETED: '',
+  FAILED: '',
+};
+
+/** 客户阶段名称（stageName） */
+export function formatCustomerStageName(row: Record<string, any>) {
+  return row.stageName ? String(row.stageName) : '';
+}
+
+/**
+ * 客户阶段状态展示（沿用原 stage 列格式化：stageStatus 前后缀 + stageName）
+ * 用于列表固定「客户信息」区，不参与表头列配置。
+ */
+export function formatCustomerStageStatusLabel(row: Record<string, any>, invalidCustomerText = '无效客户') {
   if (!row.stageName && !row.stageStatus) return '';
-  const prefixMap: Record<string, string> = {
-    NEW: '待',
-    IN_PROGRESS: '',
-    COMPLETED: '已',
-    FAILED: '',
-  };
-  const suffixMap: Record<string, string> = {
-    NEW: '',
-    IN_PROGRESS: '中',
-    COMPLETED: '',
-    FAILED: '',
-  };
+  if (row.stageStatus === 'FAILED') return invalidCustomerText;
   const status = row.stageStatus || '';
-  const prefix = status ? prefixMap[status] || '' : '';
-  const suffix = status ? suffixMap[status] || '' : '';
+  const prefix = status ? STAGE_STATUS_PREFIX_MAP[status] || '' : '';
+  const suffix = status ? STAGE_STATUS_SUFFIX_MAP[status] || '' : '';
   const name = row.stageName || '';
   return `${prefix}${name}${suffix}` || '';
+}
+
+/** @deprecated 请使用 formatCustomerStageName / formatCustomerStageStatusLabel */
+export function formatCustomerStageLabel(row: Record<string, any>) {
+  return formatCustomerStageStatusLabel(row);
 }
 
 export function useCustomerListDescription() {
@@ -210,6 +227,8 @@ export function useCustomerListDescription() {
     buildDescription,
     buildStatusDescription,
     buildListSummaryLine,
+    formatCustomerStageName,
+    formatCustomerStageStatusLabel,
     formatCustomerStageLabel,
   };
 }

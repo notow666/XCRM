@@ -45,21 +45,15 @@
           <p v-if="item.ownerName" class="customer-list-item__secondary one-line-text">
             {{ t('opportunity.owner') }}：{{ item.ownerName }}
           </p>
-          <div
-            v-if="stageLabel || showCustomerLevelStars"
-            class="customer-list-item__secondary customer-list-item__stage-row"
-          >
+          <div class="customer-list-item__secondary customer-list-item__stage-row">
             <span
-              v-if="stageLabel"
               class="customer-list-item__stage one-line-text"
               :style="{ color: stageTagStyle.color, lineHeight: '14px' }"
             >
-              {{ stageLabel }}
+              {{ stageStatusDisplay }}
             </span>
-            <span v-else class="customer-list-item__stage customer-list-item__stage--placeholder" />
-            <div class="customer-list-item__stars-col">
+            <div v-if="showCustomerLevelStars" class="customer-list-item__stars-col">
               <CustomerListLevelStars
-                v-if="showCustomerLevelStars"
                 :level="customerLevelStarCount"
                 :editable="canEditCustomerLevel"
                 :loading="levelUpdating"
@@ -176,7 +170,7 @@
   import CustomerListLevelStars from '@/components/business/crm-customer-list-item/customerListLevelStars.vue';
 
   import {
-    formatCustomerStageLabel,
+    formatCustomerStageStatusLabel,
     getCustomerLevelStarCount,
     getCustomerStageTagStyle,
   } from '@/hooks/useCustomerListDescription';
@@ -253,9 +247,13 @@
     return String(mobile);
   });
 
-  const stageLabel = computed(() => formatCustomerStageLabel(props.item));
-
   const showCustomerLevelStars = computed(() => !!props.customerLevelFieldId);
+
+  const stageStatusDisplay = computed(
+    () => formatCustomerStageStatusLabel(props.item, t('customer.invalidStageCustomer')) || '-'
+  );
+
+  const stageTagStyle = computed(() => getCustomerStageTagStyle(props.item.stage, props.stageConfigList));
 
   const customerLevelStarCount = computed(() => getCustomerLevelStarCount(props.item, props.customerLevelFieldId));
 
@@ -267,8 +265,6 @@
 
   /** 与操作列「编辑」按钮一致：canEdit 为 true 时可点击修改等级 */
   const canEditCustomerLevel = computed(() => !!props.customerLevelFieldId && canEdit.value && !props.levelUpdating);
-
-  const stageTagStyle = computed(() => getCustomerStageTagStyle(props.item.stage, props.stageConfigList));
 
   const canTransfer = computed(() => !props.hideEditTransfer && hasAnyPermission(['CUSTOMER_MANAGEMENT:TRANSFER']));
 

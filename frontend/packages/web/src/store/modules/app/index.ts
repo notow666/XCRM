@@ -16,7 +16,6 @@ import { useI18n } from '@lib/shared/hooks/useI18n';
 import { getSSE } from '@lib/shared/method';
 import { withApiPathPrefix } from '@lib/shared/method/api-path';
 import { setLocalStorage } from '@lib/shared/method/local-storage';
-import { loadScript } from '@lib/shared/method/scriptLoader';
 import type { MessageCenterItem } from '@lib/shared/models/system/message';
 
 import {
@@ -29,7 +28,6 @@ import {
   getNotificationCount,
   getOpportunityStageConfig,
   getPageConfig,
-  getThirdConfigByType,
   getThirdPartyResource,
   getUnReadAnnouncement,
 } from '@/api/modules';
@@ -522,28 +520,6 @@ const useAppStore = defineStore('app', {
     },
     setRestoreMenuTimeStamp(timeStamp: number) {
       this.restoreMenuTimeStamp = timeStamp;
-    },
-    // 显示 SQLBot
-    async showSQLBot() {
-      // TODO license 先放开
-      // const licenseStore = useLicenseStore();
-      // if (!licenseStore.hasLicense()) return;
-      try {
-        const res = await getThirdConfigByType(CompanyTypeEnum.SQLBot);
-        if (res?.config && res.config.sqlBotChatEnable) {
-          await loadScript(res.config?.appSecret as string, { identifier: CompanyTypeEnum.SQLBot });
-        }
-      } catch (error) {
-        // 未配置 SQLBot（后端返回 code=100500）属于可预期场景：静默跳过，不影响登录后主流程
-        if (typeof error === 'string' && error.includes('当前类型应用未配置')) {
-          return;
-        }
-        if ((error as any)?.code === 100500 || (error as any)?.response?.data?.code === 100500) {
-          return;
-        }
-        // eslint-disable-next-line no-console
-        console.log(error);
-      }
     },
 
     // 初始化页面配置

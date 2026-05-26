@@ -6,8 +6,8 @@ import type { CrmDataTableColumn } from '@/components/pure/crm-table/type';
 
 import useTableStore from '@/hooks/useTableStore';
 
-/** 固定在「客户信息」列展示，不参与中间动态列 */
-const LIST_CUSTOMER_INFO_KEYS = new Set(['name', 'stage', 'callStatus', 'wechatFriendStatus', 'mobile']);
+/** 固定在「客户信息」列展示，不参与中间动态列（客户阶段名称 stage 由表头显示设置控制） */
+const LIST_CUSTOMER_INFO_KEYS = new Set(['name', 'callStatus', 'wechatFriendStatus', 'mobile']);
 
 /** 表格模式专用或已从列表剔除的列 */
 const LIST_EXCLUDED_MIDDLE_KEYS = new Set([

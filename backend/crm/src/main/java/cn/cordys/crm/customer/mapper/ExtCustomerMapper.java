@@ -33,6 +33,9 @@ public interface ExtCustomerMapper {
     List<String> listIds(@Param("request") CustomerPageRequest request, @Param("orgId") String orgId,
                          @Param("userId") String userId, @Param("dataPermission") DeptDataPermissionDTO deptDataPermission);
 
+    List<Customer> listByCondition(@Param("request") CustomerPageRequest request, @Param("orgId") String orgId,
+                         @Param("userId") String userId, @Param("dataPermission") DeptDataPermissionDTO deptDataPermission);
+
     List<CustomerListResponse> sourceList(@Param("request") CustomerPageRequest request, @Param("orgId") String orgId,
                                           @Param("userId") String userId, @Param("dataPermission") DeptDataPermissionDTO deptDataPermission);
 

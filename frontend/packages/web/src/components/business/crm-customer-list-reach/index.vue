@@ -1,15 +1,19 @@
 <template>
-  <div class="crm-customer-list-reach flex shrink-0 flex-col gap-[6px]">
+  <div
+    class="crm-customer-list-reach flex shrink-0 gap-[6px]"
+    :class="props.direction === 'row' ? 'flex-row items-center' : 'flex-col'"
+  >
     <n-dropdown
       trigger="click"
       :options="dialCardSlotOptions"
       placement="bottom-start"
       :disabled="!canOperate"
-      @select="(_: string | number, option: { key: string | number }) => handleDialSelect(option.key)"
+      @select="handleDialSelect"
     >
       <ReachIconButton
         icon-class="icon-a-dianhuadianhua-icon"
         :color="callIconColor"
+        :icon-size="iconSize"
         :title="t('customer.reach.call')"
         :disabled="!canOperate"
       />
@@ -17,6 +21,7 @@
     <ReachIconButton
       icon-class="icon-weixin"
       :color="wechatIconColor"
+      :icon-size="iconSize"
       :title="wechatIconTitle"
       :disabled="!canOperate"
       @click="handleWechatClick"
@@ -26,11 +31,12 @@
       trigger="click"
       :options="dialCardSlotOptions"
       placement="bottom-start"
-      @select="(_: string | number, option: { key: string | number }) => handleSmsSelect(option.key)"
+      @select="handleSmsSelect"
     >
       <ReachIconButton
         icon-class="icon-duanxin"
         color="#F7B52C"
+        :icon-size="iconSize"
         :title="t('customer.reach.sms')"
       />
     </n-dropdown>
@@ -59,9 +65,12 @@
       wechatFriendStatus: number;
       /** 负责人为当前登录用户时可操作（拨打/短信/微信）；否则仅展示电话、微信状态色且不可点击 */
       canOperate?: boolean;
+      /** 详情页标题栏横向排列；列表侧栏默认纵向 */
+      direction?: 'row' | 'column';
     }>(),
     {
       canOperate: true,
+      direction: 'column',
     }
   );
 
@@ -74,6 +83,10 @@
 
   const { t } = useI18n();
   const message = useMessage();
+
+  const iconSize = computed(() =>
+    props.direction === 'row' ? '30px' : '22px'
+  );
 
   const callIconColor = computed(() => (props.callStatus === 2 ? CALL_COLOR_ACTIVE : CALL_COLOR_INACTIVE));
 

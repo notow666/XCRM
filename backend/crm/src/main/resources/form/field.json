@@ -1090,7 +1090,8 @@
       "showLabel": true,
       "readable": true,
       "editable": false,
-      "fieldWidth": 1,
+      "fieldWidth": 0.5,
+      "pos": 1,
       "rules": [
         {
           "key": "required"
@@ -1106,7 +1107,8 @@
       "showLabel": true,
       "readable": true,
       "editable": false,
-      "fieldWidth": 1,
+      "fieldWidth": 0.5,
+      "pos": 2,
       "rules": [
         {
           "key": "required"
@@ -1121,7 +1123,8 @@
       "showLabel": true,
       "readable": true,
       "editable": true,
-      "fieldWidth": 1,
+      "fieldWidth": 0.5,
+      "pos": 3,
       "options": [],
       "rules": [
         {
@@ -1134,41 +1137,18 @@
       "name": "跟进时间",
       "internalKey": "recordTime",
       "type": "DATE_TIME",
-      "dateType": "date",
+      "dateType": "datetime",
+      "dateDefaultType": "current",
       "showLabel": true,
       "readable": true,
       "editable": true,
-      "fieldWidth": 1,
+      "fieldWidth": 0.5,
+      "pos": 4,
       "rules": [
         {
           "key": "required"
         }
       ],
-      "mobile": true
-    },
-    {
-      "name": "跟进内容",
-      "internalKey": "recordDescription",
-      "type": "TEXTAREA",
-      "showLabel": true,
-      "readable": true,
-      "editable": true,
-      "fieldWidth": 1,
-      "rules": [
-        {
-          "key": "required"
-        }
-      ],
-      "mobile": true
-    },
-    {
-      "name": "附件",
-      "internalKey": "recordAttachment",
-      "type": "ATTACHMENT",
-      "showLabel": true,
-      "readable": true,
-      "editable": true,
-      "fieldWidth": 1,
       "mobile": true
     },
     {
@@ -1178,7 +1158,8 @@
       "showLabel": true,
       "readable": true,
       "editable": true,
-      "fieldWidth": 1,
+      "fieldWidth": 0.5,
+      "pos": 5,
       "options": [
         {
           "label": "跟进中",
@@ -1215,8 +1196,34 @@
       "showLabel": true,
       "readable": true,
       "editable": true,
-      "fieldWidth": 1,
+      "fieldWidth": 0.5,
+      "pos": 6,
       "options": [],
+      "mobile": true
+    },
+    {
+      "name": "跟进内容",
+      "internalKey": "recordDescription",
+      "type": "TEXTAREA",
+      "showLabel": true,
+      "readable": true,
+      "editable": true,
+      "fieldWidth": 7,
+      "rules": [
+        {
+          "key": "required"
+        }
+      ],
+      "mobile": true
+    },
+    {
+      "name": "附件",
+      "internalKey": "recordAttachment",
+      "type": "ATTACHMENT",
+      "showLabel": true,
+      "readable": true,
+      "editable": true,
+      "fieldWidth": 8,
       "mobile": true
     }
   ],
@@ -1229,22 +1236,13 @@
       "showLabel": true,
       "readable": true,
       "editable": false,
-      "fieldWidth": 1,
+      "fieldWidth": 0.5,
+      "pos": 1,
       "rules": [
         {
           "key": "required"
         }
       ],
-      "mobile": true
-    },
-    {
-      "name": "阶段",
-      "internalKey": "planNextStage",
-      "type": "INPUT",
-      "showLabel": true,
-      "readable": true,
-      "editable": false,
-      "fieldWidth": 1,
       "mobile": true
     },
     {
@@ -1255,7 +1253,8 @@
       "showLabel": true,
       "readable": true,
       "editable": false,
-      "fieldWidth": 1,
+      "fieldWidth": 0.5,
+      "pos": 2,
       "rules": [
         {
           "key": "required"
@@ -1263,14 +1262,26 @@
       ]
     },
     {
-      "name": "预计开始时间",
-      "internalKey": "planStartTime",
-      "type": "DATE_TIME",
-      "dateType": "date",
+      "name": "阶段",
+      "internalKey": "planNextStage",
+      "type": "INPUT",
+      "showLabel": true,
+      "readable": true,
+      "editable": false,
+      "fieldWidth": 0.5,
+      "pos": 3,
+      "mobile": true
+    },
+    {
+      "name": "跟进方式",
+      "internalKey": "planMethod",
+      "type": "SELECT",
       "showLabel": true,
       "readable": true,
       "editable": true,
-      "fieldWidth": 1,
+      "fieldWidth": 0.5,
+      "pos": 4,
+      "options": [],
       "rules": [
         {
           "key": "required"
@@ -1285,7 +1296,8 @@
       "showLabel": true,
       "readable": true,
       "editable": true,
-      "fieldWidth": 1,
+      "fieldWidth": 0.5,
+      "pos": 5,
       "rules": [
         {
           "key": "required"
@@ -1294,14 +1306,16 @@
       "mobile": true
     },
     {
-      "name": "跟进方式",
-      "internalKey": "planMethod",
-      "type": "SELECT",
+      "name": "预计开始时间",
+      "internalKey": "planStartTime",
+      "type": "DATE_TIME",
+      "dateType": "datetime",
+      "dateDefaultType": "current",
       "showLabel": true,
       "readable": true,
       "editable": true,
-      "fieldWidth": 1,
-      "options": [],
+      "fieldWidth": 0.5,
+      "pos": 6,
       "rules": [
         {
           "key": "required"
@@ -1317,6 +1331,7 @@
       "readable": true,
       "editable": true,
       "fieldWidth": 1,
+      "pos": 7,
       "mobile": true
     },
     {
@@ -1327,6 +1342,7 @@
       "readable": true,
       "editable": true,
       "fieldWidth": 1,
+      "pos": 8,
       "mobile": true
     }
   ],

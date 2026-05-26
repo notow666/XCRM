@@ -17,10 +17,10 @@ import NotifyToastContent from '@/views/system/message/components/notifyToastCon
 
 import { getApiKeyList, isLogin, login, signout } from '@/api/modules';
 import useDiscreteApi from '@/hooks/useDiscreteApi';
-import useUser from '@/hooks/useUser';
 import router from '@/router';
-import useAppStore from '@/store/modules/app/index';
+import { WHITE_LIST_NAME } from '@/router/constants';
 import useLicenseStore from '@/store/modules/setting/license';
+import useAppStoreAccessor from '@/store/storeAccessors';
 import { hasAnyPermission } from '@/utils/permission';
 
 import { dispatchOpenMessageDrawer } from '@/constants/messageNotify';
@@ -50,6 +50,7 @@ const useUserStore = defineStore('user', {
       updateTime: 0,
       language: '',
       tenantId: '',
+      tenantName: '',
       tenantIds: [],
       lastOrganizationId: '',
       phone: '',
@@ -100,7 +101,7 @@ const useUserStore = defineStore('user', {
         const res = await login(params);
         setToken(res.sessionId, res.csrfToken);
         this.setInfo(res);
-        const appStore = useAppStore();
+        const appStore = useAppStoreAccessor();
         appStore.setTenantId(res.tenantId || '');
         const lastOrganizationId = res.lastOrganizationId ?? res.organizationIds[0] ?? '';
         this.clientIdRandomId = getGenerateId();
@@ -112,7 +113,7 @@ const useUserStore = defineStore('user', {
     },
     // 登出回调
     logoutCallBack() {
-      const appStore = useAppStore();
+      const appStore = useAppStoreAccessor();
       const licenseStore = useLicenseStore();
       if (!licenseStore.hasLicense()) {
         appStore.resetPageConfig();
@@ -134,7 +135,7 @@ const useUserStore = defineStore('user', {
       try {
         const { t } = useI18n();
         if (!silence) {
-          const appStore = useAppStore();
+          const appStore = useAppStoreAccessor();
           appStore.showLoading(t('message.loggingOut'));
         }
         await signout();
@@ -159,7 +160,7 @@ const useUserStore = defineStore('user', {
         }
         setToken(res.sessionId, res.csrfToken);
         this.setInfo(res);
-        const appStore = useAppStore();
+        const appStore = useAppStoreAccessor();
         appStore.setTenantId(res.tenantId || '');
         const lastOrganizationId = res.lastOrganizationId ?? res.organizationIds?.[0] ?? '';
         appStore.setOrgId(lastOrganizationId);
@@ -180,7 +181,7 @@ const useUserStore = defineStore('user', {
         }
         setToken(res.sessionId, res.csrfToken);
         this.setInfo(res);
-        const appStore = useAppStore();
+        const appStore = useAppStoreAccessor();
         appStore.setTenantId(res.tenantId || '');
         const lastOrganizationId = res.lastOrganizationId ?? res.organizationIds?.[0] ?? '';
         appStore.setOrgId(lastOrganizationId);
@@ -192,8 +193,14 @@ const useUserStore = defineStore('user', {
       }
     },
     async checkIsLogin(isDisabledErrorTip = false) {
-      const { isLoginPage } = useUser();
       const isLoginStatus = await this.isLogin(isDisabledErrorTip);
+      const isLoginPage = () => {
+        const { name } = router.currentRoute.value;
+        if (name == null || typeof name !== 'string') {
+          return false;
+        }
+        return WHITE_LIST_NAME.includes(name);
+      };
       if (isLoginStatus) {
         if (isLoginPage()) {
           await router.push({
@@ -201,7 +208,7 @@ const useUserStore = defineStore('user', {
           });
         }
       } else if (!isLoginPage()) {
-        const appStore = useAppStore();
+        const appStore = useAppStoreAccessor();
         const routeTenantId = router.currentRoute.value.params?.tenantId;
         const tenantId =
           (typeof routeTenantId === 'string' && routeTenantId.trim()) ||
@@ -216,7 +223,7 @@ const useUserStore = defineStore('user', {
     },
     // 展示系统公告（持久弹窗）
     showSystemNotify() {
-      const appStore = useAppStore();
+      const appStore = useAppStoreAccessor();
       if (appStore.messageInfo.announcementDTOList?.length) {
         this.notify = notification.create({
           title: '',

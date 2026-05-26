@@ -74,6 +74,7 @@ public class DataSpecialistRealm extends AuthorizingRealm {
         user.setSource(LoginAuthenticateType.DATA_SPECIALIST.name());
         user.setEnable(true);
         user.setTenantId("---");
+        user.setTenantName("---");
         user.setPermissionIds(Collections.singleton(DataSpecialistConstants.PERMISSION_POOL_IMPORT));
         user.setOrganizationIds(Collections.emptySet());
         user.setTenantIds(Collections.emptySet());

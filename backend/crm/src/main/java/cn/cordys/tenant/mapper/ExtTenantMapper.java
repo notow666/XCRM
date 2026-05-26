@@ -1,6 +1,7 @@
 package cn.cordys.tenant.mapper;
 
 import cn.cordys.platform.dto.response.PlatformTenantItemResponse;
+import cn.cordys.tenant.domain.Tenant;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
@@ -22,6 +23,8 @@ public interface ExtTenantMapper {
     Long countByTenantId(@Param("tenantId") String tenantId);
 
     Long countByCode(@Param("code") String code);
+
+    Tenant getOne(@Param("tenantId") String tenantId);
 
     String selectStatusByTenantId(@Param("tenantId") String tenantId);
 

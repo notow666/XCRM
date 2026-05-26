@@ -253,7 +253,7 @@
         ].includes(e.type);
 
         if (props.formKey === FormDesignKeyEnum.CUSTOMER_OPEN_SEA) {
-          return baseCondition && e.businessKey !== 'owner';
+          return baseCondition && e.businessKey !== 'owner' && e.businessKey !== 'mobile';
         }
         return baseCondition;
       }) as unknown as SelectMixedOption[]

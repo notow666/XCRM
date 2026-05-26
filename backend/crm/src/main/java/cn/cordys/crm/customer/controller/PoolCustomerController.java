@@ -82,6 +82,14 @@ public class PoolCustomerController {
         poolCustomerService.delete(id);
     }
 
+    @PostMapping("/transfer")
+    @Operation(summary = "转移客户到指定公海池")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_POOL_TRANSFER)
+    public void transfer(@Validated @RequestBody PoolTransferRequest request) {
+        poolCustomerService.transfer(request.getCustomerId(), request.getTargetPoolId(),
+                SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
     @GetMapping("/get/{id}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_POOL_READ)
     @Operation(summary = "客户详情")
@@ -127,13 +135,6 @@ public class PoolCustomerController {
     public Map<String, Object> batchUpdateByCondition(@Validated @RequestBody PoolBatchUpdateByConditionRequest request) {
         ConditionFilterUtils.parseCondition(request);
         return poolCustomerService.batchUpdateByCondition(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
-    }
-
-    @PostMapping("/batch-update")
-    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_POOL_UPDATE)
-    @Operation(summary = "批量更新客户")
-    public void batchUpdate(@Validated @RequestBody ResourceBatchEditRequest request) {
-        poolCustomerService.batchUpdate(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
     @PostMapping("/export-all")

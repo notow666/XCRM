@@ -23,6 +23,18 @@ public class SortRequest {
     @Schema(description = "排序类型(asc/desc)")
     private String type;
 
+    /**
+     * 客户列表默认排序
+     *      拨打状态、微信好友状态：0>-1>1>2
+     * @return
+     */
+    public static SortRequest customerPage() {
+        SortRequest sortRequest = new SortRequest();
+        sortRequest.setName("customerPage");
+        sortRequest.setType("customerPage");
+        return sortRequest;
+    }
+
     public static String camelToUnderline(String camelCase) {
         if (camelCase == null || camelCase.isEmpty()) {
             return camelCase;

@@ -24,11 +24,18 @@
         WHERE code = #{code}
     </select>
 
+    <select id="getOne" resultType="cn.cordys.tenant.domain.Tenant">
+        SELECT *
+        FROM tenant
+        WHERE id = #{tenantId}
+        LIMIT 1
+    </select>
+
     <select id="selectStatusByTenantId" resultType="java.lang.String">
         SELECT status
         FROM tenant
         WHERE id = #{tenantId}
-        LIMIT 1
+            LIMIT 1
     </select>
 
     <select id="countByKeyword" resultType="java.lang.Long">

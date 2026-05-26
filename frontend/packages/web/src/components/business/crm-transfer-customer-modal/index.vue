@@ -71,7 +71,6 @@
         .saveApi({
           ids: props.sourceIds,
           owner: selectedUserIds.value[0],
-          ownerUserIds: selectedUserIds.value,
         })
         .then((data: any) => {
           showModal.value = false;

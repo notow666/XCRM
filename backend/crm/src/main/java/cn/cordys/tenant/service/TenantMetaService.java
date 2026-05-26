@@ -1,5 +1,6 @@
 package cn.cordys.tenant.service;
 
+import cn.cordys.tenant.domain.Tenant;
 import cn.cordys.tenant.dto.TenantDbConfigDTO;
 import cn.cordys.tenant.mapper.ExtTenantMapper;
 import jakarta.annotation.Resource;
@@ -24,6 +25,10 @@ public class TenantMetaService {
 
     @Resource
     private TenantJdbcResolver tenantJdbcResolver;
+
+    public Tenant getOne(String tenantId) {
+        return extTenantMapper.getOne(tenantId);
+    }
 
     public List<TenantDbConfigDTO> listEnabledTenantDbConfigs() {
         return extTenantMapper.listActiveTenantIds()

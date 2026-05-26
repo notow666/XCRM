@@ -10,6 +10,7 @@ export interface UserInfo {
   updateTime: number;
   language: string;
   tenantId: string;
+  tenantName: string;
   tenantIds: string[];
   lastOrganizationId: string;
   phone: string;

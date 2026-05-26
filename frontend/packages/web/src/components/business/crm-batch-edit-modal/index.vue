@@ -241,6 +241,8 @@
     ...initForm,
   });
 
+  const customerBatchEditExcludedKeys = new Set(['owner', 'callStatus', 'wechatFriendStatus', 'mobile']);
+
   const fieldOptions = computed(
     () =>
       list.value.filter((e) => {
@@ -255,6 +257,9 @@
           FieldTypeEnum.FORMULA,
         ].includes(e.type);
 
+        if (props.formKey === FormDesignKeyEnum.CUSTOMER) {
+          return baseCondition && !customerBatchEditExcludedKeys.has(e.businessKey || '');
+        }
         if (props.formKey === FormDesignKeyEnum.CLUE_POOL || props.formKey === FormDesignKeyEnum.CUSTOMER_OPEN_SEA) {
           return baseCondition && e.businessKey !== 'owner';
         }

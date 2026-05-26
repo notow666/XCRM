@@ -40,7 +40,6 @@ import cn.cordys.crm.customer.mapper.ExtCustomerContactMapper;
 import cn.cordys.crm.customer.mapper.ExtCustomerMapper;
 import cn.cordys.crm.customer.mapper.ExtCustomerPoolMapper;
 import cn.cordys.crm.customer.mapper.ExtCustomerStageConfigMapper;
-import cn.cordys.crm.customer.service.CustomerStageService;
 import cn.cordys.crm.follow.domain.FollowUpPlan;
 import cn.cordys.crm.follow.domain.FollowUpRecord;
 import cn.cordys.crm.follow.constants.FollowUpPlanType;
@@ -832,47 +831,10 @@ public class CustomerService {
                 orgId, List.of(originCustomer.getOwner()), true);
     }
 
-    public int batchTransfer(CustomerBatchTransferRequest request, String userId, String orgId) {
-        List<String> ownerUserIds = resolveTransferOwnerIds(request);
-        if (CollectionUtils.isEmpty(ownerUserIds)) {
+    public int batchTransferSingleOwner(CustomerBatchTransferRequest request, String userId, String orgId) {
+        if (StringUtils.isBlank(request.getOwner())) {
             throw new GenericException(Translator.get("owner.required"));
         }
-        if (ownerUserIds.size() == 1) {
-            request.setOwner(ownerUserIds.get(0));
-            return batchTransferSingleOwner(request, userId, orgId);
-        }
-        return batchTransferMultipleOwners(request.getIds(), ownerUserIds, userId, orgId);
-    }
-
-    public int batchTransferByCondition(CustomerBatchTransferByConditionRequest request, String userId, String orgId,
-                                        DeptDataPermissionDTO deptDataPermission) {
-        int transferCount = Math.min(request.getTransferCount(), BATCH_TRANSFER_BY_CONDITION_MAX_SIZE);
-        PageHelper.startPage(1, transferCount, false);
-        List<String> ids = extCustomerMapper.listIds(request, orgId, userId, deptDataPermission);
-        if (CollectionUtils.isEmpty(ids)) {
-            return 0;
-        }
-        CustomerBatchTransferRequest transferRequest = new CustomerBatchTransferRequest();
-        transferRequest.setIds(ids);
-        transferRequest.setOwner(request.getOwner());
-        transferRequest.setOwnerUserIds(request.getOwnerUserIds());
-        return batchTransfer(transferRequest, userId, orgId);
-    }
-
-    private List<String> resolveTransferOwnerIds(CustomerBatchTransferRequest request) {
-        if (CollectionUtils.isNotEmpty(request.getOwnerUserIds())) {
-            return request.getOwnerUserIds().stream()
-                    .filter(StringUtils::isNotBlank)
-                    .distinct()
-                    .collect(Collectors.toList());
-        }
-        if (StringUtils.isNotBlank(request.getOwner())) {
-            return List.of(request.getOwner());
-        }
-        return Collections.emptyList();
-    }
-
-    private int batchTransferSingleOwner(CustomerBatchTransferRequest request, String userId, String orgId) {
         List<Customer> originCustomers = customerMapper.selectByIds(request.getIds());
         List<String> owners = getOwners(originCustomers);
         List<Customer> candidateCustomers = originCustomers.stream()
@@ -962,9 +924,17 @@ public class CustomerService {
         return (int) processCount - transferIds.size();
     }
 
-    private int batchTransferMultipleOwners(List<String> customerIds, List<String> ownerUserIds, String userId, String orgId) {
-        List<Customer> originCustomers = customerMapper.selectByIds(customerIds);
+    public int batchTransferByCondition(CustomerBatchTransferByConditionRequest request, String userId, String orgId,
+                                            DeptDataPermissionDTO deptDataPermission) {
+        int transferCount = Math.min(request.getTransferCount(), BATCH_TRANSFER_BY_CONDITION_MAX_SIZE);
+        PageHelper.startPage(1, transferCount, false);
+        List<Customer> originCustomers = extCustomerMapper.listByCondition(request, orgId, userId, deptDataPermission);
+        if (CollectionUtils.isEmpty(originCustomers)) {
+            return 0;
+        }
+
         List<String> owners = getOwners(originCustomers);
+        List<String> ownerUserIds = request.getOwnerUserIds();
         dataScopeService.checkDataPermission(userId, orgId, owners, PermissionConstants.CUSTOMER_MANAGEMENT_TRANSFER);
 
         Set<String> targetOwnerSet = new HashSet<>(ownerUserIds);
@@ -1555,7 +1525,7 @@ public class CustomerService {
             CustomerBatchTransferRequest batchTransferRequest = new CustomerBatchTransferRequest();
             batchTransferRequest.setIds(request.getIds());
             batchTransferRequest.setOwner(request.getFieldValue().toString());
-            batchTransfer(batchTransferRequest, userId, organizationId);
+            batchTransferSingleOwner(batchTransferRequest, userId, organizationId);
             return;
         }
 

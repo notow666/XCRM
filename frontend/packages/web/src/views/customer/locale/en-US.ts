@@ -69,6 +69,8 @@ export default {
     "Selected accounts: chosen from list; Other accounts: visible accounts; Owner assignment: only selected accounts' owners can be chosen; other accounts' owners remain unchanged",
   'customer.selectedMergeAccountNumber': 'Selected {number} accounts',
   'customer.stage': 'Account Stage',
+  'customer.stageStatus': 'Account Stage Status',
+  'customer.invalidStageCustomer': 'Invalid Account',
   'customer.stageHasData': 'Current customer stage has customer data, deletion is prohibited!',
   'customer.failReason': 'Failure Reason',
   'customer.deleteByCondition': 'Delete by Filter',
@@ -147,9 +149,13 @@ export default {
   'customer.reach.noActiveWechat': 'There is no active WeChat account under the current user',
   'customer.reach.addWechatPhoneMissing': 'This customer has no mobile number, so a WeChat friend cannot be added',
   'customer.reach.addWechatSending': 'The add-WeChat-friend request has been sent, please wait',
+  'customer.reach.dialSending': 'Dialing in progress, please wait',
+  'customer.reach.notOwner': 'Only the account owner can use reach actions',
   'customer.reach.wechatFriendAwaitingApproval':
     'The WeChat friend request has not been approved yet. Please wait.',
   'customer.reach.smsPending': 'SMS action is mocked on the page and can be wired after backend integration.',
   'customer.reach.wechatFriendPending':
     'Add WeChat action is mocked on the page and can be wired after backend integration.',
+  'customer.detail.prev': 'Previous',
+  'customer.detail.next': 'Next',
 };

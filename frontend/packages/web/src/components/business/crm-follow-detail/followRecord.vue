@@ -122,7 +122,7 @@
 
   function getShowTime(item: FollowDetailItem) {
     const time = 'estimatedTime' in item ? item.estimatedTime : item.followTime;
-    return time ? dayjs(time).format('YYYY-MM-DD') : '-';
+    return time ? dayjs(time).format('YYYY-MM-DD HH:mm:ss') : '-';
   }
 
   function isPlanItem(item: FollowDetailItem): item is CustomerFollowPlanListItem {

@@ -283,123 +283,6 @@ public class PoolCustomerService {
     }
 
     /**
-     * 批量领取客户
-     *
-     * @param request      请求参数
-     * @param currentUser  当前用户ID
-     * @param currentOrgId 当前组织ID
-     */
-    public void batchPick(PoolBatchPickRequest request, String currentUser, String currentOrgId) {
-        CustomerPool pool = poolMapper.selectByPrimaryKey(request.getPoolId());
-        validateCapacity(request.getBatchIds().size(), currentUser, currentOrgId);
-        LambdaQueryWrapper<CustomerPoolPickRule> pickRuleWrapper = new LambdaQueryWrapper<>();
-        pickRuleWrapper.eq(CustomerPoolPickRule::getPoolId, request.getPoolId());
-        List<CustomerPoolPickRule> customerPoolPickRules = pickRuleMapper.selectListByLambda(pickRuleWrapper);
-        CustomerPoolPickRule pickRule = customerPoolPickRules.getFirst();
-        boolean poolAdmin = userExtendService.isPoolAdmin(JSON.parseArray(pool.getOwnerId(), String.class), currentUser, currentOrgId);
-        if (!poolAdmin) {
-            validateDailyPickNum(request.getBatchIds().size(), currentUser, pickRule);
-        }
-        validateBatchPickMobileConflict(request.getBatchIds(), currentUser, currentOrgId);
-        request.getBatchIds().forEach(id -> ownCustomer(id, currentUser, pickRule, currentUser, LogType.PICK, currentOrgId, poolAdmin));
-    }
-
-    /**
-     * 批量分配客户
-     *
-     * @param request      请求参数
-     * @param assignUserId 分配用户ID（单个，兼容旧接口）
-     * @param currentOrgId 当前组织ID
-     * @return 未分配的客户数量，0表示全部分配完成
-     */
-     public int batchAssign(PoolBatchAssignRequest request, String assignUserId, String currentOrgId, String currentUser) {
-         List<String> assignUserIds = request.getAssignUserIds();
-         if (CollectionUtils.isEmpty(assignUserIds)) {
-             if (StringUtils.isNotEmpty(assignUserId)) {
-                 assignUserIds = List.of(assignUserId);
-             } else {
-                 return request.getBatchIds().size();
-             }
-         }
-
-         // 预计算每个用户的剩余库容
-         Map<String, Integer> userCapacitiesMap = new HashMap<>();
-         Map<String, Set<String>> userOwnedPoolMobileMap = new HashMap<>();
-         Map<String, Set<String>> userPrivateConflictMobileMap = new HashMap<>();
-         Map<String, Customer> customerMap = customerMapper.selectByIds(request.getBatchIds()).stream()
-                 .collect(Collectors.toMap(Customer::getId, customer -> customer));
-         List<String> candidateMobiles = customerMap.values().stream().map(Customer::getMobile).toList();
-         for (String targetUserId : assignUserIds) {
-             CustomerCapacity customerCapacity = getUserCapacity(targetUserId, currentOrgId);
-             int remainingCapacity = Integer.MAX_VALUE;
-             if (customerCapacity != null && customerCapacity.getCapacity() != null) {
-                 List<String> excludeStageIds = new ArrayList<>();
-                 String paymentStageId = customerStageService.getPaymentStageId(currentOrgId);
-                 String failStageId = customerStageService.getFailStageId(currentOrgId);
-                 if (StringUtils.isNotEmpty(paymentStageId)) {
-                     excludeStageIds.add(paymentStageId);
-                 }
-                 if (StringUtils.isNotEmpty(failStageId)) {
-                     excludeStageIds.add(failStageId);
-                 }
-                 int excludeCount = 0;
-                 if (CollectionUtils.isNotEmpty(excludeStageIds)) {
-                     excludeCount = extCustomerMapper.countByOwnerAndStages(targetUserId, excludeStageIds);
-                 }
-                 LambdaQueryWrapper<Customer> customerWrapper = new LambdaQueryWrapper<>();
-                 customerWrapper.eq(Customer::getOwner, targetUserId).eq(Customer::getInSharedPool, false);
-                 int ownCount = customerMapper.selectListByLambda(customerWrapper).size();
-                 remainingCapacity = Math.max(0, customerCapacity.getCapacity() - (ownCount - excludeCount));
-            }
-             userCapacitiesMap.put(targetUserId, remainingCapacity);
-            userOwnedPoolMobileMap.put(targetUserId, customerMobileRuleService.loadOwnerPoolMobiles(targetUserId, currentOrgId));
-            userPrivateConflictMobileMap.put(targetUserId,
-                     customerMobileRuleService.findPoolImportReceiveBlockingOwnerPrivateMobiles(candidateMobiles, targetUserId, currentOrgId));
-         }
-
-         int totalCustomers = request.getBatchIds().size();
-         int assignedCount = 0;
-         int userIdx = 0;
-         int userCount = assignUserIds.size();
-
-         // 轮询分配
-         for (String customerId : request.getBatchIds()) {
-             Customer customer = customerMap.get(customerId);
-             if (customer == null) {
-                 continue;
-             }
-             int attempts = 0;
-             boolean success = false;
-             while (attempts < userCount) {
-                String currentUserId = assignUserIds.get(userIdx);
-                Integer capacity = userCapacitiesMap.get(currentUserId);
-                Set<String> ownedPoolMobiles = userOwnedPoolMobileMap.computeIfAbsent(currentUserId,
-                        key -> customerMobileRuleService.loadOwnerPoolMobiles(currentUserId, currentOrgId));
-                Set<String> privateConflictMobiles = userPrivateConflictMobileMap.computeIfAbsent(currentUserId,
-                        key -> customerMobileRuleService.findPoolImportReceiveBlockingOwnerPrivateMobiles(candidateMobiles, currentUserId, currentOrgId));
-                 if (capacity != null && capacity > 0
-                         && !customerMobileRuleService.hasPoolImportReceiveConflict(customer == null ? null : customer.getMobile(),
-                         privateConflictMobiles, ownedPoolMobiles)) {
-                     ownCustomer(customerId, currentUserId, null, currentUser, LogType.ASSIGN, currentOrgId, false);
-                     userCapacitiesMap.put(currentUserId, capacity - 1);
-                     customerMobileRuleService.addOwnedMobile(customer, ownedPoolMobiles);
-                     assignedCount++;
-                     success = true;
-                     userIdx = (userIdx + 1) % userCount;
-                     break;
-                 } else {
-                     userIdx = (userIdx + 1) % userCount;
-                     attempts++;
-                 }
-             }
-             if (!success) {
-                 // 所有选中用户库容均不足，该客户无法分配
-             }
-         }
-         return totalCustomers - assignedCount;
-     }
-
-    /**
      * 批量删除客户
      *
      * @param ids 客户ID集合
@@ -705,20 +588,19 @@ public class PoolCustomerService {
         logService.add(new LogDTO(currentOrgId, customer.getId(), operateUserId, logType,
                 LogModule.CUSTOMER_POOL, customer.getName()));
 
-//        if (Strings.CS.equals(logType, LogType.ASSIGN)) {
-//            commonNoticeSendService.sendNotice(
-//                    NotificationConstants.Module.CUSTOMER,
-//                    NotificationConstants.Event.HIGH_SEAS_CUSTOMER_DISTRIBUTED,
-//                    customer.getName(), operateUserId, currentOrgId,
-//                    List.of(ownerId), true
-//            );
-//        }
+        if (Strings.CS.equals(logType, LogType.ASSIGN)) {
+            commonNoticeSendService.sendNotice(
+                    NotificationConstants.Module.CUSTOMER,
+                    NotificationConstants.Event.HIGH_SEAS_CUSTOMER_DISTRIBUTED,
+                    customer.getName(), operateUserId, currentOrgId,
+                    List.of(ownerId), true
+            );
+        }
         //员工事件服务
         EmployeeStatEventType eventType = Strings.CS.equals(logType, LogType.PICK)
             ? EmployeeStatEventType.PICK
             : EmployeeStatEventType.ASSIGN;
         employeeStatEventRecordService.recordPoolOwnEvent(customer, operateUserId, currentOrgId, eventType);
-
     }
 
     private void validateBatchPickMobileConflict(List<String> customerIds, String ownerId, String currentOrgId) {
@@ -749,22 +631,6 @@ public class PoolCustomerService {
         if (customerMobileRuleService.hasPoolImportReceiveConflict(mobile, privateConflictMobiles, poolMobiles)) {
             throw new GenericException(Translator.getWithArgs("common.field_value.repeat", "手机号"));
         }
-    }
-
-    public void batchUpdate(ResourceBatchEditRequest request, String userId, String organizationId) {
-        BaseField field = customerFieldService.getAndCheckField(request.getFieldId(), organizationId);
-
-        if (Strings.CS.equals(field.getBusinessKey(), BusinessModuleField.CUSTOMER_OWNER.getBusinessKey())) {
-            // 修改负责人，走批量分配的接口
-            PoolBatchAssignRequest batchAssignRequest = new PoolBatchAssignRequest();
-            batchAssignRequest.setBatchIds(request.getIds());
-            batchAssignRequest.setAssignUserId(request.getFieldValue().toString());
-            batchAssign(batchAssignRequest, batchAssignRequest.getAssignUserId(), organizationId, userId);
-            return;
-        }
-
-        List<Customer> originCustomers = customerMapper.selectByIds(request.getIds());
-        poolCustomerBatchSupport.executePoolBatchUpdate(request, originCustomers, field, userId, organizationId);
     }
 
     public List<ChartResult> chart(PoolCustomerChartAnalysisRequest request, String userId, String orgId, DeptDataPermissionDTO deptDataPermission) {

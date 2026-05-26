@@ -95,21 +95,12 @@ public class MmbaController {
     }
 
     /**
-     * 限制电话拨打。
+     * 添加微信好友。
      */
-    @PostMapping("/phone/limit")
-    @Operation(summary = "限制电话拨打")
-    public JsonNode callLimit(@RequestBody JsonNode request) {
-        return mmbaFacadeService.callLimit(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
-    }
-
-    /**
-     * 发送短信。
-     */
-    @PostMapping("/sms/send")
-    @Operation(summary = "发送短信")
-    public JsonNode sendSms(@RequestBody JsonNode request) {
-        return mmbaFacadeService.sendSms(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    @PostMapping("/wx/friend/add")
+    @Operation(summary = "添加微信好友")
+    public JsonNode addWxFriend(@RequestBody JsonNode request) {
+        return mmbaFacadeService.addWxFriend(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
     /**
@@ -122,12 +113,12 @@ public class MmbaController {
     }
 
     /**
-     * 添加微信好友。
+     * 发送短信。
      */
-    @PostMapping("/wx/friend/add")
-    @Operation(summary = "添加微信好友")
-    public JsonNode addWxFriend(@RequestBody JsonNode request) {
-        return mmbaFacadeService.addWxFriend(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    @PostMapping("/sms/send")
+    @Operation(summary = "发送短信")
+    public JsonNode sendSms(@RequestBody JsonNode request) {
+        return mmbaFacadeService.sendSms(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
     /**

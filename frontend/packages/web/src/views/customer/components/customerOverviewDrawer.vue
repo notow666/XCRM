@@ -12,6 +12,29 @@
     @button-select="handleButtonSelect"
     @saved="handleSaved"
   >
+    <template #titleRightPrefix>
+      <div v-if="showListNavigation || canReachOperate" class="mr-[12px] flex items-center gap-[12px]">
+        <CrmCustomerListReach
+          v-if="canReachOperate"
+          direction="row"
+          :call-status="readCallStatus(reachRow)"
+          :wechat-friend-status="readWechatFriendStatus(reachRow)"
+          :can-operate="true"
+          @dial="(slot) => handleDialCustomer(reachRow, slot)"
+          @sms="(slot) => handleSmsCustomer(reachRow, slot)"
+          @wechat="() => handleWechatCustomer(reachRow)"
+          @add-wechat="() => handleWechatFriendCustomer(reachRow)"
+        />
+        <template v-if="showListNavigation">
+          <n-button type="primary" ghost class="n-btn-outline-primary" :disabled="!canGoPrev" @click="goPrevCustomer">
+            {{ t('customer.detail.prev') }}
+          </n-button>
+          <n-button type="primary" ghost class="n-btn-outline-primary" :disabled="!canGoNext" @click="goNextCustomer">
+            {{ t('customer.detail.next') }}
+          </n-button>
+        </template>
+      </div>
+    </template>
     <template #transferPopContent>
       <CrmPoolAssignUserSelect v-model:selected-ids="transferSelectedUserIds" class="mt-[16px] min-w-[480px]" />
     </template>
@@ -149,11 +172,20 @@
       />
     </template>
   </CrmOverviewDrawer>
+  <customerSmsModal
+    v-model:show="showReachModal"
+    :mode="reachModal.mode"
+    :source-id="reachModal.sourceId"
+    :name="reachModal.name"
+    :mobile="reachModal.mobile"
+    :wechat-options="activeWechatOptions"
+    @submit="handleReachModalSubmit"
+  />
 </template>
 
 <script setup lang="ts">
   import { onMounted, watch } from 'vue';
-  import { useMessage } from 'naive-ui';
+  import { NButton, useMessage } from 'naive-ui';
 
   import { FormDesignKeyEnum } from '@lib/shared/enums/formDesignEnum';
   import { ModuleConfigEnum, ReasonTypeEnum } from '@lib/shared/enums/moduleEnum';
@@ -162,6 +194,7 @@
 
   import CrmCard from '@/components/pure/crm-card/index.vue';
   import type { ActionsItem } from '@/components/pure/crm-more-action/type';
+  import CrmCustomerListReach from '@/components/business/crm-customer-list-reach/index.vue';
   import ContactTable from '@/components/business/crm-form-create-table/contactTable.vue';
   import CrmFormDescription from '@/components/business/crm-form-description/index.vue';
   import CrmHeaderTable from '@/components/business/crm-header-table/index.vue';
@@ -174,6 +207,7 @@
   import collaborator from './collaborator.vue';
   import CustomerCallRecordTable from './customerCallRecordTable.vue';
   import customerRelation from './customerRelation.vue';
+  import customerSmsModal from './customerSmsModal.vue';
   import ContractTimeline from '@/views/contract/contract/components/contractTimeline.vue';
   import ContractDetailDrawer from '@/views/contract/contract/components/detail.vue';
   import opportunityTable from '@/views/opportunity/components/opportunityTable.vue';
@@ -189,17 +223,32 @@
   import useModal from '@/hooks/useModal';
   import { hasAnyPermission } from '@/utils/permission';
 
+  import { type CustomerReachRow, useCustomerReach } from '../hooks/useCustomerReach';
+
   const FollowDetail = defineAsyncComponent(() => import('@/components/business/crm-follow-detail/index.vue'));
+
+  export interface CustomerNavigationItem {
+    id: string;
+    name?: string;
+    owner?: string;
+    callStatus?: number;
+    wechatFriendStatus?: number;
+    mobile?: string;
+    inSharedPool?: boolean;
+  }
 
   const props = defineProps<{
     sourceId: string;
     readonly?: boolean;
+    /** 从客户列表打开时传入当前页客户，用于详情页上一页/下一页 */
+    navigationRows?: CustomerNavigationItem[];
   }>();
   const emit = defineEmits<{
     (e: 'saved'): void;
     (e: 'deleted'): void;
     (e: 'transfer'): void;
     (e: 'button-select', key: string): void;
+    (e: 'update:sourceId', id: string): void;
   }>();
 
   const { t } = useI18n();
@@ -216,6 +265,72 @@
   const customerHiddenLeftFields = ['recyclePoolName', 'reservedDays'];
 
   const refreshKey = ref(0);
+  const reachRow = ref<CustomerReachRow>({ id: '' });
+  const transferLoading = ref(false);
+  const collaborationType = ref<CollaborationType>();
+  const sourceName = ref('');
+  const createSource = ref('MANUAL_CREATE');
+  const descriptionRef = ref<InstanceType<typeof CrmFormDescription>>();
+
+  const {
+    showReachModal,
+    reachModal,
+    activeWechatOptions,
+    readCallStatus,
+    readWechatFriendStatus,
+    isReachOwner,
+    handleDialCustomer,
+    handleSmsCustomer,
+    handleWechatCustomer,
+    handleWechatFriendCustomer,
+    handleReachModalSubmit,
+  } = useCustomerReach({
+    onStatusUpdated: () => {
+      emit('saved');
+    },
+  });
+
+  const showListNavigation = computed(() => (props.navigationRows?.length ?? 0) > 0);
+  const navigationIndex = computed(() => props.navigationRows?.findIndex((row) => row.id === props.sourceId) ?? -1);
+  const canGoPrev = computed(() => navigationIndex.value > 0);
+  const canGoNext = computed(
+    () => navigationIndex.value >= 0 && navigationIndex.value < (props.navigationRows?.length ?? 0) - 1
+  );
+  const canReachOperate = computed(
+    () =>
+      !props.readonly &&
+      collaborationType.value !== 'READ_ONLY' &&
+      Boolean(reachRow.value.id) &&
+      isReachOwner(reachRow.value)
+  );
+
+  function syncReachRowFromNavigation() {
+    const item = props.navigationRows?.find((row) => row.id === props.sourceId);
+    if (item) {
+      reachRow.value = { ...item };
+      return;
+    }
+    reachRow.value = { id: props.sourceId };
+  }
+
+  function goPrevCustomer() {
+    const rows = props.navigationRows;
+    const index = navigationIndex.value;
+    if (!rows || index <= 0) {
+      return;
+    }
+    emit('update:sourceId', rows[index - 1].id);
+  }
+
+  function goNextCustomer() {
+    const rows = props.navigationRows;
+    const index = navigationIndex.value;
+    if (!rows || index < 0 || index >= rows.length - 1) {
+      return;
+    }
+    emit('update:sourceId', rows[index + 1].id);
+  }
+
   const stageConfig = ref<Awaited<ReturnType<typeof getCustomerStageConfig>>>();
   const currentStatus = ref<string>('');
   const customerStageStatus = ref<string>('');
@@ -224,6 +339,25 @@
   const isCustomerCompleted = computed(
     () => currentStatus.value === 'stage_fail' || currentStatus.value === 'stage_payment'
   );
+
+  async function getCustomerDetailStage() {
+    try {
+      const detail = await getCustomer(props.sourceId);
+      if (detail?.stage) {
+        currentStatus.value = detail.stage;
+      }
+      if (detail?.stageStatus) {
+        customerStageStatus.value = detail.stageStatus;
+      }
+      if (detail?.failReason) {
+        customerFailReason.value = detail.failReason;
+      }
+      createSource.value = detail?.createSource || '';
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log('getCustomerDetailStage error:', error);
+    }
+  }
 
   async function initStageConfig() {
     try {
@@ -246,15 +380,31 @@
     (val) => {
       if (val) {
         initStageConfig();
+        syncReachRowFromNavigation();
       }
     }
   );
 
-  const transferLoading = ref(false);
-  const collaborationType = ref<CollaborationType>();
-  const sourceName = ref('');
-  const createSource = ref('MANUAL_CREATE');
-  const descriptionRef = ref<InstanceType<typeof CrmFormDescription>>();
+  watch(
+    () => props.sourceId,
+    () => {
+      if (!show.value) {
+        return;
+      }
+      syncReachRowFromNavigation();
+      refreshKey.value += 1;
+      getCustomerDetailStage();
+    }
+  );
+
+  watch(
+    () => props.navigationRows,
+    () => {
+      syncReachRowFromNavigation();
+    },
+    { deep: true }
+  );
+
   const buttonList = computed<ActionsItem[]>(() => {
     if (collaborationType.value || props.readonly) {
       return [];
@@ -461,25 +611,6 @@
     }
   }
 
-  async function getCustomerDetailStage() {
-    try {
-      const detail = await getCustomer(props.sourceId);
-      if (detail?.stage) {
-        currentStatus.value = detail.stage;
-      }
-      if (detail?.stageStatus) {
-        customerStageStatus.value = detail.stageStatus;
-      }
-      if (detail?.failReason) {
-        customerFailReason.value = detail.failReason;
-      }
-      createSource.value = detail?.createSource || '';
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log('getCustomerDetailStage error:', error);
-    }
-  }
-
   function handleSaved() {
     refreshKey.value += 1;
     emit('saved');
@@ -503,6 +634,15 @@
     if (detail?.stageStatus) {
       customerStageStatus.value = detail.stageStatus;
     }
+    reachRow.value = {
+      id: props.sourceId,
+      name: _sourceName || reachRow.value.name,
+      owner: detail?.owner ?? reachRow.value.owner,
+      callStatus: detail?.callStatus ?? reachRow.value.callStatus,
+      wechatFriendStatus: detail?.wechatFriendStatus ?? reachRow.value.wechatFriendStatus,
+      mobile: detail?.mobile ?? reachRow.value.mobile,
+      inSharedPool: detail?.inSharedPool ?? reachRow.value.inSharedPool,
+    };
   }
 
   const showContractDetailDrawer = ref(false);

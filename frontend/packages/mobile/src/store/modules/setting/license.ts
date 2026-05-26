@@ -3,8 +3,6 @@ import dayjs from 'dayjs';
 
 import { LicenseInfo } from '@lib/shared/models/system/authorizedManagement';
 
-import { getLicense } from '@/api/modules';
-
 const useLicenseStore = defineStore('license', {
   persist: true,
   state: (): { licenseInfo: LicenseInfo | null; expiredDuring: boolean; expiredDays: number } => ({
@@ -68,26 +66,8 @@ const useLicenseStore = defineStore('license', {
         this.expiredDuring = false;
       }
     },
-    // license校验
     async getValidateLicense() {
-      try {
-        const result = await getLicense();
-        // 检查返回结果是否有效，不存在license自身值
-        if (!result || !result.status) {
-          return;
-        }
-        /* if (!result || !result.status || !result.license || !result.license.count) {
-          return;
-        } */
-        this.setLicenseInfo(result);
-        // 计算license时间
-        if (result) {
-          this.getExpirationTime(result.expired);
-        }
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.log(error);
-      }
+      // license 校验接口已停用
     },
   },
 });

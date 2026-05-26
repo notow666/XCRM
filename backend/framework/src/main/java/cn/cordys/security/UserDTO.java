@@ -83,6 +83,9 @@ public class UserDTO implements java.io.Serializable {
     @Schema(description = "当前租户ID")
     private String tenantId;
 
+    @Schema(description = "当前租户名称")
+    private String tenantName;
+
     @Schema(description = "所在的租户ID")
     private Set<String> tenantIds;
 
