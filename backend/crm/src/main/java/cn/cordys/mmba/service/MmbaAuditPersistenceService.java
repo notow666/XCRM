@@ -67,8 +67,6 @@ public class MmbaAuditPersistenceService {
     @Resource
     private BaseMapper<MmbaWxLoginAudit> mmbaWxLoginAuditMapper;
     @Resource
-    private BaseMapper<MmbaDeviceInfoAudit> mmbaDeviceInfoAuditMapper;
-    @Resource
     private ExtMmbaAuditMapper extMmbaAuditMapper;
 
     public MmbaCallRecordAudit saveOrUpdateCallAudit(MmbaCallRecordAudit record, String userId) {
@@ -149,17 +147,8 @@ public class MmbaAuditPersistenceService {
     }
 
     public MmbaDeviceInfoAudit saveOrUpdateDeviceInfoAudit(MmbaDeviceInfoAudit record, String userId) {
-        MmbaDeviceInfoAudit query = new MmbaDeviceInfoAudit();
-        query.setDeviceId(record.getDeviceId());
-        query.setTimestamp(record.getTimestamp());
-        MmbaDeviceInfoAudit db = mmbaDeviceInfoAuditMapper.selectOne(query);
-        if (db == null) {
-            record.setId(IDGenerator.nextStr());
-            mmbaDeviceInfoAuditMapper.insert(record);
-            return record;
-        }
-        record.setId(db.getId());
-        mmbaDeviceInfoAuditMapper.update(record);
+        record.setId(IDGenerator.nextStr());
+        extMmbaAuditMapper.upsertDeviceInfoAudit(record);
         return record;
     }
 

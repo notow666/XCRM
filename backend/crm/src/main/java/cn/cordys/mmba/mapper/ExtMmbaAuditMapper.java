@@ -33,6 +33,8 @@ public interface ExtMmbaAuditMapper {
 
     int upsertSmsRecordAudit(MmbaSmsRecordAudit record);
 
+    int upsertDeviceInfoAudit(MmbaDeviceInfoAudit record);
+
     int upsertWxChatAudit(MmbaWxChatAudit record);
 
     int upsertWxAccountAudit(MmbaWxAccountAudit record);

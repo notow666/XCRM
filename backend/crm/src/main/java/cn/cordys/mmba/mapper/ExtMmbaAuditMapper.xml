@@ -106,6 +106,39 @@
             callback_record_id = VALUES(callback_record_id)
     </insert>
 
+    <insert id="upsertDeviceInfoAudit" parameterType="cn.cordys.mmba.domain.MmbaDeviceInfoAudit">
+        INSERT INTO mmba_device_info_audit (
+            id, behavior_type, change_time, dept_id, dept_id_path, dept_info, device_id, device_type,
+            iccid, iccid2, imei, imei2, org_name, org_names, phone, phone2, staff_name,
+            telecom_operators, telecom_operators2, tenancy_name, timestamp, um, callback_record_id
+        ) VALUES (
+            #{id}, #{behaviorType}, #{changeTime}, #{deptId}, #{deptIdPath}, #{deptInfo}, #{deviceId}, #{deviceType},
+            #{iccid}, #{iccid2}, #{imei}, #{imei2}, #{orgName}, #{orgNames}, #{phone}, #{phone2}, #{staffName},
+            #{telecomOperators}, #{telecomOperators2}, #{tenancyName}, #{timestamp}, #{um}, #{callbackRecordId}
+        )
+        ON DUPLICATE KEY UPDATE
+            behavior_type = VALUES(behavior_type),
+            change_time = VALUES(change_time),
+            dept_id = VALUES(dept_id),
+            dept_id_path = VALUES(dept_id_path),
+            dept_info = VALUES(dept_info),
+            device_type = VALUES(device_type),
+            iccid = VALUES(iccid),
+            iccid2 = VALUES(iccid2),
+            imei = VALUES(imei),
+            imei2 = VALUES(imei2),
+            org_name = VALUES(org_name),
+            org_names = VALUES(org_names),
+            phone = VALUES(phone),
+            phone2 = VALUES(phone2),
+            staff_name = VALUES(staff_name),
+            telecom_operators = VALUES(telecom_operators),
+            telecom_operators2 = VALUES(telecom_operators2),
+            tenancy_name = VALUES(tenancy_name),
+            um = VALUES(um),
+            callback_record_id = VALUES(callback_record_id)
+    </insert>
+
     <insert id="upsertWxChatAudit" parameterType="cn.cordys.mmba.domain.MmbaWxChatAudit">
         INSERT INTO mmba_wx_chat_audit (
             es_id, app_name, behavior_type, chat_sources_type, chat_type, contact_description,
