@@ -74,7 +74,7 @@
     <select id="listInboundRows" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisMetricRow">
         select date_format(from_unixtime(e.event_time / 1000), '%Y-%m-%d') as statDate,
                e.customer_id as customerId,
-               e.customer_source as customerSource,
+               max(e.customer_source) as customerSource,
                e.owner_user_id as operatorUserId,
                1 as inboundCustomerFlag,
                0 as contactedCustomerFlag,
@@ -96,14 +96,13 @@
           </if>
         group by date_format(from_unixtime(e.event_time / 1000), '%Y-%m-%d'),
                  e.customer_id,
-                 e.customer_source,
                  e.owner_user_id
     </select>
 
     <select id="listContactedRows" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisMetricRow">
         select date_format(from_unixtime(e.event_time / 1000), '%Y-%m-%d') as statDate,
                e.customer_id as customerId,
-               e.customer_source as customerSource,
+               max(e.customer_source) as customerSource,
                e.owner_user_id as operatorUserId,
                0 as inboundCustomerFlag,
                1 as contactedCustomerFlag,
@@ -125,14 +124,13 @@
           </if>
         group by date_format(from_unixtime(e.event_time / 1000), '%Y-%m-%d'),
                  e.customer_id,
-                 e.customer_source,
                  e.owner_user_id
     </select>
 
     <select id="listWechatRows" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisMetricRow">
         select date_format(from_unixtime(e.event_time / 1000), '%Y-%m-%d') as statDate,
                e.customer_id as customerId,
-               e.customer_source as customerSource,
+               max(e.customer_source) as customerSource,
                e.owner_user_id as operatorUserId,
                0 as inboundCustomerFlag,
                0 as contactedCustomerFlag,
@@ -155,7 +153,6 @@
           </if>
         group by date_format(from_unixtime(e.event_time / 1000), '%Y-%m-%d'),
                  e.customer_id,
-                 e.customer_source,
                  e.owner_user_id
     </select>
 
