@@ -1,5 +1,7 @@
 package cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service;
 
+import cn.cordys.common.util.PhoneMaskUtil;
+import cn.cordys.crm.system.service.GlobalPhoneMaskConfigService;
 import com.fasterxml.jackson.databind.JsonNode;
 import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.dto.DeptDataPermissionDTO;
@@ -44,6 +46,9 @@ public class EmployeeFollowAnalysisDrilldownService {
     private BaseService baseService;
     @Resource
     private DataScopeService dataScopeService;
+
+    @Resource
+    private GlobalPhoneMaskConfigService globalPhoneMaskConfigService;
 
     public Pager<List<EmployeeFollowAnalysisDrilldownItemResponse>> drilldown(EmployeeFollowAnalysisDrilldownRequest request, String orgId, String userId) {
         // 下钻不查日报汇总表，直接按当前口径回查原始业务/MMBA 明细，避免汇总和明细脱节。
@@ -90,6 +95,7 @@ public class EmployeeFollowAnalysisDrilldownService {
         if (isCallMetric(metricType)) {
             fillCallSnapshotFields(list);
         }
+        applyGlobalPhoneMask(list, orgId);
         fillBlankCustomerSource(list);
         return PageUtils.setPageInfo(page, list);
     }
@@ -105,6 +111,7 @@ public class EmployeeFollowAnalysisDrilldownService {
         );
         fillCallSnapshotFields(allRows);
         List<EmployeeFollowAnalysisDrilldownItemResponse> filteredRows = filterCallRowsByCustomerSource(allRows, request.getDimensionKey());
+        applyGlobalPhoneMask(filteredRows, orgId);
         fillBlankCustomerSource(filteredRows);
         return buildPager(filteredRows, request.getCurrent(), request.getPageSize());
     }
@@ -304,5 +311,17 @@ public class EmployeeFollowAnalysisDrilldownService {
         long cost = System.currentTimeMillis() - start;
         log.info("员工跟进分析SQL结束, sqlName={}, params={}, costMs={}, resultSize={}", sqlName, params, cost, result == null ? 0 : result.size());
         return result;
+    }
+
+    private void applyGlobalPhoneMask(List<EmployeeFollowAnalysisDrilldownItemResponse> list, String orgId) {
+        if (list == null || list.isEmpty()) {
+            return;
+        }
+        if (!globalPhoneMaskConfigService.isEnabled(orgId)) {
+            return;
+        }
+        for (EmployeeFollowAnalysisDrilldownItemResponse item : list) {
+            item.setMobile(PhoneMaskUtil.maskGlobalPhone(item.getMobile()));
+        }
     }
 }
