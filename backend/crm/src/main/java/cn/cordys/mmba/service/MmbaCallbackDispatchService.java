@@ -2,6 +2,7 @@ package cn.cordys.mmba.service;
 
 import cn.cordys.common.constants.CrmLoggers;
 import cn.cordys.common.util.JSON;
+import cn.cordys.common.util.PhoneMaskUtil;
 import cn.cordys.crm.customer.service.CustomerCallStatusService;
 import cn.cordys.crm.customer.service.CustomerWechatFriendStatusService;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service.EmployeeStatEventRecordService;
@@ -10,6 +11,7 @@ import cn.cordys.crm.system.dto.MessageDetailDTO;
 import cn.cordys.crm.system.notice.common.NoticeModel;
 import cn.cordys.crm.system.notice.common.Receiver;
 import cn.cordys.crm.system.notice.sender.insite.InSiteNoticeSender;
+import cn.cordys.crm.system.service.GlobalPhoneMaskConfigService;
 import cn.cordys.mmba.MmbaBehaviorTypes;
 import cn.cordys.mmba.MmbaConstants;
 import cn.cordys.mmba.domain.*;
@@ -64,6 +66,9 @@ public class MmbaCallbackDispatchService {
 
     @Resource
     private EmployeeStatEventRecordService employeeStatEventRecordService;
+
+    @Resource
+    private GlobalPhoneMaskConfigService globalPhoneMaskConfigService;
 
     /**
      * 审计类回调分发。
@@ -792,7 +797,7 @@ public class MmbaCallbackDispatchService {
 
             Integer processStatus = toInteger(firstNotBlank(data.getProcessStatus(), data.getStatus()));
             String processStatusText = resolveAddWechatFriendProcessStatusText(processStatus);
-            String context = buildAddWechatFriendReceiptNoticeContext(customerName, customerMobile, processStatusText);
+            String context = buildAddWechatFriendReceiptNoticeContext(customerName, customerMobile, processStatusText,organizationId);
             String subjectText = "添加微信好友回执";
 
             inSiteNoticeSender.sendAnnouncement(
@@ -837,14 +842,17 @@ public class MmbaCallbackDispatchService {
             .build();
     }
 
-    private String buildAddWechatFriendReceiptNoticeContext(String customerName, String customerMobile, String statusText){
+    private String buildAddWechatFriendReceiptNoticeContext(String customerName, String customerMobile, String statusText, String organizationId){
         StringBuilder sb = new StringBuilder();
         sb.append("收到微信好友添加回执");
         if (StringUtils.isNotBlank(customerName)) {
             sb.append("，客户：").append(customerName);
         }
         if (StringUtils.isNotBlank(customerMobile)) {
-            sb.append("，手机号：").append(customerMobile);
+            String noticeCustomerMobile = globalPhoneMaskConfigService.isEnabled(organizationId)
+                ? PhoneMaskUtil.maskGlobalPhone(customerMobile)
+                : customerMobile;
+            sb.append("，手机号：").append(noticeCustomerMobile);
         }
         sb.append("，回执结果：").append(statusText);
         return sb.toString();
