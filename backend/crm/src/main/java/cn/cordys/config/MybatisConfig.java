@@ -51,8 +51,10 @@ public class MybatisConfig {
      * 供运行时动态注册租户数据源使用。
      */
     @Bean
-    public DynamicTenantRoutingDataSource tenantRoutingDataSource(@Qualifier("dataSourceProperties") DataSourceProperties properties) {
-        DataSource defaultDataSource = buildDataSource(
+    public DynamicTenantRoutingDataSource tenantRoutingDataSource(
+            @Qualifier("dataSourceProperties") DataSourceProperties properties,
+            TenantHikariDataSourceFactory tenantHikariDataSourceFactory) {
+        DataSource defaultDataSource = tenantHikariDataSourceFactory.create(
                 properties.determineDriverClassName(),
                 properties.determineUrl(),
                 properties.determineUsername(),
@@ -170,21 +172,6 @@ public class MybatisConfig {
     @Bean
     public UserDesensitizationInterceptor userDesensitizationInterceptor() {
         return new UserDesensitizationInterceptor();
-    }
-
-    private DataSource buildDataSource(String driverClassName,
-                                       String url,
-                                       String username,
-                                       String password,
-                                       String poolName) {
-        HikariDataSource dataSource = DataSourceBuilder.create().type(HikariDataSource.class)
-                .driverClassName(driverClassName)
-                .url(url)
-                .username(username)
-                .password(password)
-                .build();
-        dataSource.setPoolName(poolName);
-        return dataSource;
     }
 
     /**

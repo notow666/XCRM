@@ -43,6 +43,11 @@ public class AsyncConfig implements AsyncConfigurer {
     private static final int BATCH_QUEUE_CAPACITY = 2048;
     private static final int BATCH_KEEP_ALIVE_SECONDS = 120;
 
+    /** MMBA Stream 单条消息消费（与 cordys.mmba.callback.db-concurrency 同量级） */
+    private static final int CALLBACK_CONSUMER_CORE_POOL_SIZE = 4;
+    private static final int CALLBACK_CONSUMER_MAX_POOL_SIZE = 8;
+    private static final int CALLBACK_CONSUMER_QUEUE_CAPACITY = 256;
+
     @Bean(name = {ExecutorBeanNames.MAIN_ASYNC, ExecutorBeanNames.APPLICATION_TASK})
     public Executor taskExecutor() {
         ThreadPoolTaskExecutor executor = createExecutor(
@@ -107,9 +112,9 @@ public class AsyncConfig implements AsyncConfigurer {
     public ExecutorService callbackConsumerTaskExecutor() {
         ThreadPoolTaskExecutor executor = createExecutor(
                 "callback-consumer-async-task-",
-                CORE_POOL_SIZE,
-                MAX_POOL_SIZE,
-                QUEUE_CAPACITY,
+                CALLBACK_CONSUMER_CORE_POOL_SIZE,
+                CALLBACK_CONSUMER_MAX_POOL_SIZE,
+                CALLBACK_CONSUMER_QUEUE_CAPACITY,
                 KEEP_ALIVE_SECONDS);
         executor.initialize();
         return executor.getThreadPoolExecutor();

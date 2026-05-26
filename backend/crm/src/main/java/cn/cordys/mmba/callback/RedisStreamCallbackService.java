@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -40,6 +41,10 @@ public class RedisStreamCallbackService implements SmartLifecycle {
     private final ExecutorService consumerService;
     private final Map<String, ZZYConsumerService> abstractZZYConsumerMap;
     private final TenantMetaService tenantMetaService;
+    private final int streamParallelConsumers;
+    private final int batchFlushSize;
+    private final int dbConcurrency;
+    private final Semaphore dbConcurrencySemaphore;
 
     private static final String STREAM_KEY = "mmba:callback:stream";
     private static final String DLQ_KEY = "mmba:callback:dlq";
@@ -51,9 +56,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
     /** DLQ 元数据，区分写入实例 */
     private final String instanceTag = consumerBaseId + "_rs" + System.currentTimeMillis();
 
-    private static final int STREAM_PARALLEL_CONSUMERS = 5;
     private static final int READ_BATCH_COUNT = 80;
-    private static final int BATCH_FLUSH_SIZE = 32;
     private static final long BATCH_FLUSH_TIMEOUT_MS = 500L;
     private static final Duration READ_BLOCK = Duration.ofSeconds(3);
     private static final long BATCH_FUTURE_WAIT_SECONDS = 120L;
@@ -78,12 +81,18 @@ public class RedisStreamCallbackService implements SmartLifecycle {
                                       @Qualifier("redisStreamTemplate") RedisTemplate<String, Object> redisTemplate,
                                       @Qualifier("callbackStreamTaskExecutor") ExecutorService streamService,
                                       @Qualifier("callbackConsumerTaskExecutor") ExecutorService consumerService,
-                                      List<ZZYConsumerService> abstractZZYConsumerList, TenantMetaService tenantMetaService) {
+                                      List<ZZYConsumerService> abstractZZYConsumerList,
+                                      TenantMetaService tenantMetaService,
+                                      MmbaCallbackProperties mmbaCallbackProperties) {
         this.redisTemplate = redisTemplate;
         this.streamService = streamService;
         this.consumerService = consumerService;
         this.mainExecutorService = mainExecutorService;
         this.tenantMetaService = tenantMetaService;
+        this.streamParallelConsumers = mmbaCallbackProperties.getStreamParallelConsumers();
+        this.batchFlushSize = mmbaCallbackProperties.getBatchFlushSize();
+        this.dbConcurrency = mmbaCallbackProperties.getDbConcurrency();
+        this.dbConcurrencySemaphore = new Semaphore(dbConcurrency);
         this.abstractZZYConsumerMap = new HashMap<>();
         for (ZZYConsumerService consumer : abstractZZYConsumerList) {
             abstractZZYConsumerMap.put(consumer.group(), consumer);
@@ -158,8 +167,8 @@ public class RedisStreamCallbackService implements SmartLifecycle {
                     }
                     startStreamConsumers();
                     running = true;
-                    log.info("[mmba-callback-queue] Stream 消费已启动: stream={}, group={}, parallelism={}, consumerBaseId={}",
-                            STREAM_KEY, CONSUMER_GROUP, STREAM_PARALLEL_CONSUMERS, consumerBaseId);
+                    log.info("[mmba-callback-queue] Stream 消费已启动: stream={}, group={}, parallelism={}, batchFlushSize={}, dbConcurrency={}, consumerBaseId={}",
+                            STREAM_KEY, CONSUMER_GROUP, streamParallelConsumers, batchFlushSize, dbConcurrency, consumerBaseId);
                 } catch (Exception e) {
                     running = false;
                     log.error("[mmba-callback-queue] 消费端启动失败（回调仍会尝试入队但不会被消费，请检查 Redis）", e);
@@ -269,7 +278,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
     }
 
     private void startStreamConsumers() {
-        for (int i = 0; i < STREAM_PARALLEL_CONSUMERS; i++) {
+        for (int i = 0; i < streamParallelConsumers; i++) {
             String consumerName = String.format(CONSUMER_NAME, consumerBaseId, i);
             streamService.submit(() -> consumeStreamWithBatch(consumerName));
         }
@@ -312,7 +321,7 @@ public class RedisStreamCallbackService implements SmartLifecycle {
 
                 long now = System.currentTimeMillis();
                 boolean shouldProcess = !pendingRecordMap.isEmpty()
-                        && (pendingRecordMap.size() >= BATCH_FLUSH_SIZE
+                        && (pendingRecordMap.size() >= batchFlushSize
                         || (now - lastBatchTime) >= BATCH_FLUSH_TIMEOUT_MS);
 
                 if (shouldProcess) {
@@ -381,8 +390,8 @@ public class RedisStreamCallbackService implements SmartLifecycle {
         for (MapRecord<String, Object, Object> record : validRecords) {
             futureByRecord.put(record,
                     CompletableFuture.supplyAsync(
-                            () -> processStreamRecord(record, consumerName),
-                    consumerService));
+                            () -> processStreamRecordWithDbLimit(record, consumerName),
+                            consumerService));
         }
 
         CompletableFuture<?>[] all = futureByRecord.values().toArray(new CompletableFuture[0]);
@@ -480,6 +489,24 @@ public class RedisStreamCallbackService implements SmartLifecycle {
                 } catch (Exception ex) {
                     log.error("[mmba-callback-queue] 补删失败 streamId={}", id.getValue(), ex);
                 }
+            }
+        }
+    }
+
+    private StreamMessageDisposition processStreamRecordWithDbLimit(MapRecord<String, Object, Object> record,
+                                                                    String consumerName) {
+        boolean acquired = false;
+        try {
+            dbConcurrencySemaphore.acquire();
+            acquired = true;
+            return processStreamRecord(record, consumerName);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("[mmba-callback-queue] 等待 DB 并发许可被中断: streamId={}", record.getId().getValue());
+            return StreamMessageDisposition.PENDING_NO_ACK;
+        } finally {
+            if (acquired) {
+                dbConcurrencySemaphore.release();
             }
         }
     }

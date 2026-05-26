@@ -2,7 +2,6 @@ package cn.cordys.config;
 
 import cn.cordys.tenant.dto.TenantDbConfigDTO;
 import cn.cordys.tenant.service.TenantMetaService;
-import com.zaxxer.hikari.HikariDataSource;
 import jakarta.annotation.Resource;
 import org.flywaydb.core.Flyway;
 import org.apache.commons.lang3.StringUtils;
@@ -11,11 +10,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.core.Ordered;
 
-import javax.sql.DataSource;
 import java.util.List;
 
 @Component
@@ -29,6 +26,9 @@ public class TenantDataSourceBootstrap implements ApplicationRunner, Ordered {
 
     @Resource
     private TenantMetaService tenantMetaService;
+
+    @Resource
+    private TenantHikariDataSourceFactory tenantHikariDataSourceFactory;
 
     @Value("${spring.flyway.locations:classpath:migration}")
     private String flywayLocations;
@@ -82,12 +82,12 @@ public class TenantDataSourceBootstrap implements ApplicationRunner, Ordered {
             try {
                 tenantRoutingDataSource.registerTenantDataSource(
                         tenantId,
-                        buildDataSource(
+                        tenantHikariDataSourceFactory.createTenantPool(
                                 config.getDriverClassName(),
                                 config.getJdbcUrl(),
                                 config.getDbUsername(),
                                 config.getDbPassword(),
-                                "CordysTenant-" + tenantId
+                                tenantId
                         )
                 );
             } catch (Exception e) {
@@ -122,21 +122,5 @@ public class TenantDataSourceBootstrap implements ApplicationRunner, Ordered {
             locations[i] = locations[i] == null ? null : locations[i].trim();
         }
         return locations;
-    }
-
-    private DataSource buildDataSource(String driverClassName,
-                                       String url,
-                                       String username,
-                                       String password,
-                                       String poolName) {
-        HikariDataSource dataSource = DataSourceBuilder.create()
-                .type(HikariDataSource.class)
-                .driverClassName(driverClassName)
-                .url(url)
-                .username(username)
-                .password(password)
-                .build();
-        dataSource.setPoolName(poolName);
-        return dataSource;
     }
 }
