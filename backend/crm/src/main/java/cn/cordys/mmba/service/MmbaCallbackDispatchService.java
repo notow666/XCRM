@@ -22,7 +22,6 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -44,9 +43,10 @@ import java.util.Map;
  */
 @Slf4j(topic = CrmLoggers.MMBA_CALLBACK)
 @Service
-@Transactional(rollbackFor = Exception.class)
 public class MmbaCallbackDispatchService {
 
+    @Resource
+    private MmbaCallbackItemDispatchService mmbaCallbackItemDispatchService;
     @Resource
     private MmbaAuditPersistenceService mmbaAuditPersistenceService;
     @Resource
@@ -80,69 +80,72 @@ public class MmbaCallbackDispatchService {
         for (ZzyData data : orderedDataList) {
             log.info("MMBA审计回调分发 callbackRecordId={} behaviorType={} reqId={} esId={} tenantId={}",
                     callbackRecord.getId(), dto.getBehaviorType(), data.getReqId(), data.getEsId(), data.getTenantId());
-            switch (dto.getBehaviorType()) {
-                case MmbaBehaviorTypes.CALL_RECORD_AUDIT -> {
-                    MmbaAuditPersistenceService.SaveOrUpdateResult<MmbaCallRecordAudit> callAuditResult =
-                            mmbaAuditPersistenceService.saveOrUpdateCallAuditWithResult(
-                            buildCallAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER
-                    );
-                    MmbaCallRecordAudit previousCallAudit = callAuditResult.getPrevious();
-                    MmbaCallRecordAudit callAudit = callAuditResult.getCurrent();
-                    upgradeCustomerCallStatus(callAudit.getCustomerId(), callAudit.getCustomerTel(), callAudit.getUm(),
-                            resolveAuditCustomerCallStatus(callAudit), callbackRecord.getId());
-                    mmbaAutoCustomerFollowService.handleConnectedCall(previousCallAudit, callAudit);
-                }
-                case MmbaBehaviorTypes.SMS_RECORD_AUDIT -> {
-                    MmbaAuditPersistenceService.SaveOrUpdateResult<MmbaSmsRecordAudit> smsAuditResult =
-                            mmbaAuditPersistenceService.saveOrUpdateSmsAuditWithResult(
-                                    buildSmsAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER
-                            );
-                    MmbaSmsRecordAudit previousSmsAudit = smsAuditResult.getPrevious();
-                    MmbaSmsRecordAudit smsAudit = smsAuditResult.getCurrent();
-                    mmbaAutoCustomerFollowService.handleSmsDelivered(previousSmsAudit, smsAudit);
-                }
-                case MmbaBehaviorTypes.WX_CHAT_AUDIT -> {
-                    MmbaAuditPersistenceService.SaveOrUpdateResult<MmbaWxChatAudit> wxChatAuditResult =
-                            mmbaAuditPersistenceService.saveOrUpdateWxChatAuditWithResult(
-                                    buildWxChatAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER
-                            );
-                    MmbaWxChatAudit previousWxChatAudit = wxChatAuditResult.getPrevious();
-                    MmbaWxChatAudit wxChatAudit = wxChatAuditResult.getCurrent();
-                    mmbaAutoCustomerFollowService.handleWxChatSuccess(previousWxChatAudit, wxChatAudit);
-                }
-                case MmbaBehaviorTypes.WX_FRIEND_CHANGE_AUDIT -> {
-                    mmbaAuditPersistenceService.saveOrUpdateWxFriendChangeAudit(buildWxFriendChangeAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
-                    customerWechatFriendStatusService.handleFriendChangeAudit(
-                            data.getUm(), data.getFriendPhone(), data.getIsFriend(), toInteger(data.getOperFlag()), MmbaConstants.SYSTEM_USER
-                    );
-                    //员工事件服务
-                    boolean friendAdded = "1".equals(StringUtils.trimToEmpty(data.getIsFriend()))
-                        || Integer.valueOf(1).equals(toInteger(data.getOperFlag()));
-                    if (friendAdded) {
-                        employeeStatEventRecordService.confirmWechatFriendSuccessEvent(
-                            data.getUm(),
-                            data.getFriendPhone(),
-                            data.getEsId(),
-                            data.getTimestamp()
+            mmbaCallbackItemDispatchService.dispatchAuditItem(dto, callbackRecord, data);
+        }
+    }
+
+    public void processAuditItem(MmbaAuditRequest dto, MmbaCallbackRecord callbackRecord, ZzyData data) {
+        switch (dto.getBehaviorType()) {
+            case MmbaBehaviorTypes.CALL_RECORD_AUDIT -> {
+                MmbaAuditPersistenceService.SaveOrUpdateResult<MmbaCallRecordAudit> callAuditResult =
+                        mmbaAuditPersistenceService.saveOrUpdateCallAuditWithResult(
+                        buildCallAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER
+                );
+                MmbaCallRecordAudit previousCallAudit = callAuditResult.getPrevious();
+                MmbaCallRecordAudit callAudit = callAuditResult.getCurrent();
+                upgradeCustomerCallStatus(callAudit.getCustomerId(), callAudit.getCustomerTel(), callAudit.getUm(),
+                        resolveAuditCustomerCallStatus(callAudit), callbackRecord.getId());
+                mmbaAutoCustomerFollowService.handleConnectedCall(previousCallAudit, callAudit);
+            }
+            case MmbaBehaviorTypes.SMS_RECORD_AUDIT -> {
+                MmbaAuditPersistenceService.SaveOrUpdateResult<MmbaSmsRecordAudit> smsAuditResult =
+                        mmbaAuditPersistenceService.saveOrUpdateSmsAuditWithResult(
+                                buildSmsAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER
                         );
-                    }
+                MmbaSmsRecordAudit previousSmsAudit = smsAuditResult.getPrevious();
+                MmbaSmsRecordAudit smsAudit = smsAuditResult.getCurrent();
+                mmbaAutoCustomerFollowService.handleSmsDelivered(previousSmsAudit, smsAudit);
+            }
+            case MmbaBehaviorTypes.WX_CHAT_AUDIT -> {
+                MmbaAuditPersistenceService.SaveOrUpdateResult<MmbaWxChatAudit> wxChatAuditResult =
+                        mmbaAuditPersistenceService.saveOrUpdateWxChatAuditWithResult(
+                                buildWxChatAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER
+                        );
+                MmbaWxChatAudit previousWxChatAudit = wxChatAuditResult.getPrevious();
+                MmbaWxChatAudit wxChatAudit = wxChatAuditResult.getCurrent();
+                mmbaAutoCustomerFollowService.handleWxChatSuccess(previousWxChatAudit, wxChatAudit);
+            }
+            case MmbaBehaviorTypes.WX_FRIEND_CHANGE_AUDIT -> {
+                mmbaAuditPersistenceService.saveOrUpdateWxFriendChangeAudit(buildWxFriendChangeAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
+                customerWechatFriendStatusService.handleFriendChangeAudit(
+                        data.getUm(), data.getFriendPhone(), data.getIsFriend(), toInteger(data.getOperFlag()), MmbaConstants.SYSTEM_USER
+                );
+                boolean friendAdded = "1".equals(StringUtils.trimToEmpty(data.getIsFriend()))
+                    || Integer.valueOf(1).equals(toInteger(data.getOperFlag()));
+                if (friendAdded) {
+                    employeeStatEventRecordService.confirmWechatFriendSuccessEvent(
+                        data.getUm(),
+                        data.getFriendPhone(),
+                        data.getEsId(),
+                        data.getTimestamp()
+                    );
                 }
-                case MmbaBehaviorTypes.WX_FRIEND_LIST_AUDIT -> mmbaAuditPersistenceService.saveOrUpdateWxFriendListAudit(buildWxFriendListAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
-                case MmbaBehaviorTypes.WX_ACCOUNT_AUDIT -> {
-                    mmbaAuditPersistenceService.saveOrUpdateWxAccountAudit(buildWxAccountAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
-                    mmbaWxMappingSyncService.syncFromAccountAudit(data, MmbaConstants.SYSTEM_USER);
-                }
-                case MmbaBehaviorTypes.DEVICE_INFO_AUDIT -> {
-                    mmbaAuditPersistenceService.saveOrUpdateDeviceInfoAudit(buildDeviceInfoAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
-                    syncDeviceSnapshot(data, dto.getBehaviorType());
-                }
-                case MmbaBehaviorTypes.WX_LOGIN_LOGOUT_AUDIT -> {
-                    mmbaAuditPersistenceService.saveOrUpdateWxLoginAudit(buildWxLoginAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
-                    mmbaWxMappingSyncService.syncMappingStatusFromLoginAudit(data, MmbaConstants.SYSTEM_USER);
-                    customerWechatFriendStatusService.recalculateByUm(data.getUm(), MmbaConstants.SYSTEM_USER);
-                }
-                default -> {
-                }
+            }
+            case MmbaBehaviorTypes.WX_FRIEND_LIST_AUDIT -> mmbaAuditPersistenceService.saveOrUpdateWxFriendListAudit(buildWxFriendListAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
+            case MmbaBehaviorTypes.WX_ACCOUNT_AUDIT -> {
+                mmbaAuditPersistenceService.saveOrUpdateWxAccountAudit(buildWxAccountAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
+                mmbaWxMappingSyncService.syncFromAccountAudit(data, MmbaConstants.SYSTEM_USER);
+            }
+            case MmbaBehaviorTypes.DEVICE_INFO_AUDIT -> {
+                mmbaAuditPersistenceService.saveOrUpdateDeviceInfoAudit(buildDeviceInfoAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
+                syncDeviceSnapshot(data, dto.getBehaviorType());
+            }
+            case MmbaBehaviorTypes.WX_LOGIN_LOGOUT_AUDIT -> {
+                mmbaAuditPersistenceService.saveOrUpdateWxLoginAudit(buildWxLoginAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
+                mmbaWxMappingSyncService.syncMappingStatusFromLoginAudit(data, MmbaConstants.SYSTEM_USER);
+                customerWechatFriendStatusService.recalculateByUm(data.getUm(), MmbaConstants.SYSTEM_USER);
+            }
+            default -> {
             }
         }
     }
@@ -151,26 +154,33 @@ public class MmbaCallbackDispatchService {
      * 指令结果类回调分发。
      */
     public void dispatchCommand(MmbaAuditRequest dto, MmbaCallbackRecord callbackRecord) {
+        if (dto.getData() == null) {
+            return;
+        }
         for (ZzyData data : dto.getData()) {
             log.info("MMBA结果回调分发 callbackRecordId={} behaviorType={} reqId={} tenantId={}",
                     callbackRecord.getId(), dto.getBehaviorType(), data.getReqId(), data.getTenantId());
-            MmbaCommandResultService.SaveOrUpdateResult saveResult = mmbaCommandResultService.saveOrUpdate(
-                    buildCommandResult(dto.getBehaviorType(), data, callbackRecord), MmbaConstants.SYSTEM_USER
+            mmbaCallbackItemDispatchService.dispatchCommandItem(dto, callbackRecord, data);
+        }
+    }
+
+    public void processCommandItem(MmbaAuditRequest dto, MmbaCallbackRecord callbackRecord, ZzyData data) {
+        MmbaCommandResultService.SaveOrUpdateResult saveResult = mmbaCommandResultService.saveOrUpdate(
+                buildCommandResult(dto.getBehaviorType(), data, callbackRecord), MmbaConstants.SYSTEM_USER
+        );
+        if (dto.getBehaviorType() == MmbaBehaviorTypes.DIAL_FAIL_RECEIPT) {
+            upgradeCustomerCallStatus(resolveCustomerId(data.getBizExtInfo()), data.getCustomerTel(), data.getUm(),
+                    CustomerCallStatusService.DIALED_NOT_CONNECTED, callbackRecord.getId());
+        }
+        if (dto.getBehaviorType() == MmbaBehaviorTypes.ADD_WECHAT_FRIEND_RECEIPT) {
+            customerWechatFriendStatusService.handleAddFriendReceipt(
+                    data.getUm(),
+                    data.getFriendPhone(),
+                    toInteger(firstNotBlank(data.getProcessStatus(), data.getStatus())),
+                    MmbaConstants.SYSTEM_USER
             );
-            if (dto.getBehaviorType() == MmbaBehaviorTypes.DIAL_FAIL_RECEIPT) {
-                upgradeCustomerCallStatus(resolveCustomerId(data.getBizExtInfo()), data.getCustomerTel(), data.getUm(),
-                        CustomerCallStatusService.DIALED_NOT_CONNECTED, callbackRecord.getId());
-            }
-            if (dto.getBehaviorType() == MmbaBehaviorTypes.ADD_WECHAT_FRIEND_RECEIPT) {
-                customerWechatFriendStatusService.handleAddFriendReceipt(
-                        data.getUm(),
-                        data.getFriendPhone(),
-                        toInteger(firstNotBlank(data.getProcessStatus(), data.getStatus())),
-                        MmbaConstants.SYSTEM_USER
-                );
-                if (saveResult.isCreated()) {
-                    sendAddWechatFriendReceiptNotice(data);
-                }
+            if (saveResult.isCreated()) {
+                sendAddWechatFriendReceiptNotice(data);
             }
         }
     }

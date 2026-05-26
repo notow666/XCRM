@@ -7,11 +7,11 @@ import cn.cordys.common.util.Translator;
 import cn.cordys.common.schedule.TenantQuartzLifecycleService;
 import cn.cordys.common.service.DataInitService;
 import cn.cordys.config.DynamicTenantRoutingDataSource;
+import cn.cordys.config.TenantHikariDataSourceFactory;
 import cn.cordys.context.TenantContext;
 import cn.cordys.tenant.dto.TenantDbConfigDTO;
 import cn.cordys.tenant.dto.response.TenantProvisionResponse;
 import cn.cordys.tenant.util.JdbcUrlUtils;
-import com.zaxxer.hikari.HikariDataSource;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -22,7 +22,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
-import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.stereotype.Service;
@@ -52,6 +51,9 @@ public class TenantProvisioningService {
 
     @Resource
     private DynamicTenantRoutingDataSource tenantRoutingDataSource;
+
+    @Resource
+    private TenantHikariDataSourceFactory tenantHikariDataSourceFactory;
 
     @Resource
     @Qualifier("dataSourceProperties")
@@ -103,7 +105,8 @@ public class TenantProvisioningService {
             TenantDbConfigDTO existingConfig = tenantMetaService.getTenantDbConfig(tenantId);
             if (existingConfig != null) {
                 if (!tenantRoutingDataSource.hasTenantDataSource(tenantId)) {
-                    DataSource pool = buildPooledDataSource(existingConfig.getJdbcUrl(), existingConfig.getDriverClassName(),
+                    DataSource pool = tenantHikariDataSourceFactory.createTenantPool(
+                            existingConfig.getDriverClassName(), existingConfig.getJdbcUrl(),
                             existingConfig.getDbUsername(), existingConfig.getDbPassword(), tenantId);
                     tenantRoutingDataSource.registerTenantDataSource(tenantId, pool);
                 }
@@ -138,7 +141,8 @@ public class TenantProvisioningService {
             long now = System.currentTimeMillis();
             tenantMetaService.insertTenant(tenantId, tenantId, tenantName, orgId, now, operatorId);
 
-            DataSource pool = buildPooledDataSource(tenantJdbcUrl, driver, jdbcUser, jdbcPassword, tenantId);
+            DataSource pool = tenantHikariDataSourceFactory.createTenantPool(
+                    driver, tenantJdbcUrl, jdbcUser, jdbcPassword, tenantId);
             tenantRoutingDataSource.registerTenantDataSource(tenantId, pool);
             initializeTenantData(tenantId);
             initializeTenantQuartzSchedules(tenantId);
@@ -247,24 +251,6 @@ public class TenantProvisioningService {
                 .validateOnMigrate(false)
                 .load();
         flyway.migrate();
-    }
-
-    private DataSource buildPooledDataSource(String jdbcUrl, String driver, String user, String password, String tenantId) {
-        HikariDataSource ds = DataSourceBuilder.create()
-                .type(HikariDataSource.class)
-                .driverClassName(driver)
-                .url(jdbcUrl)
-                .username(user)
-                .password(password)
-                .build();
-        ds.setPoolName("CordysTenant-" + tenantId);
-        ds.setMaximumPoolSize(20);
-        ds.setMinimumIdle(2);
-        ds.setConnectionTimeout(30_000L);
-        ds.setMaxLifetime(1_800_000L);
-        ds.setIdleTimeout(300_000L);
-        ds.setConnectionTestQuery("SELECT 1");
-        return ds;
     }
 
     /**

@@ -19,7 +19,6 @@ import java.nio.charset.StandardCharsets;
 
 @Slf4j(topic = CrmLoggers.MMBA_CALLBACK)
 @Service
-@Transactional(rollbackFor = Exception.class)
 public class MmbaCallbackProcessService {
 
     private static final int MAX_ERROR_MESSAGE_LENGTH = 60000;
@@ -27,6 +26,7 @@ public class MmbaCallbackProcessService {
     @Resource
     private MmbaCallbackRecordService mmbaCallbackRecordService;
 
+    @Transactional(rollbackFor = Exception.class)
     public CallbackRecordPrepareResult prepareCallbackRecord(MmbaAuditRequest dto) {
         MmbaCallbackRecord record = buildCallbackRecord(dto);
         MmbaCallbackRecord existing = mmbaCallbackRecordService.findLatestByPayloadHash(record.getPayloadHash());
@@ -59,15 +59,7 @@ public class MmbaCallbackProcessService {
         return new CallbackRecordPrepareResult(existing, true);
     }
 
-    public MmbaCallbackRecord initCallbackRecord(MmbaAuditRequest dto) {
-        MmbaCallbackRecord record = buildCallbackRecord(dto);
-        log.info("MMBA回调入库初始化 streamId={} consumer={} behaviorType={} tenancyName={} tenantId={} recordCount={} payloadHash={} reqId={} esId={}",
-                dto.getStreamId(), dto.getStreamConsumer(), dto.getBehaviorType(), dto.getTenancyName(),
-                TenantContext.getTenantId(), record.getRecordCount(), record.getPayloadHash(),
-                firstReqId(dto), firstEsId(dto));
-        return mmbaCallbackRecordService.init(record, MmbaConstants.SYSTEM_USER);
-    }
-
+    @Transactional(rollbackFor = Exception.class)
     public void markSuccess(MmbaCallbackRecord record, MmbaAuditRequest dto) {
         record.setProcessStatus(MmbaConstants.CALLBACK_PROCESS_SUCCESS);
         record.setProcessResult("processed");
@@ -79,6 +71,7 @@ public class MmbaCallbackProcessService {
                 firstReqId(dto), firstEsId(dto));
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void markFailed(MmbaCallbackRecord record, MmbaAuditRequest dto, Exception exception) {
         record.setProcessStatus(MmbaConstants.CALLBACK_PROCESS_FAILED);
         record.setProcessResult("failed");
@@ -89,15 +82,6 @@ public class MmbaCallbackProcessService {
                 record.getId(), record.getBehaviorType(), TenantContext.getTenantId(),
                 firstReqId(dto), firstEsId(dto),
                 exception == null ? null : exception.getMessage(), exception);
-    }
-
-    public void touchPayloadError(MmbaAuditRequest dto, Exception exception) {
-        MmbaCallbackRecord record = initCallbackRecord(dto);
-        markFailed(record, dto, exception);
-    }
-
-    public String toRawData(ZzyData data) {
-        return JSON.toJSONString(data);
     }
 
     private MmbaCallbackRecord buildCallbackRecord(MmbaAuditRequest dto) {

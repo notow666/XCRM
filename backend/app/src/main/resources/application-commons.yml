@@ -20,15 +20,6 @@ spring:
   cache:
     type: redis
   datasource:
-    hikari:
-      auto-commit: true
-      connection-test-query: SELECT 1
-      connection-timeout: 30000
-      idle-timeout: 300000
-      max-lifetime: 1800000
-      maximum-pool-size: 100
-      minimum-idle: 10
-      pool-name: DatebookHikariCP
     quartz:
       hikari:
         auto-commit: true
@@ -107,3 +98,18 @@ springdoc:
   swagger-ui:
     enabled: false
 
+cordys:
+  tenant:
+    datasource:
+      hikari:
+        maximum-pool-size: 25
+        minimum-idle: 2
+        connection-timeout: 60000
+        idle-timeout: 300000
+        max-lifetime: 1800000
+        connection-test-query: SELECT 1
+  mmba:
+    callback:
+      stream-parallel-consumers: 5
+      batch-flush-size: 16
+      db-concurrency: 8

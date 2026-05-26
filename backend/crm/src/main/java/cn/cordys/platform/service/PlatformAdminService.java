@@ -7,6 +7,7 @@ import cn.cordys.common.pager.Pager;
 import cn.cordys.common.response.result.CrmHttpResultCode;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.config.DynamicTenantRoutingDataSource;
+import cn.cordys.config.TenantHikariDataSourceFactory;
 import cn.cordys.platform.domain.TenantOpsTask;
 import cn.cordys.platform.dto.request.PlatformAuditPageRequest;
 import cn.cordys.platform.dto.request.PlatformTenantPageRequest;
@@ -21,7 +22,6 @@ import cn.cordys.tenant.mapper.ExtTenantMapper;
 import cn.cordys.tenant.service.TenantJdbcResolver;
 import cn.cordys.tenant.service.TenantProvisioningService;
 import cn.cordys.tenant.service.TenantMetaService;
-import com.zaxxer.hikari.HikariDataSource;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -31,7 +31,6 @@ import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
@@ -63,6 +62,9 @@ public class PlatformAdminService {
 
     @Resource
     private DynamicTenantRoutingDataSource tenantRoutingDataSource;
+
+    @Resource
+    private TenantHikariDataSourceFactory tenantHikariDataSourceFactory;
 
     @Resource
     private TenantProvisioningService tenantProvisioningService;
@@ -111,7 +113,10 @@ public class PlatformAdminService {
         } else {
             TenantDbConfigDTO cfg = tenantMetaService.getTenantDbConfig(tenantId);
             if (cfg != null && !tenantRoutingDataSource.hasTenantDataSource(tenantId)) {
-                tenantRoutingDataSource.registerTenantDataSource(tenantId, Objects.requireNonNull(createDataSource(cfg)));
+                tenantRoutingDataSource.registerTenantDataSource(tenantId,
+                        Objects.requireNonNull(tenantHikariDataSourceFactory.createTenantPool(
+                                cfg.getDriverClassName(), cfg.getJdbcUrl(),
+                                cfg.getDbUsername(), cfg.getDbPassword(), tenantId)));
             }
             initializeTenantQuartzSchedules(tenantId);
             log.info("[TENANT_UNFREEZE] tenantId={}, operator={}", tenantId, operatorId);
@@ -216,7 +221,9 @@ public class PlatformAdminService {
         String migrationVersion = "";
         if (metadataExists) {
             try {
-                DataSource ds = createDataSource(config);
+                DataSource ds = tenantHikariDataSourceFactory.createTenantPool(
+                        config.getDriverClassName(), config.getJdbcUrl(),
+                        config.getDbUsername(), config.getDbPassword(), tenantId);
                 JdbcTemplate jdbcTemplate = new JdbcTemplate(ds);
                 jdbcTemplate.queryForObject("SELECT 1", Integer.class);
                 jdbcReachable = true;
@@ -245,7 +252,9 @@ public class PlatformAdminService {
         if (config == null) {
             throw new GenericException("租户不存在");
         }
-        DataSource ds = createDataSource(config);
+        DataSource ds = tenantHikariDataSourceFactory.createTenantPool(
+                config.getDriverClassName(), config.getJdbcUrl(),
+                config.getDbUsername(), config.getDbPassword(), tenantId);
         Flyway flyway = Flyway.configure()
                 .dataSource(ds)
                 .locations("classpath:migration")
@@ -312,17 +321,6 @@ public class PlatformAdminService {
         masterJdbcTemplate.update("INSERT INTO platform_audit_log (id, operator_id, action, tenant_id, result, detail, duration_ms, create_time) " +
                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 IDGenerator.nextStr(), operatorId, action, tenantId, result, detail, durationMs, System.currentTimeMillis());
-    }
-
-    @NonNull
-    private DataSource createDataSource(TenantDbConfigDTO config) {
-        HikariDataSource dataSource = new HikariDataSource();
-        dataSource.setJdbcUrl(config.getJdbcUrl());
-        dataSource.setUsername(config.getDbUsername());
-        dataSource.setPassword(config.getDbPassword());
-        dataSource.setDriverClassName(config.getDriverClassName());
-        dataSource.setMaximumPoolSize(2);
-        return dataSource;
     }
 
     private void closeIfPossible(DataSource dataSource) {
