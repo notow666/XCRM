@@ -39,6 +39,7 @@ import cn.cordys.crm.customer.mapper.ExtCustomerOwnerMapper;
 import cn.cordys.crm.customer.mapper.ExtCustomerStageConfigMapper;
 import cn.cordys.crm.follow.service.FollowUpPlanService;
 import cn.cordys.crm.opportunity.dto.response.StageConfigResponse;
+import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service.EmployeeStatEventRecordService;
 import cn.cordys.crm.system.constants.NotificationConstants;
 import cn.cordys.crm.system.dto.MessageDetailDTO;
 import cn.cordys.crm.system.domain.User;
@@ -65,6 +66,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.springframework.stereotype.Service;
+import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.enums.EmployeeStatEventType;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -133,6 +135,9 @@ public class PoolCustomerService {
     private PoolCustomerBatchByConditionService poolCustomerBatchByConditionService;
     @Resource
     private PoolCustomerBatchSupport poolCustomerBatchSupport;
+
+    @Resource
+    private EmployeeStatEventRecordService employeeStatEventRecordService;
 
     /**
      * 获取当前用户公海选项
@@ -708,6 +713,12 @@ public class PoolCustomerService {
 //                    List.of(ownerId), true
 //            );
 //        }
+        //员工事件服务
+        EmployeeStatEventType eventType = Strings.CS.equals(logType, LogType.PICK)
+            ? EmployeeStatEventType.PICK
+            : EmployeeStatEventType.ASSIGN;
+        employeeStatEventRecordService.recordPoolOwnEvent(customer, operateUserId, currentOrgId, eventType);
+
     }
 
     private void validateBatchPickMobileConflict(List<String> customerIds, String ownerId, String currentOrgId) {

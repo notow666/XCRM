@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS report_employee_follow_analysis_fact_day;

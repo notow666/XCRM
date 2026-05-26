@@ -9,8 +9,8 @@ import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.request.
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisDrilldownItemResponse;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisSummaryItemResponse;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service.EmployeeFollowAnalysisDrilldownService;
-import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service.EmployeeFollowAnalysisFactBuildService;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service.EmployeeFollowAnalysisService;
+import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service.EmployeeStatDayBuildService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -36,7 +36,7 @@ public class EmployeeFollowAnalysisController {
     @Resource
     private EmployeeFollowAnalysisDrilldownService employeeFollowAnalysisDrilldownService;
     @Resource
-    private EmployeeFollowAnalysisFactBuildService employeeFollowAnalysisFactBuildService;
+    private EmployeeStatDayBuildService employeeStatDayBuildService;
 
     @PostMapping("/summary")
     @Operation(summary = "员工跟进分析汇总")
@@ -64,13 +64,13 @@ public class EmployeeFollowAnalysisController {
     }
 
     @PostMapping("/rebuild")
-    @Operation(summary = "员工跟进分析历史事实重算")
+    @Operation(summary = "员工跟进分析日报重算")
     public void rebuild(@Valid @RequestBody EmployeeFollowAnalysisRebuildRequest request) {
         long start = System.currentTimeMillis();
         String orgId = OrganizationContext.getOrganizationId();
         String userId = SessionUtils.getUserId();
         log.info("员工跟进分析请求开始, api=rebuild, orgId={}, operatorUserId={}, request={}", orgId, userId, request);
-        employeeFollowAnalysisFactBuildService.rebuildRange(request, userId);
+        employeeStatDayBuildService.rebuildRange(request, userId);
         log.info("员工跟进分析请求结束, api=rebuild, orgId={}, operatorUserId={}, costMs={}", orgId, userId, System.currentTimeMillis() - start);
     }
 }

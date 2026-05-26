@@ -1,22 +1,20 @@
 package cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service;
 
-import cn.cordys.common.constants.FormKey;
+import com.fasterxml.jackson.databind.JsonNode;
 import cn.cordys.common.constants.PermissionConstants;
+import cn.cordys.common.util.JSON;
 import cn.cordys.common.dto.DeptDataPermissionDTO;
 import cn.cordys.common.dto.UserDeptDTO;
 import cn.cordys.common.service.BaseService;
 import cn.cordys.common.service.DataScopeService;
+import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.domain.EmployeeStatDay;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.request.EmployeeFollowAnalysisSummaryRequest;
-import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisCustomerContextRow;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisEmployeeDimensionRow;
-import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisHistoryAggregateRow;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisMetricRow;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisSummaryItemResponse;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.enums.EmployeeFollowAnalysisDimensionType;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.enums.EmployeeFollowAnalysisTimePreset;
-import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.mapper.EmployeeFollowAnalysisMapper;
-import cn.cordys.crm.system.dto.field.base.OptionProp;
-import cn.cordys.crm.system.service.ModuleFieldExtService;
+import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.mapper.EmployeeStatAnalysisMapper;
 import jakarta.annotation.Resource;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -31,11 +29,11 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Comparator;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -44,63 +42,57 @@ import java.util.function.Supplier;
 @Slf4j
 public class EmployeeFollowAnalysisService {
 
-    private static final String CUSTOMER_SOURCE_INTERNAL_KEY = "customerSource";
     private static final DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM");
 
     @Resource
-    private EmployeeFollowAnalysisMapper employeeFollowAnalysisMapper;
-    @Resource
-    private ModuleFieldExtService moduleFieldExtService;
+    private EmployeeStatAnalysisMapper employeeStatAnalysisMapper;
     @Resource
     private BaseService baseService;
     @Resource
     private DataScopeService dataScopeService;
 
     public List<EmployeeFollowAnalysisSummaryItemResponse> summary(EmployeeFollowAnalysisSummaryRequest request, String orgId, String userId) {
-        // 汇总查询固定拆成两段：昨天及以前走事实表，今天走原始表实时聚合。
         QueryRange range = buildQueryRange(request.getTimePreset(), request.getStartTime(), request.getEndTime());
         EmployeeFollowAnalysisDimensionType dimensionType = EmployeeFollowAnalysisDimensionType.fromValue(request.getDimensionType());
         AggregationContext context = buildAggregationContext(orgId, userId, dimensionType);
         if (context.getEmployeeMap().isEmpty()) {
             return List.of();
         }
-        List<String> visibleOperatorUserIds = context.getSqlFilterOperatorUserIds();
+        List<String> visibleOwnerUserIds = context.getSqlFilterOperatorUserIds();
         Map<String, SummaryAccumulator> accumulatorMap = new LinkedHashMap<>();
-        if (range.getHistoryStartDate() != null && range.getHistoryEndDate() != null) {
-            // 历史区间直接按当前维度在事实表聚合，避免回传大量明细行再由 Java 二次聚合。
-            mergeAccumulatorMaps(
-                    accumulatorMap,
-                    aggregateHistoryRows(loadHistoryAggregateRows(range, dimensionType, orgId, visibleOperatorUserIds), dimensionType, context)
+        boolean useHistoryDayRows = dimensionType != EmployeeFollowAnalysisDimensionType.CUSTOMER_SOURCE;
+
+        if (useHistoryDayRows
+                && range.getHistoryStartDate() != null
+                && range.getHistoryEndDate() != null) {
+            List<EmployeeStatDay> historyRows = logSqlQuery(
+                    "listHistoryDayRows",
+                    "startDate=" + range.getHistoryStartDate() + ", endDate=" + range.getHistoryEndDate() + ", orgId=" + orgId,
+                    () -> employeeStatAnalysisMapper.listHistoryDayRows(
+                            range.getHistoryStartDate().toString(),
+                            range.getHistoryEndDate().toString(),
+                            orgId,
+                            visibleOwnerUserIds
+                    )
             );
+            mergeAccumulatorMaps(accumulatorMap, aggregateHistoryDayRows(historyRows, dimensionType));
         }
-        List<EmployeeFollowAnalysisMetricRow> metricRows = new ArrayList<>();
-        if (range.getTodayStartTime() != null && range.getTodayEndTime() != null) {
-            // 入库客户数
-            metricRows.addAll(logSqlQuery(
-                    "listInboundRows",
-                    "startTime=" + range.getTodayStartTime() + ", endTime=" + range.getTodayEndTime() + ", orgId=" + orgId,
-                    () -> employeeFollowAnalysisMapper.listInboundRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId, visibleOperatorUserIds)
-            ));
-            // 联系客户数
-            metricRows.addAll(logSqlQuery(
-                    "listContactedRows",
-                    "startTime=" + range.getTodayStartTime() + ", endTime=" + range.getTodayEndTime() + ", orgId=" + orgId,
-                    () -> employeeFollowAnalysisMapper.listContactedRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId, visibleOperatorUserIds)
-            ));
-            // 通话类指标：拨打电话数、拨打接通数、一分钟以上通话数、三分钟以上通话数、通话时长
-            metricRows.addAll(logSqlQuery(
-                    "listCallRows",
-                    "startTime=" + range.getTodayStartTime() + ", endTime=" + range.getTodayEndTime() + ", orgId=" + orgId,
-                    () -> employeeFollowAnalysisMapper.listCallRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId, visibleOperatorUserIds)
-            ));
-            // 新增微信好友数
-            metricRows.addAll(logSqlQuery(
-                    "listWechatRows",
-                    "startTime=" + range.getTodayStartTime() + ", endTime=" + range.getTodayEndTime() + ", orgId=" + orgId,
-                    () -> employeeFollowAnalysisMapper.listWechatRows(range.getTodayStartTime(), range.getTodayEndTime(), orgId, visibleOperatorUserIds)
-            ));
+
+        Long metricStartTime;
+        Long metricEndTime;
+        if (useHistoryDayRows) {
+            metricStartTime = range.getTodayStartTime();
+            metricEndTime = range.getTodayEndTime();
+        } else {
+            metricStartTime = range.getQueryStartDate().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
+            metricEndTime = range.getQueryEndDate().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() - 1;
         }
-        mergeAccumulatorMaps(accumulatorMap, aggregateRows(metricRows, dimensionType, context));
+
+        if (metricStartTime != null && metricEndTime != null) {
+            List<EmployeeFollowAnalysisMetricRow> metricRows = loadMetricRows(metricStartTime, metricEndTime, orgId, visibleOwnerUserIds);
+            mergeAccumulatorMaps(accumulatorMap, aggregateRows(metricRows, dimensionType, context));
+        }
+
         if (Boolean.TRUE.equals(request.getShowEmptyItems())) {
             fillEmptyDimensions(accumulatorMap, dimensionType, context, range);
         }
@@ -109,11 +101,67 @@ public class EmployeeFollowAnalysisService {
         return responses;
     }
 
+    private List<EmployeeFollowAnalysisMetricRow> loadMetricRows(Long startTime,
+                                                                 Long endTime,
+                                                                 String orgId,
+                                                                 List<String> visibleOwnerUserIds) {
+        List<EmployeeFollowAnalysisMetricRow> metricRows = new ArrayList<>();
+        metricRows.addAll(logSqlQuery(
+                "listInboundRows",
+                "startTime=" + startTime + ", endTime=" + endTime + ", orgId=" + orgId,
+                () -> employeeStatAnalysisMapper.listInboundRows(startTime, endTime, orgId, visibleOwnerUserIds)
+        ));
+        metricRows.addAll(logSqlQuery(
+                "listContactedRows",
+                "startTime=" + startTime + ", endTime=" + endTime + ", orgId=" + orgId,
+                () -> employeeStatAnalysisMapper.listContactedRows(startTime, endTime, orgId, visibleOwnerUserIds)
+        ));
+        List<EmployeeFollowAnalysisMetricRow> callRows = logSqlQuery(
+                "listCallRows",
+                "startTime=" + startTime + ", endTime=" + endTime + ", orgId=" + orgId,
+                () -> employeeStatAnalysisMapper.listCallRows(startTime, endTime, orgId, visibleOwnerUserIds)
+        );
+        metricRows.addAll(fillCallMetricRows(callRows, orgId, visibleOwnerUserIds));
+        metricRows.addAll(logSqlQuery(
+                "listWechatRows",
+                "startTime=" + startTime + ", endTime=" + endTime + ", orgId=" + orgId,
+                () -> employeeStatAnalysisMapper.listWechatRows(startTime, endTime, orgId, visibleOwnerUserIds)
+        ));
+        return metricRows;
+    }
+
+    private List<EmployeeFollowAnalysisMetricRow> fillCallMetricRows(List<EmployeeFollowAnalysisMetricRow> callRows,
+                                                                     String orgId,
+                                                                     List<String> visibleOwnerUserIds) {
+        if (callRows == null || callRows.isEmpty()) {
+            return List.of();
+        }
+        List<EmployeeFollowAnalysisMetricRow> result = new ArrayList<>(callRows.size());
+        for (EmployeeFollowAnalysisMetricRow row : callRows) {
+            JsonNode bizExtInfo = parseBizExtInfo(row.getBizExtInfo());
+            if (bizExtInfo == null) {
+                continue;
+            }
+            row.setOrganizationId(readBizExtText(bizExtInfo, "organization_id", "organizationId"));
+            row.setOperatorUserId(readBizExtText(bizExtInfo, "operator_user_id", "operatorUserId"));
+            row.setCustomerSource(readBizExtText(bizExtInfo, "customer_source", "customerSource"));
+            if (StringUtils.isAnyBlank(row.getOrganizationId(), row.getOperatorUserId())) {
+                continue;
+            }
+            if (!StringUtils.equals(row.getOrganizationId(), orgId)) {
+                continue;
+            }
+            if (visibleOwnerUserIds != null && !visibleOwnerUserIds.contains(row.getOperatorUserId())) {
+                continue;
+            }
+            result.add(row);
+        }
+        return result;
+    }
+
     private AggregationContext buildAggregationContext(String orgId, String userId, EmployeeFollowAnalysisDimensionType dimensionType) {
         AggregationContext context = new AggregationContext();
-        // 员工跟进分析当前没有独立权限点，这里复用客户管理读权限上的数据范围来裁剪可见员工。
         DeptDataPermissionDTO permission = dataScopeService.getDeptDataPermission(userId, orgId, PermissionConstants.CUSTOMER_MANAGEMENT_READ);
-        // 维度展示统一取当前值，不在历史事实表内固化部门和客户来源。
         List<EmployeeFollowAnalysisEmployeeDimensionRow> employees = loadVisibleEmployees(orgId, userId, permission);
         Map<String, EmployeeFollowAnalysisEmployeeDimensionRow> employeeMap = new LinkedHashMap<>();
         for (EmployeeFollowAnalysisEmployeeDimensionRow item : employees) {
@@ -127,7 +175,6 @@ public class EmployeeFollowAnalysisService {
         }
         context.setEmployeeOrderMap(employeeOrderMap);
 
-        // 部门维度只保留“当前有员工实际归属”的部门，不平铺整棵组织树所有节点。
         Map<String, String> departmentMap = new LinkedHashMap<>();
         Map<String, Integer> departmentOrderMap = new LinkedHashMap<>();
         int departmentIndex = 0;
@@ -143,34 +190,6 @@ public class EmployeeFollowAnalysisService {
         context.setDepartmentMap(departmentMap);
         context.setDepartmentOrderMap(departmentOrderMap);
 
-        Map<String, String> sourceLabelMap = new LinkedHashMap<>();
-        List<OptionProp> sourceOptions = logSqlQuery(
-                "getFieldOptions(customerSource)",
-                "formKey=" + FormKey.CUSTOMER.getKey() + ", orgId=" + orgId + ", internalKey=" + CUSTOMER_SOURCE_INTERNAL_KEY,
-                () -> moduleFieldExtService.getFieldOptions(FormKey.CUSTOMER.getKey(), orgId, CUSTOMER_SOURCE_INTERNAL_KEY)
-        );
-        Map<String, Integer> sourceOrderMap = new LinkedHashMap<>();
-        int sourceIndex = 0;
-        for (OptionProp option : sourceOptions) {
-            sourceLabelMap.put(StringUtils.defaultString(option.getValue()), option.getLabel());
-            sourceOrderMap.put(StringUtils.defaultString(option.getValue()), sourceIndex++);
-        }
-        context.setSourceLabelMap(sourceLabelMap);
-        context.setSourceOrderMap(sourceOrderMap);
-
-        Map<String, EmployeeFollowAnalysisCustomerContextRow> customerContextMap = new LinkedHashMap<>();
-        // 客户来源维度直接查询当前客户来源映射，避免按 customerIds 拼超长 IN SQL。
-        if (dimensionType == EmployeeFollowAnalysisDimensionType.CUSTOMER_SOURCE) {
-            List<EmployeeFollowAnalysisCustomerContextRow> customerRows = logSqlQuery(
-                    "listCustomerContexts",
-                    "orgId=" + orgId,
-                    () -> employeeFollowAnalysisMapper.listCustomerContexts(orgId)
-            );
-            for (EmployeeFollowAnalysisCustomerContextRow item : customerRows) {
-                customerContextMap.put(item.getCustomerId(), item);
-            }
-        }
-        context.setCustomerContextMap(customerContextMap);
         return context;
     }
 
@@ -180,7 +199,7 @@ public class EmployeeFollowAnalysisService {
         List<EmployeeFollowAnalysisEmployeeDimensionRow> employees = logSqlQuery(
                 "listCurrentEmployees",
                 "orgId=" + orgId + ", userId=" + userId,
-                () -> employeeFollowAnalysisMapper.listCurrentEmployees(orgId)
+                () -> employeeStatAnalysisMapper.listCurrentEmployees(orgId)
         );
         if (employees.isEmpty()) {
             return List.of();
@@ -229,53 +248,16 @@ public class EmployeeFollowAnalysisService {
         return visibleEmployees;
     }
 
-    private List<EmployeeFollowAnalysisHistoryAggregateRow> loadHistoryAggregateRows(QueryRange range,
-                                                                                     EmployeeFollowAnalysisDimensionType dimensionType,
-                                                                                     String orgId,
-                                                                                     List<String> visibleOperatorUserIds) {
-        String startDate = range.getHistoryStartDate().toString();
-        String endDate = range.getHistoryEndDate().toString();
-        return switch (dimensionType) {
-            case EMPLOYEE_NAME -> logSqlQuery(
-                    "listHistoryRowsByEmployee",
-                    "startDate=" + startDate + ", endDate=" + endDate,
-                    () -> employeeFollowAnalysisMapper.listHistoryRowsByEmployee(startDate, endDate, visibleOperatorUserIds)
-            );
-            case EMPLOYEE_DEPT -> logSqlQuery(
-                    "listHistoryRowsByDepartment",
-                    "startDate=" + startDate + ", endDate=" + endDate + ", orgId=" + orgId,
-                    () -> employeeFollowAnalysisMapper.listHistoryRowsByDepartment(startDate, endDate, orgId, visibleOperatorUserIds)
-            );
-            case CUSTOMER_SOURCE -> logSqlQuery(
-                    "listHistoryRowsByCustomerSource",
-                    "startDate=" + startDate + ", endDate=" + endDate,
-                    () -> employeeFollowAnalysisMapper.listHistoryRowsByCustomerSource(startDate, endDate, visibleOperatorUserIds)
-            );
-            case STAT_DAY -> logSqlQuery(
-                    "listHistoryRowsByStatDay",
-                    "startDate=" + startDate + ", endDate=" + endDate,
-                    () -> employeeFollowAnalysisMapper.listHistoryRowsByStatDay(startDate, endDate, visibleOperatorUserIds)
-            );
-            case STAT_MONTH -> logSqlQuery(
-                    "listHistoryRowsByStatMonth",
-                    "startDate=" + startDate + ", endDate=" + endDate,
-                    () -> employeeFollowAnalysisMapper.listHistoryRowsByStatMonth(startDate, endDate, visibleOperatorUserIds)
-            );
-        };
-    }
-
-    private Map<String, SummaryAccumulator> aggregateHistoryRows(List<EmployeeFollowAnalysisHistoryAggregateRow> rows,
-                                                                EmployeeFollowAnalysisDimensionType dimensionType,
-                                                                AggregationContext context) {
+    private Map<String, SummaryAccumulator> aggregateHistoryDayRows(List<EmployeeStatDay> rows,
+                                                                    EmployeeFollowAnalysisDimensionType dimensionType) {
         Map<String, SummaryAccumulator> result = new LinkedHashMap<>();
-        for (EmployeeFollowAnalysisHistoryAggregateRow row : rows) {
-            DimensionValue dimension = resolveHistoryDimensionValue(row, dimensionType, context);
-            String dimensionKey = StringUtils.defaultString(dimension.getKey());
-            SummaryAccumulator accumulator = result.computeIfAbsent(dimensionKey,
-                    ignore -> new SummaryAccumulator(dimensionKey, defaultText(dimension.getLabel())));
-            accumulator.getInboundCustomers().addIfFlag(row.getCustomerId(), row.getInboundCustomerFlag());
-            accumulator.getContactedCustomers().addIfFlag(row.getCustomerId(), row.getContactedCustomerFlag());
-            accumulator.getWechatCustomers().addIfFlag(row.getCustomerId(), row.getNewWechatFriendFlag());
+        for (EmployeeStatDay row : rows) {
+            DimensionValue dimension = resolveDayDimensionValue(row, dimensionType);
+            SummaryAccumulator accumulator = result.computeIfAbsent(dimension.getKey(),
+                    ignore -> new SummaryAccumulator(dimension.getKey(), defaultText(dimension.getLabel())));
+            accumulator.setInboundCustomerBaseCount(accumulator.getInboundCustomerBaseCount() + defaultInt(row.getInboundCustomerCount()));
+            accumulator.setContactedCustomerBaseCount(accumulator.getContactedCustomerBaseCount() + defaultInt(row.getContactedCustomerCount()));
+            accumulator.setWechatCustomerBaseCount(accumulator.getWechatCustomerBaseCount() + defaultInt(row.getNewWechatFriendCount()));
             accumulator.setDialCount(accumulator.getDialCount() + defaultInt(row.getDialCount()));
             accumulator.setConnectedCount(accumulator.getConnectedCount() + defaultInt(row.getConnectedCount()));
             accumulator.setCallOver1MinCount(accumulator.getCallOver1MinCount() + defaultInt(row.getCallOver1minCount()));
@@ -285,29 +267,14 @@ public class EmployeeFollowAnalysisService {
         return result;
     }
 
-    private DimensionValue resolveHistoryDimensionValue(EmployeeFollowAnalysisHistoryAggregateRow row,
-                                                        EmployeeFollowAnalysisDimensionType dimensionType,
-                                                        AggregationContext context) {
+    private DimensionValue resolveDayDimensionValue(EmployeeStatDay row,
+                                                    EmployeeFollowAnalysisDimensionType dimensionType) {
         return switch (dimensionType) {
-            case EMPLOYEE_NAME -> new DimensionValue(
-                    StringUtils.defaultString(row.getDimensionKey()),
-                    defaultText(row.getDimensionLabel())
-            );
-            case EMPLOYEE_DEPT -> {
-                EmployeeFollowAnalysisEmployeeDimensionRow employee = context.getEmployeeMap().get(row.getDimensionKey());
-                String departmentId = employee == null ? "" : StringUtils.defaultString(employee.getDepartmentId());
-                String departmentName = employee == null ? "" : employee.getDepartmentName();
-                yield new DimensionValue(departmentId, defaultText(departmentName));
-            }
-            case CUSTOMER_SOURCE -> {
-                EmployeeFollowAnalysisCustomerContextRow customer = context.getCustomerContextMap().get(row.getCustomerId());
-                String sourceValue = customer == null ? "" : StringUtils.defaultString(customer.getCustomerSource());
-                yield new DimensionValue(sourceValue, defaultText(context.getSourceLabelMap().getOrDefault(sourceValue, sourceValue)));
-            }
-            case STAT_DAY, STAT_MONTH -> new DimensionValue(
-                    StringUtils.defaultString(row.getDimensionKey()),
-                    defaultText(row.getDimensionLabel())
-            );
+            case EMPLOYEE_NAME -> new DimensionValue(StringUtils.defaultString(row.getOwnerUserId()), defaultText(row.getOwnerUserName()));
+            case EMPLOYEE_DEPT -> new DimensionValue(StringUtils.defaultString(row.getOwnerDeptId()), defaultText(row.getOwnerDeptName()));
+            case STAT_DAY -> new DimensionValue(StringUtils.defaultString(row.getStatDate()), defaultText(row.getStatDate()));
+            case STAT_MONTH -> new DimensionValue(row.getStatDate().substring(0, 7), row.getStatDate().substring(0, 7));
+            case CUSTOMER_SOURCE -> throw new IllegalStateException("customerSource should not use history day rows");
         };
     }
 
@@ -317,8 +284,8 @@ public class EmployeeFollowAnalysisService {
         Map<String, SummaryAccumulator> result = new LinkedHashMap<>();
         for (EmployeeFollowAnalysisMetricRow row : metricRows) {
             DimensionValue dimension = resolveDimensionValue(row, dimensionType, context);
-            SummaryAccumulator accumulator = result.computeIfAbsent(dimension.getKey(), ignore -> new SummaryAccumulator(dimension.getKey(), dimension.getLabel()));
-            // 这三个指标按客户去重，保证和“联系客户数/新增微信好友数”的业务口径一致。
+            SummaryAccumulator accumulator = result.computeIfAbsent(dimension.getKey(),
+                    ignore -> new SummaryAccumulator(dimension.getKey(), dimension.getLabel()));
             accumulator.getInboundCustomers().addIfFlag(row.getCustomerId(), row.getInboundCustomerFlag());
             accumulator.getContactedCustomers().addIfFlag(row.getCustomerId(), row.getContactedCustomerFlag());
             accumulator.getWechatCustomers().addIfFlag(row.getCustomerId(), row.getNewWechatFriendFlag());
@@ -336,6 +303,9 @@ public class EmployeeFollowAnalysisService {
         for (SummaryAccumulator sourceItem : source.values()) {
             SummaryAccumulator targetItem = target.computeIfAbsent(sourceItem.getDimensionKey(),
                     ignore -> new SummaryAccumulator(sourceItem.getDimensionKey(), sourceItem.getDimensionLabel()));
+            targetItem.setInboundCustomerBaseCount(targetItem.getInboundCustomerBaseCount() + sourceItem.getInboundCustomerBaseCount());
+            targetItem.setContactedCustomerBaseCount(targetItem.getContactedCustomerBaseCount() + sourceItem.getContactedCustomerBaseCount());
+            targetItem.setWechatCustomerBaseCount(targetItem.getWechatCustomerBaseCount() + sourceItem.getWechatCustomerBaseCount());
             targetItem.getInboundCustomers().addAll(sourceItem.getInboundCustomers());
             targetItem.getContactedCustomers().addAll(sourceItem.getContactedCustomers());
             targetItem.getWechatCustomers().addAll(sourceItem.getWechatCustomers());
@@ -351,7 +321,6 @@ public class EmployeeFollowAnalysisService {
                                      EmployeeFollowAnalysisDimensionType dimensionType,
                                      AggregationContext context,
                                      QueryRange range) {
-        // “显示无数据项”只补当前维度全集，不额外制造不存在的事实数据。
         switch (dimensionType) {
             case EMPLOYEE_NAME -> {
                 for (EmployeeFollowAnalysisEmployeeDimensionRow item : context.getEmployeeMap().values()) {
@@ -366,10 +335,7 @@ public class EmployeeFollowAnalysisService {
                 }
             }
             case CUSTOMER_SOURCE -> {
-                for (Map.Entry<String, String> entry : context.getSourceLabelMap().entrySet()) {
-                    accumulatorMap.computeIfAbsent(entry.getKey(),
-                            ignore -> new SummaryAccumulator(entry.getKey(), defaultText(entry.getValue())));
-                }
+                // customerSource 是自由文本快照，不存在固定全集，这里不补无数据项。
             }
             case STAT_DAY -> {
                 LocalDate cursor = range.getQueryStartDate();
@@ -399,23 +365,14 @@ public class EmployeeFollowAnalysisService {
             EmployeeFollowAnalysisSummaryItemResponse item = new EmployeeFollowAnalysisSummaryItemResponse();
             item.setDimensionKey(accumulator.getDimensionKey());
             item.setDimensionLabel(resolveDisplayLabel(accumulator, dimensionType, context));
-            // 入库客户数
-            item.setInboundCustomerCount(accumulator.getInboundCustomers().size());
-            // 联系客户数
-            item.setContactedCustomerCount(accumulator.getContactedCustomers().size());
-            // 新增微信好友数
-            item.setNewWechatFriendCount(accumulator.getWechatCustomers().size());
-            // 拨打电话数
+            item.setInboundCustomerCount(accumulator.getInboundCustomerBaseCount() + accumulator.getInboundCustomers().size());
+            item.setContactedCustomerCount(accumulator.getContactedCustomerBaseCount() + accumulator.getContactedCustomers().size());
+            item.setNewWechatFriendCount(accumulator.getWechatCustomerBaseCount() + accumulator.getWechatCustomers().size());
             item.setDialCount(accumulator.getDialCount());
-            // 拨打接通数
             item.setConnectedCount(accumulator.getConnectedCount());
-            // 一分钟以上通话数
             item.setCallOver1MinCount(accumulator.getCallOver1MinCount());
-            // 三分钟以上通话数
             item.setCallOver3MinCount(accumulator.getCallOver3MinCount());
-            // 通话时长
             item.setCallDurationSec(accumulator.getCallDurationSec());
-            // 平均通话时长 = 通话时长 / 拨打接通数
             item.setAvgCallDurationSec(accumulator.getConnectedCount() > 0 ? accumulator.getCallDurationSec() / accumulator.getConnectedCount() : 0L);
             result.add(item);
         }
@@ -430,8 +387,7 @@ public class EmployeeFollowAnalysisService {
                     .thenComparing(EmployeeFollowAnalysisSummaryItemResponse::getDimensionLabel, String::compareTo);
             case EMPLOYEE_DEPT -> Comparator.<EmployeeFollowAnalysisSummaryItemResponse>comparingInt(item -> orderOf(context.getDepartmentOrderMap(), item.getDimensionKey()))
                     .thenComparing(EmployeeFollowAnalysisSummaryItemResponse::getDimensionLabel, String::compareTo);
-            case CUSTOMER_SOURCE -> Comparator.<EmployeeFollowAnalysisSummaryItemResponse>comparingInt(item -> orderOf(context.getSourceOrderMap(), item.getDimensionKey()))
-                    .thenComparing(EmployeeFollowAnalysisSummaryItemResponse::getDimensionLabel, String::compareTo);
+            case CUSTOMER_SOURCE -> Comparator.comparing(EmployeeFollowAnalysisSummaryItemResponse::getDimensionLabel, String::compareTo);
             case STAT_DAY, STAT_MONTH -> Comparator.comparing(EmployeeFollowAnalysisSummaryItemResponse::getDimensionKey, String::compareTo);
         };
         responses.sort(comparator);
@@ -446,12 +402,7 @@ public class EmployeeFollowAnalysisService {
                 yield defaultText(employee == null ? accumulator.getDimensionLabel() : employee.getEmployeeName());
             }
             case EMPLOYEE_DEPT, STAT_DAY, STAT_MONTH -> accumulator.getDimensionLabel();
-            case CUSTOMER_SOURCE -> {
-                if (StringUtils.isBlank(accumulator.getDimensionKey())) {
-                    yield defaultText(accumulator.getDimensionLabel());
-                }
-                yield defaultText(context.getSourceLabelMap().getOrDefault(accumulator.getDimensionKey(), accumulator.getDimensionKey()));
-            }
+            case CUSTOMER_SOURCE -> defaultText(accumulator.getDimensionLabel());
         };
     }
 
@@ -471,9 +422,8 @@ public class EmployeeFollowAnalysisService {
                 yield new DimensionValue(departmentId, defaultText(departmentName));
             }
             case CUSTOMER_SOURCE -> {
-                EmployeeFollowAnalysisCustomerContextRow customer = context.getCustomerContextMap().get(row.getCustomerId());
-                String sourceValue = customer == null ? "" : StringUtils.defaultString(customer.getCustomerSource());
-                yield new DimensionValue(sourceValue, defaultText(context.getSourceLabelMap().getOrDefault(sourceValue, sourceValue)));
+                String sourceValue = StringUtils.defaultString(row.getCustomerSource());
+                yield new DimensionValue(sourceValue, defaultText(sourceValue));
             }
             case STAT_DAY -> new DimensionValue(row.getStatDate(), row.getStatDate());
             case STAT_MONTH -> new DimensionValue(row.getStatDate().substring(0, 7), row.getStatDate().substring(0, 7));
@@ -515,7 +465,6 @@ public class EmployeeFollowAnalysisService {
         range.setQueryStartDate(startDate);
         range.setQueryEndDate(endDate);
         LocalDate yesterday = today.minusDays(1);
-        // 自定义区间只要覆盖今天，就会自动拆成“历史 + today”两段。
         if (!startDate.isAfter(yesterday)) {
             range.setHistoryStartDate(startDate);
             range.setHistoryEndDate(endDate.isAfter(yesterday) ? yesterday : endDate);
@@ -546,22 +495,44 @@ public class EmployeeFollowAnalysisService {
         return StringUtils.defaultIfBlank(value, "-");
     }
 
+    private JsonNode parseBizExtInfo(String bizExtInfo) {
+        if (StringUtils.isBlank(bizExtInfo)) {
+            return null;
+        }
+        try {
+            return JSON.parseObject(bizExtInfo, JsonNode.class);
+        } catch (Exception e) {
+            log.warn("员工跟进分析通话汇总 bizExtInfo 解析失败 bizExtInfo={}", bizExtInfo, e);
+            return null;
+        }
+    }
+
+    private String readBizExtText(JsonNode bizExtInfo, String primaryField, String fallbackField) {
+        if (bizExtInfo == null) {
+            return null;
+        }
+        String value = StringUtils.trimToNull(bizExtInfo.path(primaryField).asText(null));
+        if (value != null) {
+            return value;
+        }
+        return StringUtils.trimToNull(bizExtInfo.path(fallbackField).asText(null));
+    }
+
     private int orderOf(Map<String, Integer> orderMap, String key) {
         return orderMap.getOrDefault(StringUtils.defaultString(key), Integer.MAX_VALUE);
     }
 
     private <T> List<T> logSqlQuery(String sqlName, String params, Supplier<List<T>> supplier) {
         long start = System.currentTimeMillis();
-        log.info("员工跟进分析SQL开始, sqlName={}, params={}", sqlName, params);
+        //log.info("员工跟进分析SQL开始, sqlName={}, params={}", sqlName, params);
         List<T> result = supplier.get();
         long cost = System.currentTimeMillis() - start;
-        log.info("员工跟进分析SQL结束, sqlName={}, params={}, costMs={}, resultSize={}", sqlName, params, cost, result == null ? 0 : result.size());
+        //log.info("员工跟进分析SQL结束, sqlName={}, params={}, costMs={}, resultSize={}", sqlName, params, cost, result == null ? 0 : result.size());
         return result;
     }
 
     private <K, V> Map<K, V> logMapQuery(String sqlName, String params, Supplier<Map<K, V>> supplier) {
         long start = System.currentTimeMillis();
-        //log.info("员工跟进分析SQL开始, sqlName={}, params={}", sqlName, params);
         Map<K, V> result = supplier.get();
         long cost = System.currentTimeMillis() - start;
         //log.info("员工跟进分析SQL结束, sqlName={}, params={}, costMs={}, resultSize={}", sqlName, params, cost, result == null ? 0 : result.size());
@@ -585,9 +556,6 @@ public class EmployeeFollowAnalysisService {
         private Map<String, Integer> employeeOrderMap = new LinkedHashMap<>();
         private Map<String, String> departmentMap = new LinkedHashMap<>();
         private Map<String, Integer> departmentOrderMap = new LinkedHashMap<>();
-        private Map<String, String> sourceLabelMap = new LinkedHashMap<>();
-        private Map<String, Integer> sourceOrderMap = new LinkedHashMap<>();
-        private Map<String, EmployeeFollowAnalysisCustomerContextRow> customerContextMap = new LinkedHashMap<>();
     }
 
     @Data
@@ -603,6 +571,9 @@ public class EmployeeFollowAnalysisService {
         private final UniqueCustomerSet inboundCustomers = new UniqueCustomerSet();
         private final UniqueCustomerSet contactedCustomers = new UniqueCustomerSet();
         private final UniqueCustomerSet wechatCustomers = new UniqueCustomerSet();
+        private int inboundCustomerBaseCount;
+        private int contactedCustomerBaseCount;
+        private int wechatCustomerBaseCount;
         private int dialCount;
         private int connectedCount;
         private int callOver1MinCount;

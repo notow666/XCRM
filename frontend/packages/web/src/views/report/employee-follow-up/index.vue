@@ -360,11 +360,6 @@
         { title: t('report.drilldown.col.ownerName'), key: 'ownerName', width: 120 },
         { title: t('report.drilldown.col.departmentName'), key: 'departmentName', width: 140 },
         { title: t('report.drilldown.col.customerSource'), key: 'customerSource', width: 140 },
-        { title: t('report.drilldown.col.friendPhone'), key: 'friendPhone', width: 130 },
-        { title: t('report.drilldown.col.friendNickName'), key: 'contactImAppNickName', width: 140 },
-        { title: t('report.drilldown.col.friendAccount'), key: 'contactImAppAccount', width: 140 },
-        { title: t('report.drilldown.col.friendNote'), key: 'contactImAppNote', width: 140 },
-        { title: t('report.drilldown.col.staffName'), key: 'staffName', width: 120 },
         {
           title: t('report.drilldown.col.eventTime'),
           key: 'eventTime',
@@ -380,7 +375,6 @@
         { title: t('report.drilldown.col.ownerName'), key: 'ownerName', width: 120 },
         { title: t('report.drilldown.col.departmentName'), key: 'departmentName', width: 140 },
         { title: t('report.drilldown.col.customerSource'), key: 'customerSource', width: 140 },
-        { title: t('report.drilldown.col.staffName'), key: 'staffName', width: 120 },
         { title: t('report.drilldown.col.beginTime'), key: 'beginTime', width: 160 },
         { title: t('report.drilldown.col.endTime'), key: 'endTime', width: 160 },
         {
@@ -414,10 +408,10 @@
 
   const drilldownScrollX = computed(() => {
     if (drilldownState.metricType === MetricType.NEW_WECHAT_FRIENDS) {
-      return 1560;
+      return 900;
     }
     if (isCallMetric(drilldownState.metricType)) {
-      return 1480;
+      return 1360;
     }
     return 980;
   });

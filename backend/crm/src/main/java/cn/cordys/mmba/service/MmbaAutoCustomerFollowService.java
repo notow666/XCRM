@@ -6,6 +6,7 @@ import cn.cordys.crm.customer.domain.CustomerFollowWayConfig;
 import cn.cordys.crm.customer.service.CustomerFollowWayService;
 import cn.cordys.crm.follow.dto.request.FollowUpRecordAddRequest;
 import cn.cordys.crm.follow.service.FollowUpRecordService;
+import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.enums.EmployeeStatEventType;
 import cn.cordys.crm.system.domain.User;
 import cn.cordys.mmba.domain.MmbaCallRecordAudit;
 import cn.cordys.mmba.domain.MmbaSmsRecordAudit;
@@ -131,7 +132,16 @@ public class MmbaAutoCustomerFollowService {
         request.setFollowResult(FOLLOW_RESULT_IN_PROGRESS);
         request.setContent(content);
         request.setFollowTime(followTime);
-        followUpRecordService.add(request, operatorUserId, customer.getOrganizationId());
+        EmployeeStatEventType eventType=null;
+        if(scene.equals("电话")){
+            eventType = EmployeeStatEventType.CALL_AUTO_FOLLOW;
+        }else if(scene.equals("短信")){
+            eventType = EmployeeStatEventType.SMS_AUTO_FOLLOW;
+        }
+        else if(scene.equals("微信")){
+            eventType = EmployeeStatEventType.WECHAT_AUTO_FOLLOW;
+        }
+        followUpRecordService.add(request, operatorUserId, customer.getOrganizationId(),eventType);
         log.info("MMBA自动新增客户跟进成功 scene={} reqId={} customerId={} followWayId={} operatorUserId={}",
                 scene, reqId, customer.getId(), followWay.getId(), operatorUserId);
     }

@@ -153,7 +153,8 @@ public class NotificationConstants {
         @Schema(description = "message.sync_organization_structure")
         String SYNC_ORGANIZATION_STRUCTURE = "SYNC_ORGANIZATION_STRUCTURE";
 
-
+        @Schema(description = "message.mmba_add_wechat_friend_receipt")
+        String MMBA_ADD_WECHAT_FRIEND_RECEIPT = "MMBA_ADD_WECHAT_FRIEND_RECEIPT";
     }
 
     public interface RelatedUser {

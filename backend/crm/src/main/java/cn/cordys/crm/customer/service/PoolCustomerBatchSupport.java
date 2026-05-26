@@ -13,6 +13,7 @@ import cn.cordys.crm.customer.mapper.ExtCustomerMapper;
 import cn.cordys.crm.customer.mapper.ExtCustomerOwnerMapper;
 import cn.cordys.crm.customer.mapper.ExtCustomerStageConfigMapper;
 import cn.cordys.crm.opportunity.dto.response.StageConfigResponse;
+import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service.EmployeeStatEventRecordService;
 import cn.cordys.crm.system.constants.NotificationConstants;
 import cn.cordys.crm.system.dto.MessageDetailDTO;
 import cn.cordys.crm.system.dto.field.base.BaseField;
@@ -79,6 +80,9 @@ public class PoolCustomerBatchSupport {
     private ExtCustomerCapacityMapper extCustomerCapacityMapper;
     @Resource
     private BaseMapper<CustomerPoolPickRule> pickRuleMapper;
+
+    @Resource
+    private EmployeeStatEventRecordService employeeStatEventRecordService;
 
     public void batchDelete(List<String> ids, String userId, String orgId) {
         List<Customer> customers = customerMapper.selectByIds(ids);
@@ -382,6 +386,10 @@ public class PoolCustomerBatchSupport {
         logService.batchAdd(logs);
         log.info("[POOL_BATCH_PICK_LOG_BATCH_COST] taskId={}, poolId={}, costMs={}",
                 taskId, pool.getId(), System.currentTimeMillis() - logStart);
+        //员工服务事件
+        employeeStatEventRecordService.recordPoolPickEvents(
+            plan.pickedCustomers(), currentUser, currentOrgId, now
+        );
     }
 
     public CustomerPoolPickRule loadPoolPickRule(String poolId) {
@@ -610,6 +618,10 @@ public class PoolCustomerBatchSupport {
         logService.batchAdd(logs);
         log.info("[POOL_BATCH_ASSIGN_LOG_BATCH_COST] taskId={}, poolId={}, costMs={}",
                 taskId, pool.getId(), System.currentTimeMillis() - logStart);
+        //员工服务事件
+        employeeStatEventRecordService.recordPoolAssignEvents(
+            plan.getOwnerCustomersMap(), currentUser, currentOrgId, now
+        );
     }
 
     /**

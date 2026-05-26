@@ -18,6 +18,7 @@ public class EmployeeFollowAnalysisDrilldownItemResponse {
     private String contactImAppAccount;
     private String contactImAppNote;
     private String staffName;
+    private String bizExtInfo;
     private String beginTime;
     private String endTime;
     private Integer duration;

@@ -25,7 +25,7 @@ public class MmbaCommandResultService {
     /**
      * 保存或更新统一指令结果。
      */
-    public MmbaCommandResult saveOrUpdate(MmbaCommandResult record, String userId) {
+    public SaveOrUpdateResult  saveOrUpdate(MmbaCommandResult record, String userId) {
         if (StringUtils.isBlank(record.getTargetValue())) {
             log.warn("MMBA结果回执 targetValue 为空 behaviorType={} reqId={} targetType={}",
                     record.getBehaviorType(), record.getReqId(), record.getTargetType());
@@ -40,7 +40,7 @@ public class MmbaCommandResultService {
             mmbaCommandResultMapper.insert(record);
             log.debug("MMBA结果回执新增 behaviorType={} reqId={} targetType={} callbackRecordId={}",
                     record.getBehaviorType(), record.getReqId(), record.getTargetType(), record.getCallbackRecordId());
-            return record;
+            return new SaveOrUpdateResult(true, record);
         }
         record.setId(db.getId());
         record.setCreateTime(db.getCreateTime());
@@ -49,7 +49,7 @@ public class MmbaCommandResultService {
         mmbaCommandResultMapper.update(record);
         log.debug("MMBA结果回执更新 behaviorType={} reqId={} targetType={} callbackRecordId={}",
                 record.getBehaviorType(), record.getReqId(), record.getTargetType(), record.getCallbackRecordId());
-        return record;
+        return new SaveOrUpdateResult(false, record);
     }
 
 //    public MmbaCommandResult findByReqIdAndBehaviorType(String reqId, Integer behaviorType) {
@@ -80,5 +80,23 @@ public class MmbaCommandResultService {
     private void touch(MmbaCommandResult record, String userId) {
         record.setUpdateTime(System.currentTimeMillis());
         record.setUpdateUser(userId);
+    }
+
+    public static final class SaveOrUpdateResult {
+        private final boolean created;
+        private final MmbaCommandResult record;
+
+        public SaveOrUpdateResult(boolean created, MmbaCommandResult record) {
+            this.created = created;
+            this.record = record;
+        }
+
+        public boolean isCreated() {
+            return created;
+        }
+
+        public MmbaCommandResult getRecord() {
+            return record;
+        }
     }
 }

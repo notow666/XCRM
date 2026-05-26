@@ -47,12 +47,12 @@ public class MmbaRequestRecordService {
         mmbaRequestRecordMapper.update(record);
     }
 
-//    public MmbaRequestRecord findByReqId(String reqId) {
-//        if (reqId == null || reqId.isBlank()) {
-//            return null;
-//        }
-//        MmbaRequestRecord query = new MmbaRequestRecord();
-//        query.setReqId(reqId);
-//        return mmbaRequestRecordMapper.selectOne(query);
-//    }
+    public MmbaRequestRecord findByReqId(String reqId) {
+        if (reqId == null || reqId.isBlank()) {
+            return null;
+        }
+        MmbaRequestRecord query = new MmbaRequestRecord();
+        query.setReqId(reqId);
+        return mmbaRequestRecordMapper.selectOne(query);
+    }
 }

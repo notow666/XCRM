@@ -6,8 +6,14 @@ import lombok.Data;
 public class EmployeeFollowAnalysisMetricRow {
 
     private String statDate;
+    private String organizationId;
     private String customerId;
+    private String customerSource;
     private String operatorUserId;
+    private String ownerUserName;
+    private String ownerDeptId;
+    private String ownerDeptName;
+    private String bizExtInfo;
     private Integer inboundCustomerFlag;
     private Integer contactedCustomerFlag;
     private Integer newWechatFriendFlag;

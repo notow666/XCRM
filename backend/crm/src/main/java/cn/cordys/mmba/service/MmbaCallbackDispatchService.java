@@ -4,19 +4,15 @@ import cn.cordys.common.constants.CrmLoggers;
 import cn.cordys.common.util.JSON;
 import cn.cordys.crm.customer.service.CustomerCallStatusService;
 import cn.cordys.crm.customer.service.CustomerWechatFriendStatusService;
+import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service.EmployeeStatEventRecordService;
+import cn.cordys.crm.system.constants.NotificationConstants;
+import cn.cordys.crm.system.dto.MessageDetailDTO;
+import cn.cordys.crm.system.notice.common.NoticeModel;
+import cn.cordys.crm.system.notice.common.Receiver;
+import cn.cordys.crm.system.notice.sender.insite.InSiteNoticeSender;
 import cn.cordys.mmba.MmbaBehaviorTypes;
 import cn.cordys.mmba.MmbaConstants;
-import cn.cordys.mmba.domain.MmbaCallRecordAudit;
-import cn.cordys.mmba.domain.MmbaCallbackRecord;
-import cn.cordys.mmba.domain.MmbaCommandResult;
-import cn.cordys.mmba.domain.MmbaDevice;
-import cn.cordys.mmba.domain.MmbaDeviceInfoAudit;
-import cn.cordys.mmba.domain.MmbaSmsRecordAudit;
-import cn.cordys.mmba.domain.MmbaWxAccountAudit;
-import cn.cordys.mmba.domain.MmbaWxChatAudit;
-import cn.cordys.mmba.domain.MmbaWxFriendChangeAudit;
-import cn.cordys.mmba.domain.MmbaWxFriendListAudit;
-import cn.cordys.mmba.domain.MmbaWxLoginAudit;
+import cn.cordys.mmba.domain.*;
 import cn.cordys.mmba.dto.MmbaAuditRequest;
 import cn.cordys.mmba.dto.ZzyData;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -36,7 +32,9 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAccessor;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * MMBA 回调分发服务。
@@ -63,6 +61,9 @@ public class MmbaCallbackDispatchService {
     private CustomerWechatFriendStatusService customerWechatFriendStatusService;
     @Resource
     private MmbaAutoCustomerFollowService mmbaAutoCustomerFollowService;
+
+    @Resource
+    private EmployeeStatEventRecordService employeeStatEventRecordService;
 
     /**
      * 审计类回调分发。
@@ -109,6 +110,17 @@ public class MmbaCallbackDispatchService {
                     customerWechatFriendStatusService.handleFriendChangeAudit(
                             data.getUm(), data.getFriendPhone(), data.getIsFriend(), toInteger(data.getOperFlag()), MmbaConstants.SYSTEM_USER
                     );
+                    //员工事件服务
+                    boolean friendAdded = "1".equals(StringUtils.trimToEmpty(data.getIsFriend()))
+                        || Integer.valueOf(1).equals(toInteger(data.getOperFlag()));
+                    if (friendAdded) {
+                        employeeStatEventRecordService.confirmWechatFriendSuccessEvent(
+                            data.getUm(),
+                            data.getFriendPhone(),
+                            data.getEsId(),
+                            data.getTimestamp()
+                        );
+                    }
                 }
                 case MmbaBehaviorTypes.WX_FRIEND_LIST_AUDIT -> mmbaAuditPersistenceService.saveOrUpdateWxFriendListAudit(buildWxFriendListAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
                 case MmbaBehaviorTypes.WX_ACCOUNT_AUDIT -> {
@@ -137,7 +149,7 @@ public class MmbaCallbackDispatchService {
         for (ZzyData data : dto.getData()) {
             log.info("MMBA结果回调分发 callbackRecordId={} behaviorType={} reqId={} tenantId={}",
                     callbackRecord.getId(), dto.getBehaviorType(), data.getReqId(), data.getTenantId());
-            MmbaCommandResult commandResult = mmbaCommandResultService.saveOrUpdate(
+            MmbaCommandResultService.SaveOrUpdateResult saveResult = mmbaCommandResultService.saveOrUpdate(
                     buildCommandResult(dto.getBehaviorType(), data, callbackRecord), MmbaConstants.SYSTEM_USER
             );
             if (dto.getBehaviorType() == MmbaBehaviorTypes.DIAL_FAIL_RECEIPT) {
@@ -151,6 +163,9 @@ public class MmbaCallbackDispatchService {
                         toInteger(firstNotBlank(data.getProcessStatus(), data.getStatus())),
                         MmbaConstants.SYSTEM_USER
                 );
+                if (saveResult.isCreated()) {
+                    sendAddWechatFriendReceiptNotice(data);
+                }
             }
         }
     }
@@ -737,5 +752,139 @@ public class MmbaCallbackDispatchService {
         customerCallStatusService.upgradeByCustomer(customerId, customerTel, um, targetStatus, MmbaConstants.SYSTEM_USER);
         log.debug("MMBA客户拨打状态维护 callbackRecordId={} customerId={} customerTel={} um={} targetStatus={}",
                 callbackRecordId, customerId, customerTel, um, targetStatus);
+    }
+
+    @Resource
+    private MmbaRequestRecordService mmbaRequestRecordService;
+
+    @Resource
+    private InSiteNoticeSender inSiteNoticeSender;
+    private void sendAddWechatFriendReceiptNotice(ZzyData data) {
+        try {
+            String reqId = StringUtils.trimToNull(data.getReqId());
+            if (reqId == null) {
+                return;
+            }
+
+            MmbaRequestRecord requestRecord = mmbaRequestRecordService.findByReqId(reqId);
+            if (requestRecord == null || StringUtils.isBlank(requestRecord.getRequestBody())) {
+                log.warn("MMBA添加微信好友回执通知跳过，未找到请求记录 reqId={}", reqId);
+                return;
+            }
+
+            JsonNode requestBody = JSON.parseObject(requestRecord.getRequestBody(), JsonNode.class);
+            JsonNode bizExtInfo = requestBody == null ? null : requestBody.path("bizExtInfo");
+            if (bizExtInfo == null || bizExtInfo.isMissingNode()) {
+                log.warn("MMBA添加微信好友回执通知跳过，bizExtInfo为空 reqId={}", reqId);
+                return;
+            }
+
+            String operatorUserId = readBizExtText(bizExtInfo, "operator_user_id", "operatorUserId");
+            if (StringUtils.isBlank(operatorUserId)) {
+                log.warn("MMBA添加微信好友回执通知跳过，operator_user_id为空 reqId={}", reqId);
+                return;
+            }
+
+            String customerId = readBizExtText(bizExtInfo, "customer_id", "customerId");
+            String customerName = readBizExtText(bizExtInfo, "customer_name", "customerName");
+            String customerMobile = readBizExtText(bizExtInfo, "customer_mobile", "customerMobile");
+            String organizationId = readBizExtText(bizExtInfo, "organization_id", "organizationId");
+
+            Integer processStatus = toInteger(firstNotBlank(data.getProcessStatus(), data.getStatus()));
+            String processStatusText = resolveAddWechatFriendProcessStatusText(processStatus);
+            String context = buildAddWechatFriendReceiptNoticeContext(customerName, customerMobile, processStatusText);
+            String subjectText = "添加微信好友回执";
+
+            inSiteNoticeSender.sendAnnouncement(
+                buildAddWechatFriendReceiptMessageDetail(reqId, organizationId),
+                buildAddWechatFriendReceiptNoticeModel(operatorUserId, organizationId, customerId, customerName),
+                context,
+                subjectText
+            );
+        } catch (Exception e) {
+            log.error("MMBA添加微信好友回执通知发送失败 reqId={}", data == null ? null : data.getReqId(), e);
+        }
+    }
+
+
+    private MessageDetailDTO buildAddWechatFriendReceiptMessageDetail(String reqId, String organizationId) {
+        MessageDetailDTO dto = new MessageDetailDTO();
+        dto.setId(reqId);
+        dto.setEvent(NotificationConstants.Event.MMBA_ADD_WECHAT_FRIEND_RECEIPT);
+        dto.setTaskType(NotificationConstants.Module.CUSTOMER);
+        dto.setOrganizationId(organizationId);
+        dto.setSysEnable(true);
+        return dto;
+    }
+
+    private NoticeModel buildAddWechatFriendReceiptNoticeModel(String operatorUserId, String organizationId,
+                                                               String customerId, String customerName) {
+        Map<String, Object> paramMap = new HashMap<>();
+        paramMap.put("organizationId", organizationId);
+        if (StringUtils.isNotBlank(customerId)) {
+            paramMap.put("resourceId", customerId);
+        }
+        if (StringUtils.isNotBlank(customerName)) {
+            paramMap.put("name", customerName);
+        }
+
+        return NoticeModel.builder()
+            .operator(MmbaConstants.SYSTEM_USER)
+            .event(NotificationConstants.Event.MMBA_ADD_WECHAT_FRIEND_RECEIPT)
+            .paramMap(paramMap)
+            .receivers(List.of(new Receiver(operatorUserId, NotificationConstants.Type.SYSTEM_NOTICE.name())))
+            .excludeSelf(false)
+            .build();
+    }
+
+    private String buildAddWechatFriendReceiptNoticeContext(String customerName, String customerMobile, String statusText){
+        StringBuilder sb = new StringBuilder();
+        sb.append("收到微信好友添加回执");
+        if (StringUtils.isNotBlank(customerName)) {
+            sb.append("，客户：").append(customerName);
+        }
+        if (StringUtils.isNotBlank(customerMobile)) {
+            sb.append("，手机号：").append(customerMobile);
+        }
+        sb.append("，回执结果：").append(statusText);
+        return sb.toString();
+    }
+    private String readBizExtText(JsonNode bizExtInfo, String primaryField, String fallbackField) {
+        if (bizExtInfo == null || bizExtInfo.isMissingNode()) {
+            return null;
+        }
+        String value = StringUtils.trimToNull(bizExtInfo.path(primaryField).asText(null));
+        if (value != null) {
+            return value;
+        }
+        return StringUtils.trimToNull(bizExtInfo.path(fallbackField).asText(null));
+    }
+    private String resolveAddWechatFriendProcessStatusText(Integer processStatus) {
+        return switch (processStatus) {
+            case 2 -> "未搜索到微信联系人";
+            case 3 -> "已经是好友";
+            case 4 -> "添加好友请求发送成功";
+            case 5 -> "添加好友请求发送失败";
+            case 6 -> "添加失败：被对方加入黑名单";
+            case 7 -> "其它原因";
+            case 8 -> "操作过于频繁";
+            case 9 -> "微信登出";
+            case 10 -> "添加失败：设备处于灭屏状态或亮屏未解锁状态";
+            case 11 -> "微信未安装";
+            case 12 -> "辅助功能处于关闭状态";
+            case 13 -> "启动微信失败";
+            case 14 -> "搜索好友失败";
+            case 15 -> "搜索好友异常";
+            case 16 -> "设置备注失败";
+            case 17 -> "绑定sim卡与设备插入sim卡不一致";
+            case 18 -> "设备登录微信Id与指定微信Id不符";
+            case 19 -> "定时添加好友，超出时间范围";
+            case 20 -> "未适配设备安装微信版本";
+            case 21 -> "有权查看应用使用情况权限未开启";
+            case 22 -> "该设备未找到指定的微信ID，请检查微信是否登陆成功";
+            case 23 -> "该设备未找到指定的微信ID，请检查微信分身是否安装并登陆成功";
+            case 24 -> "双开策略下，api参数异常umWxid字段为空";
+            default -> "收到添加微信好友回执，状态码：" + processStatus;
+        };
     }
 }

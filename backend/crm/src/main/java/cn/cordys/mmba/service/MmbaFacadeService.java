@@ -11,9 +11,13 @@ import cn.cordys.context.TenantContext;
 import cn.cordys.common.constants.SsePrincipalKind;
 import cn.cordys.crm.customer.service.CustomerCallStatusService;
 import cn.cordys.crm.customer.service.CustomerWechatFriendStatusService;
+import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisCustomerContextRow;
+import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.mapper.EmployeeStatAnalysisMapper;
+import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service.EmployeeStatEventRecordService;
 import cn.cordys.crm.system.notice.sse.SseService;
 import cn.cordys.crm.customer.domain.Customer;
 import cn.cordys.crm.system.domain.User;
+import cn.cordys.crm.system.mapper.ExtUserMapper;
 import cn.cordys.mmba.MmbaApiPaths;
 import cn.cordys.mmba.MmbaBizTypes;
 import cn.cordys.mmba.MmbaConstants;
@@ -22,6 +26,7 @@ import cn.cordys.mmba.MmbaInvokeException;
 import cn.cordys.mmba.domain.MmbaDevice;
 import cn.cordys.mmba.domain.MmbaRequestRecord;
 import cn.cordys.mybatis.BaseMapper;
+import cn.cordys.common.dto.UserDeptDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -71,11 +76,17 @@ public class MmbaFacadeService {
     @Resource
     private BaseMapper<Customer> customerMapper;
     @Resource
+    private ExtUserMapper extUserMapper;
+    @Resource
     private SseService sseService;
     @Resource
     private CustomerCallStatusService customerCallStatusService;
     @Resource
     private CustomerWechatFriendStatusService customerWechatFriendStatusService;
+    @Resource
+    private EmployeeStatEventRecordService employeeStatEventRecordService;
+    @Resource
+    private EmployeeStatAnalysisMapper employeeStatAnalysisMapper;
 
     /**
      * 拨打电话。
@@ -119,7 +130,8 @@ public class MmbaFacadeService {
      * 发送微信消息。
      */
     public JsonNode sendWxMsg(JsonNode request, String userId, String organizationId) {
-        return executeJson(MmbaBizTypes.WX_MSG_SEND, MmbaApiPaths.IM_SEND_WX_MSG, request, userId, organizationId, mmbaIntegrationService::sendWxMsg);
+        return executeJson(MmbaBizTypes.WX_MSG_SEND, MmbaApiPaths.IM_SEND_WX_MSG,
+                enrichWxMsgRequest(request, userId, organizationId), userId, organizationId, mmbaIntegrationService::sendWxMsg);
     }
 
     /**
@@ -136,6 +148,7 @@ public class MmbaFacadeService {
                 mmbaIntegrationService::addWxFriend
         );
         customerWechatFriendStatusService.markAddInitiated(readCustomerId(payload));
+        employeeStatEventRecordService.recordWechatFriendPendingEvent(JSON.toJSONString(payload.path("bizExtInfo")), System.currentTimeMillis());
         return response;
     }
 
@@ -415,8 +428,11 @@ public class MmbaFacadeService {
         String customerId = payload.path("bizExtInfo").path("customerId").asText(null);
         if (StringUtils.isNotBlank(customerId)) {
             Customer customer = customerMapper.selectByPrimaryKey(customerId);
-            if (customer != null && StringUtils.isNotBlank(customer.getMobile())) {
-                payload.put("toPhone", customer.getMobile());
+            if (customer != null) {
+                if (StringUtils.isNotBlank(customer.getMobile())) {
+                    payload.put("toPhone", customer.getMobile());
+                }
+                enrichBizExtInfo(payload, customer, userId, organizationId);
             }
         }
         return payload;
@@ -436,8 +452,23 @@ public class MmbaFacadeService {
         String customerId = payload.path("bizExtInfo").path("customerId").asText(null);
         if (StringUtils.isNotBlank(customerId)) {
             Customer customer = customerMapper.selectByPrimaryKey(customerId);
-            if (customer != null && StringUtils.isNotBlank(customer.getMobile())) {
-                payload.put("toPhone", customer.getMobile());
+            if (customer != null) {
+                if (StringUtils.isNotBlank(customer.getMobile())) {
+                    payload.put("toPhone", customer.getMobile());
+                }
+                enrichBizExtInfo(payload, customer, userId, organizationId);
+            }
+        }
+        return payload;
+    }
+
+    private ObjectNode enrichWxMsgRequest(JsonNode request, String userId, String organizationId) {
+        ObjectNode payload = normalizeRequest(request);
+        String customerId = payload.path("bizExtInfo").path("customerId").asText(null);
+        if (StringUtils.isNotBlank(customerId)) {
+            Customer customer = customerMapper.selectByPrimaryKey(customerId);
+            if (customer != null) {
+                enrichBizExtInfo(payload, customer, userId, organizationId);
             }
         }
         return payload;
@@ -497,6 +528,7 @@ public class MmbaFacadeService {
                 payload.put("friendPhone", customer.getMobile());
                 payload.put("friendSearch", customer.getMobile());
             }
+            enrichBizExtInfo(payload, customer, userId, organizationId);
         }
         if (StringUtils.isBlank(payload.path("friendSearch").asText(null))) {
             String friendPhone = StringUtils.trimToNull(payload.path("friendPhone").asText(null));
@@ -510,6 +542,105 @@ public class MmbaFacadeService {
         String um = requireCurrentUserUm(userId, "无法添加微信好友");
         payload.put("um", um);
         return payload;
+    }
+
+    private void enrichBizExtInfo(ObjectNode payload, Customer customer, String userId, String organizationId) {
+        if (payload == null || customer == null) {
+            return;
+        }
+        ObjectNode bizExtInfo = payload.with("bizExtInfo");
+        putIfNotBlank(bizExtInfo, "organization_id", organizationId);
+        putIfNotBlank(bizExtInfo, "customer_id", customer.getId());
+        putIfNotBlank(bizExtInfo, "customer_name", customer.getName());
+        putIfNotBlank(bizExtInfo, "customer_mobile", customer.getMobile());
+        putIfNotBlank(bizExtInfo, "customer_source", loadCustomerSource(customer.getId(), organizationId));
+
+        String ownerUserId = StringUtils.trimToNull(customer.getOwner());
+        putIfNotBlank(bizExtInfo, "owner_user_id", ownerUserId);
+        putIfNotBlank(bizExtInfo, "operator_user_id", userId);
+
+        Map<String, User> userMap = loadUserMap(userId, ownerUserId);
+        User operatorUser = userMap.get(userId);
+        User ownerUser = ownerUserId == null ? null : userMap.get(ownerUserId);
+        if (ownerUser != null) {
+            putIfNotBlank(bizExtInfo, "owner_user_name", ownerUser.getName());
+        }
+        if (operatorUser != null) {
+            putIfNotBlank(bizExtInfo, "operator_user_name", operatorUser.getName());
+        }
+
+        Map<String, UserDeptDTO> userDeptMap = loadUserDeptMap(userId, ownerUserId, organizationId);
+        UserDeptDTO ownerDept = ownerUserId == null ? null : userDeptMap.get(ownerUserId);
+        UserDeptDTO operatorDept = userDeptMap.get(userId);
+        if (ownerDept != null) {
+            putIfNotBlank(bizExtInfo, "owner_dept_id", ownerDept.getDeptId());
+            putIfNotBlank(bizExtInfo, "owner_dept_name", ownerDept.getDeptName());
+        }
+        if (operatorDept != null) {
+            putIfNotBlank(bizExtInfo, "operator_dept_id", operatorDept.getDeptId());
+            putIfNotBlank(bizExtInfo, "operator_dept_name", operatorDept.getDeptName());
+        }
+    }
+
+    private String loadCustomerSource(String customerId, String organizationId) {
+        if (StringUtils.isBlank(customerId) || StringUtils.isBlank(organizationId)) {
+            return null;
+        }
+        List<EmployeeFollowAnalysisCustomerContextRow> rows =
+                employeeStatAnalysisMapper.listCustomerSourceRows(organizationId, List.of(customerId));
+        if (CollectionUtils.isEmpty(rows)) {
+            return null;
+        }
+        for (EmployeeFollowAnalysisCustomerContextRow row : rows) {
+            if (row != null && StringUtils.equals(customerId, row.getCustomerId())) {
+                return row.getCustomerSource();
+            }
+        }
+        return null;
+    }
+
+    private Map<String, User> loadUserMap(String operatorUserId, String ownerUserId) {
+        List<String> userIds = java.util.stream.Stream.of(operatorUserId, ownerUserId)
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .toList();
+        if (CollectionUtils.isEmpty(userIds)) {
+            return Map.of();
+        }
+        List<User> users = userBaseMapper.selectByIds(userIds.toArray(new String[0]));
+        if (CollectionUtils.isEmpty(users)) {
+            return Map.of();
+        }
+        Map<String, User> userMap = new LinkedHashMap<>();
+        for (User user : users) {
+            if (user == null || StringUtils.isBlank(user.getId())) {
+                continue;
+            }
+            userMap.put(user.getId(), user);
+        }
+        return userMap;
+    }
+
+    private Map<String, UserDeptDTO> loadUserDeptMap(String operatorUserId, String ownerUserId, String organizationId) {
+        List<String> userIds = java.util.stream.Stream.of(operatorUserId, ownerUserId)
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .toList();
+        if (CollectionUtils.isEmpty(userIds) || StringUtils.isBlank(organizationId)) {
+            return Map.of();
+        }
+        List<UserDeptDTO> userDeptList = extUserMapper.getUserDeptByUserIds(userIds, organizationId);
+        if (CollectionUtils.isEmpty(userDeptList)) {
+            return Map.of();
+        }
+        Map<String, UserDeptDTO> userDeptMap = new LinkedHashMap<>();
+        for (UserDeptDTO userDept : userDeptList) {
+            if (userDept == null || StringUtils.isBlank(userDept.getUserId())) {
+                continue;
+            }
+            userDeptMap.put(userDept.getUserId(), userDept);
+        }
+        return userDeptMap;
     }
 
     /**

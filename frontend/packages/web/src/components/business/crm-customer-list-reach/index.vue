@@ -1,12 +1,19 @@
 <template>
   <div class="crm-customer-list-reach flex shrink-0 flex-col gap-[6px]">
-    <ReachIconButton
-      icon-class="icon-a-dianhuadianhua-icon"
-      :color="callIconColor"
-      :title="t('customer.reach.call')"
+    <n-dropdown
+      trigger="click"
+      :options="dialCardSlotOptions"
+      placement="bottom-start"
       :disabled="!canOperate"
-      @click="handleCallClick"
-    />
+      @select="(_: string | number, option: { key: string | number }) => handleDialSelect(option.key)"
+    >
+      <ReachIconButton
+        icon-class="icon-a-dianhuadianhua-icon"
+        :color="callIconColor"
+        :title="t('customer.reach.call')"
+        :disabled="!canOperate"
+      />
+    </n-dropdown>
     <ReachIconButton
       icon-class="icon-weixin"
       :color="wechatIconColor"
@@ -14,18 +21,24 @@
       :disabled="!canOperate"
       @click="handleWechatClick"
     />
-    <ReachIconButton
+    <n-dropdown
       v-if="canOperate"
-      icon-class="icon-duanxin"
-      color="#F7B52C"
-      :title="t('customer.reach.sms')"
-      @click="handleSmsClick"
-    />
+      trigger="click"
+      :options="dialCardSlotOptions"
+      placement="bottom-start"
+      @select="(_: string | number, option: { key: string | number }) => handleSmsSelect(option.key)"
+    >
+      <ReachIconButton
+        icon-class="icon-duanxin"
+        color="#F7B52C"
+        :title="t('customer.reach.sms')"
+      />
+    </n-dropdown>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { useMessage } from 'naive-ui';
+  import { NDropdown, useMessage } from 'naive-ui';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
 
@@ -35,7 +48,10 @@
   const CALL_COLOR_INACTIVE = '#8a8a8a';
   const WECHAT_COLOR_ACTIVE = '#28C445';
   const WECHAT_COLOR_INACTIVE = '#8a8a8a';
-  const DEFAULT_CARD_SLOT = 1;
+  const dialCardSlotOptions = [
+    { label: '卡槽1', key: 1 },
+    { label: '卡槽2', key: 2 },
+  ];
 
   const props = withDefaults(
     defineProps<{
@@ -59,9 +75,7 @@
   const { t } = useI18n();
   const message = useMessage();
 
-  const callIconColor = computed(() =>
-    props.callStatus === 2 ? CALL_COLOR_ACTIVE : CALL_COLOR_INACTIVE
-  );
+  const callIconColor = computed(() => (props.callStatus === 2 ? CALL_COLOR_ACTIVE : CALL_COLOR_INACTIVE));
 
   const wechatIconColor = computed(() =>
     props.wechatFriendStatus === 2 ? WECHAT_COLOR_ACTIVE : WECHAT_COLOR_INACTIVE
@@ -74,14 +88,14 @@
     return t('customer.reach.addWechat');
   });
 
-  function handleCallClick() {
+  function handleDialSelect(cardSlotNum: string | number) {
     if (!props.canOperate) return;
-    emit('dial', DEFAULT_CARD_SLOT);
+    emit('dial', Number(cardSlotNum));
   }
 
-  function handleSmsClick() {
+  function handleSmsSelect(cardSlotNum: string | number) {
     if (!props.canOperate) return;
-    emit('sms', DEFAULT_CARD_SLOT);
+    emit('sms', Number(cardSlotNum));
   }
 
   function handleWechatClick() {

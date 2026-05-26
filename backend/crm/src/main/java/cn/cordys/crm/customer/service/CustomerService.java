@@ -97,6 +97,7 @@ import org.apache.commons.lang3.Strings;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service.EmployeeStatEventRecordService;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -202,6 +203,9 @@ public class CustomerService {
     private CustomerWechatFriendStatusService customerWechatFriendStatusService;
     @Resource
     private CustomerMobileRuleService customerMobileRuleService;
+
+    @Resource
+    private EmployeeStatEventRecordService employeeStatEventRecordService;
 
     public PagerWithOption<List<CustomerListResponse>> list(CustomerPageRequest request, String userId, String orgId, DeptDataPermissionDTO deptDataPermission) {
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
@@ -577,6 +581,8 @@ public class CustomerService {
                 NotificationConstants.Event.CUSTOMER_ADD, customer.getName(), userId,
                 orgId, List.of(customer.getOwner()), true);
         customerWechatFriendStatusService.recalculateCustomer(customer.getId(), userId);
+        //员工事件服务
+        employeeStatEventRecordService.recordCustomerCreateEvent(customer, userId, orgId);
         return customer;
     }
 
@@ -949,6 +955,9 @@ public class CustomerService {
 
         logService.batchAdd(logs);
 //        sendTransferNotice(transferredCustomers, request.getOwner(), userId, orgId);
+
+        //员工事件服务
+        employeeStatEventRecordService.recordOwnerTransferEvents(transferredCustomers, userId, orgId);
 
         return (int) processCount - transferIds.size();
     }
@@ -1394,6 +1403,8 @@ public class CustomerService {
                 }
                 // record logs
                 logService.batchAdd(logs);
+                //员工事件服务
+                employeeStatEventRecordService.recordCustomerCreateEvents(customers, currentUser, currentOrg);
             };
             CustomFieldImportEventListener<Customer> eventListener = new CustomFieldImportEventListener<>(filteredFields, Customer.class, currentOrg, currentUser,
                     "customer_field", afterDo, 2000, null, null);

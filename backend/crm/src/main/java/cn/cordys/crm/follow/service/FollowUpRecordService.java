@@ -39,6 +39,8 @@ import cn.cordys.crm.follow.dto.response.FollowUpRecordDetailResponse;
 import cn.cordys.crm.follow.dto.response.FollowUpRecordListResponse;
 import cn.cordys.crm.follow.mapper.ExtFollowUpRecordMapper;
 import cn.cordys.crm.opportunity.domain.Opportunity;
+import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.enums.EmployeeStatEventType;
+import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service.EmployeeStatEventRecordService;
 import cn.cordys.crm.system.constants.NotificationConstants;
 import cn.cordys.crm.system.dto.response.ModuleFormConfigDTO;
 import cn.cordys.crm.system.dto.response.UserResponse;
@@ -100,6 +102,9 @@ public class FollowUpRecordService extends BaseFollowUpService {
     @Resource
     private CommonNoticeSendService commonNoticeSendService;
 
+    @Resource
+    private EmployeeStatEventRecordService employeeStatEventRecordService;
+
     /**
      * 添加跟进记录
      *
@@ -110,6 +115,11 @@ public class FollowUpRecordService extends BaseFollowUpService {
      * @return
      */
     public FollowUpRecord add(FollowUpRecordAddRequest request, String userId, String orgId) {
+        return add(request, userId, orgId, EmployeeStatEventType.MANUAL_FOLLOW);
+    }
+
+    public FollowUpRecord add(FollowUpRecordAddRequest request, String userId, String orgId,
+                              EmployeeStatEventType eventType) {
         FollowUpRecord followUpRecord = BeanUtils.copyBean(new FollowUpRecord(), request);
         long time = System.currentTimeMillis();
         followUpRecord.setCreateTime(time);
@@ -123,7 +133,6 @@ public class FollowUpRecordService extends BaseFollowUpService {
         }
         String followResult = request.getFollowResult();
 
-        // 保存时记录客户的当前阶段状态（有customerId说明是客户跟进记录）
         if (StringUtils.isNotBlank(request.getCustomerId())) {
             Customer customer = customerMapper.selectByPrimaryKey(request.getCustomerId());
             if (customer != null) {
@@ -143,7 +152,8 @@ public class FollowUpRecordService extends BaseFollowUpService {
 
         handleCustomerStageStatus(request, orgId);
         sendCustomerFollowResultNotice(followUpRecord, orgId);
-
+        //员工事件服务
+        employeeStatEventRecordService.recordCustomerFollowEvent(followUpRecord, orgId, eventType);
         return followUpRecord;
     }
 
