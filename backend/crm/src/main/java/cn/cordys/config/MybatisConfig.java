@@ -106,6 +106,7 @@ public class MybatisConfig {
         configuration.setDefaultStatementTimeout(coreConfiguration.getDefaultStatementTimeout());
         configuration.setMapUnderscoreToCamelCase(coreConfiguration.getMapUnderscoreToCamelCase());
         configuration.setLogImpl(coreConfiguration.getLogImpl());
+        configuration.getTypeHandlerRegistry().register(ListTypeHandler.class);
         factoryBean.setConfiguration(configuration);
 
         return factoryBean.getObject();

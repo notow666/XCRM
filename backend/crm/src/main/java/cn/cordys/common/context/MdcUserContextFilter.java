@@ -6,6 +6,7 @@ import cn.cordys.common.util.ServletUtils;
 import cn.cordys.context.TenantContext;
 import cn.cordys.security.SessionConstants;
 import cn.cordys.security.SessionUtils;
+import cn.cordys.security.ShiroFilter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,13 +34,7 @@ public class MdcUserContextFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) throws ServletException {
-        String uri = request.getRequestURI();
-        return StringUtils.isNotBlank(uri) &&
-                (
-                        uri.contains("/system/version") ||
-                        uri.contains("/anonymous/mmba/callback") ||
-                        uri.contains("/anonymous/mmba/mgmt-sso/check")
-                );
+        return ShiroFilter.shouldNotFilter(request, false);
     }
 
     @Override

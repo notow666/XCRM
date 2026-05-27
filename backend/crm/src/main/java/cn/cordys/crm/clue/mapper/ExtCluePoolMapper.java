@@ -51,4 +51,6 @@ public interface ExtCluePoolMapper {
      * @return 公海池集合
      */
     List<CluePool> getAllPool(@Param("orgId") String orgId);
+
+    CluePool getOneByName(@Param("name") String name);
 }

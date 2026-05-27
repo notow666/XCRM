@@ -18,8 +18,13 @@ public class CluePushRequest {
 
     @NotBlank
     @Size(max = 32)
-    @Schema(description = "线索池Id")
-    private String poolId;
+    @Schema(description = "租户唯一标识")
+    private String tenant;
+
+    @NotBlank
+    @Size(max = 32)
+    @Schema(description = "线索池名称")
+    private String poolName;
 
     @NotBlank
     @Size(max = 255)

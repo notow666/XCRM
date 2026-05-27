@@ -11,6 +11,7 @@ import cn.cordys.common.pager.PagerWithOption;
 import cn.cordys.common.service.DataScopeService;
 import cn.cordys.common.utils.ConditionFilterUtils;
 import cn.cordys.context.OrganizationContext;
+import cn.cordys.context.TenantContext;
 import cn.cordys.crm.clue.domain.Clue;
 import cn.cordys.crm.clue.dto.request.*;
 import cn.cordys.crm.clue.dto.response.ClueGetResponse;
@@ -95,10 +96,14 @@ public class ClueController {
     }
 
     @PostMapping("/push")
-    @RequiresPermissions(PermissionConstants.CLUE_MANAGEMENT_ADD)
     @Operation(summary = "线索推送进线索池")
     public void push(@Validated @RequestBody CluePushRequest request) {
-        clueService.push(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+        try {
+            TenantContext.setTenantId(request.getTenant());
+            clueService.push(request);
+        } finally {
+            TenantContext.clear();
+        }
     }
 
     @PostMapping("/update")

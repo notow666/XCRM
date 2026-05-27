@@ -56,4 +56,8 @@
             </trim>
         </if>
     </sql>
+
+    <select id="getOneByName" resultType="cn.cordys.crm.clue.domain.CluePool">
+        select * from clue_pool where name = #{name} limit 1
+    </select>
 </mapper>

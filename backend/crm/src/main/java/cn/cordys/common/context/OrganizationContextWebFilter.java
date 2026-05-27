@@ -1,6 +1,7 @@
 package cn.cordys.common.context;
 
 import cn.cordys.context.OrganizationContext;
+import cn.cordys.security.ShiroFilter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,10 +26,7 @@ public class OrganizationContextWebFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) throws ServletException {
-        String uri = request.getRequestURI();
-        return StringUtils.isNotBlank(uri) && (uri.contains("/platform/")
-                || uri.contains("/system/version") || uri.contains("/anonymous/mmba/callback")
-                || uri.contains("/anonymous/mmba/mgmt-sso/check"));
+        return ShiroFilter.shouldNotFilter(request, true);
     }
 
     @Override

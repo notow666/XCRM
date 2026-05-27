@@ -2,6 +2,7 @@ package cn.cordys.common.security;
 
 import cn.cordys.security.SessionConstants;
 import cn.cordys.security.SessionUtils;
+import cn.cordys.security.ShiroFilter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
@@ -28,8 +29,7 @@ public class ApiKeyFilter extends AnonymousFilter {
     protected boolean onPreHandle(ServletRequest request, ServletResponse response, Object mappedValue) {
         HttpServletRequest httpRequest = WebUtils.toHttp(request);
 
-        String uri = httpRequest.getRequestURI();
-        if (uri != null && (uri.contains("/anonymous/mmba/callback") || uri.contains("/anonymous/mmba/mgmt-sso/check"))) {
+        if (ShiroFilter.shouldNotFilter(httpRequest, false)) {
             return true;
         }
 

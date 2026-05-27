@@ -7,6 +7,7 @@ import cn.cordys.aspectj.builder.parse.OperationLogValueParser;
 import cn.cordys.aspectj.constants.CodeVariableType;
 import cn.cordys.aspectj.context.OperationLogContext;
 import cn.cordys.aspectj.handler.OperationLogService;
+import cn.cordys.common.constants.InternalUser;
 import cn.cordys.common.util.CommonBeanFactory;
 import cn.cordys.security.SessionUser;
 import cn.cordys.security.SessionUtils;
@@ -184,7 +185,9 @@ public class OperationOperationLogInterceptor extends OperationLogValueParser im
                 operation.setOperatorId(sessionUser.getId());
             }
             else{
-                operation.setOperatorId(MDC.get(USER_ID_KEY));
+                String op = MDC.get(USER_ID_KEY);
+                op = op == null ? InternalUser.ADMIN.getValue() : op;
+                operation.setOperatorId(op);
             }
         }
         templates.add(operation.getOperatorId());
