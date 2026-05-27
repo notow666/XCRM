@@ -19,6 +19,7 @@ import org.springframework.util.CollectionUtils;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -57,6 +58,16 @@ public class MmbaDeviceService {
             return db;
         }
         mergeDevice(db, device);
+
+        setIfBlank(device.getIccid(), db::setIccid);
+        setIfBlank(device.getIccid2(), db::setIccid2);
+        setIfBlank(device.getPhone(), db::setPhone);
+        setIfBlank(device.getPhone2(), db::setPhone2);
+        setIfBlank(device.getImei(), db::setImei);
+        setIfBlank(device.getImei2(), db::setImei2);
+        setIfBlank(device.getTelecomOperators(), db::setTelecomOperators);
+        setIfBlank(device.getTelecomOperators2(), db::setTelecomOperators2);
+
         touch(db, userId);
         mmbaDeviceMapper.update(db);
         return db;
@@ -336,5 +347,11 @@ public class MmbaDeviceService {
             return false;
         }
         return source.getLastAuditTime() < target.getLastAuditTime();
+    }
+
+    private void setIfBlank(String value, Consumer<String> setter) {
+        if (value == null || StringUtils.isBlank(value)) {
+            setter.accept(StringUtils.EMPTY);
+        }
     }
 }
