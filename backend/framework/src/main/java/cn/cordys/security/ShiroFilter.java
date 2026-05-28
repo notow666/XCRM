@@ -1,5 +1,8 @@
 package cn.cordys.security;
 
+import jakarta.servlet.http.HttpServletRequest;
+import org.apache.commons.lang3.StringUtils;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -91,7 +94,6 @@ public final class ShiroFilter {
         FILTER_CHAIN_DEFINITION_MAP.put("/attachment/preview/**", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/ui/display/preview", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/ui/display/info", "anon");
-        FILTER_CHAIN_DEFINITION_MAP.put("/anonymous/**", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/system/version", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/system/version/current", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/sse/subscribe/**", "anon");
@@ -103,6 +105,10 @@ public final class ShiroFilter {
         FILTER_CHAIN_DEFINITION_MAP.put("/license/validate/**", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/mcp/**", "anon");
         FILTER_CHAIN_DEFINITION_MAP.put("/opportunity/stage/get", "anon");
+        // mmba回调
+        FILTER_CHAIN_DEFINITION_MAP.put("/anonymous/**", "anon");
+        // 线索池推送
+        FILTER_CHAIN_DEFINITION_MAP.put("/lead/push", "anon");
     }
 
     /**
@@ -116,5 +122,17 @@ public final class ShiroFilter {
         ignore.put("/language", "apikey, authc");
         ignore.put("/mock", "apikey, authc");
         return ignore;
+    }
+
+    public static boolean shouldNotFilter(HttpServletRequest httpRequest, boolean isTenant) {
+        String uri = httpRequest.getRequestURI();
+        return StringUtils.isNotBlank(uri) &&
+                (
+                        uri.contains("/system/version") ||
+                        uri.contains("/anonymous/mmba/callback") ||
+                        uri.contains("/anonymous/mmba/mgmt-sso/check") ||
+                        uri.contains("/lead/push") ||
+                        (!isTenant || uri.contains("/platform/"))
+                );
     }
 }

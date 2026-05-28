@@ -6,6 +6,7 @@ import cn.cordys.common.response.handler.ResultHolder;
 import cn.cordys.common.response.result.CrmHttpResultCode;
 import cn.cordys.common.util.Translator;
 import cn.cordys.security.CommonUtils;
+import cn.cordys.security.ShiroFilter;
 import cn.cordys.tenant.service.TenantMetaService;
 import cn.cordys.common.util.JSON;
 import jakarta.servlet.FilterChain;
@@ -47,10 +48,7 @@ public class TenantContextWebFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) throws ServletException {
-        String uri = request.getRequestURI();
-        return StringUtils.isNotBlank(uri) && (uri.contains("/platform/")
-                || uri.contains("/system/version") || uri.contains("/anonymous/mmba/callback")
-                || uri.contains("/anonymous/mmba/mgmt-sso/check"));
+        return ShiroFilter.shouldNotFilter(request, true);
     }
 
     @Override

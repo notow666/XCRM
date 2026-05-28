@@ -242,6 +242,12 @@ public class CluePoolService {
         }
 
         CluePool pool = new CluePool();
+        pool.setName(request.getName());
+        boolean exist = cluePoolMapper.exist(pool);
+        if(exist) {
+            throw new GenericException(Translator.get("clue_pool_name_must_be_unique"));
+        }
+
         BeanUtils.copyBean(pool, request);
         pool.setId(IDGenerator.nextStr());
         pool.setOrganizationId(currentOrgId);
@@ -329,6 +335,14 @@ public class CluePoolService {
         }
 
         CluePool pool = new CluePool();
+        if(!originPool.getName().equals(request.getName())) {
+            pool.setName(request.getName());
+            boolean exist = cluePoolMapper.exist(pool);
+            if (exist) {
+                throw new GenericException(Translator.get("clue_pool_name_must_be_unique"));
+            }
+        }
+
         BeanUtils.copyBean(pool, request);
         pool.setOrganizationId(currentOrgId);
         pool.setOwnerId(JSON.toJSONString(List.of(InternalRole.ORG_ADMIN.getValue())));
@@ -569,6 +583,14 @@ public class CluePoolService {
      */
     public CluePool checkPoolExist(String id) {
         CluePool pool = cluePoolMapper.selectByPrimaryKey(id);
+        if (pool == null) {
+            throw new GenericException(Translator.get("clue_pool_not_exist"));
+        }
+        return pool;
+    }
+
+    public CluePool checkPoolExistByName(String name) {
+        CluePool pool = extCluePoolMapper.getOneByName(name);
         if (pool == null) {
             throw new GenericException(Translator.get("clue_pool_not_exist"));
         }

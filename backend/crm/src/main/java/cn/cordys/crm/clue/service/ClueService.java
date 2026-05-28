@@ -25,6 +25,7 @@ import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.PhoneMaskUtil;
 import cn.cordys.common.util.Translator;
 import cn.cordys.common.utils.ConditionFilterUtils;
+import cn.cordys.context.OrganizationContext;
 import cn.cordys.crm.clue.constants.ClueStatus;
 import cn.cordys.crm.clue.domain.*;
 import cn.cordys.crm.clue.dto.ClueFollowDTO;
@@ -601,9 +602,11 @@ public class ClueService {
 
     @Async(ExecutorBeanNames.MAIN_ASYNC)
     @OperationLog(module = LogModule.CLUE_POOL_INDEX, type = LogType.ADD, resourceName = "{#request.phone}")
-    public void push(CluePushRequest request, String userId, String orgId) {
+    public void push(CluePushRequest request) {
         try {
-            CluePool cluePool = cluePoolService.checkPoolExist(request.getPoolId());
+            String orgId = OrganizationContext.getOrganizationId();
+            String userId = InternalUser.ADMIN.getValue();
+            CluePool cluePool = cluePoolService.checkPoolExistByName(request.getPoolName());
 
             List<BaseField> allFields = moduleFormService.getAllFields(FormKey.CLUE.getKey(), orgId);
             Map<String, String> name2Id = allFields.stream()
@@ -613,7 +616,7 @@ public class ClueService {
                         f.setFieldId(name2Id.get(f.getFieldId()));
                     });
 
-            Clue clue = add(request, userId, orgId);
+            Clue clue = add(request, cluePool.getId(), userId, orgId);
 
             if (cluePool.getDistribute()) {
                 // 自动分发
@@ -638,17 +641,18 @@ public class ClueService {
         }
     }
 
-    private Clue add(CluePushRequest request, String userId, String orgId) {
+    private Clue add(CluePushRequest request, String poolId, String userId, String orgId) {
         long currented = System.currentTimeMillis();
-        Clue clue = BeanUtils.copyBean(new Clue(), request);
+        Clue clue = new Clue();
+        clue.setName(request.getName());
+        clue.setPhone(request.getPhone());
         clue.setOwner(userId);
         clue.setOrganizationId(orgId);
         clue.setCreateTime(currented);
         clue.setUpdateTime(currented);
         clue.setStage(ClueStatus.NEW.name());
         clue.setInSharedPool(true);
-        clue.setPoolId(request.getPoolId());
-        clue.setProducts(null);
+        clue.setPoolId(poolId);
         clue.setCollectionTime(null);
         clue.setUpdateUser(userId);
         clue.setCreateUser(userId);

@@ -1,6 +1,7 @@
 package cn.cordys.common.security;
 
 import cn.cordys.security.SessionUtils;
+import cn.cordys.security.ShiroFilter;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,8 +30,7 @@ public class AuthFilter extends FormAuthenticationFilter {
     @Override
     protected boolean onAccessDenied(ServletRequest request, ServletResponse response) throws Exception {
         HttpServletRequest httpRequest = WebUtils.toHttp(request);
-        String uri = httpRequest.getRequestURI();
-        if(uri != null && (uri.contains("/anonymous/mmba/callback") || uri.contains("/anonymous/mmba/mgmt-sso/check"))){
+        if(ShiroFilter.shouldNotFilter(httpRequest, false)){
             return true;
         }
 

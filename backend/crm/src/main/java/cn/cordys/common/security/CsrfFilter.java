@@ -5,6 +5,7 @@ import cn.cordys.common.util.CommonBeanFactory;
 import cn.cordys.security.SessionConstants;
 import cn.cordys.security.SessionUser;
 import cn.cordys.security.SessionUtils;
+import cn.cordys.security.ShiroFilter;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,8 +40,7 @@ public class CsrfFilter extends AnonymousFilter {
     protected boolean onPreHandle(ServletRequest request, ServletResponse response, Object mappedValue) {
         HttpServletRequest httpServletRequest = WebUtils.toHttp(request);
 
-        String uri = httpServletRequest.getRequestURI();
-        if(uri != null && (uri.contains("/anonymous/mmba/callback") || uri.contains("/anonymous/mmba/mgmt-sso/check"))){
+        if(ShiroFilter.shouldNotFilter(httpServletRequest, false)){
             return true;
         }
 

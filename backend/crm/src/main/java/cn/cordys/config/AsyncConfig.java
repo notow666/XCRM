@@ -143,7 +143,7 @@ public class AsyncConfig implements AsyncConfigurer {
             String tenantId = copyOfContextMap != null ? copyOfContextMap.get(MdcConstants.TENANT_ID_KEY) : "";
             log.error(String.format(
                     "异步方法执行异常 - 方法: %s, traceId: %s, 租户: %s, 异常: %s",
-                    method.getName(),
+                    method.getDeclaringClass().getName() + "-" + method.getName(),
                     traceId,
                     tenantId,
                     throwable.getMessage()
