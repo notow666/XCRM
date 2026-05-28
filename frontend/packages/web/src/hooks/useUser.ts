@@ -69,7 +69,7 @@ export default function useUser() {
           message.error(t('message.logoutFail') || '无法识别当前租户，请返回对应租户登录页');
           return;
         }
-        router.push({
+        await router.push({
           name: targetName,
           params: targetName === 'login' ? { tenantId: tenantIdToRedirect } : undefined,
           query:
