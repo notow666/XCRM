@@ -14,6 +14,12 @@ public class UserCapacityResponse {
     @Schema(description = "用户名")
     private String userName;
 
+    @Schema(description = "部门ID")
+    private String departmentId;
+
+    @Schema(description = "部门名称")
+    private String departmentName;
+
     @Schema(description = "库容上限")
     private Integer capacity;
 

@@ -8,6 +8,7 @@ import cn.cordys.aspectj.dto.LogContextInfo;
 import cn.cordys.common.constants.InternalUser;
 import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.dto.OptionDTO;
+import cn.cordys.common.dto.UserDeptDTO;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.permission.PermissionCache;
 import cn.cordys.common.uid.IDGenerator;
@@ -183,7 +184,13 @@ public class CustomerCapacityService {
     }
 
     private List<UserCapacityResponse> buildUserCapacityResponses(Map<String, String> userNameMap, String orgId) {
+        if (userNameMap.isEmpty()) {
+            return Collections.emptyList();
+        }
         List<UserCapacityResponse> responses = new ArrayList<>();
+        Map<String, UserDeptDTO> userDeptMap = extUserMapper.getUserDeptByUserIds(new ArrayList<>(userNameMap.keySet()), orgId)
+                .stream()
+                .collect(Collectors.toMap(UserDeptDTO::getUserId, userDept -> userDept, (a, b) -> a));
         List<String> excludeStageIds = new ArrayList<>();
         String paymentStageId = customerStageService.getPaymentStageId(orgId);
         String failStageId = customerStageService.getFailStageId(orgId);
@@ -197,6 +204,11 @@ public class CustomerCapacityService {
             UserCapacityResponse response = new UserCapacityResponse();
             response.setUserId(userId);
             response.setUserName(userNameMap.getOrDefault(userId, ""));
+            UserDeptDTO userDept = userDeptMap.get(userId);
+            if (userDept != null) {
+                response.setDepartmentId(userDept.getDeptId());
+                response.setDepartmentName(userDept.getDeptName());
+            }
             CustomerCapacity capacity = poolCustomerService.getUserCapacity(userId, orgId);
             if (capacity != null && capacity.getCapacity() != null) {
                 response.setCapacity(capacity.getCapacity());

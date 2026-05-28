@@ -191,6 +191,8 @@ export interface CapacityItem {
 export interface UserCapacityItem {
   userId: string;
   userName: string;
+  departmentId: string;
+  departmentName: string;
   capacity?: number;
   ownedCount?: number;
   remainingCapacity?: number;

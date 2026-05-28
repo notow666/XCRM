@@ -13,34 +13,41 @@
     </div>
     <NSpin :show="loadingUserList">
       <div class="overflow-y-auto rounded border border-[var(--border-1)] p-[12px]" :style="{ maxHeight }">
-        <div v-if="userCapacityList.length > 0" class="grid grid-cols-4 gap-[8px]">
-          <div
-            v-for="item in userCapacityList"
-            :key="item.userId"
-            class="flex min-h-[36px] cursor-pointer items-center gap-[6px] rounded-[4px] border px-[8px] py-[6px] transition-colors"
-            :class="getUserItemClass(item)"
-            :title="formatUserLabel(item)"
-            @click="handleUserItemClick(item)"
-          >
-            <NRadio
-              v-if="!multiple"
-              :checked="selectedIds.includes(item.userId)"
-              :disabled="!isUserSelectable(item)"
-              class="shrink-0"
-              @click.stop
-              @update:checked="() => handleUserItemClick(item)"
-            />
-            <NCheckbox
-              v-else
-              :checked="selectedIds.includes(item.userId)"
-              :disabled="!isUserSelectable(item)"
-              class="shrink-0"
-              @click.stop
-              @update:checked="() => handleUserItemClick(item)"
-            />
-            <span class="line-clamp-2 flex-1 text-[12px] leading-[18px] text-[var(--text-n1)]">
-              {{ formatUserLabel(item) }}
-            </span>
+        <div v-if="groupedUserCapacityList.length > 0" class="space-y-[12px]">
+          <div v-for="group in groupedUserCapacityList" :key="group.departmentId" class="space-y-[6px]">
+            <div class="truncate text-[12px] font-medium text-[var(--text-n3)]" :title="group.departmentName">
+              {{ group.departmentName }}
+            </div>
+            <div class="grid gap-[8px]" :class="gridClass">
+              <div
+                v-for="item in group.users"
+                :key="item.userId"
+                class="flex min-h-[36px] cursor-pointer items-center gap-[6px] rounded-[4px] border px-[8px] py-[6px] transition-colors"
+                :class="getUserItemClass(item)"
+                :title="formatUserLabel(item)"
+                @click="handleUserItemClick(item)"
+              >
+                <NRadio
+                  v-if="!multiple"
+                  :checked="selectedIds.includes(item.userId)"
+                  :disabled="!isUserSelectable(item)"
+                  class="shrink-0"
+                  @click.stop
+                  @update:checked="() => handleUserItemClick(item)"
+                />
+                <NCheckbox
+                  v-else
+                  :checked="selectedIds.includes(item.userId)"
+                  :disabled="!isUserSelectable(item)"
+                  class="shrink-0"
+                  @click.stop
+                  @update:checked="() => handleUserItemClick(item)"
+                />
+                <span class="line-clamp-2 flex-1 text-[12px] leading-[18px] text-[var(--text-n1)]">
+                  {{ formatUserLabel(item) }}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
         <div v-else-if="!loadingUserList" class="py-[24px] text-center text-[14px] text-[var(--text-n4)]">
@@ -71,12 +78,14 @@
       showLabel?: boolean;
       showSelectAll?: boolean;
       maxHeight?: string;
+      gridClass?: string;
     }>(),
     {
       multiple: false,
       showLabel: true,
       showSelectAll: true,
       maxHeight: '280px',
+      gridClass: 'grid-cols-4',
     }
   );
 
@@ -84,6 +93,12 @@
     required: true,
     default: () => [],
   });
+
+  interface UserCapacityGroup {
+    departmentId: string;
+    departmentName: string;
+    users: UserCapacityItem[];
+  }
 
   const userCapacityList = ref<UserCapacityItem[]>([]);
   const loadingUserList = ref(false);
@@ -93,6 +108,24 @@
   }
 
   const selectableUserIds = computed(() => userCapacityList.value.filter(isUserSelectable).map((item) => item.userId));
+
+  const groupedUserCapacityList = computed<UserCapacityGroup[]>(() => {
+    const groupMap = new Map<string, UserCapacityGroup>();
+    userCapacityList.value.forEach((item) => {
+      const { departmentId } = item;
+      let group = groupMap.get(departmentId);
+      if (!group) {
+        group = {
+          departmentId,
+          departmentName: item.departmentName,
+          users: [],
+        };
+        groupMap.set(departmentId, group);
+      }
+      group.users.push(item);
+    });
+    return Array.from(groupMap.values());
+  });
 
   const isAllSelected = computed(
     () => selectableUserIds.value.length > 0 && selectableUserIds.value.every((id) => selectedIds.value.includes(id))

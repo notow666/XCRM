@@ -604,7 +604,9 @@
                 distributePopContent: () => {
                   return h(CrmPoolAssignUserSelect, {
                     'key': distributeFormKey.value,
-                    'class': 'mt-[16px] min-w-[480px]',
+                    'class': 'mt-[16px] w-[336px]',
+                    'maxHeight': '220px',
+                    'gridClass': 'grid-cols-2',
                     'poolId': openSea.value as string,
                     'selectedIds': distributeSelectedUserIds.value,
                     'onUpdate:selectedIds': (ids: string[]) => {
