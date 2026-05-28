@@ -2,7 +2,6 @@ import { clearToken, hasToken, isLoginExpires } from '@lib/shared/method/auth';
 
 import { dataSpecialistIsLogin, platformIsLogin } from '@/api/modules';
 import useUser from '@/hooks/useUser';
-import useAppStore from '@/store/modules/app';
 import useUserStore from '@/store/modules/user';
 
 import NProgress from 'nprogress';
@@ -19,7 +18,6 @@ export default function setupUserLoginInfoGuard(router: Router) {
     }
 
     const tokenExists = hasToken();
-    const appStore = useAppStore();
     const userStore = useUserStore();
     let isPlatformUser = userStore.userInfo.source === 'PLATFORM';
     let isDataSpecialistUser = userStore.userInfo.source === 'DATA_SPECIALIST';
@@ -88,11 +86,9 @@ export default function setupUserLoginInfoGuard(router: Router) {
         return;
       }
       const routeTenantId = to.params?.tenantId;
-      const userTenantId = userStore.userInfo?.tenantId || '';
-      const appTenantId = appStore.tenantId || '';
+      const appTenantId = userStore.userInfo?.tenantId || '';
       const tenantIdToRedirect =
         (typeof routeTenantId === 'string' && routeTenantId.trim()) ||
-        (typeof userTenantId === 'string' && userTenantId.trim()) ||
         (typeof appTenantId === 'string' && appTenantId.trim()) ||
         'default';
       next({
