@@ -299,8 +299,7 @@
       if (!licenseStore.hasLicense()) {
         // license到期后，退出登录重置界面配置
         appStore.resetPageConfig();
-        // 退出跳转登录页时不能立即刷新，否则可能在 noResource 等无租户路由上重载并被守卫兜底到 default 租户。
-        // window.location.reload();
+        window.location.reload();
       }
     }
   }
