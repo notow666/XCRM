@@ -111,4 +111,12 @@
             update_user = #{updateUser}
         WHERE id = #{tenantId}
     </update>
+
+    <update id="updateTenantName">
+        UPDATE tenant
+        SET name        = #{name},
+            update_time = #{updateTime},
+            update_user = #{updateUser}
+        WHERE id = #{tenantId}
+    </update>
 </mapper>

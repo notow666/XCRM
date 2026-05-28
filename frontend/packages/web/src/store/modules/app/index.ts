@@ -318,7 +318,7 @@ const useAppStore = defineStore('app', {
       } else if (src === 'DATA_SPECIALIST') {
         params.kind = SSE_KIND_DATA_SPECIALIST;
       } else {
-        const tenantId = this.tenantId || userStore.userInfo.tenantId;
+        const tenantId = userStore.userInfo.tenantId || this.tenantId;
         if (!tenantId) {
           return;
         }
@@ -402,7 +402,7 @@ const useAppStore = defineStore('app', {
         } else if (src === 'DATA_SPECIALIST') {
           await closeMessageSubscribe({ ...base, kind: SSE_KIND_DATA_SPECIALIST });
         } else {
-          const tenantId = this.tenantId || userStore.userInfo.tenantId;
+          const tenantId = userStore.userInfo.tenantId || this.tenantId;
           if (!tenantId) {
             return;
           }

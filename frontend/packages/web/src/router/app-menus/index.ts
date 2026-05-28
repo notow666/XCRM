@@ -1,6 +1,6 @@
-import appRoutes from '../routes';
+import { allAppRoutes } from '../routes';
 
-const mixinRoutes = [...appRoutes];
+const mixinRoutes = [...allAppRoutes];
 
 // 菜单信息根据路由配置推导
 const appClientMenus = mixinRoutes.map((el) => {

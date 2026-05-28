@@ -5,6 +5,8 @@ import { CompanyTypeEnum } from '@lib/shared/enums/commonEnum';
 import { useI18n } from '@lib/shared/hooks/useI18n';
 import { getGenerateId } from '@lib/shared/method';
 import { clearToken, setToken } from '@lib/shared/method/auth';
+import { broadcastTenantSessionSync } from '@lib/shared/method/tenant-session-sync';
+import { resolveTenantIdForAuthRedirect } from '@lib/shared/method/tenant-url';
 import { removeRouteListener } from '@lib/shared/method/route-listener';
 import { removeScript } from '@lib/shared/method/scriptLoader';
 import type { LoginParams } from '@lib/shared/models/system/login';
@@ -114,7 +116,13 @@ const useUserStore = defineStore('user', {
           router.replace({ name: AppRouteEnum.WORKBENCH_INDEX });
         }
       } else if (!isLoginPage()) {
-        router.replace({ name: 'login', params: { tenantId: 'default' } });
+        const appStore = useAppStore();
+        const tenantId = resolveTenantIdForAuthRedirect({
+          routeTenantId: router.currentRoute.value.params?.tenantId,
+          userTenantId: this.userInfo?.tenantId,
+          appTenantId: appStore.tenantId,
+        });
+        router.replace({ name: 'login', params: { tenantId: tenantId || 'default' } });
       }
     },
     async login(params: LoginParams) {
@@ -137,6 +145,7 @@ const useUserStore = defineStore('user', {
       clearToken();
       removeRouteListener();
       removeScript(CompanyTypeEnum.SQLBot);
+      broadcastTenantSessionSync('logout');
     },
     async logout(silence = false) {
       try {

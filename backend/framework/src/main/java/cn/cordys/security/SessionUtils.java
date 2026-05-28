@@ -14,6 +14,9 @@ import org.apache.shiro.util.ThreadContext;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.data.redis.RedisIndexedSessionRepository;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+
 import java.util.Map;
 
 import static cn.cordys.security.SessionConstants.ATTR_USER;
@@ -65,6 +68,25 @@ public class SessionUtils {
             log.warn("获取在线用户失败: {}", e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * 先走 Shiro ThreadContext，再走 HttpSession（SSE 等 anon 链路仅有 Spring Session 时仍能读到用户）。
+     */
+    public static SessionUser getUser(HttpServletRequest request) {
+        SessionUser fromShiro = getUser();
+        if (fromShiro != null) {
+            return fromShiro;
+        }
+        if (request == null) {
+            return null;
+        }
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return null;
+        }
+        Object attr = session.getAttribute(ATTR_USER);
+        return attr instanceof SessionUser ? (SessionUser) attr : null;
     }
 
     /**

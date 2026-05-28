@@ -1,4 +1,5 @@
 import { useI18n } from '@lib/shared/hooks/useI18n';
+import { resolveTenantIdForAuthRedirect } from '@lib/shared/method/tenant-url';
 
 import { dataSpecialistLogout, platformLogout } from '@/api/modules';
 import router from '@/router';
@@ -15,14 +16,11 @@ export default function useUser() {
     try {
       const appStore = useAppStore();
       const userStore = useUserStore();
-      const tenantIdToRedirect = (() => {
-        const userTenantId = userStore.userInfo?.tenantId;
-        if (typeof userTenantId === 'string' && userTenantId.trim()) return userTenantId;
-        const appTenantId = appStore.tenantId;
-        if (typeof appTenantId === 'string' && appTenantId.trim()) return appTenantId;
-        const routeTenantId = router.currentRoute.value.params.tenantId;
-        return typeof routeTenantId === 'string' && routeTenantId.trim() ? routeTenantId : '';
-      })();
+      const tenantIdToRedirect = resolveTenantIdForAuthRedirect({
+        routeTenantId: router.currentRoute.value.params.tenantId,
+        userTenantId: userStore.userInfo?.tenantId,
+        appTenantId: appStore.tenantId,
+      });
       const isPlatformUser = userStore.userInfo.source === 'PLATFORM';
       const isDataSpecialist = userStore.userInfo.source === 'DATA_SPECIALIST';
       if (isPlatformUser) {
@@ -104,8 +102,17 @@ export default function useUser() {
     const userStore = useUserStore();
     const isPlatformUser = userStore.userInfo.source === 'PLATFORM';
 
+    const appStore = useAppStore();
+    const tenantId = resolveTenantIdForAuthRedirect({
+      routeTenantId: router.currentRoute.value.params.tenantId,
+      userTenantId: userStore.userInfo?.tenantId,
+      appTenantId: appStore.tenantId,
+      sessionFirst: true,
+    });
+
     router.push({
       name: isPlatformUser ? 'managementCenterOverview' : 'workbenchIndex',
+      params: isPlatformUser || !tenantId ? {} : { tenantId },
       query: {
         ...othersQuery,
       },

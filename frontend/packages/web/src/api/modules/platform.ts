@@ -95,6 +95,10 @@ export function updatePlatformTenantOrgId(tenantId: string, orgId: string) {
   return CDR.post({ url: `/platform/admin/tenant/${tenantId}/org-id`, data: { orgId } });
 }
 
+export function updatePlatformTenantName(tenantId: string, name: string) {
+  return CDR.post({ url: `/platform/admin/tenant/${tenantId}/name`, data: { name } });
+}
+
 export function getPlatformTenantHealth(tenantId: string) {
   return CDR.get<PlatformTenantHealth>({ url: `/platform/admin/tenant/${tenantId}/health` });
 }

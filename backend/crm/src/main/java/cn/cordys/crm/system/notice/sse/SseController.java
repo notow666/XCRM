@@ -4,6 +4,7 @@ import cn.cordys.common.constants.SsePrincipalKind;
 import cn.cordys.context.TenantContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpHeaders;
@@ -35,6 +36,7 @@ public class SseController {
                              @RequestParam(required = false) String tenantId,
                              @RequestParam String userId,
                              @RequestParam String clientId,
+                             HttpServletRequest request,
                              HttpServletResponse response) {
         response.setHeader("X-Accel-Buffering", "no");
         response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache");
@@ -43,7 +45,8 @@ public class SseController {
         if (k == SsePrincipalKind.TENANT && tid == null) {
             tid = StringUtils.trimToNull(TenantContext.getTenantId());
         }
-        return sseService.addClient(k, tid, userId, clientId);
+        Flux<String> stream = sseService.addClient(k, tid, userId, clientId, request);
+        return stream != null ? stream : Flux.empty();
     }
 
     @GetMapping("/broadcast")
@@ -67,12 +70,13 @@ public class SseController {
     public void close(@RequestParam(defaultValue = "TENANT") String kind,
                       @RequestParam(required = false) String tenantId,
                       @RequestParam String userId,
-                      @RequestParam String clientId) {
+                      @RequestParam String clientId,
+                      HttpServletRequest request) {
         SsePrincipalKind k = SsePrincipalKind.fromQuery(kind);
         String tid = StringUtils.trimToNull(tenantId);
         if (k == SsePrincipalKind.TENANT && tid == null) {
             tid = StringUtils.trimToNull(TenantContext.getTenantId());
         }
-        sseService.removeClient(k, tid, userId, clientId);
+        sseService.removeClient(k, tid, userId, clientId, request);
     }
 }

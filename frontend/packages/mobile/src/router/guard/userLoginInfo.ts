@@ -1,5 +1,6 @@
 import { isDingTalkBrowser, isLarkBrowser, isWeComBrowser } from '@lib/shared/method';
 import { clearToken, hasToken, isLoginExpires } from '@lib/shared/method/auth';
+import { resolvePersistedAppTenantIdForRedirect, resolveTenantIdForAuthRedirect } from '@lib/shared/method/tenant-url';
 
 import useUser from '@/hooks/useUser';
 
@@ -38,7 +39,15 @@ export default function setupUserLoginInfoGuard(router: Router) {
         }
         // 其他浏览器进入则到登录页面
       } else if (to.name !== 'login' && !isWhiteListPage()) {
-        next({ name: 'login', params: { tenantId: 'default' } });
+        const tenantId =
+          resolveTenantIdForAuthRedirect({
+            routeTenantId: to.params?.tenantId,
+          }) || resolvePersistedAppTenantIdForRedirect();
+        if (!tenantId) {
+          next({ name: 'login', params: { tenantId: 'default' } });
+        } else {
+          next({ name: 'login', params: { tenantId } });
+        }
         NProgress.done();
         return;
       }

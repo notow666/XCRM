@@ -124,7 +124,7 @@ const useAppStore = defineStore('app', {
       const userStore = useUserStore();
 
       await this.disconnectSystemMessageSSE();
-      const tenantId = this.tenantId || userStore.userInfo.tenantId;
+      const tenantId = userStore.userInfo.tenantId || this.tenantId;
       if (!tenantId || !userStore.clientIdRandomId || !userStore.userInfo.id) {
         return;
       }
@@ -168,7 +168,7 @@ const useAppStore = defineStore('app', {
         this.eventSource = null;
       }
       try {
-        const tenantId = this.tenantId || userStore.userInfo.tenantId;
+        const tenantId = userStore.userInfo.tenantId || this.tenantId;
         if (!tenantId) return;
         await closeMessageSubscribe({
           clientId: userStore.clientIdRandomId,

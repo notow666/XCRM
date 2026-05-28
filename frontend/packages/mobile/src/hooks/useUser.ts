@@ -1,6 +1,7 @@
 import { showToast } from 'vant';
 
 import { useI18n } from '@lib/shared/hooks/useI18n';
+import { resolveTenantIdForAuthRedirect } from '@lib/shared/method/tenant-url';
 
 import router from '@/router';
 import { WHITE_LIST } from '@/router/constants';
@@ -13,13 +14,13 @@ export default function useUser() {
   const logout = async (logoutTo?: string, _noRedirect?: boolean, silence = false) => {
     try {
       const appStore = useAppStore();
-      const tenantIdToRedirect = (() => {
-        const appTenantId = appStore.tenantId;
-        if (typeof appTenantId === 'string' && appTenantId.trim()) return appTenantId;
-        const routeTenantId = router.currentRoute.value.params.tenantId;
-        return typeof routeTenantId === 'string' && routeTenantId.trim() ? routeTenantId : '';
-      })();
       const userStore = useUserStore();
+      const tenantIdToRedirect = resolveTenantIdForAuthRedirect({
+        routeTenantId: router.currentRoute.value.params.tenantId,
+        userTenantId: userStore.userInfo?.tenantId,
+        appTenantId: appStore.tenantId,
+        sessionFirst: true,
+      });
       await userStore.logout();
 
       // 清空租户相关字段（persist 会把空值写回本地）

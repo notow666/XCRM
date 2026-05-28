@@ -11,6 +11,7 @@ import '@/assets/style/index.less';
 
 import { setupI18n } from '@lib/shared/locale';
 import useLocale from '@lib/shared/locale/useLocale';
+import { setupTenantSessionTabSync } from '@lib/shared/method/tenant-session-sync';
 
 import App from './App.vue';
 import directive from './directive/index';
@@ -36,6 +37,7 @@ async function setupApp() {
     changeLocale('zh-CN');
   }
   app.use(router);
+  setupTenantSessionTabSync(router);
   app.use(directive);
   app.mount('#app');
 }

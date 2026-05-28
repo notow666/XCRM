@@ -167,6 +167,9 @@ public class LogService implements OperationLogHandler {
             return;
         }
         Map<String, String> copyOfContextMap = MDC.getCopyOfContextMap();
+        if(copyOfContextMap == null) {
+            return;
+        }
         long currentTimeMillis = System.currentTimeMillis();
         List<OperationLog> items = new ArrayList<>();
         // 使用流处理，构建操作日志和Blob列表

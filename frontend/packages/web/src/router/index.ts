@@ -1,12 +1,29 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
 
+import { resolvePersistedAppTenantIdForRedirect } from '@lib/shared/method/tenant-url';
+
 import 'nprogress/nprogress.css';
 import createRouteGuard from './guard/index';
-import appRoutes from './routes';
+import { platformRoutes, tenantRoutes } from './routes';
 import { NO_RESOURCE_ROUTE, NOT_FOUND_ROUTE } from './routes/base';
+import { createLegacyTenantRedirects, prefixRoutesForTenantScope } from './routes/tenant-route-utils';
 import NProgress from 'nprogress';
+import type { RouteRecordRaw } from 'vue-router';
 
 NProgress.configure({ showSpinner: false });
+
+const tenantScopedChildren: RouteRecordRaw[] = [
+  {
+    path: 'login',
+    name: 'login',
+    component: () => import('@/views/base/login/index.vue'),
+    meta: {
+      requiresAuth: false,
+    },
+  },
+  ...prefixRoutesForTenantScope(tenantRoutes as RouteRecordRaw[]),
+  prefixRoutesForTenantScope([NO_RESOURCE_ROUTE])[0],
+];
 
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
@@ -14,27 +31,11 @@ const router = createRouter({
     {
       path: '/',
       redirect: () => {
-        try {
-          const appRaw = localStorage.getItem('app');
-          if (appRaw) {
-            const app = JSON.parse(appRaw);
-            const tenantId = typeof app?.tenantId === 'string' ? app.tenantId.trim() : '';
-            if (tenantId) {
-              return `/${tenantId}/login`;
-            }
-          }
-        } catch {
-          // ignore
+        const tenantId = resolvePersistedAppTenantIdForRedirect();
+        if (tenantId) {
+          return `/${tenantId}/login`;
         }
         return '/platform/login';
-      },
-    },
-    {
-      path: '/:tenantId/login',
-      name: 'login',
-      component: () => import('@/views/base/login/index.vue'),
-      meta: {
-        requiresAuth: false,
       },
     },
     {
@@ -61,9 +62,13 @@ const router = createRouter({
         requiresAuth: false,
       },
     },
-    ...appRoutes,
+    ...platformRoutes,
+    ...createLegacyTenantRedirects(),
+    {
+      path: '/:tenantId',
+      children: tenantScopedChildren,
+    },
     NOT_FOUND_ROUTE,
-    NO_RESOURCE_ROUTE,
   ],
 });
 

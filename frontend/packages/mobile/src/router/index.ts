@@ -1,5 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
 
+import { resolvePersistedAppTenantIdForRedirect } from '@lib/shared/method/tenant-url';
+
 import 'nprogress/nprogress.css';
 import createRouteGuard from './guard/index';
 import appRoutes from './routes';
@@ -13,7 +15,10 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/default/login',
+      redirect: () => {
+        const tenantId = resolvePersistedAppTenantIdForRedirect();
+        return tenantId ? `/${tenantId}/login` : '/default/login';
+      },
     },
     {
       path: '/:tenantId/login',

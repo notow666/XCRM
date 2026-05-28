@@ -2,7 +2,7 @@ import { RouteLocationNormalized, RouteRecordNormalized, RouteRecordRaw } from '
 
 import { ModuleConfigEnum } from '@lib/shared/enums/moduleEnum';
 
-import appRoutes from '@/router/routes/index';
+import { allAppRoutes } from '@/router/routes/index';
 import useAppStore from '@/store/modules/app';
 import useUserStore from '@/store/modules/user';
 
@@ -91,7 +91,7 @@ export function routerNameHasPermission(routerName: string, routerList: RouteRec
 }
 
 export function findRouteByName(name: string) {
-  const queue: RouteRecordNormalized[] = [...appRoutes];
+  const queue: RouteRecordRaw[] = [...allAppRoutes];
   while (queue.length > 0) {
     const currentRoute = queue.shift();
     if (!currentRoute) {
@@ -101,7 +101,7 @@ export function findRouteByName(name: string) {
       return currentRoute;
     }
     if (currentRoute.children) {
-      queue.push(...(currentRoute.children as RouteRecordNormalized[]));
+      queue.push(...(currentRoute.children as RouteRecordRaw[]));
     }
   }
   return null;
@@ -111,7 +111,9 @@ export function findRouteByName(name: string) {
 export function getFirstRouterNameByCurrentRoute(parentName: string) {
   const currentRoute = findRouteByName(parentName);
   if (currentRoute) {
-    const hasAuthChildrenRouter = currentRoute.children.find((item) => hasAnyPermission(item.meta?.permissions || []));
+    const hasAuthChildrenRouter = currentRoute.children?.find((item) =>
+      hasAnyPermission(item.meta?.permissions || [])
+    );
     return hasAuthChildrenRouter ? hasAuthChildrenRouter.name : parentName;
   }
   return parentName;

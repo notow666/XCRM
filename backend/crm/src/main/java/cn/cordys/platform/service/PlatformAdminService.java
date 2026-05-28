@@ -293,6 +293,18 @@ public class PlatformAdminService {
         recordAudit(operatorId, "TENANT_ORG_ID_UPDATE", tenantId, "SUCCESS", "orgId=" + normalizedOrgId, 0L);
     }
 
+    public void updateTenantName(String tenantId, String name, String operatorId) {
+        String normalizedName = StringUtils.trimToNull(name);
+        if (normalizedName == null) {
+            throw new GenericException(CrmHttpResultCode.VALIDATE_FAILED, "name 参数不能为空");
+        }
+        int updated = extTenantMapper.updateTenantName(tenantId, normalizedName, System.currentTimeMillis(), operatorId);
+        if (updated <= 0) {
+            throw new GenericException("租户不存在");
+        }
+        recordAudit(operatorId, "TENANT_NAME_UPDATE", tenantId, "SUCCESS", "name=" + normalizedName, 0L);
+    }
+
     public Pager<List<PlatformAuditLogResponse>> pageAuditLogs(PlatformAuditPageRequest request) {
         int current = Math.max(1, request.getCurrent());
         int pageSize = Math.max(1, request.getPageSize());

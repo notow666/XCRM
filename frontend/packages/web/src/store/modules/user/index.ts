@@ -7,6 +7,8 @@ import { getGenerateId } from '@lib/shared/method';
 import { clearToken, setToken } from '@lib/shared/method/auth';
 import { removeRouteListener } from '@lib/shared/method/route-listener';
 import { removeScript } from '@lib/shared/method/scriptLoader';
+import { broadcastTenantSessionSync } from '@lib/shared/method/tenant-session-sync';
+import { resolveTenantIdForAuthRedirect } from '@lib/shared/method/tenant-url';
 import type { ApiKeyItem } from '@lib/shared/models/system/business';
 import type { LoginParams } from '@lib/shared/models/system/login';
 import type { MessageCenterItem } from '@lib/shared/models/system/message';
@@ -128,6 +130,7 @@ const useUserStore = defineStore('user', {
       removeRouteListener();
       removeScript(CompanyTypeEnum.SQLBot);
       appStore.hideLoading();
+      broadcastTenantSessionSync('logout');
       // 登出跳转与租户信息清理由 useUser().logout() 统一处理
     },
     // 登出
@@ -203,17 +206,26 @@ const useUserStore = defineStore('user', {
       };
       if (isLoginStatus) {
         if (isLoginPage()) {
+          const appStore = useAppStoreAccessor();
+          const isPlatformUser = this.userInfo.source === 'PLATFORM';
+          const tenantId = resolveTenantIdForAuthRedirect({
+            routeTenantId: router.currentRoute.value.params?.tenantId,
+            userTenantId: this.userInfo?.tenantId,
+            appTenantId: appStore.tenantId,
+            sessionFirst: true,
+          });
           await router.push({
-            name: this.userInfo.source === 'PLATFORM' ? 'managementCenterOverview' : 'workbenchIndex',
+            name: isPlatformUser ? 'managementCenterOverview' : 'workbenchIndex',
+            params: isPlatformUser || !tenantId ? {} : { tenantId },
           });
         }
       } else if (!isLoginPage()) {
         const appStore = useAppStoreAccessor();
-        const routeTenantId = router.currentRoute.value.params?.tenantId;
-        const tenantId =
-          (typeof routeTenantId === 'string' && routeTenantId.trim()) ||
-          (typeof appStore.tenantId === 'string' && appStore.tenantId.trim()) ||
-          '';
+        const tenantId = resolveTenantIdForAuthRedirect({
+          routeTenantId: router.currentRoute.value.params?.tenantId,
+          userTenantId: this.userInfo?.tenantId,
+          appTenantId: appStore.tenantId,
+        });
         if (tenantId) {
           router.push({ name: 'login', params: { tenantId } });
         } else {

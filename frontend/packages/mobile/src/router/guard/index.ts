@@ -2,6 +2,7 @@ import { AxiosCanceler } from '@lib/shared/api/http/axiosCancel';
 import { setRouteEmitter } from '@lib/shared/method/route-listener';
 
 import setupPermissionGuard from './permission';
+import setupTenantParamGuard from './tenant-param';
 import setupUserLoginInfoGuard from './userLoginInfo';
 import NProgress from 'nprogress';
 import type { Router } from 'vue-router';
@@ -21,6 +22,7 @@ function setupPageGuard(router: Router) {
 export default function createRouteGuard(router: Router) {
   // 设置路由监听守卫
   setupPageGuard(router);
+  setupTenantParamGuard(router);
   // 设置用户登录校验守卫
   setupUserLoginInfoGuard(router);
   // 设置菜单权限守卫

@@ -13,8 +13,13 @@ import cn.cordys.crm.system.domain.Notification;
 import cn.cordys.crm.system.dto.response.NotificationDTO;
 import cn.cordys.crm.system.mapper.ExtNotificationMapper;
 import cn.cordys.crm.system.notice.dto.SseMessageDTO;
+import cn.cordys.common.context.TenantSessionBindingSupport;
 import cn.cordys.crm.system.service.SendModuleService;
+import cn.cordys.dataspecialist.mapper.ExtDataSpecialistMapper;
+import cn.cordys.security.SessionUser;
+import cn.cordys.security.SessionUtils;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -44,6 +49,8 @@ public class SseService {
     private SendModuleService sendModuleService;
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+    @Resource
+    private ExtDataSpecialistMapper extDataSpecialistMapper;
 
     private String tenantRedisKey(String rawKey) {
         return TenantRedisKeyBuilder.tenantKey(rawKey);
@@ -76,8 +83,18 @@ public class SseService {
     /**
      * 添加或获取现有客户端流（租户内 / 平台 / 数据专员各自独立连接键，与租户切换无关）。
      */
-    public Flux<String> addClient(SsePrincipalKind kind, String tenantId, String userId, String clientId) {
+    public Flux<String> addClient(
+            SsePrincipalKind kind, String tenantId, String userId, String clientId, HttpServletRequest request) {
         log.info("SSE addClient kind={} userId={} clientId={}", kind, userId, clientId);
+
+        if (kind == SsePrincipalKind.TENANT) {
+            SessionUser sessionUser = SessionUtils.getUser(request);
+            if (!TenantSessionBindingSupport.validateTenantSseSubscription(
+                    sessionUser, tenantId, userId, extDataSpecialistMapper)) {
+                log.warn("SSE subscribe denied: kind={} tenantId={} userId={}", kind, tenantId, userId);
+                return null;
+            }
+        }
 
         if (StringUtils.isBlank(clientId)) {
             log.info("Client ID is blank, cannot add client.");
@@ -104,7 +121,15 @@ public class SseService {
         }
     }
 
-    public void removeClient(SsePrincipalKind kind, String tenantId, String userId, String clientId) {
+    public void removeClient(
+            SsePrincipalKind kind, String tenantId, String userId, String clientId, HttpServletRequest request) {
+        if (kind == SsePrincipalKind.TENANT) {
+            SessionUser sessionUser = SessionUtils.getUser(request);
+            if (!TenantSessionBindingSupport.validateTenantSseSubscription(
+                    sessionUser, tenantId, userId, extDataSpecialistMapper)) {
+                return;
+            }
+        }
         if (StringUtils.isBlank(clientId) || StringUtils.isBlank(userId)) {
             return;
         }

@@ -47,6 +47,11 @@ public interface ExtTenantMapper {
                           @Param("updateTime") long updateTime,
                           @Param("updateUser") String updateUser);
 
+    int updateTenantName(@Param("tenantId") String tenantId,
+                         @Param("name") String name,
+                         @Param("updateTime") long updateTime,
+                         @Param("updateUser") String updateUser);
+
     List<String> listActiveTenantIds();
 
     List<Map<String, Object>> listEnabledTenantWithOrgId();

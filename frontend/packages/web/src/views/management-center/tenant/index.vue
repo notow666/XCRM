@@ -55,6 +55,19 @@
       <NInput v-model:value="orgSyncForm.orgId" placeholder="org_id" />
     </NSpace>
   </NModal>
+
+  <NModal
+    v-model:show="showEditName"
+    preset="dialog"
+    title="编辑租户名称"
+    positive-text="保存"
+    @positive-click="handleSaveName"
+  >
+    <NSpace vertical>
+      <div class="text-sm text-[#999]">租户唯一标识：{{ nameEditForm.tenantId }}</div>
+      <NInput v-model:value="nameEditForm.name" placeholder="租户名称" />
+    </NSpace>
+  </NModal>
 </template>
 
 <script setup lang="ts">
@@ -71,6 +84,7 @@
     type PlatformTenantItem,
     provisionPlatformTenant,
     rerunPlatformTenantMigrate,
+    updatePlatformTenantName,
     updatePlatformTenantOrgId,
     updatePlatformTenantStatus,
   } from '@/api/modules';
@@ -97,6 +111,11 @@
   const orgSyncForm = reactive({
     tenantId: '',
     orgId: '',
+  });
+  const showEditName = ref(false);
+  const nameEditForm = reactive({
+    tenantId: '',
+    name: '',
   });
 
   async function loadData() {
@@ -203,6 +222,28 @@
     return true;
   }
 
+  function openEditName(row: PlatformTenantItem) {
+    nameEditForm.tenantId = row.tenantId;
+    nameEditForm.name = row.name || '';
+    showEditName.value = true;
+  }
+
+  async function handleSaveName() {
+    const name = nameEditForm.name.trim();
+    if (!name) {
+      message.warning('请先填写租户名称');
+      return false;
+    }
+    try {
+      await updatePlatformTenantName(nameEditForm.tenantId, name);
+      message.success('租户名称已保存');
+      await loadData();
+    } catch {
+      return false;
+    }
+    return true;
+  }
+
   const columns = computed(() => [
     { title: '租户名称', key: 'name' },
     { title: '唯一标识', key: 'tenantId' },
@@ -228,6 +269,7 @@
       key: 'action',
       render: (row: PlatformTenantItem) =>
         h('div', { class: 'flex gap-2' }, [
+          h(NButton, { size: 'small', onClick: () => openEditName(row) }, { default: () => '编辑名称' }),
           h(NButton, { size: 'small', onClick: () => openOrgSync(row) }, { default: () => 'MMBA部门同步' }),
           h(NButton, { size: 'small', onClick: () => showHealth(row) }, { default: () => '健康' }),
           // h(NButton, { size: 'small', onClick: () => rerunMigrate(row) }, { default: () => '重跑迁移' }),

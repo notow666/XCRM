@@ -5,6 +5,7 @@ import cn.cordys.common.util.CommonBeanFactory;
 import cn.cordys.security.SessionConstants;
 import cn.cordys.security.SessionUser;
 import cn.cordys.security.SessionUtils;
+import cn.cordys.security.CommonUtils;
 import cn.cordys.security.ShiroFilter;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
@@ -63,6 +64,11 @@ public class CsrfFilter extends AnonymousFilter {
         // WebSocket 请求无需 CSRF 校验
         String websocketKey = httpServletRequest.getHeader("Sec-WebSocket-Key");
         if (StringUtils.isNotBlank(websocketKey)) {
+            return true;
+        }
+
+        // EventSource 无法自定义 CSRF 头，SSE 走 anon + 会话 cookie
+        if (CommonUtils.requiresTenantForSse(httpServletRequest.getRequestURI())) {
             return true;
         }
 

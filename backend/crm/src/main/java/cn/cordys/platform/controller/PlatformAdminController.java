@@ -5,6 +5,7 @@ import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.common.response.result.CrmHttpResultCode;
 import cn.cordys.platform.dto.request.PlatformAuditPageRequest;
+import cn.cordys.platform.dto.request.PlatformTenantNameUpdateRequest;
 import cn.cordys.platform.dto.request.PlatformTenantOrgIdUpdateRequest;
 import cn.cordys.platform.dto.request.PlatformTenantPageRequest;
 import cn.cordys.platform.dto.response.PlatformAuditLogResponse;
@@ -24,8 +25,6 @@ import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -92,6 +91,14 @@ public class PlatformAdminController {
                                   @Valid @RequestBody PlatformTenantOrgIdUpdateRequest request) {
         String operator = assertPlatformAdmin();
         platformAdminService.updateTenantOrgId(tenantId, request.getOrgId(), operator);
+    }
+
+    @PostMapping("/tenant/{tenantId}/name")
+    @Operation(summary = "更新租户名称")
+    public void updateTenantName(@PathVariable("tenantId") String tenantId,
+                                 @Valid @RequestBody PlatformTenantNameUpdateRequest request) {
+        String operator = assertPlatformAdmin();
+        platformAdminService.updateTenantName(tenantId, request.getName(), operator);
     }
 
     @GetMapping("/tenant/provision/task/{taskId}")

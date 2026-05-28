@@ -6,6 +6,7 @@ import '@/assets/style/index.less';
 
 import { setupI18n } from '@lib/shared/locale';
 import useLocale from '@lib/shared/locale/useLocale';
+import { setupTenantSessionTabSync } from '@lib/shared/method/tenant-session-sync';
 
 import CrmIcon from '@/components/pure/crm-icon-font/index.vue';
 import App from './App.vue';
@@ -37,6 +38,7 @@ async function setupApp() {
   }
 
   app.use(router);
+  setupTenantSessionTabSync(router);
 
   // 初始化本地存储
   localforage.config({

@@ -7,6 +7,7 @@ import axios from 'axios';
 import { useI18n } from '@lib/shared/hooks/useI18n';
 import { deepMerge, setObjToUrlParams } from '@lib/shared/method';
 import { getToken } from '@lib/shared/method/auth';
+import { resolveClientTenantId } from '@lib/shared/method/tenant-url';
 import { isString } from '@lib/shared/method/is';
 import type CommonResponse from '@lib/shared/models/common';
 import type { RequestOptions, Result } from '@lib/shared/types/axios';
@@ -14,14 +15,6 @@ import type { Recordable } from '@lib/shared/types/global';
 import type { AxiosResponse } from 'axios';
 
 export default function createAxios(opt: Partial<CreateAxiosOptions>) {
-  const resolveTenantIdFromHash = () => {
-    const hash = window.location.hash || '';
-    const match = hash.match(/^#\/([^/]+)\/login(?:\?|$)/);
-    if (match && typeof match[1] === 'string' && match[1].trim()) {
-      return decodeURIComponent(match[1].trim());
-    }
-    return '';
-  };
   /**
    * @description: 数据处理，方便区分多种处理方式
    */
@@ -117,7 +110,7 @@ export default function createAxios(opt: Partial<CreateAxiosOptions>) {
           'Accept-Language': currentLocale,
         };
         if (!isPlatformApi && !isDataSpecialistApi) {
-          const routeTenantId = resolveTenantIdFromHash();
+          const routeTenantId = resolveClientTenantId();
           headers['X-Tenant-ID'] = routeTenantId || app?.tenantId;
           headers['Organization-Id'] = app?.orgId;
         }

@@ -1,4 +1,9 @@
 import { clearToken, hasToken, isLoginExpires } from '@lib/shared/method/auth';
+import {
+  getSessionTenantId,
+  isTenantRouteMismatch,
+  resolveTenantIdForAuthRedirect,
+} from '@lib/shared/method/tenant-url';
 
 import { dataSpecialistIsLogin, platformIsLogin } from '@/api/modules';
 import useUser from '@/hooks/useUser';
@@ -6,7 +11,45 @@ import useAppStore from '@/store/modules/app';
 import useUserStore from '@/store/modules/user';
 
 import NProgress from 'nprogress';
-import type { LocationQueryRaw, Router } from 'vue-router';
+import type { LocationQueryRaw, NavigationGuardNext, RouteLocationNormalized, Router } from 'vue-router';
+
+function tenantRouteParams(
+  to: RouteLocationNormalized,
+  userStore: ReturnType<typeof useUserStore>,
+  appStore: ReturnType<typeof useAppStore>
+) {
+  const tenantId = resolveTenantIdForAuthRedirect({
+    routeTenantId: to.params?.tenantId,
+    userTenantId: userStore.userInfo?.tenantId,
+    appTenantId: appStore.tenantId,
+    sessionFirst: true,
+  });
+  return tenantId ? { tenantId } : {};
+}
+
+function isTenantBoundUser(source: string | undefined): boolean {
+  return source !== 'PLATFORM' && source !== 'DATA_SPECIALIST';
+}
+
+function redirectTenantScopedRoute(to: RouteLocationNormalized, sessionTenantId: string, next: NavigationGuardNext) {
+  if (to.name != null && typeof to.name === 'string') {
+    next({
+      name: to.name,
+      params: { ...to.params, tenantId: sessionTenantId },
+      query: to.query,
+      hash: to.hash,
+      replace: true,
+    });
+    return;
+  }
+  const correctedPath = to.path.replace(/^\/[^/]+/, `/${sessionTenantId}`);
+  next({
+    path: correctedPath,
+    query: to.query,
+    hash: to.hash,
+    replace: true,
+  });
+}
 
 export default function setupUserLoginInfoGuard(router: Router) {
   router.beforeEach(async (to, from, next) => {
@@ -19,8 +62,8 @@ export default function setupUserLoginInfoGuard(router: Router) {
     }
 
     const tokenExists = hasToken();
-    const appStore = useAppStore();
     const userStore = useUserStore();
+    const appStore = useAppStore();
     let isPlatformUser = userStore.userInfo.source === 'PLATFORM';
     let isDataSpecialistUser = userStore.userInfo.source === 'DATA_SPECIALIST';
     const isPlatformRoute = to.path.startsWith('/platform');
@@ -70,7 +113,7 @@ export default function setupUserLoginInfoGuard(router: Router) {
       userStore.userInfo.source &&
       userStore.userInfo.source !== 'DATA_SPECIALIST'
     ) {
-      next({ name: 'workbenchIndex' });
+      next({ name: 'workbenchIndex', params: tenantRouteParams(to, userStore, appStore) });
       NProgress.done();
       return;
     }
@@ -87,14 +130,16 @@ export default function setupUserLoginInfoGuard(router: Router) {
         NProgress.done();
         return;
       }
-      const routeTenantId = to.params?.tenantId;
-      const userTenantId = userStore.userInfo?.tenantId || '';
-      const appTenantId = appStore.tenantId || '';
-      const tenantIdToRedirect =
-        (typeof routeTenantId === 'string' && routeTenantId.trim()) ||
-        (typeof userTenantId === 'string' && userTenantId.trim()) ||
-        (typeof appTenantId === 'string' && appTenantId.trim()) ||
-        'default';
+      const tenantIdToRedirect = resolveTenantIdForAuthRedirect({
+        routeTenantId: to.params?.tenantId,
+        userTenantId: userStore.userInfo?.tenantId,
+        appTenantId: appStore.tenantId,
+      });
+      if (!tenantIdToRedirect) {
+        next({ name: 'platformLogin' });
+        NProgress.done();
+        return;
+      }
       next({
         name: 'login',
         params: {
@@ -117,7 +162,10 @@ export default function setupUserLoginInfoGuard(router: Router) {
       } else if (isDataSpecialistUser) {
         postLoginName = 'dataSpecialistImport';
       }
-      next({ name: postLoginName });
+      next({
+        name: postLoginName,
+        params: postLoginName === 'workbenchIndex' ? tenantRouteParams(to, userStore, appStore) : {},
+      });
       NProgress.done();
       return;
     }
@@ -140,6 +188,23 @@ export default function setupUserLoginInfoGuard(router: Router) {
 
     if (isPlatformUser && !isPlatformRoute && !isManagementCenterRoute) {
       next({ name: 'managementCenterOverview' });
+      NProgress.done();
+      return;
+    }
+
+    const needsTenant = to.matched.some((record) => record.path.includes(':tenantId'));
+    const sessionTenantId =
+      tokenExists && isTenantBoundUser(userStore.userInfo?.source)
+        ? getSessionTenantId() || userStore.userInfo?.tenantId?.trim() || ''
+        : '';
+    if (
+      tokenExists &&
+      needsTenant &&
+      sessionTenantId &&
+      isTenantBoundUser(userStore.userInfo?.source) &&
+      isTenantRouteMismatch(to.params?.tenantId, sessionTenantId)
+    ) {
+      redirectTenantScopedRoute(to, sessionTenantId, next);
       NProgress.done();
       return;
     }

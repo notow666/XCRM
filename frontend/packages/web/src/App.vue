@@ -20,6 +20,7 @@
   import useLocale from '@lib/shared/locale/useLocale';
   import { getGenerateId, getQueryVariable, getUrlParameterWidthRegExp } from '@lib/shared/method';
   import { hasToken, setLoginExpires, setLoginType } from '@lib/shared/method/auth';
+  import { resolveTenantIdForAuthRedirect } from '@lib/shared/method/tenant-url';
   import type { Result } from '@lib/shared/types/axios';
 
   import CrmSysUpgradeTip from '@/components/pure/crm-sys-upgrade-tip/index.vue';
@@ -55,15 +56,10 @@
   });
 
   function resolveTenantIdForLogin() {
-    const routeTenantId = router.currentRoute.value.params?.tenantId;
-    if (typeof routeTenantId === 'string' && routeTenantId.trim()) {
-      return routeTenantId;
-    }
-    const appTenantId = appStore.tenantId;
-    if (typeof appTenantId === 'string' && appTenantId.trim()) {
-      return appTenantId;
-    }
-    return '';
+    return resolveTenantIdForAuthRedirect({
+      routeTenantId: router.currentRoute.value.params?.tenantId,
+      appTenantId: appStore.tenantId,
+    });
   }
 
   async function handleOauthLogin(type: string, loginType: CompanyTypeEnum, isDingBrowser: boolean) {

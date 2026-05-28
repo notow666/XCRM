@@ -1,5 +1,6 @@
 package cn.cordys.crm.system.controller;
 
+import cn.cordys.common.constants.CommonConstants;
 import cn.cordys.common.security.ShiroSessionAttributes;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.request.LoginRequest;
@@ -22,6 +23,7 @@ import org.apache.shiro.SecurityUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
 import cn.cordys.common.constants.LoginAuthenticateConstants.LoginAuthenticateType;
 
 /**
@@ -51,6 +53,7 @@ public class LoginController {
     public SessionUser isLogin() {
         SessionUser user = SessionUtils.getUser();
         if (user != null) {
+            // 租户上下文由 TenantSessionConsistencyWebFilter 按会话覆盖
             // 检查当前组织的手机认证配置
             userLoginService.checkMobileAuthConfig(OrganizationContext.getOrganizationId());
 
@@ -87,13 +90,17 @@ public class LoginController {
      */
     @PostMapping(value = "/login")
     @Operation(summary = "登录")
-    public SessionUser login(@Validated @RequestBody LoginRequest request) {
+    public SessionUser login(@Validated @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         String tenantId = StringUtils.trimToNull(request.getTenantId());
         if (StringUtils.isBlank(tenantId) || !tenantMetaService.existsTenantId(tenantId)) {
             throw new GenericException("请求非法");
         }
         if (!tenantMetaService.isTenantEnabled(tenantId)) {
             throw new GenericException(Translator.get("tenant.disabled"));
+        }
+        String headerTenantId = StringUtils.trimToNull(httpRequest.getHeader(CommonConstants.TENANT_ID_HEADER));
+        if (headerTenantId != null && !Strings.CI.equals(headerTenantId, tenantId)) {
+            throw new GenericException("请求非法");
         }
         TenantContext.setTenantId(tenantId);
 

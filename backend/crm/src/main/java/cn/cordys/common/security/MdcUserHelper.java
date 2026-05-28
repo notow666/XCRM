@@ -3,11 +3,9 @@ package cn.cordys.common.security;
 import cn.cordys.common.constants.LoginAuthenticateConstants;
 import cn.cordys.common.constants.SsePrincipalKind;
 import cn.cordys.dataspecialist.DataSpecialistConstants;
-import cn.cordys.security.SessionConstants;
 import cn.cordys.security.SessionUser;
 import cn.cordys.security.SessionUtils;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.MDC;
 
@@ -69,15 +67,6 @@ public final class MdcUserHelper {
      * 与 {@link SessionUtils#getUser()} 一致：先 Shiro，再 Spring Session 包装的 HttpSession。
      */
     static SessionUser resolveSessionUser(HttpServletRequest request) {
-        SessionUser fromShiro = SessionUtils.getUser();
-        if (fromShiro != null) {
-            return fromShiro;
-        }
-        HttpSession session = request.getSession(false);
-        if (session == null) {
-            return null;
-        }
-        Object attr = session.getAttribute(SessionConstants.ATTR_USER);
-        return attr instanceof SessionUser ? (SessionUser) attr : null;
+        return SessionUtils.getUser(request);
     }
 }
