@@ -167,16 +167,15 @@ public class LogService implements OperationLogHandler {
             return;
         }
         Map<String, String> copyOfContextMap = MDC.getCopyOfContextMap();
-        if(copyOfContextMap == null) {
-            return;
-        }
+        String traceId = MDC.get(MdcConstants.TRACE_ID_KEY);
+        String requestUri = MDC.get(MdcConstants.REQUEST_URI_KEY);
         long currentTimeMillis = System.currentTimeMillis();
         List<OperationLog> items = new ArrayList<>();
         // 使用流处理，构建操作日志和Blob列表
         List<OperationLogBlob> blobs = logs.stream()
                 .peek(log -> {
-                    log.setTraceId(copyOfContextMap.get(MdcConstants.TRACE_ID_KEY));
-                    log.setPath(copyOfContextMap.get(MdcConstants.REQUEST_URI_KEY));
+                    log.setTraceId(traceId);
+                    log.setPath(requestUri);
                     log.setId(IDGenerator.nextStr());
                     log.setResourceName(subStrResourceName(log.getResourceName()));
                     log.setDetail(subStrContent(log.getDetail()));
