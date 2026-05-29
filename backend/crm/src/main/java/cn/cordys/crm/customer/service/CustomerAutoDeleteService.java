@@ -11,6 +11,8 @@ import org.apache.commons.collections.CollectionUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 @Service
@@ -64,7 +66,11 @@ public class CustomerAutoDeleteService {
             return 0;
         }
 
-        long cutoffTime = System.currentTimeMillis() - (config.getDays() * 24L * 60 * 60 * 1000);
+        long cutoffTime = LocalDate.now()
+                .minusDays(config.getDays() - 1L)
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli();
         log.info("开始执行客户定时删除，days={}, cutoffTime={}", config.getDays(), cutoffTime);
         int deletedCount = customerService.autoDeletePoolImportCustomers(cutoffTime, SYSTEM_OPERATOR);
         log.info("客户定时删除执行完成，deletedCount={}", deletedCount);
