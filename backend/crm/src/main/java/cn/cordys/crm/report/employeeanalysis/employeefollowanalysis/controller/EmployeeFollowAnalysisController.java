@@ -9,6 +9,7 @@ import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.request.
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisDrilldownItemResponse;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisSummaryItemResponse;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service.EmployeeFollowAnalysisDrilldownService;
+import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service.EmployeeFollowAnalysisExportService;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service.EmployeeFollowAnalysisService;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service.EmployeeStatDayBuildService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -36,6 +38,8 @@ public class EmployeeFollowAnalysisController {
     @Resource
     private EmployeeFollowAnalysisDrilldownService employeeFollowAnalysisDrilldownService;
     @Resource
+    private EmployeeFollowAnalysisExportService employeeFollowAnalysisExportService;
+    @Resource
     private EmployeeStatDayBuildService employeeStatDayBuildService;
 
     @PostMapping("/summary")
@@ -48,6 +52,18 @@ public class EmployeeFollowAnalysisController {
         List<EmployeeFollowAnalysisSummaryItemResponse> result = employeeFollowAnalysisService.summary(request, orgId, userId);
         log.info("员工跟进分析请求结束, api=summary, orgId={}, costMs={}, resultSize={}", orgId, System.currentTimeMillis() - start, result == null ? 0 : result.size());
         return result;
+    }
+
+    @PostMapping("/export")
+    @Operation(summary = "员工跟进分析汇总导出")
+    public String export(@Valid @RequestBody EmployeeFollowAnalysisSummaryRequest request) {
+        long start = System.currentTimeMillis();
+        String orgId = OrganizationContext.getOrganizationId();
+        String userId = SessionUtils.getUserId();
+        log.info("员工跟进分析请求开始, api=export, orgId={}, userId={}, request={}", orgId, userId, request);
+        String taskId = employeeFollowAnalysisExportService.export(request, orgId, userId, LocaleContextHolder.getLocale());
+        log.info("员工跟进分析请求结束, api=export, orgId={}, userId={}, costMs={}, taskId={}", orgId, userId, System.currentTimeMillis() - start, taskId);
+        return taskId;
     }
 
     @PostMapping("/drilldown")

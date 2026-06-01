@@ -128,6 +128,11 @@ public class LogModule {
     public static final String DASHBOARD = "DASHBOARD";
     public static final String AGENT = "AGENT";
 
+    /**
+     * 报表
+     */
+    public static final String REPORT = "REPORT";
+
     public static final String CONTRACT_INDEX = "CONTRACT_INDEX";
     /**
      * 合同回款计划

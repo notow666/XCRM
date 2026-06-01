@@ -1,7 +1,12 @@
 <template>
   <div class="w-full">
     <div v-if="showLabel" class="mb-[8px] flex items-center justify-between">
-      <div class="text-[14px] text-[var(--text-n1)]">{{ t('customer.assignSelectUsers') }}</div>
+      <div class="flex items-center text-[14px] font-normal leading-[20px] text-[var(--text-n1)]">
+        <div>{{ t('customer.assignSelectUsers') }}</div>
+        <div v-if="showSelectedCount" class="ml-[16px]">
+          {{ t('customer.assignSelectedUserCount', { count: selectedIds.length }) }}
+        </div>
+      </div>
       <NCheckbox
         v-if="multiple && showSelectAll && selectableUserIds.length > 0"
         :checked="isAllSelected"
@@ -79,6 +84,7 @@
       showSelectAll?: boolean;
       maxHeight?: string;
       gridClass?: string;
+      showSelectedCount?: boolean;
     }>(),
     {
       multiple: false,
@@ -86,6 +92,7 @@
       showSelectAll: true,
       maxHeight: '280px',
       gridClass: 'grid-cols-4',
+      showSelectedCount: false,
     }
   );
 

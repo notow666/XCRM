@@ -86,6 +86,7 @@ export default {
   'customer.assignCountInvalid': 'Enter a number between 1 and {max}',
   'customer.assignUserCapacityLabel': '{name}({capacity})',
   'customer.assignUserCapacityUnlimited': 'Unlimited',
+  'customer.assignSelectedUserCount': '{count} selected',
   'customer.assignSelectUsers': 'Select receiver users',
   'customer.transferByCondition': 'Transfer by Filter',
   'customer.transferByConditionTotal': '{total} account(s) in the current filter',

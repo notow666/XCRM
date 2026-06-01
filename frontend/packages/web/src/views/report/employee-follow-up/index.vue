@@ -42,7 +42,7 @@
             </span>
             <n-switch v-model:value="showEmptyItems" @update:value="handleShowEmptyItemsChange" />
           </div>
-          <n-button type="primary" secondary @click="handleExport">
+          <n-button type="primary" secondary :loading="exportLoading" :disabled="!lastQueryParams" @click="handleExport">
             {{ t('common.export') }}
           </n-button>
         </div>
@@ -104,7 +104,11 @@
   import CrmCard from '@/components/pure/crm-card/index.vue';
   import DrilldownModal from './components/drilldownModal.vue';
 
-  import { getEmployeeFollowAnalysisDrilldown, getEmployeeFollowAnalysisSummary } from '@/api/modules';
+  import {
+    exportEmployeeFollowAnalysisSummary,
+    getEmployeeFollowAnalysisDrilldown,
+    getEmployeeFollowAnalysisSummary,
+  } from '@/api/modules';
 
   const { t } = useI18n();
   const message = useMessage();
@@ -146,8 +150,10 @@
   type FollowUpRow = EmployeeFollowAnalysisSummaryItem;
 
   const loading = ref(false);
+  const exportLoading = ref(false);
   const showEmptyItems = ref(true);
   const tableData = ref<FollowUpRow[]>([]);
+  const lastQueryParams = ref<EmployeeFollowAnalysisSummaryParams | null>(null);
 
   const form = reactive({
     timePreset: TimePreset.TODAY as TimePresetValue,
@@ -435,6 +441,7 @@
       // 汇总接口返回的 dimensionKey 是后续下钻时回传给后端的唯一维度键。
       const data = buildSummaryParams();
       tableData.value = await getEmployeeFollowAnalysisSummary(data);
+      lastQueryParams.value = { ...data };
     } finally {
       loading.value = false;
     }
@@ -466,8 +473,18 @@
     await fetchSummary();
   }
 
-  function handleExport() {
-    message.info(t('report.exportSoon'));
+  async function handleExport() {
+    if (!lastQueryParams.value) {
+      message.warning(t('report.action.query'));
+      return;
+    }
+    exportLoading.value = true;
+    try {
+      await exportEmployeeFollowAnalysisSummary(lastQueryParams.value);
+      message.success(t('common.exportTaskCreate'));
+    } finally {
+      exportLoading.value = false;
+    }
   }
 
   async function handleDrilldownPageChange(page: number) {

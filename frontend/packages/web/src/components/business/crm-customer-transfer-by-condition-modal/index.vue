@@ -26,7 +26,7 @@
           {{ t('customer.transferCountHint', { limit: MAX_TRANSFER_COUNT }) }}
         </div>
       </div>
-      <CrmPoolAssignUserSelect v-model:selected-ids="selectedUserIds" multiple />
+      <CrmPoolAssignUserSelect v-model:selected-ids="selectedUserIds" multiple show-selected-count />
     </div>
   </CrmModal>
 </template>

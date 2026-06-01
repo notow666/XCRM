@@ -26,7 +26,12 @@
           {{ t('customer.assignCountHint', { limit: MAX_ASSIGN_COUNT }) }}
         </div>
       </div>
-      <CrmPoolAssignUserSelect v-model:selected-ids="selectedUserIds" :pool-id="poolId" multiple />
+      <CrmPoolAssignUserSelect
+        v-model:selected-ids="selectedUserIds"
+        :pool-id="poolId"
+        multiple
+        show-selected-count
+      />
     </div>
   </CrmModal>
 </template>

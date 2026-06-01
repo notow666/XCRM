@@ -135,6 +135,7 @@
     { name: SystemResourceMessageTypeEnum.CLUE, tab: t('menu.clue') },
     // { name: SystemResourceMessageTypeEnum.OPPORTUNITY, tab: t('menu.opportunity') },
     { name: SystemResourceMessageTypeEnum.CONTRACT, tab: t('module.contract') },
+    { name: SystemResourceMessageTypeEnum.EMPLOYEE_FOLLOW_ANALYSIS, tab: t('menu.report') },
     // { name: SystemResourceMessageTypeEnum.PRODUCT_PRICE, tab: t('module.productManagementPrice') },
     // { name: SystemResourceMessageTypeEnum.BUSINESS_TITLE, tab: t('module.businessTitle') },
     // { name: SystemResourceMessageTypeEnum.CONTRACT_INVOICE, tab: t('module.invoice') },
@@ -210,6 +211,8 @@
         return t('module.businessTitle');
       case SystemResourceMessageTypeEnum.CONTRACT_INVOICE:
         return t('module.invoice');
+      case SystemResourceMessageTypeEnum.EMPLOYEE_FOLLOW_ANALYSIS:
+        return t('menu.report');
       default:
         return t('menu.opportunity');
     }
