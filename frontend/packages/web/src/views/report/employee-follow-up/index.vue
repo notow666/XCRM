@@ -42,7 +42,13 @@
             </span>
             <n-switch v-model:value="showEmptyItems" @update:value="handleShowEmptyItemsChange" />
           </div>
-          <n-button type="primary" secondary :loading="exportLoading" :disabled="!lastQueryParams" @click="handleExport">
+          <n-button
+            type="primary"
+            secondary
+            :loading="exportLoading"
+            :disabled="!lastQueryParams"
+            @click="handleExport"
+          >
             {{ t('common.export') }}
           </n-button>
         </div>
@@ -94,6 +100,7 @@
   import dayjs from 'dayjs';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
+  import { downloadByteFile } from '@lib/shared/method';
   import type {
     EmployeeFollowAnalysisDrilldownItem,
     EmployeeFollowAnalysisDrilldownParams,
@@ -473,6 +480,18 @@
     await fetchSummary();
   }
 
+  function parseDownloadFileName(contentDisposition?: string) {
+    if (!contentDisposition) {
+      return '';
+    }
+    const utf8FileName = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition);
+    if (utf8FileName?.[1]) {
+      return decodeURIComponent(utf8FileName[1]);
+    }
+    const fileName = /filename="?([^";]+)"?/i.exec(contentDisposition);
+    return fileName?.[1] ? decodeURIComponent(fileName[1]) : '';
+  }
+
   async function handleExport() {
     if (!lastQueryParams.value) {
       message.warning(t('report.action.query'));
@@ -480,8 +499,13 @@
     }
     exportLoading.value = true;
     try {
-      await exportEmployeeFollowAnalysisSummary(lastQueryParams.value);
-      message.success(t('common.exportTaskCreate'));
+      const response = await exportEmployeeFollowAnalysisSummary(lastQueryParams.value);
+      const fileName = parseDownloadFileName(response.headers?.['content-disposition']);
+      if (!fileName) {
+        message.error(t('common.exportFailed'));
+        return;
+      }
+      downloadByteFile(response.data, fileName);
     } finally {
       exportLoading.value = false;
     }

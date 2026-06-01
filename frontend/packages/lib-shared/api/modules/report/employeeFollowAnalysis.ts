@@ -22,7 +22,10 @@ export default function useEmployeeFollowAnalysisApi(CDR: CordysAxios) {
   }
 
   function exportEmployeeFollowAnalysisSummary(data: EmployeeFollowAnalysisSummaryParams) {
-    return CDR.post<string>({ url: EmployeeFollowAnalysisExportUrl, data });
+    return CDR.post(
+      { url: EmployeeFollowAnalysisExportUrl, data, responseType: 'blob' },
+      { isTransformResponse: false, isReturnNativeResponse: true }
+    );
   }
 
   return {

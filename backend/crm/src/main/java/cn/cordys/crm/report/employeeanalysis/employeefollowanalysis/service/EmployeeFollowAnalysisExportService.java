@@ -1,26 +1,24 @@
 package cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service;
 
-import cn.cordys.aspectj.constants.LogModule;
-import cn.cordys.common.service.BaseExportService;
-import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.request.EmployeeFollowAnalysisSummaryRequest;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisSummaryItemResponse;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.enums.EmployeeFollowAnalysisDimensionType;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.enums.EmployeeFollowAnalysisTimePreset;
-import cn.cordys.crm.system.constants.ExportConstants;
-import cn.cordys.crm.system.domain.ExportTask;
 import cn.cordys.crm.system.excel.handler.CustomHeadColWidthStyleStrategy;
-import cn.cordys.crm.system.service.ExportTaskService;
-import cn.cordys.registry.ExportThreadRegistry;
 import cn.idev.excel.EasyExcel;
 import cn.idev.excel.ExcelWriter;
 import cn.idev.excel.support.ExcelTypeEnum;
 import cn.idev.excel.write.metadata.WriteSheet;
 import jakarta.annotation.Resource;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.UriUtils;
 
-import java.io.File;
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -28,11 +26,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 
 @Service
-@Transactional(rollbackFor = Exception.class)
-public class EmployeeFollowAnalysisExportService extends BaseExportService {
+public class EmployeeFollowAnalysisExportService {
 
     private static final DateTimeFormatter FILE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -40,50 +36,30 @@ public class EmployeeFollowAnalysisExportService extends BaseExportService {
 
     @Resource
     private EmployeeFollowAnalysisService employeeFollowAnalysisService;
-    @Resource
-    private ExportTaskService exportTaskService;
 
-    public String export(EmployeeFollowAnalysisSummaryRequest request, String orgId, String userId, Locale locale) {
+    public ResponseEntity<ByteArrayResource> export(EmployeeFollowAnalysisSummaryRequest request, String orgId, String userId) {
         String fileName = buildFileName(request);
-        exportTaskService.checkUserTaskLimit(userId, ExportConstants.ExportStatus.PREPARED.name());
-
-        String fileId = IDGenerator.nextStr();
-        ExportTask exportTask = exportTaskService.saveTask(
-                orgId,
-                fileId,
-                userId,
-                ExportConstants.ExportType.EMPLOYEE_FOLLOW_ANALYSIS.name(),
-                fileName
-        );
-
-        runExport(orgId, userId, LogModule.REPORT, locale, exportTask, fileName,
-                () -> exportData(fileId, exportTask, request, orgId, userId));
-
-        return exportTask.getId();
-    }
-
-    private void exportData(String fileId,
-                            ExportTask exportTask,
-                            EmployeeFollowAnalysisSummaryRequest request,
-                            String orgId,
-                            String userId) throws InterruptedException {
-        if (ExportThreadRegistry.isInterrupted(exportTask.getId())) {
-            throw new InterruptedException("线程已被中断，主动退出");
-        }
         List<EmployeeFollowAnalysisSummaryItemResponse> summaryRows = employeeFollowAnalysisService.summary(request, orgId, userId);
-        if (ExportThreadRegistry.isInterrupted(exportTask.getId())) {
-            throw new InterruptedException("线程已被中断，主动退出");
-        }
 
-        File file = prepareExportFile(fileId, exportTask.getFileName(), exportTask.getOrganizationId());
-        try (ExcelWriter writer = EasyExcel.write(file)
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        try (ExcelWriter writer = EasyExcel.write(outputStream)
                 .head(buildHeadList(request.getDimensionType()))
                 .excelType(ExcelTypeEnum.XLSX)
                 .registerWriteHandler(new CustomHeadColWidthStyleStrategy())
                 .build()) {
             WriteSheet sheet = EasyExcel.writerSheet(SHEET_NAME).build();
             writer.write(buildDataRows(summaryRows), sheet);
+        } catch (Exception e) {
+            throw new RuntimeException("员工跟进分析报表导出失败", e);
         }
+
+        byte[] bytes = outputStream.toByteArray();
+        String downloadFileName = fileName + ".xlsx";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + UriUtils.encode(downloadFileName, StandardCharsets.UTF_8))
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentLength(bytes.length)
+                .body(new ByteArrayResource(bytes));
     }
 
     private List<List<Object>> buildDataRows(List<EmployeeFollowAnalysisSummaryItemResponse> summaryRows) {

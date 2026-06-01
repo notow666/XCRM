@@ -17,7 +17,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -56,14 +57,14 @@ public class EmployeeFollowAnalysisController {
 
     @PostMapping("/export")
     @Operation(summary = "员工跟进分析汇总导出")
-    public String export(@Valid @RequestBody EmployeeFollowAnalysisSummaryRequest request) {
+    public ResponseEntity<ByteArrayResource> export(@Valid @RequestBody EmployeeFollowAnalysisSummaryRequest request) {
         long start = System.currentTimeMillis();
         String orgId = OrganizationContext.getOrganizationId();
         String userId = SessionUtils.getUserId();
         log.info("员工跟进分析请求开始, api=export, orgId={}, userId={}, request={}", orgId, userId, request);
-        String taskId = employeeFollowAnalysisExportService.export(request, orgId, userId, LocaleContextHolder.getLocale());
-        log.info("员工跟进分析请求结束, api=export, orgId={}, userId={}, costMs={}, taskId={}", orgId, userId, System.currentTimeMillis() - start, taskId);
-        return taskId;
+        ResponseEntity<ByteArrayResource> response = employeeFollowAnalysisExportService.export(request, orgId, userId);
+        log.info("员工跟进分析请求结束, api=export, orgId={}, userId={}, costMs={}", orgId, userId, System.currentTimeMillis() - start);
+        return response;
     }
 
     @PostMapping("/drilldown")
