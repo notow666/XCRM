@@ -42,7 +42,13 @@
             </span>
             <n-switch v-model:value="showEmptyItems" @update:value="handleShowEmptyItemsChange" />
           </div>
-          <n-button type="primary" secondary @click="handleExport">
+          <n-button
+            type="primary"
+            secondary
+            :loading="exportLoading"
+            :disabled="!lastQueryParams"
+            @click="handleExport"
+          >
             {{ t('common.export') }}
           </n-button>
         </div>
@@ -94,6 +100,7 @@
   import dayjs from 'dayjs';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
+  import { downloadByteFile } from '@lib/shared/method';
   import type {
     EmployeeFollowAnalysisDrilldownItem,
     EmployeeFollowAnalysisDrilldownParams,
@@ -104,7 +111,11 @@
   import CrmCard from '@/components/pure/crm-card/index.vue';
   import DrilldownModal from './components/drilldownModal.vue';
 
-  import { getEmployeeFollowAnalysisDrilldown, getEmployeeFollowAnalysisSummary } from '@/api/modules';
+  import {
+    exportEmployeeFollowAnalysisSummary,
+    getEmployeeFollowAnalysisDrilldown,
+    getEmployeeFollowAnalysisSummary,
+  } from '@/api/modules';
 
   const { t } = useI18n();
   const message = useMessage();
@@ -146,8 +157,10 @@
   type FollowUpRow = EmployeeFollowAnalysisSummaryItem;
 
   const loading = ref(false);
+  const exportLoading = ref(false);
   const showEmptyItems = ref(true);
   const tableData = ref<FollowUpRow[]>([]);
+  const lastQueryParams = ref<EmployeeFollowAnalysisSummaryParams | null>(null);
 
   const form = reactive({
     timePreset: TimePreset.TODAY as TimePresetValue,
@@ -435,6 +448,7 @@
       // 汇总接口返回的 dimensionKey 是后续下钻时回传给后端的唯一维度键。
       const data = buildSummaryParams();
       tableData.value = await getEmployeeFollowAnalysisSummary(data);
+      lastQueryParams.value = { ...data };
     } finally {
       loading.value = false;
     }
@@ -466,8 +480,35 @@
     await fetchSummary();
   }
 
-  function handleExport() {
-    message.info(t('report.exportSoon'));
+  function parseDownloadFileName(contentDisposition?: string) {
+    if (!contentDisposition) {
+      return '';
+    }
+    const utf8FileName = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition);
+    if (utf8FileName?.[1]) {
+      return decodeURIComponent(utf8FileName[1]);
+    }
+    const fileName = /filename="?([^";]+)"?/i.exec(contentDisposition);
+    return fileName?.[1] ? decodeURIComponent(fileName[1]) : '';
+  }
+
+  async function handleExport() {
+    if (!lastQueryParams.value) {
+      message.warning(t('report.action.query'));
+      return;
+    }
+    exportLoading.value = true;
+    try {
+      const response = await exportEmployeeFollowAnalysisSummary(lastQueryParams.value);
+      const fileName = parseDownloadFileName(response.headers?.['content-disposition']);
+      if (!fileName) {
+        message.error(t('common.exportFailed'));
+        return;
+      }
+      downloadByteFile(response.data, fileName);
+    } finally {
+      exportLoading.value = false;
+    }
   }
 
   async function handleDrilldownPageChange(page: number) {

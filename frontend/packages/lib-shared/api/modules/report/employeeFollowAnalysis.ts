@@ -1,5 +1,9 @@
 import type { CordysAxios } from '@lib/shared/api/http/Axios';
-import { EmployeeFollowAnalysisDrilldownUrl, EmployeeFollowAnalysisSummaryUrl } from '@lib/shared/api/requrls/report/employeeFollowAnalysis';
+import {
+  EmployeeFollowAnalysisDrilldownUrl,
+  EmployeeFollowAnalysisExportUrl,
+  EmployeeFollowAnalysisSummaryUrl,
+} from '@lib/shared/api/requrls/report/employeeFollowAnalysis';
 import type { CommonList } from '@lib/shared/models/common';
 import type {
   EmployeeFollowAnalysisDrilldownItem,
@@ -17,8 +21,16 @@ export default function useEmployeeFollowAnalysisApi(CDR: CordysAxios) {
     return CDR.post<CommonList<EmployeeFollowAnalysisDrilldownItem>>({ url: EmployeeFollowAnalysisDrilldownUrl, data });
   }
 
+  function exportEmployeeFollowAnalysisSummary(data: EmployeeFollowAnalysisSummaryParams) {
+    return CDR.post(
+      { url: EmployeeFollowAnalysisExportUrl, data, responseType: 'blob' },
+      { isTransformResponse: false, isReturnNativeResponse: true }
+    );
+  }
+
   return {
     getEmployeeFollowAnalysisSummary,
     getEmployeeFollowAnalysisDrilldown,
+    exportEmployeeFollowAnalysisSummary,
   };
 }

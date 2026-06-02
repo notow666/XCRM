@@ -428,6 +428,9 @@ public class MmbaFacadeService {
         String customerId = payload.path("bizExtInfo").path("customerId").asText(null);
         if (StringUtils.isNotBlank(customerId)) {
             Customer customer = customerMapper.selectByPrimaryKey(customerId);
+            if (customer == null) {
+                throw new GenericException("未查找到该用户信息,请刷新页面");
+            }
             if (customer != null) {
                 if (StringUtils.isNotBlank(customer.getMobile())) {
                     payload.put("toPhone", customer.getMobile());

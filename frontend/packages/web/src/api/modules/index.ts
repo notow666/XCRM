@@ -649,7 +649,11 @@ export const {
 
 export const { getMmbaMgmtSsoRedirectUrl } = mmbaMgmtSsoApi;
 
-export const { getEmployeeFollowAnalysisSummary, getEmployeeFollowAnalysisDrilldown } = employeeFollowAnalysisApi;
+export const {
+  getEmployeeFollowAnalysisSummary,
+  getEmployeeFollowAnalysisDrilldown,
+  exportEmployeeFollowAnalysisSummary,
+} = employeeFollowAnalysisApi;
 
 export const {
   addReason,

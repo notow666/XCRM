@@ -80,6 +80,7 @@ export default {
   'customer.assignCountInvalid': '请输入 1～{max} 之间的数量',
   'customer.assignUserCapacityLabel': '{name}({capacity})',
   'customer.assignUserCapacityUnlimited': '不限',
+  'customer.assignSelectedUserCount': '已选择{count}人',
   'customer.assignSelectUsers': '选择接收用户',
   'customer.transferByCondition': '按筛选转移',
   'customer.transferByConditionTotal': '当前筛选共 {total} 条客户',
