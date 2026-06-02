@@ -166,7 +166,6 @@ public class LogService implements OperationLogHandler {
         if (CollectionUtils.isEmpty(logs)) {
             return;
         }
-        Map<String, String> copyOfContextMap = MDC.getCopyOfContextMap();
         String traceId = MDC.get(MdcConstants.TRACE_ID_KEY);
         String requestUri = MDC.get(MdcConstants.REQUEST_URI_KEY);
         long currentTimeMillis = System.currentTimeMillis();

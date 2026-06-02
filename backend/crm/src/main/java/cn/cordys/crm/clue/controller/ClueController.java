@@ -39,6 +39,7 @@ import jakarta.validation.constraints.NotNull;
 import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -97,10 +98,11 @@ public class ClueController {
 
     @PostMapping("/push")
     @Operation(summary = "线索推送进线索池")
-    public void push(@Validated @RequestBody CluePushRequest request) {
+    public ResponseEntity<String> push(@Validated @RequestBody CluePushRequest request) {
         try {
             TenantContext.setTenantId(request.getTenant());
             clueService.push(request);
+            return ResponseEntity.ok("接口请求成功");
         } finally {
             TenantContext.clear();
         }

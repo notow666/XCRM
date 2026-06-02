@@ -37,6 +37,16 @@ export function normalizeCustomerListTags(
     });
 }
 
+/** 轻量列表行：标签列纯文本展示 */
+export function formatCustomerListTagsPlain(
+  tags: string[] | Record<string, any>[] | null | undefined,
+  labelKey = 'label'
+): string {
+  const items = normalizeCustomerListTags(tags, labelKey);
+  if (!items.length) return '-';
+  return items.map((item) => item.fullLabel).join('、');
+}
+
 export function getCustomerListTagBindProps(tagGroupProps?: Omit<CrmTagGroupProps, 'tags'>) {
   return {
     size: tagGroupProps?.size ?? 'medium',

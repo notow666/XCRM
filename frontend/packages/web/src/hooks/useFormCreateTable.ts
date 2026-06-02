@@ -27,6 +27,7 @@ import { quotationStatusOptions } from '@/config/opportunity';
 import useApprovalConfig from '@/hooks/useApprovalConfig';
 import useFormCreateAdvanceFilter from '@/hooks/useFormCreateAdvanceFilter';
 import useReasonConfig from '@/hooks/useReasonConfig';
+import useTableStore from '@/hooks/useTableStore';
 
 export type FormKey =
   | FormDesignKeyEnum.CUSTOMER
@@ -81,6 +82,7 @@ export interface FormCreateTableProps {
 
 export default async function useFormCreateTable(props: FormCreateTableProps) {
   const { t } = useI18n();
+  const tableStore = useTableStore();
   const { getFilterListConfig, customFieldsFilterConfig } = useFormCreateAdvanceFilter();
   const { reasonOptions, initReasonConfig } = useReasonConfig(props.formKey);
   const { initApprovalConfig, dicApprovalEnable } = useApprovalConfig(props.formKey);
@@ -1379,6 +1381,10 @@ export default async function useFormCreateTable(props: FormCreateTableProps) {
 
   await initFormConfig();
 
+  const customerListDefaultPageSize = 50;
+  const isCustomerListForm =
+    props.formKey === FormDesignKeyEnum.CUSTOMER && props.containerClass === '' && !props.readonly;
+
   const useTableRes = useTable(
     getFormListApiMap[props.formKey],
     {
@@ -1392,6 +1398,11 @@ export default async function useFormCreateTable(props: FormCreateTableProps) {
       hiddenTotal: props.hiddenTotal,
       hiddenAllScreen: props.hiddenAllScreen,
       hiddenRefresh: props.hiddenRefresh,
+      crmPagination: isCustomerListForm
+        ? {
+            pageSize: customerListDefaultPageSize,
+          }
+        : undefined,
     },
     (item, originalData) => {
       return transformData({
@@ -1402,6 +1413,14 @@ export default async function useFormCreateTable(props: FormCreateTableProps) {
       });
     }
   );
+
+  if (isCustomerListForm && tableKeyMap[props.formKey]) {
+    const customerTableKey = tableKeyMap[props.formKey]!;
+    if (useTableRes.propsRes.value.crmPagination) {
+      useTableRes.propsRes.value.crmPagination.pageSize = customerListDefaultPageSize;
+    }
+    await tableStore.setPageSize(customerTableKey, customerListDefaultPageSize);
+  }
 
   return {
     loading,

@@ -26,10 +26,24 @@
           @add-wechat="() => handleWechatFriendCustomer(reachRow)"
         />
         <template v-if="showListNavigation">
-          <n-button type="primary" ghost class="n-btn-outline-primary" :disabled="!canGoPrev" @click="goPrevCustomer">
+          <n-button
+            type="primary"
+            ghost
+            class="n-btn-outline-primary"
+            :disabled="!canGoPrev"
+            :loading="navigationLoading && navigationPending === 'prev'"
+            @click="goPrevCustomer"
+          >
             {{ t('customer.detail.prev') }}
           </n-button>
-          <n-button type="primary" ghost class="n-btn-outline-primary" :disabled="!canGoNext" @click="goNextCustomer">
+          <n-button
+            type="primary"
+            ghost
+            class="n-btn-outline-primary"
+            :disabled="!canGoNext"
+            :loading="navigationLoading && navigationPending === 'next'"
+            @click="goNextCustomer"
+          >
             {{ t('customer.detail.next') }}
           </n-button>
         </template>
@@ -220,6 +234,7 @@
     getCustomerHeaderList,
     getCustomerStageConfig,
   } from '@/api/modules';
+  import type { CustomerNavigationItem } from '@/hooks/useCustomerListWindow';
   import useModal from '@/hooks/useModal';
   import { hasAnyPermission } from '@/utils/permission';
 
@@ -227,21 +242,19 @@
 
   const FollowDetail = defineAsyncComponent(() => import('@/components/business/crm-follow-detail/index.vue'));
 
-  export interface CustomerNavigationItem {
-    id: string;
-    name?: string;
-    owner?: string;
-    callStatus?: number;
-    wechatFriendStatus?: number;
-    mobile?: string;
-    inSharedPool?: boolean;
-  }
-
   const props = defineProps<{
     sourceId: string;
     readonly?: boolean;
-    /** 从客户列表打开时传入当前页客户，用于详情页上一页/下一页 */
+    /** 当前列表查询条件下已加载的客户序列（用于详情上一页/下一页） */
     navigationRows?: CustomerNavigationItem[];
+    /** 当前搜索结果总条数 */
+    navigationTotal?: number;
+    /** 是否还有未加载的下一页 */
+    navigationHasMore?: boolean;
+    /** 跨页加载下一批列表数据 */
+    onNavigationLoadMore?: () => Promise<void>;
+    /** 列表/导航加载中 */
+    navigationLoading?: boolean;
   }>();
   const emit = defineEmits<{
     (e: 'saved'): void;
@@ -290,12 +303,26 @@
     },
   });
 
-  const showListNavigation = computed(() => (props.navigationRows?.length ?? 0) > 0);
-  const navigationIndex = computed(() => props.navigationRows?.findIndex((row) => row.id === props.sourceId) ?? -1);
-  const canGoPrev = computed(() => navigationIndex.value > 0);
-  const canGoNext = computed(
-    () => navigationIndex.value >= 0 && navigationIndex.value < (props.navigationRows?.length ?? 0) - 1
+  const navigationPending = ref<'prev' | 'next' | null>(null);
+
+  const showListNavigation = computed(
+    () => (props.navigationRows?.length ?? 0) > 0 || (props.navigationTotal ?? 0) > 0
   );
+  const navigationIndex = computed(() => props.navigationRows?.findIndex((row) => row.id === props.sourceId) ?? -1);
+  const loadedNavigationCount = computed(() => props.navigationRows?.length ?? 0);
+  const canGoPrev = computed(() => navigationIndex.value > 0);
+  const canGoNext = computed(() => {
+    const index = navigationIndex.value;
+    const loaded = loadedNavigationCount.value;
+    if (index < 0) return false;
+    if (index < loaded - 1) return true;
+    if (index === loaded - 1 && props.navigationHasMore) return true;
+    const total = props.navigationTotal;
+    if (total != null && total > 0) {
+      return index < total - 1;
+    }
+    return false;
+  });
   const canReachOperate = computed(
     () =>
       !props.readonly &&
@@ -322,13 +349,29 @@
     emit('update:sourceId', rows[index - 1].id);
   }
 
-  function goNextCustomer() {
+  async function goNextCustomer() {
     const rows = props.navigationRows;
     const index = navigationIndex.value;
-    if (!rows || index < 0 || index >= rows.length - 1) {
+    if (!rows || index < 0) {
       return;
     }
-    emit('update:sourceId', rows[index + 1].id);
+    if (index < rows.length - 1) {
+      emit('update:sourceId', rows[index + 1].id);
+      return;
+    }
+    if (!props.navigationHasMore || !props.onNavigationLoadMore) {
+      return;
+    }
+    navigationPending.value = 'next';
+    try {
+      await props.onNavigationLoadMore();
+      const nextRows = props.navigationRows;
+      if (nextRows && index < nextRows.length - 1) {
+        emit('update:sourceId', nextRows[index + 1].id);
+      }
+    } finally {
+      navigationPending.value = null;
+    }
   }
 
   const stageConfig = ref<Awaited<ReturnType<typeof getCustomerStageConfig>>>();

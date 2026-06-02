@@ -19,7 +19,7 @@
           @update:checked="(val: boolean) => emit('checkChange', val)"
         />
       </div>
-      <div class="min-w-0 flex-1">
+      <div class="crm-customer-list-item__info-main min-w-0 flex-1">
         <div class="customer-list-item__name-row">
           <div class="customer-list-item__name-col min-w-0">
             <CrmNameTooltip
@@ -32,13 +32,14 @@
               class="customer-list-item__name customer-list-item__name-ellipsis cursor-pointer"
               @click.stop="emit('openDetail')"
             >
-              <NEllipsis :tooltip="{ delay: 300 }">
+              <span v-if="lightweight" class="one-line-text">{{ item.name || '-' }}</span>
+              <NEllipsis v-else :tooltip="{ delay: 300 }">
                 {{ item.name || '-' }}
               </NEllipsis>
             </div>
           </div>
           <div class="customer-list-item__mobile-col">
-            <span v-if="displayMobile" class="customer-list-item__secondary">{{ displayMobile }}</span>
+            <span class="customer-list-item__secondary one-line-text">{{ displayMobile || '\u00a0' }}</span>
           </div>
         </div>
         <div class="mt-[15px] space-y-[2px]">
@@ -55,7 +56,7 @@
             <div v-if="showCustomerLevelStars" class="customer-list-item__stars-col">
               <CustomerListLevelStars
                 :level="customerLevelStarCount"
-                :editable="canEditCustomerLevel"
+                :editable="!lightweight && canEditCustomerLevel"
                 :loading="levelUpdating"
                 @select="(level) => emit('customerLevelChange', level)"
               />
@@ -63,7 +64,14 @@
           </div>
         </div>
       </div>
-      <slot v-if="showReach" name="reach"></slot>
+      <div
+        v-if="showReach"
+        class="crm-customer-list-item__reach shrink-0 self-center"
+        :class="{ 'crm-customer-list-item__reach--hidden': lightweight }"
+        :aria-hidden="lightweight"
+      >
+        <slot v-if="!lightweight" name="reach"></slot>
+      </div>
     </div>
 
     <!-- 动态列（横向滚动与表头同步，由父级统一控制） -->
@@ -79,6 +87,7 @@
             :column="column"
             :row="item"
             :row-index="rowIndex"
+            :lightweight="lightweight"
             :can-edit-tags="canEditTags"
             :editable-tag-field-ids="editableTagFieldIds"
             :tag-updating="
@@ -192,7 +201,6 @@
       operationMoreList?: ActionsItem[];
       infoColumnWidth?: number;
       operationColumnWidth?: number;
-      dynamicScrollLeft?: number;
       middleTotalWidth?: number;
       stageConfigList?: Array<{ id: string; type?: string; rate?: string | number }>;
       customerLevelFieldId?: string;
@@ -201,13 +209,14 @@
       editableTagFieldIds?: Set<string>;
       tagUpdatingRowId?: string;
       tagUpdatingFieldId?: string;
+      /** 纵向滚动中启用轻量渲染 */
+      lightweight?: boolean;
     }>(),
     {
       middleColumns: () => [],
       rowIndex: 0,
       infoColumnWidth: 280,
       operationColumnWidth: 120,
-      dynamicScrollLeft: 0,
       middleTotalWidth: 0,
       showReach: true,
       followUpDisabled: false,
@@ -232,7 +241,6 @@
 
   const middleTrackStyle = computed(() => ({
     width: `${props.middleTotalWidth}px`,
-    transform: `translateX(-${props.dynamicScrollLeft}px)`,
   }));
 
   function handleMiddleWheel(event: WheelEvent) {
@@ -285,8 +293,22 @@
 </script>
 
 <style lang="less" scoped>
+  /** 列表触达区纵向三图标宽度（与 CrmCustomerListReach direction=column、icon 22px 一致） */
+  @reach-slot-width: 22px;
+
   .crm-customer-list-item {
     cursor: pointer;
+  }
+  .crm-customer-list-item__info-main {
+    min-width: 0;
+  }
+  .crm-customer-list-item__reach {
+    width: @reach-slot-width;
+    min-width: @reach-slot-width;
+  }
+  .crm-customer-list-item__reach--hidden {
+    visibility: hidden;
+    pointer-events: none;
   }
   .customer-list-item__name-col {
     overflow: hidden;
@@ -341,6 +363,7 @@
     grid-template-columns: minmax(0, 1fr) 82px 20px;
   }
   .customer-list-item__mobile-col {
+    min-width: 80px;
     text-align: right;
     white-space: nowrap;
   }
@@ -348,6 +371,7 @@
     display: flex;
     justify-content: flex-end;
     align-items: center;
+    min-width: 82px;
     min-height: 14px;
   }
   .customer-list-item__stage {
@@ -364,7 +388,7 @@
   }
   .crm-customer-list-item__middle-track {
     flex-shrink: 0;
-    will-change: transform;
+    transform: translateX(calc(-1 * var(--customer-list-scroll-left, 0px)));
   }
   .operation-grid {
     display: flex;

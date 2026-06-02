@@ -1,5 +1,5 @@
 <template>
-  <n-spin :show="props.loading" class="h-full min-h-0" content-class="h-full min-h-0 flex flex-col">
+  <n-spin :show="showFullLoading" class="h-full min-h-0" content-class="h-full min-h-0 flex flex-col">
     <n-virtual-list
       ref="listRef"
       :class="['crm-list min-h-0 flex-1', containerStatusClass, props.class]"
@@ -55,6 +55,13 @@
         </slot>
       </template>
     </n-virtual-list>
+    <div
+      v-if="showMoreLoading"
+      class="crm-list__load-more flex shrink-0 items-center justify-center border-t border-[var(--text-n8)] py-[8px]"
+      :style="{ minHeight: `${props.itemHeight}px` }"
+    >
+      <n-spin size="small" />
+    </div>
   </n-spin>
 </template>
 
@@ -87,12 +94,15 @@
       activeItemClass?: string;
       virtualScrollHeight?: string;
       loading?: boolean;
+      /** full：整表遮罩；more：仅底部加载更多指示 */
+      loadingMode?: 'full' | 'more';
       itemResizable?: boolean;
     }>(),
     {
       mode: 'static',
       keyField: 'key',
       itemHeight: 34,
+      loadingMode: 'full',
       bordered: false,
       draggable: false,
       maxHeight: '300px',
@@ -109,7 +119,11 @@
     (e: 'itemClick', item: Record<string, any>): void;
     (e: 'clickMore', item: Record<string, any>): void;
     (e: 'wheel', event: Event): void;
+    (e: 'virtualScroll', event: Event): void;
   }>();
+
+  const showFullLoading = computed(() => props.loading && props.loadingMode === 'full');
+  const showMoreLoading = computed(() => props.loading && props.loadingMode === 'more');
 
   const listData = defineModel<Record<string, any>[]>('data', {
     default: [],
@@ -190,6 +204,7 @@
   }
 
   function handleReachBottomScroll(event: Event) {
+    emit('virtualScroll', event);
     const target = (event.currentTarget || event.target) as HTMLElement;
     if (!target) {
       return;
@@ -269,6 +284,11 @@
   function handleWheel(event: Event) {
     emit('wheel', event);
   }
+
+  defineExpose({
+    listRef,
+    getScrollContainer,
+  });
 </script>
 
 <style lang="less">

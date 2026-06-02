@@ -157,8 +157,10 @@ export default function useTable<T>(
       };
       let refreshPage = 0;
       if (refreshId !== undefined) {
+        const pageSize =
+          (propsRes.value.crmPagination as PaginationProps | undefined)?.pageSize ?? appStore.pageSize;
         refreshPage = Math.max(
-          Math.ceil((propsRes.value.data.findIndex((item) => item.id === refreshId) + 1) / appStore.pageSize),
+          Math.ceil((propsRes.value.data.findIndex((item) => item.id === refreshId) + 1) / pageSize),
           1
         );
       }

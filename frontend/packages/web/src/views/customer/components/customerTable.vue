@@ -107,7 +107,10 @@
       />
     </template>
     <template v-if="useListLayout" #other>
-      <div class="customer-list-panel flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div
+        class="customer-list-panel flex min-h-0 flex-1 flex-col overflow-hidden"
+        :style="{ '--customer-list-scroll-left': `${dynamicScrollLeft}px` }"
+      >
         <div class="customer-list-table-header b-0 flex shrink-0 border border-[var(--text-n8)]">
           <div
             class="customer-list-dynamic-th customer-list-table-header__info flex shrink-0 items-center border-r border-[var(--text-n8)]"
@@ -147,30 +150,47 @@
         </div>
         <CrmList
           v-if="propsRes.data.length"
+          ref="crmListRef"
           :key="String(activeTab ?? '')"
           v-model:data="propsRes.data"
           key-field="id"
           mode="remote"
           :item-height="listItemHeight"
           :loading="!!propsRes.loading"
+          :loading-mode="listLoadingMode"
           :no-more-data="isCustomerListNoMoreData"
           virtual-scroll-height="100%"
           class="customer-list-scroll min-h-0 flex-1"
           @reach-bottom="handleListReachBottom"
+          @virtual-scroll="markListScrolling"
         >
           <template #item="{ item }">
-            <div :key="item.id" class="customer-list-item-wrap" :style="{ height: `${listItemHeight}px` }">
+            <div
+              :key="item.id"
+              class="customer-list-item-wrap"
+              :class="{ 'customer-list-item-wrap--enter': isListRowEnter(item.id) }"
+              :style="{ height: `${listItemHeight}px` }"
+              @animationend="clearEnterRowId(String(item.id))"
+            >
               <CrmCustomerListItem
+                v-memo="[
+                  item.id,
+                  checkedIdSet.has(item.id),
+                  listMiddleColumns.length,
+                  isListScrolling,
+                  updatingCustomerLevelId === item.id,
+                  updatingCustomerTag?.rowId === item.id && updatingCustomerTag?.fieldId,
+                ]"
+                :lightweight="isListScrolling"
                 :item="item"
                 :row-index="0"
                 :middle-columns="listMiddleColumns"
-                :dynamic-scroll-left="dynamicScrollLeft"
                 :middle-total-width="listMiddleTotalWidth"
                 :info-column-width="listInfoColumnWidth"
                 :operation-column-width="listOperationColumnWidth"
                 :show-checkbox="showListCheckbox"
                 :show-reach="showReachColumn"
-                :checked="checkedRowKeys.includes(item.id)"
+                :checked="checkedIdSet.has(item.id)"
                 :checkbox-disabled="item.collaborationType === 'READ_ONLY'"
                 :limit-show-detail="!!props.isLimitShowDetail"
                 :show-operation="showListItemOperation(item)"
@@ -183,7 +203,7 @@
                 :tag-updating-row-id="updatingCustomerTag?.rowId"
                 :tag-updating-field-id="updatingCustomerTag?.fieldId"
                 :hide-edit-transfer="activeTab === CustomerSearchTypeEnum.CUSTOMER_COLLABORATION"
-                :operation-more-list="getListOperationMoreList(item)"
+                :operation-more-list="resolveListOperationMoreList(item)"
                 @open-detail="() => handleOpenCustomerDetail(item)"
                 @check-change="(checked) => handleListItemCheckChange(item, checked)"
                 @operation-select="(key) => handleActionSelect(item, key)"
@@ -253,6 +273,10 @@
     v-model:show="showOverviewDrawer"
     :source-id="activeSourceId"
     :navigation-rows="overviewNavigationRows"
+    :navigation-total="navigationTotal"
+    :navigation-has-more="navigationHasMore"
+    :navigation-loading="!!propsRes.loading"
+    :on-navigation-load-more="handleNavigationLoadMore"
     @update:source-id="activeSourceId = $event"
     @saved="searchData(undefined, activeSourceId)"
     @deleted="removeItemFromList(activeSourceId)"
@@ -370,8 +394,13 @@
     setCustomerLevelOnRow,
     setInputMultipleTagsOnRow,
   } from '@/hooks/useCustomerListDescription';
+  import useCustomerListWindow, {
+    adjustVirtualListScrollAfterTrim,
+    CUSTOMER_LIST_PAGE_SIZE,
+  } from '@/hooks/useCustomerListWindow';
   import useFormCreateApi from '@/hooks/useFormCreateApi';
   import useFormCreateTable from '@/hooks/useFormCreateTable';
+  import useListScrollLightweight from '@/hooks/useListScrollLightweight';
   import useModal from '@/hooks/useModal';
   import useViewChartParams, { STORAGE_VIEW_CHART_KEY, ViewChartResult } from '@/hooks/useViewChartParams';
   import useViewStore from '@/store/modules/view';
@@ -418,6 +447,11 @@
   );
 
   const checkedRowKeys = ref<DataTableRowKey[]>([]);
+  const checkedIdSet = computed(() => new Set(checkedRowKeys.value));
+  const crmListRef = ref<InstanceType<typeof CrmList> | null>(null);
+  const listLoadingMode = ref<'full' | 'more'>('full');
+  const listLoadKind = ref<'replace' | 'append'>('replace');
+  const listIdsBeforeLoad = ref<Set<string>>(new Set());
   const keyword = ref('');
   const formCreateDrawerVisible = ref(false);
   const activeSourceId = ref('');
@@ -724,21 +758,22 @@
     },
   });
 
-  const overviewNavigationRows = computed(() => {
-    if (props.formKey !== FormDesignKeyEnum.CUSTOMER) {
-      return undefined;
-    }
-    // eslint-disable-next-line no-use-before-define
-    return propsRes.value.data.map((row) => ({
-      id: String(row.id),
-      name: row.name,
-      owner: row.owner,
-      callStatus: readCallStatus(row),
-      wechatFriendStatus: readWechatFriendStatus(row),
-      mobile: row.mobile,
-      inSharedPool: row.inSharedPool,
-    }));
-  });
+  const {
+    navigationBuffer,
+    enterRowIds,
+    resetNavigationBuffer,
+    mergeNavigationBuffer,
+    markEnterBatch,
+    clearEnterRowId,
+    trimDisplayWindow,
+    removeFromNavigationBuffer,
+  } = useCustomerListWindow(readCallStatus, readWechatFriendStatus);
+
+  const { isListScrolling, markListScrolling } = useListScrollLightweight();
+
+  function isListRowEnter(id: string) {
+    return enterRowIds.value.has(String(id));
+  }
 
   function getWxFriendStatusText(row: any) {
     const status = readWechatFriendStatus(row);
@@ -863,6 +898,96 @@
     customerStage: stageConfig.value?.stageConfigList || [],
   });
   const { propsRes, propsEvent, tableQueryParams, loadList, setLoadListParams, setAdvanceFilter } = useTableRes;
+
+  function snapshotListIdsBeforeLoad() {
+    listIdsBeforeLoad.value = new Set(propsRes.value.data.map((row) => String(row.id)));
+  }
+
+  function applyCustomerListAfterLoad() {
+    if (!useListLayout.value) return;
+    const data = propsRes.value.data as Record<string, any>[];
+    const pageSize = propsRes.value.crmPagination?.pageSize ?? CUSTOMER_LIST_PAGE_SIZE;
+
+    if (listLoadKind.value === 'replace') {
+      resetNavigationBuffer();
+      mergeNavigationBuffer(data);
+      if (data.length) {
+        markEnterBatch(data.map((row) => String(row.id)));
+      }
+    } else {
+      const newRows = data.filter((row) => !listIdsBeforeLoad.value.has(String(row.id)));
+      mergeNavigationBuffer(newRows);
+      if (newRows.length) {
+        markEnterBatch(newRows.map((row) => String(row.id)));
+      }
+    }
+
+    const { removedCount } = trimDisplayWindow(data, pageSize);
+    if (removedCount > 0) {
+      nextTick(() => {
+        adjustVirtualListScrollAfterTrim(crmListRef, removedCount, listItemHeight);
+      });
+    }
+  }
+
+  function beginListLoad(kind: 'replace' | 'append') {
+    if (!useListLayout.value) return;
+    listLoadKind.value = kind;
+    if (kind === 'append') {
+      snapshotListIdsBeforeLoad();
+      listLoadingMode.value = 'more';
+    } else {
+      listLoadingMode.value = propsRes.value.data.length > 0 ? 'more' : 'full';
+    }
+  }
+
+  const overviewNavigationRows = computed(() => {
+    if (props.formKey !== FormDesignKeyEnum.CUSTOMER || !useListLayout.value) {
+      return undefined;
+    }
+    return navigationBuffer.value;
+  });
+
+  const navigationTotal = computed(() => propsRes.value.crmPagination?.itemCount ?? 0);
+
+  const navigationHasMore = computed(() => {
+    const pagination = propsRes.value.crmPagination;
+    if (!pagination?.page || !pagination.pageSize || pagination.itemCount == null) {
+      return false;
+    }
+    return pagination.page * pagination.pageSize < pagination.itemCount;
+  });
+
+  async function handleNavigationLoadMore() {
+    const pagination = propsRes.value.crmPagination;
+    if (!pagination?.page || propsRes.value.loading) {
+      return;
+    }
+    beginListLoad('append');
+    await propsEvent.value.pageChange(pagination.page + 1);
+  }
+
+  watch(
+    () => propsRes.value.loading,
+    (loading, wasLoading) => {
+      if (!useListLayout.value) return;
+      if (loading && !wasLoading) {
+        const page = propsRes.value.crmPagination?.page ?? 1;
+        if (page <= 1) {
+          listLoadKind.value = 'replace';
+          listLoadingMode.value = propsRes.value.data.length > 0 ? 'more' : 'full';
+        } else if (listLoadKind.value !== 'append') {
+          listLoadKind.value = 'append';
+          snapshotListIdsBeforeLoad();
+          listLoadingMode.value = 'more';
+        }
+      }
+      if (!loading && wasLoading) {
+        applyCustomerListAfterLoad();
+        listLoadingMode.value = 'full';
+      }
+    }
+  );
 
   const customerLevelFieldId = computed(
     () => fieldList.value.find((field) => field.internalKey === 'customerLevel')?.id
@@ -1000,27 +1125,32 @@
     );
   }
 
-  function getListOperationMoreList(row: Record<string, any>) {
+  const listOperationMoreDeleteOnly = computed<ActionsItem[]>(() => [
+    {
+      label: t('common.delete'),
+      key: 'delete',
+      danger: true,
+      permission: ['CUSTOMER_MANAGEMENT:DELETE'],
+    },
+  ]);
+
+  const listOperationMoreWithPool = computed<ActionsItem[]>(() => [
+    {
+      label: t('customer.moveToOpenSea'),
+      key: 'moveToOpenSea',
+      permission: ['CUSTOMER_MANAGEMENT:RECYCLE'],
+    },
+    ...listOperationMoreDeleteOnly.value,
+  ]);
+
+  function resolveListOperationMoreList(row: Record<string, any>) {
     if (activeTab.value === CustomerSearchTypeEnum.CUSTOMER_COLLABORATION) {
       return [];
     }
-    return [
-      ...(['MANUAL_CREATE', 'PRIVATE_IMPORT'].includes(row.createSource)
-        ? []
-        : [
-            {
-              label: t('customer.moveToOpenSea'),
-              key: 'moveToOpenSea',
-              permission: ['CUSTOMER_MANAGEMENT:RECYCLE'],
-            },
-          ]),
-      {
-        label: t('common.delete'),
-        key: 'delete',
-        danger: true,
-        permission: ['CUSTOMER_MANAGEMENT:DELETE'],
-      },
-    ];
+    if (['MANUAL_CREATE', 'PRIVATE_IMPORT'].includes(row.createSource)) {
+      return listOperationMoreDeleteOnly.value;
+    }
+    return listOperationMoreWithPool.value;
   }
 
   function handleOpenCustomerDetail(row: Record<string, any>) {
@@ -1042,7 +1172,11 @@
 
   const listHeaderCheckState = computed(() => {
     const selectableIds = listSelectableIds.value;
-    const selectedCount = selectableIds.filter((id) => checkedRowKeys.value.includes(id)).length;
+    const selectedSet = checkedIdSet.value;
+    let selectedCount = 0;
+    selectableIds.forEach((id) => {
+      if (selectedSet.has(id)) selectedCount += 1;
+    });
     return {
       checked: selectableIds.length > 0 && selectedCount === selectableIds.length,
       indeterminate: selectedCount > 0 && selectedCount < selectableIds.length,
@@ -1089,6 +1223,7 @@
     if (pagination.page * pagination.pageSize >= pagination.itemCount) {
       return;
     }
+    beginListLoad('append');
     propsEvent.value.pageChange(pagination.page + 1);
   }
 
@@ -1369,7 +1504,6 @@
 
   const dynamicMiddleTrackStyle = computed(() => ({
     width: `${listMiddleTotalWidth.value}px`,
-    transform: `translateX(-${dynamicScrollLeft.value}px)`,
   }));
 
   function handleDynamicScroll() {
@@ -1524,6 +1658,9 @@
     advancedOriginalForm.value = originalForm;
     isAdvancedSearchMode.value = isAdvancedMode;
     setAdvanceFilter(filter);
+    if (useListLayout.value) {
+      beginListLoad('replace');
+    }
     loadList();
     crmTableRef.value?.scrollTo({ top: 0 });
   }
@@ -1533,6 +1670,9 @@
   const tableAdvanceFilterRef = ref<InstanceType<typeof CrmAdvanceFilter>>();
 
   function searchData(val?: string, refreshId?: string) {
+    if (useListLayout.value && refreshId === undefined) {
+      beginListLoad('replace');
+    }
     setLoadListParams({ keyword: val ?? keyword.value, viewId: activeTab.value });
     loadList(false, refreshId);
     if (!refreshId) {
@@ -1626,6 +1766,10 @@
     () => activeTab.value,
     (val) => {
       if (val) {
+        showOverviewDrawer.value = false;
+        if (useListLayout.value) {
+          resetNavigationBuffer();
+        }
         checkedRowKeys.value = [];
         setLoadListParams({ keyword: keyword.value, viewId: getChartViewId() ?? activeTab.value });
         initTableViewChartParams(viewChartCallBack);
@@ -1651,6 +1795,7 @@
 
   function removeItemFromList(id: string) {
     propsRes.value.data = propsRes.value.data.filter((item) => item.id !== id);
+    removeFromNavigationBuffer(id);
     propsRes.value.crmPagination = {
       ...propsRes.value.crmPagination,
       itemCount: (propsRes.value.crmPagination?.itemCount ?? 1) - 1,
@@ -1732,7 +1877,20 @@
     }
     .customer-list-dynamic-header-track {
       flex-shrink: 0;
-      will-change: transform;
+      transform: translateX(calc(-1 * var(--customer-list-scroll-left, 0px)));
+    }
+    .customer-list-item-wrap--enter {
+      animation: customerListRowIn 0.2s ease-out;
+    }
+    @keyframes customerListRowIn {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
     .customer-list-dynamic-scrollbar-row {
       flex-shrink: 0;
