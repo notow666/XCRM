@@ -91,8 +91,8 @@ public class MmbaAuditPersistenceService {
 
     public SaveOrUpdateResult<MmbaSmsRecordAudit> saveOrUpdateSmsAuditWithResult(MmbaSmsRecordAudit record, String userId) {
         MmbaSmsRecordAudit previous = loadByEsId(record.getEsId(), mmbaSmsRecordAuditMapper);
-        extMmbaAuditMapper.upsertSmsRecordAudit(record);
-        return new SaveOrUpdateResult<>(previous, record, previous == null);
+        int affectedRows = extMmbaAuditMapper.upsertSmsRecordAudit(record);
+        return new SaveOrUpdateResult<>(previous, record, previous == null && affectedRows == 1);
     }
 
     public MmbaSmsRecordAudit findSmsAuditByEsId(String esId) {

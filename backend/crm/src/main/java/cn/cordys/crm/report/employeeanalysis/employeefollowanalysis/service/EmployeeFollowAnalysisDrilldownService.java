@@ -4,6 +4,7 @@ import cn.cordys.common.util.PhoneMaskUtil;
 import cn.cordys.crm.system.service.GlobalPhoneMaskConfigService;
 import com.fasterxml.jackson.databind.JsonNode;
 import cn.cordys.common.constants.PermissionConstants;
+import cn.cordys.common.dto.BaseTreeNode;
 import cn.cordys.common.dto.DeptDataPermissionDTO;
 import cn.cordys.common.dto.UserDeptDTO;
 import cn.cordys.common.pager.PageUtils;
@@ -17,6 +18,7 @@ import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.enums.EmployeeFollowAnalysisMetricType;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.enums.EmployeeFollowAnalysisTimePreset;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.mapper.EmployeeStatAnalysisMapper;
+import cn.cordys.crm.system.service.DepartmentService;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import jakarta.annotation.Resource;
@@ -30,6 +32,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,14 +52,16 @@ public class EmployeeFollowAnalysisDrilldownService {
 
     @Resource
     private GlobalPhoneMaskConfigService globalPhoneMaskConfigService;
+    @Resource
+    private DepartmentService departmentService;
 
     public Pager<List<EmployeeFollowAnalysisDrilldownItemResponse>> drilldown(EmployeeFollowAnalysisDrilldownRequest request, String orgId, String userId) {
         // 下钻不查日报汇总表，直接按当前口径回查原始业务/MMBA 明细，避免汇总和明细脱节。
         fillTimeRange(request);
         // 下钻和汇总复用同一数据权限锚点，保证“谁能看汇总，谁就只能看同范围的明细”。
         DeptDataPermissionDTO permission = dataScopeService.getDeptDataPermission(userId, orgId, PermissionConstants.CUSTOMER_MANAGEMENT_READ);
-        List<String> visibleOperatorUserIds = loadDrilldownOperatorUserIds(orgId, userId, permission);
-        if (!Boolean.TRUE.equals(permission.getAll()) && visibleOperatorUserIds.isEmpty()) {
+        List<String> visibleOperatorUserIds = loadDrilldownOperatorUserIds(orgId, userId, permission, request.getDepartmentId());
+        if (visibleOperatorUserIds != null && visibleOperatorUserIds.isEmpty()) {
             Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
             return PageUtils.setPageInfo(page, List.of());
         }
@@ -118,20 +123,28 @@ public class EmployeeFollowAnalysisDrilldownService {
 
     private List<String> loadDrilldownOperatorUserIds(String orgId,
                                                        String userId,
-                                                       DeptDataPermissionDTO permission) {
-        if (Boolean.TRUE.equals(permission.getAll())) {
+                                                       DeptDataPermissionDTO permission,
+                                                       String departmentId) {
+        if (Boolean.TRUE.equals(permission.getAll()) && StringUtils.isBlank(departmentId)) {
             return null;
         }
-        if (Boolean.TRUE.equals(permission.getSelf())) {
-            return List.of(userId);
+        List<EmployeeFollowAnalysisEmployeeDimensionRow> employees = loadCurrentEmployeesWithDepartment(orgId);
+        if (employees.isEmpty()) {
+            return List.of();
         }
-        Set<String> deptIds = permission.getDeptIds();
-        if (deptIds == null || deptIds.isEmpty()) {
-            return List.of(userId);
+        List<EmployeeFollowAnalysisEmployeeDimensionRow> visibleEmployees = filterEmployeesByPermission(employees, userId, permission);
+        visibleEmployees = filterEmployeesByDepartment(visibleEmployees, orgId, departmentId);
+        List<String> visibleOperatorUserIds = new ArrayList<>();
+        for (EmployeeFollowAnalysisEmployeeDimensionRow item : visibleEmployees) {
+            visibleOperatorUserIds.add(item.getOperatorUserId());
         }
+        return visibleOperatorUserIds;
+    }
+
+    private List<EmployeeFollowAnalysisEmployeeDimensionRow> loadCurrentEmployeesWithDepartment(String orgId) {
         List<EmployeeFollowAnalysisEmployeeDimensionRow> employees = logSqlQuery(
                 "listCurrentEmployees-drilldown",
-                "orgId=" + orgId + ", userId=" + userId,
+                "orgId=" + orgId,
                 () -> employeeStatAnalysisMapper.listCurrentEmployees(orgId)
         );
         if (employees.isEmpty()) {
@@ -145,15 +158,70 @@ public class EmployeeFollowAnalysisDrilldownService {
                         orgId
                 )
         );
-        List<String> visibleOperatorUserIds = new ArrayList<>();
         for (EmployeeFollowAnalysisEmployeeDimensionRow item : employees) {
             UserDeptDTO userDeptDTO = userDeptMap.get(item.getOperatorUserId());
-            String departmentId = userDeptDTO == null ? null : userDeptDTO.getDeptId();
-            if (StringUtils.equals(item.getOperatorUserId(), userId) || deptIds.contains(departmentId)) {
-                visibleOperatorUserIds.add(item.getOperatorUserId());
+            if (userDeptDTO != null) {
+                item.setDepartmentId(userDeptDTO.getDeptId());
+                item.setDepartmentName(userDeptDTO.getDeptName());
             }
         }
-        return visibleOperatorUserIds;
+        return employees;
+    }
+
+    private List<EmployeeFollowAnalysisEmployeeDimensionRow> filterEmployeesByPermission(List<EmployeeFollowAnalysisEmployeeDimensionRow> employees,
+                                                                                         String userId,
+                                                                                         DeptDataPermissionDTO permission) {
+        if (Boolean.TRUE.equals(permission.getAll())) {
+            return employees;
+        }
+        List<EmployeeFollowAnalysisEmployeeDimensionRow> visibleEmployees = new ArrayList<>();
+        if (Boolean.TRUE.equals(permission.getSelf())) {
+            for (EmployeeFollowAnalysisEmployeeDimensionRow item : employees) {
+                if (StringUtils.equals(item.getOperatorUserId(), userId)) {
+                    visibleEmployees.add(item);
+                }
+            }
+            return visibleEmployees;
+        }
+        Set<String> deptIds = permission.getDeptIds();
+        if (deptIds == null || deptIds.isEmpty()) {
+            for (EmployeeFollowAnalysisEmployeeDimensionRow item : employees) {
+                if (StringUtils.equals(item.getOperatorUserId(), userId)) {
+                    visibleEmployees.add(item);
+                }
+            }
+            return visibleEmployees;
+        }
+        for (EmployeeFollowAnalysisEmployeeDimensionRow item : employees) {
+            if (StringUtils.equals(item.getOperatorUserId(), userId) || deptIds.contains(item.getDepartmentId())) {
+                visibleEmployees.add(item);
+            }
+        }
+        return visibleEmployees;
+    }
+
+    private List<EmployeeFollowAnalysisEmployeeDimensionRow> filterEmployeesByDepartment(List<EmployeeFollowAnalysisEmployeeDimensionRow> employees,
+                                                                                         String orgId,
+                                                                                         String departmentId) {
+        if (StringUtils.isBlank(departmentId) || employees.isEmpty()) {
+            return employees;
+        }
+        Set<String> departmentIds = loadDepartmentIdsWithChildren(orgId, departmentId);
+        if (departmentIds.isEmpty()) {
+            return List.of();
+        }
+        List<EmployeeFollowAnalysisEmployeeDimensionRow> filteredEmployees = new ArrayList<>();
+        for (EmployeeFollowAnalysisEmployeeDimensionRow item : employees) {
+            if (departmentIds.contains(item.getDepartmentId())) {
+                filteredEmployees.add(item);
+            }
+        }
+        return filteredEmployees;
+    }
+
+    private Set<String> loadDepartmentIdsWithChildren(String orgId, String departmentId) {
+        List<BaseTreeNode> tree = departmentService.getTree(orgId);
+        return new LinkedHashSet<>(dataScopeService.getDeptIdsWithChild(tree, Set.of(departmentId)));
     }
 
     private void fillTimeRange(EmployeeFollowAnalysisDrilldownRequest request) {

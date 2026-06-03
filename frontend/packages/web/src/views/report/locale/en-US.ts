@@ -7,6 +7,7 @@ export default {
   'report.filter.statTime.custom': 'Custom',
   'report.filter.customRange': 'Custom range',
   'report.filter.dimension': 'Statistical dimension',
+  'report.filter.department': 'Department',
   'report.dimension.employeeName': 'Employee name',
   'report.dimension.employeeDept': 'Employee department',
   'report.dimension.customerSource': 'Customer source',

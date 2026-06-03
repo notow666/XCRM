@@ -7,6 +7,7 @@ export default {
   'report.filter.statTime.custom': '自定义',
   'report.filter.customRange': '自定义区间',
   'report.filter.dimension': '统计维度',
+  'report.filter.department': '部门',
   'report.dimension.employeeName': '员工名称',
   'report.dimension.employeeDept': '员工部门',
   'report.dimension.customerSource': '客户来源',

@@ -28,6 +28,9 @@ public class EmployeeFollowAnalysisDrilldownRequest extends BasePageRequest {
     @Schema(description = "维度键")
     private String dimensionKey;
 
+    @Schema(description = "部门ID，查询该部门及下级部门")
+    private String departmentId;
+
     @NotBlank
     @Schema(description = "指标类型 inboundCustomer/contactedCustomer/newWechatFriends/dialCount/connectedCount/callOver1Min/callOver3Min")
     private String metricType;

@@ -5,6 +5,7 @@ export interface EmployeeFollowAnalysisSummaryParams {
   startTime?: number;
   endTime?: number;
   dimensionType: string;
+  departmentId?: string;
   showEmptyItems?: boolean;
 }
 
@@ -28,6 +29,7 @@ export interface EmployeeFollowAnalysisDrilldownParams extends TableQueryParams 
   endTime?: number;
   dimensionType: string;
   dimensionKey: string;
+  departmentId?: string;
   metricType: string;
 }
 

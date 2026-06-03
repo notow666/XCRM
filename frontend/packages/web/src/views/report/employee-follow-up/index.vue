@@ -26,6 +26,18 @@
           <n-form-item :label="t('report.filter.dimension')" path="dimension">
             <n-select v-model:value="form.dimension" class="w-full min-w-[200px]" :options="dimensionOptions" />
           </n-form-item>
+          <n-form-item :label="t('report.filter.department')" path="departmentId">
+            <n-tree-select
+              v-model:value="form.departmentId"
+              :options="departmentOptions"
+              label-field="name"
+              key-field="id"
+              children-field="children"
+              filterable
+              clearable
+              class="w-full min-w-[200px]"
+            />
+          </n-form-item>
           <n-form-item :show-label="false">
             <n-button ghost class="mr-[12px]" type="primary" :loading="loading" @click="handleQuery">
               {{ t('report.action.query') }}
@@ -94,6 +106,7 @@
     NScrollbar,
     NSelect,
     NSwitch,
+    NTreeSelect,
     type SelectOption,
     useMessage,
   } from 'naive-ui';
@@ -109,12 +122,14 @@
   } from '@lib/shared/models/report/employeeFollowAnalysis';
 
   import CrmCard from '@/components/pure/crm-card/index.vue';
+  import type { CrmTreeNodeData } from '@/components/pure/crm-tree/type';
   import DrilldownModal from './components/drilldownModal.vue';
 
   import {
     exportEmployeeFollowAnalysisSummary,
     getEmployeeFollowAnalysisDrilldown,
     getEmployeeFollowAnalysisSummary,
+    getHomeDepartmentTree,
   } from '@/api/modules';
 
   const { t } = useI18n();
@@ -161,11 +176,13 @@
   const showEmptyItems = ref(true);
   const tableData = ref<FollowUpRow[]>([]);
   const lastQueryParams = ref<EmployeeFollowAnalysisSummaryParams | null>(null);
+  const departmentOptions = ref<CrmTreeNodeData[]>([]);
 
   const form = reactive({
     timePreset: TimePreset.TODAY as TimePresetValue,
     customRange: null as [number, number] | null,
     dimension: Dimension.EMPLOYEE_NAME as DimensionValue,
+    departmentId: null as string | null,
   });
 
   const drilldownState = reactive({
@@ -240,6 +257,7 @@
       endTime: form.customRange?.[1],
       dimensionType: form.dimension,
       dimensionKey: drilldownState.dimensionKey,
+      departmentId: form.departmentId || undefined,
       metricType: drilldownState.metricType,
       current: drilldownState.current,
       pageSize: drilldownState.pageSize,
@@ -435,6 +453,7 @@
       startTime: form.customRange?.[0],
       endTime: form.customRange?.[1],
       dimensionType: form.dimension,
+      departmentId: form.departmentId || undefined,
       showEmptyItems: showEmptyItems.value,
     };
   }
@@ -464,7 +483,12 @@
     form.timePreset = TimePreset.TODAY;
     form.customRange = null;
     form.dimension = Dimension.EMPLOYEE_NAME;
+    form.departmentId = null;
     showEmptyItems.value = true;
+  }
+
+  async function initDepartmentOptions() {
+    departmentOptions.value = await getHomeDepartmentTree();
   }
 
   async function handleQuery() {
@@ -523,6 +547,7 @@
   }
 
   onMounted(() => {
+    initDepartmentOptions();
     fetchSummary();
   });
 </script>

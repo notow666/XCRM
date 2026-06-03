@@ -62,8 +62,13 @@ public class MmbaAutoCustomerFollowService {
                 current.getAnswerTimestamp(), current.getReqId(), "电话");
     }
 
-    public void handleSmsDelivered(MmbaSmsRecordAudit previous, MmbaSmsRecordAudit current) {
+    public void handleSmsDelivered(MmbaSmsRecordAudit previous, MmbaSmsRecordAudit current, boolean inserted) {
         if (current == null || !isSmsDelivered(current)) {
+            return;
+        }
+        if (previous == null && !inserted) {
+            log.info("MMBA自动新增客户跟进跳过，短信审计并发更新非首次插入 scene=短信 reqId={} esId={}",
+                    current.getReqId(), current.getEsId());
             return;
         }
         if (previous != null && isSmsDelivered(previous)) {

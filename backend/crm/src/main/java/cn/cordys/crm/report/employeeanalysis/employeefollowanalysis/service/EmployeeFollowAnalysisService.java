@@ -2,6 +2,7 @@ package cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import cn.cordys.common.constants.PermissionConstants;
+import cn.cordys.common.dto.BaseTreeNode;
 import cn.cordys.common.util.JSON;
 import cn.cordys.common.dto.DeptDataPermissionDTO;
 import cn.cordys.common.dto.UserDeptDTO;
@@ -15,6 +16,7 @@ import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.enums.EmployeeFollowAnalysisDimensionType;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.enums.EmployeeFollowAnalysisTimePreset;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.mapper.EmployeeStatAnalysisMapper;
+import cn.cordys.crm.system.service.DepartmentService;
 import jakarta.annotation.Resource;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -50,11 +52,13 @@ public class EmployeeFollowAnalysisService {
     private BaseService baseService;
     @Resource
     private DataScopeService dataScopeService;
+    @Resource
+    private DepartmentService departmentService;
 
     public List<EmployeeFollowAnalysisSummaryItemResponse> summary(EmployeeFollowAnalysisSummaryRequest request, String orgId, String userId) {
         QueryRange range = buildQueryRange(request.getTimePreset(), request.getStartTime(), request.getEndTime());
         EmployeeFollowAnalysisDimensionType dimensionType = EmployeeFollowAnalysisDimensionType.fromValue(request.getDimensionType());
-        AggregationContext context = buildAggregationContext(orgId, userId, dimensionType);
+        AggregationContext context = buildAggregationContext(orgId, userId, request.getDepartmentId());
         if (context.getEmployeeMap().isEmpty()) {
             return List.of();
         }
@@ -159,16 +163,20 @@ public class EmployeeFollowAnalysisService {
         return result;
     }
 
-    private AggregationContext buildAggregationContext(String orgId, String userId, EmployeeFollowAnalysisDimensionType dimensionType) {
+    private AggregationContext buildAggregationContext(String orgId, String userId, String departmentId) {
         AggregationContext context = new AggregationContext();
         DeptDataPermissionDTO permission = dataScopeService.getDeptDataPermission(userId, orgId, PermissionConstants.CUSTOMER_MANAGEMENT_READ);
-        List<EmployeeFollowAnalysisEmployeeDimensionRow> employees = loadVisibleEmployees(orgId, userId, permission);
+        List<EmployeeFollowAnalysisEmployeeDimensionRow> employees = filterEmployeesByDepartment(
+                loadVisibleEmployees(orgId, userId, permission),
+                orgId,
+                departmentId
+        );
         Map<String, EmployeeFollowAnalysisEmployeeDimensionRow> employeeMap = new LinkedHashMap<>();
         for (EmployeeFollowAnalysisEmployeeDimensionRow item : employees) {
             employeeMap.put(item.getOperatorUserId(), item);
         }
         context.setEmployeeMap(employeeMap);
-        context.setSqlFilterOperatorUserIds(Boolean.TRUE.equals(permission.getAll()) ? null : new ArrayList<>(employeeMap.keySet()));
+        context.setSqlFilterOperatorUserIds(Boolean.TRUE.equals(permission.getAll()) && StringUtils.isBlank(departmentId) ? null : new ArrayList<>(employeeMap.keySet()));
         Map<String, Integer> employeeOrderMap = new LinkedHashMap<>();
         for (int i = 0; i < employees.size(); i++) {
             employeeOrderMap.put(employees.get(i).getOperatorUserId(), i);
@@ -246,6 +254,30 @@ public class EmployeeFollowAnalysisService {
             }
         }
         return visibleEmployees;
+    }
+
+    private List<EmployeeFollowAnalysisEmployeeDimensionRow> filterEmployeesByDepartment(List<EmployeeFollowAnalysisEmployeeDimensionRow> employees,
+                                                                                         String orgId,
+                                                                                         String departmentId) {
+        if (StringUtils.isBlank(departmentId) || employees.isEmpty()) {
+            return employees;
+        }
+        Set<String> departmentIds = loadDepartmentIdsWithChildren(orgId, departmentId);
+        if (departmentIds.isEmpty()) {
+            return List.of();
+        }
+        List<EmployeeFollowAnalysisEmployeeDimensionRow> filteredEmployees = new ArrayList<>();
+        for (EmployeeFollowAnalysisEmployeeDimensionRow item : employees) {
+            if (departmentIds.contains(item.getDepartmentId())) {
+                filteredEmployees.add(item);
+            }
+        }
+        return filteredEmployees;
+    }
+
+    private Set<String> loadDepartmentIdsWithChildren(String orgId, String departmentId) {
+        List<BaseTreeNode> tree = departmentService.getTree(orgId);
+        return new LinkedHashSet<>(dataScopeService.getDeptIdsWithChild(tree, Set.of(departmentId)));
     }
 
     private Map<String, SummaryAccumulator> aggregateHistoryDayRows(List<EmployeeStatDay> rows,

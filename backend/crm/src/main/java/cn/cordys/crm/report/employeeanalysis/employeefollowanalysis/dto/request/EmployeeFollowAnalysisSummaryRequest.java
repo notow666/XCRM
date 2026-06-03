@@ -21,6 +21,9 @@ public class EmployeeFollowAnalysisSummaryRequest {
     @Schema(description = "统计维度 employeeName/employeeDept/customerSource/statDay/statMonth")
     private String dimensionType;
 
+    @Schema(description = "部门ID，查询该部门及下级部门")
+    private String departmentId;
+
     @Schema(description = "显示无数据项")
     private Boolean showEmptyItems = true;
 }

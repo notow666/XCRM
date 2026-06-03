@@ -104,7 +104,7 @@ public class MmbaCallbackDispatchService {
                         );
                 MmbaSmsRecordAudit previousSmsAudit = smsAuditResult.getPrevious();
                 MmbaSmsRecordAudit smsAudit = smsAuditResult.getCurrent();
-                mmbaAutoCustomerFollowService.handleSmsDelivered(previousSmsAudit, smsAudit);
+                mmbaAutoCustomerFollowService.handleSmsDelivered(previousSmsAudit, smsAudit, smsAuditResult.isInserted());
             }
             case MmbaBehaviorTypes.WX_CHAT_AUDIT -> {
                 MmbaAuditPersistenceService.SaveOrUpdateResult<MmbaWxChatAudit> wxChatAuditResult =
