@@ -19,7 +19,17 @@
     @check-finished="checkFinished"
   />
 
+  <CustomerImportCheckResult
+    v-if="props.apiType === FormDesignKeyEnum.CUSTOMER"
+    v-model:show="validateResultModal"
+    :validate-info="validateInfo"
+    :import-loading="importLoading"
+    :download-error-api="importApiMap[props.apiType]?.downloadError"
+    @save="importHandler"
+  />
+
   <ValidateResult
+    v-else
     v-model:show="validateResultModal"
     :validate-info="validateInfo"
     :import-loading="importLoading"
@@ -33,10 +43,12 @@
   import { ref } from 'vue';
   import { NButton, useMessage } from 'naive-ui';
 
+  import { FormDesignKeyEnum } from '@lib/shared/enums/formDesignEnum';
   import { useI18n } from '@lib/shared/hooks/useI18n';
   import type { ValidateInfo } from '@lib/shared/models/system/org';
 
   import type { CrmFileItem } from '@/components/pure/crm-upload/types';
+  import CustomerImportCheckResult from './components/CustomerImportCheckResult.vue';
   import ImportModal from './components/importModal.vue';
   import ValidateModal from './components/validateModal.vue';
   import ValidateResult from './components/validateResult.vue';

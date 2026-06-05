@@ -12,6 +12,8 @@ export default {
   'poolImportButton.poolSourceConflict': '在公海来源客户中已存在',
   'poolImportButton.downloadErrorFile': '下载错误文件',
   'poolImportButton.canImport': '校验通过，可以导入',
+  'poolImportButton.partialCanImport': '部分数据校验未通过，可先导入正确数据',
+  'poolImportButton.noImportableData': '无可导入数据，请下载错误文件并修改后重新上传',
   'poolImportButton.modifyAndReUpload': '请修改错误数据后重新上传',
   'poolImportButton.backToUpload': '返回上传',
   'poolImportButton.preCheckFailed': '校验失败，请检查数据',

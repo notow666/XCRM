@@ -21,6 +21,7 @@ import {
   BatchDeleteCustomerByConditionUrl,
   BatchDeleteOpenSeaCustomerUrl,
   BatchDeleteOpenSeaCustomerByConditionUrl,
+  BatchMoveCustomerByConditionUrl,
   BatchMoveCustomerUrl,
   BatchPickOpenSeaCustomerUrl,
   BatchTransferCustomerByConditionUrl,
@@ -42,6 +43,7 @@ import {
   DeleteCustomerViewUrl,
   DeleteOpenSeaCustomerUrl,
   DisableCustomerContactUrl,
+  DownloadAccountImportErrorFileUrl,
   DownloadAccountTemplateUrl,
   DownloadContactTemplateUrl,
   DownloadPoolCustomerTemplateUrl,
@@ -191,6 +193,7 @@ import type {
   BatchUpdateOpenSeaCustomerByConditionParams,
   BatchUpdateOpenSeaCustomerByConditionSubmitResult,
   BatchTransferCustomerByConditionParams,
+  BatchMoveToPublicPoolByConditionParams,
   BatchMoveToPublicPoolParams,
   BatchOperationOpenSeaCustomerParams,
   BatchUpdatePoolAccountParams,
@@ -455,7 +458,12 @@ export default function useProductApi(CDR: CordysAxios) {
     return CDR.post({ url: BatchMoveCustomerUrl, data });
   }
 
-  // 批量移入公海
+  // 按筛选条件批量移入公海
+  function batchMoveCustomerByCondition(data: BatchMoveToPublicPoolByConditionParams) {
+    return CDR.post({ url: BatchMoveCustomerByConditionUrl, data });
+  }
+
+  // 移入公海
   function moveCustomerToPool(data: MoveToPublicPoolParams) {
     return CDR.post({ url: MoveToCustomerUrl, data });
   }
@@ -963,6 +971,16 @@ export default function useProductApi(CDR: CordysAxios) {
     );
   }
 
+  function downloadAccountImportErrorFile(fileId: string) {
+    return CDR.get(
+      {
+        url: DownloadAccountImportErrorFileUrl + '/' + fileId,
+        responseType: 'blob',
+      },
+      { isTransformResponse: false, isReturnNativeResponse: true }
+    );
+  }
+
   function importAccount(file: File) {
     return CDR.uploadFile({ url: ImportAccountUrl }, { fileList: [file] }, 'file');
   }
@@ -1132,6 +1150,7 @@ export default function useProductApi(CDR: CordysAxios) {
     batchTransferCustomer,
     batchTransferCustomerByCondition,
     batchMoveCustomer,
+    batchMoveCustomerByCondition,
     addCustomerFollowRecord,
     updateCustomerFollowRecord,
     deleteCustomerFollowRecord,
@@ -1218,6 +1237,7 @@ export default function useProductApi(CDR: CordysAxios) {
     exportCustomerOpenSeaSelected,
     preCheckImportAccount,
     downloadAccountTemplate,
+    downloadAccountImportErrorFile,
     importAccount,
     preCheckImportContact,
     downloadContactTemplate,

@@ -62,8 +62,11 @@
       <div v-if="checkResponse.passed" class="mt-[8px] text-[var(--text-n4)]">
         {{ t('poolImportButton.canImport') }}
       </div>
-      <div v-if="!checkResponse.passed" class="mt-[8px] text-[var(--text-n4)]">
-        {{ t('poolImportButton.modifyAndReUpload') }}
+      <div v-else-if="checkResponse.successCount > 0" class="mt-[8px] text-[var(--text-n4)]">
+        {{ t('poolImportButton.partialCanImport') }}
+      </div>
+      <div v-else class="mt-[8px] text-[var(--text-n4)]">
+        {{ t('poolImportButton.noImportableData') }}
       </div>
     </div>
 
@@ -74,7 +77,7 @@
         </n-button>
 
         <n-button
-          v-if="checkResponse.passed"
+          v-if="checkResponse.successCount > 0"
           :loading="importLoading"
           quaternary
           type="primary"

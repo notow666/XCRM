@@ -47,6 +47,20 @@
         >
           {{ t('customer.transferByCondition') }}
         </n-button>
+        <n-button
+          v-if="
+            activeTab !== CustomerSearchTypeEnum.CUSTOMER_COLLABORATION &&
+            hasAnyPermission(['CUSTOMER_MANAGEMENT:RECYCLE']) &&
+            !props.readonly
+          "
+          type="primary"
+          ghost
+          class="n-btn-outline-primary"
+          :disabled="(propsRes.crmPagination?.itemCount || 0) === 0"
+          @click="handleMoveToOpenSeaByConditionClick"
+        >
+          {{ t('customer.moveToOpenSeaByCondition') }}
+        </n-button>
         <CrmImportButton
           v-if="hasAnyPermission(['CUSTOMER_MANAGEMENT:IMPORT'])"
           :api-type="FormDesignKeyEnum.CUSTOMER"
@@ -162,7 +176,7 @@
           virtual-scroll-height="100%"
           class="customer-list-scroll min-h-0 flex-1"
           @reach-bottom="handleListReachBottom"
-          @virtual-scroll="markListScrolling"
+          @virtual-scroll="handleCustomerListVirtualScroll"
         >
           <template #item="{ item }">
             <div
@@ -226,6 +240,15 @@
             </div>
           </template>
         </CrmList>
+        <div
+          v-if="useListLayout && propsRes.data.length"
+          ref="customerListScrollbarTrackRef"
+          class="customer-list-vertical-scrollbar"
+          :class="{ 'customer-list-vertical-scrollbar--visible': showCustomerListScrollbar }"
+          @pointerdown="handleCustomerListScrollbarPointerDown"
+        >
+          <div class="customer-list-vertical-scrollbar__thumb" :style="customerListScrollbarThumbStyle" />
+        </div>
         <div
           v-else-if="propsRes.loading"
           class="customer-list-panel__loading flex min-h-0 flex-1 items-center justify-center border border-t-0 border-[var(--text-n8)] py-[48px]"
@@ -316,8 +339,11 @@
     :source-id="moveIds"
     :name="initialSourceName"
     :pool-id="selectedPoolId"
+    :by-condition="moveByCondition"
+    :query-params="transferByConditionQueryParams"
+    :total="propsRes.crmPagination?.itemCount || 0"
     type="warning"
-    @refresh="Array.isArray(moveIds) ? (tableRefreshId += 1) : removeItemFromList(moveIds.toString())"
+    @refresh="handleMoveRefresh"
   />
   <CrmSelectPoolModal v-model:show="showSelectPoolModal" :name="initialSourceName" @confirm="handlePoolSelected" />
 
@@ -500,11 +526,6 @@
         permission: ['CUSTOMER_MANAGEMENT:EXPORT'],
       },
       {
-        label: t('customer.moveToOpenSea'),
-        key: 'moveToOpenSea',
-        permission: ['CUSTOMER_MANAGEMENT:RECYCLE'],
-      },
-      {
         label: t('common.batchEdit'),
         key: 'batchEdit',
         permission: ['CUSTOMER_MANAGEMENT:UPDATE'],
@@ -548,6 +569,7 @@
 
   const showMoveModal = ref(false);
   const moveIds = ref<(string | number) | (string | number)[]>('');
+  const moveByCondition = ref(false);
   const showSelectPoolModal = ref(false);
   const selectedPoolId = ref<string>('');
 
@@ -1103,6 +1125,13 @@
 
   const dynamicScrollRef = ref<HTMLElement | null>(null);
   const dynamicScrollLeft = ref(0);
+  const customerListScrollbarTrackRef = ref<HTMLElement | null>(null);
+  const customerListScrollbarVisible = ref(false);
+  const customerListScrollbarTop = ref(0);
+  const customerListScrollbarHeight = ref(40);
+  const customerListScrollbarDragging = ref(false);
+  let customerListScrollbarStartY = 0;
+  let customerListScrollbarStartTop = 0;
 
   const viewStore = useViewStore();
 
@@ -1113,6 +1142,15 @@
     }
     return pagination.page * pagination.pageSize >= pagination.itemCount;
   });
+
+  const showCustomerListScrollbar = computed(
+    () => useListLayout.value && propsRes.value.data.length > 0 && customerListScrollbarVisible.value
+  );
+
+  const customerListScrollbarThumbStyle = computed(() => ({
+    height: `${customerListScrollbarHeight.value}px`,
+    transform: `translateY(${customerListScrollbarTop.value}px)`,
+  }));
 
   const tableBindProps = computed(() => ({
     ...propsRes.value,
@@ -1226,6 +1264,93 @@
     beginListLoad('append');
     propsEvent.value.pageChange(pagination.page + 1);
   }
+
+  function getCustomerListScrollElement() {
+    return ((crmListRef.value as any)?.$el?.querySelector('.v-vl') as HTMLElement | null) ?? null;
+  }
+
+  function syncCustomerListScrollbar() {
+    if (!useListLayout.value) {
+      customerListScrollbarVisible.value = false;
+      return;
+    }
+    const scrollEl = getCustomerListScrollElement();
+    const trackEl = customerListScrollbarTrackRef.value;
+    if (!scrollEl || !trackEl) {
+      customerListScrollbarVisible.value = false;
+      return;
+    }
+    const scrollRange = scrollEl.scrollHeight - scrollEl.clientHeight;
+    if (scrollRange <= 1) {
+      customerListScrollbarVisible.value = false;
+      return;
+    }
+    const trackHeight = trackEl.clientHeight;
+    const thumbHeight = Math.max(40, Math.round((scrollEl.clientHeight / scrollEl.scrollHeight) * trackHeight));
+    const thumbRange = Math.max(trackHeight - thumbHeight, 0);
+    customerListScrollbarHeight.value = thumbHeight;
+    customerListScrollbarTop.value = Math.round((scrollEl.scrollTop / scrollRange) * thumbRange);
+    customerListScrollbarVisible.value = true;
+  }
+
+  function handleCustomerListVirtualScroll(event: Event) {
+    markListScrolling(event);
+    syncCustomerListScrollbar();
+  }
+
+  function scrollCustomerListByThumbTop(nextTop: number) {
+    const scrollEl = getCustomerListScrollElement();
+    const trackEl = customerListScrollbarTrackRef.value;
+    if (!scrollEl || !trackEl) return;
+
+    const thumbRange = Math.max(trackEl.clientHeight - customerListScrollbarHeight.value, 0);
+    const scrollRange = scrollEl.scrollHeight - scrollEl.clientHeight;
+    const boundedTop = Math.min(Math.max(nextTop, 0), thumbRange);
+    scrollEl.scrollTop = thumbRange > 0 ? (boundedTop / thumbRange) * scrollRange : 0;
+    syncCustomerListScrollbar();
+  }
+
+  function handleCustomerListScrollbarPointerMove(event: PointerEvent) {
+    if (!customerListScrollbarDragging.value) return;
+    const deltaY = event.clientY - customerListScrollbarStartY;
+    scrollCustomerListByThumbTop(customerListScrollbarStartTop + deltaY);
+  }
+
+  function handleCustomerListScrollbarPointerUp() {
+    customerListScrollbarDragging.value = false;
+    window.removeEventListener('pointermove', handleCustomerListScrollbarPointerMove);
+    window.removeEventListener('pointerup', handleCustomerListScrollbarPointerUp);
+  }
+
+  function handleCustomerListScrollbarPointerDown(event: PointerEvent) {
+    const trackEl = customerListScrollbarTrackRef.value;
+    if (!trackEl) return;
+
+    event.preventDefault();
+    const clickTop = event.clientY - trackEl.getBoundingClientRect().top;
+    const target = event.target as HTMLElement;
+    if (!target.classList.contains('customer-list-vertical-scrollbar__thumb')) {
+      scrollCustomerListByThumbTop(clickTop - customerListScrollbarHeight.value / 2);
+    }
+    customerListScrollbarDragging.value = true;
+    customerListScrollbarStartY = event.clientY;
+    customerListScrollbarStartTop = customerListScrollbarTop.value;
+    window.addEventListener('pointermove', handleCustomerListScrollbarPointerMove);
+    window.addEventListener('pointerup', handleCustomerListScrollbarPointerUp);
+  }
+
+  watch(
+    () => [propsRes.value.data.length, propsRes.value.loading, useListLayout.value],
+    () => {
+      nextTick(() => {
+        requestAnimationFrame(syncCustomerListScrollbar);
+      });
+    }
+  );
+
+  onBeforeUnmount(() => {
+    handleCustomerListScrollbarPointerUp();
+  });
 
   const transferByConditionQueryParams = computed(() => ({
     ...tableQueryParams.value,
@@ -1802,6 +1927,27 @@
     };
   }
 
+  function handleMoveToOpenSeaByConditionClick() {
+    const total = propsRes.value.crmPagination?.itemCount || 0;
+    if (!total) {
+      Message.warning(t('customer.batchDeleteByConditionEmptyTip'));
+      return;
+    }
+    moveByCondition.value = true;
+    initialSourceName.value = '';
+    moveIds.value = [];
+    showSelectPoolModal.value = true;
+  }
+
+  function handleMoveRefresh() {
+    if (moveByCondition.value || Array.isArray(moveIds.value)) {
+      checkedRowKeys.value = [];
+      tableRefreshId.value += 1;
+      return;
+    }
+    removeItemFromList(moveIds.value.toString());
+  }
+
   watch(
     () => tableRemoveRefreshId.value,
     (val) => {
@@ -1833,6 +1979,7 @@
     width: 16px !important;
   }
   .customer-list-panel {
+    position: relative;
     flex: 1;
     min-height: 0;
     :deep(.n-spin) {
@@ -1921,8 +2068,31 @@
       height: 1px;
       pointer-events: none;
     }
+    .customer-list-vertical-scrollbar {
+      position: absolute;
+      top: 43px;
+      right: 3px;
+      bottom: 15px;
+      z-index: 4;
+      width: 8px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.12s ease;
+    }
+    .customer-list-vertical-scrollbar--visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .customer-list-vertical-scrollbar__thumb {
+      width: 8px;
+      min-height: 40px;
+      border-radius: 4px;
+      background-color: var(--text-n6);
+      cursor: pointer;
+      will-change: transform;
+    }
     .customer-list-scroll {
-      width: calc(100% + 5px);
+      width: 100%;
       min-height: 0;
       border: 1px solid var(--text-n8);
       border-top: none;
@@ -1934,6 +2104,18 @@
       }
       :deep(.v-vl) {
         overflow-y: auto !important;
+        scrollbar-width: thin;
+        scrollbar-color: var(--text-n6) transparent;
+        &::-webkit-scrollbar {
+          width: 8px;
+        }
+        &::-webkit-scrollbar-thumb {
+          border-radius: 4px;
+          background-color: var(--text-n6);
+        }
+        &::-webkit-scrollbar-track {
+          background-color: transparent;
+        }
       }
     }
     .customer-list-item-wrap {

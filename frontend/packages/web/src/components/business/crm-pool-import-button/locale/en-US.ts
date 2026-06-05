@@ -13,6 +13,8 @@ export default {
   'poolImportButton.poolSourceConflict': 'Exists in pool-source customer',
   'poolImportButton.downloadErrorFile': 'Download Error File',
   'poolImportButton.canImport': 'Validation passed, ready to import',
+  'poolImportButton.partialCanImport': 'Some rows failed validation; valid rows can be imported first',
+  'poolImportButton.noImportableData': 'No importable data. Download the error file, fix it, and upload again',
   'poolImportButton.modifyAndReUpload': 'Please modify error data and re-upload',
   'poolImportButton.backToUpload': 'Back to Upload',
   'poolImportButton.preCheckFailed': 'Pre-check failed, please review your data',

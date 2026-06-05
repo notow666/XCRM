@@ -86,7 +86,7 @@ public class CustomerMobileConflictQueryService {
                 .eq(Customer::getOwner, ownerId)
                 .eq(Customer::getOrganizationId, orgId)
                 .eq(Customer::getInSharedPool, false)
-                .eq(Customer::getCreateSource, CustomerCreateSource.POOL_IMPORT);
+                .in(Customer::getCreateSource, CustomerCreateSource.poolSourceTypes());
         if (StringUtils.isNotBlank(excludeId)) {
             queryWrapper.nq(Customer::getId, excludeId);
         }
@@ -108,7 +108,7 @@ public class CustomerMobileConflictQueryService {
         LambdaQueryWrapper<Customer> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Customer::getOrganizationId, orgId)
                 .eq(Customer::getMobile, mobile)
-                .eq(Customer::getCreateSource, CustomerCreateSource.POOL_IMPORT);
+                .in(Customer::getCreateSource, CustomerCreateSource.poolSourceTypes());
         if (StringUtils.isNotBlank(excludeId)) {
             queryWrapper.nq(Customer::getId, excludeId);
         }
@@ -157,7 +157,7 @@ public class CustomerMobileConflictQueryService {
         queryWrapper.eq(Customer::getOwner, ownerId)
                 .eq(Customer::getOrganizationId, orgId)
                 .eq(Customer::getInSharedPool, false)
-                .eq(Customer::getCreateSource, CustomerCreateSource.POOL_IMPORT);
+                .in(Customer::getCreateSource, CustomerCreateSource.poolSourceTypes());
         return customerMapper.selectListByLambda(queryWrapper).stream()
                 .map(Customer::getMobile)
                 .map(StringUtils::trimToNull)

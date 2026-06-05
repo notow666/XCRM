@@ -17,6 +17,7 @@ import cn.cordys.crm.system.excel.listener.CustomFieldImportEventListener;
 import cn.cordys.crm.system.service.ModuleFormService;
 import cn.cordys.mybatis.BaseMapper;
 import cn.idev.excel.FastExcelFactory;
+import cn.idev.excel.context.AnalysisContext;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -27,9 +28,11 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.annotation.Resource;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -56,6 +59,11 @@ public class PoolCustomerImportExecutor {
 
     @Transactional(rollbackFor = Exception.class)
     public String executeImport(MultipartFile file, String poolId, String userId, String orgId) {
+        return executeImport(file, poolId, userId, orgId, Collections.emptySet());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public String executeImport(MultipartFile file, String poolId, String userId, String orgId, Set<Integer> skipRows) {
         try (InputStream inputStream = file.getInputStream()) {
             List<BaseField> fields = moduleFormService.getAllCustomImportFields(FormKey.CUSTOMER.getKey(), orgId);
             List<BaseField> filteredFields = filterOwnerField(fields);
@@ -63,8 +71,8 @@ public class PoolCustomerImportExecutor {
 
             CustomImportAfterDoConsumer<Customer, BaseResourceSubField> afterDo = buildAfterDoConsumer(poolId, userId, orgId);
 
-            CustomFieldImportEventListener<Customer> eventListener = new CustomFieldImportEventListener<>(
-                    filteredFields, Customer.class, orgId, userId, "customer_field", afterDo, 2000, null, null);
+            CustomFieldImportEventListener<Customer> eventListener = new PoolCustomerImportEventListener(
+                    filteredFields, orgId, userId, afterDo, skipRows);
             FastExcelFactory.read(inputStream, eventListener).headRowNumber(1).ignoreEmptyRow(true).sheet().doRead();
             return eventListener.successMsg();
         } catch (Exception e) {
@@ -138,9 +146,9 @@ public class PoolCustomerImportExecutor {
                     c.setUpdateUser(userId);
                     c.setUpdateTime(currentTime);
                 });
-                
+
                 customerBaseMapper.batchInsert(newCustomers);
-                
+
                 List<String> newCustomerIds = newCustomers.stream().map(Customer::getId).collect(Collectors.toList());
 
                 List<BaseResourceSubField> newFields = customerFields.stream()
@@ -171,7 +179,7 @@ public class PoolCustomerImportExecutor {
                     c.setUpdateUser(userId);
                     c.setUpdateTime(currentTime);
                 });
-                
+
                 batchMoveToPoolIncludeStage(updateCustomers);
 
                 List<String> updateCustomerIds = updateCustomers.stream().map(Customer::getId).collect(Collectors.toList());
@@ -249,5 +257,26 @@ public class PoolCustomerImportExecutor {
         return fields.stream()
                 .filter(field -> !OWNER_FIELD_KEY.equals(field.getInternalKey()))
                 .collect(Collectors.toList());
+    }
+
+    private static class PoolCustomerImportEventListener extends CustomFieldImportEventListener<Customer> {
+
+        private final Set<Integer> skipRows;
+
+        private PoolCustomerImportEventListener(List<BaseField> fields, String orgId, String userId,
+                                                CustomImportAfterDoConsumer<Customer, BaseResourceSubField> afterDo,
+                                                Set<Integer> skipRows) {
+            super(fields, Customer.class, orgId, userId, "customer_field", afterDo, 2000, null, null);
+            this.skipRows = skipRows == null ? Collections.emptySet() : skipRows;
+        }
+
+        @Override
+        public void invoke(Map<Integer, String> data, AnalysisContext analysisContext) {
+            Integer rowIndex = analysisContext.readRowHolder().getRowIndex();
+            if (skipRows.contains(rowIndex)) {
+                return;
+            }
+            super.invoke(data, analysisContext);
+        }
     }
 }

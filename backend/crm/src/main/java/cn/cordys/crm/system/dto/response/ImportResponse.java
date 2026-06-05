@@ -22,4 +22,8 @@ public class ImportResponse implements Serializable {
     private int failCount;
     @Schema(description = "报错信息")
     private List<ExcelErrData> errorMessages;
+    @Schema(description = "错误文件ID")
+    private String errorFileId;
+    @Schema(description = "错误文件名称")
+    private String errorFileName;
 }

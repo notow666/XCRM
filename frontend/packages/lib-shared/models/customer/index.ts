@@ -434,6 +434,12 @@ export interface BatchMoveToPublicPoolParams {
   reasonId?: string | null;
 }
 
+export interface BatchMoveToPublicPoolByConditionParams extends CustomerTableParams {
+  targetPoolId?: string | null;
+  reasonId?: string | null;
+  moveCount?: number;
+}
+
 export interface PoolTableExportParams extends TableExportParams {
   poolId?: string;
 }

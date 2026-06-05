@@ -116,7 +116,7 @@ public class CustomerMobileRuleEngine {
             }
             return MobileRuleDecision.noConflict(mobile);
         }
-        if (StringUtils.equals(context.getCreateSource(), CustomerCreateSource.POOL_IMPORT)) {
+        if (CustomerCreateSource.isPoolSource(context.getCreateSource())) {
             Customer poolImportConflict = customerMobileConflictQueryService.findPoolImportConflict(
                     context.getCustomerId(), mobile, context.getOrgId());
             if (poolImportConflict != null) {
@@ -163,13 +163,13 @@ public class CustomerMobileRuleEngine {
         }
         Customer ownerPoolConflict = ownerCustomers.stream()
                 .filter(customer -> StringUtils.equals(mobile, StringUtils.trimToNull(customer.getMobile())))
-                .filter(customer -> StringUtils.equals(customer.getCreateSource(), CustomerCreateSource.POOL_IMPORT))
+                .filter(customer -> CustomerCreateSource.isPoolSource(customer.getCreateSource()))
                 .findFirst()
                 .orElse(null);
         if (ownerPoolConflict != null) {
             return MobileRuleDecision.conflict(MobileConflictType.OWNER_POOL_CONFLICT, ownerPoolConflict, mobile);
         }
-        if (StringUtils.equals(incomingCreateSource, CustomerCreateSource.POOL_IMPORT)) {
+        if (CustomerCreateSource.isPoolSource(incomingCreateSource)) {
             Customer ownerPrivateConflict = ownerCustomers.stream()
                     .filter(customer -> StringUtils.equals(mobile, StringUtils.trimToNull(customer.getMobile())))
                     .filter(customer -> usesPrivateRepeatRule(customer.getCreateSource()))

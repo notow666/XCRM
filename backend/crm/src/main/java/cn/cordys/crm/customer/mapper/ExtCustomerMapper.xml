@@ -1032,8 +1032,8 @@
     </update>
 
     <update id="batchMoveToPoolIncludeStage" parameterType="java.util.List">
-        UPDATE customer 
-        SET name = CASE id 
+        UPDATE customer
+        SET name = CASE id
             <foreach collection="customers" item="customer">
                 WHEN #{customer.id} THEN #{customer.name}
             </foreach>
@@ -1176,7 +1176,7 @@
             c.mobile,
             CASE
                 WHEN c.in_shared_pool = true AND c.pool_id != #{poolId} THEN 'OTHER_POOL'
-                WHEN c.in_shared_pool = false AND c.create_source = 'POOL_IMPORT' THEN 'POOL_SOURCE_PRIVATE'
+                WHEN c.in_shared_pool = false AND c.create_source IN ('POOL_IMPORT', 'CLUE_CREATE') THEN 'POOL_SOURCE_PRIVATE'
             END AS conflictType
         FROM customer c
         WHERE c.organization_id = #{orgId}
@@ -1184,7 +1184,7 @@
         AND (
             (c.in_shared_pool = true AND c.pool_id != #{poolId})
             OR
-            (c.in_shared_pool = false AND c.create_source = 'POOL_IMPORT')
+            (c.in_shared_pool = false AND c.create_source IN ('POOL_IMPORT', 'CLUE_CREATE'))
         )
         AND c.mobile IN
         <foreach collection="mobiles" item="mobile" open="(" separator="," close=")">

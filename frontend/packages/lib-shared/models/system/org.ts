@@ -89,6 +89,8 @@ export interface ValidateInfo {
   failCount: number;
   successCount: number;
   errorMessages: ErrorMessagesType[];
+  errorFileId?: string;
+  errorFileName?: string;
 }
 
 export interface OrgUserInfo extends Omit<UserInfo, 'roles'> {

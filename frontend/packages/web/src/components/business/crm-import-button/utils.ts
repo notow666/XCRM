@@ -3,6 +3,7 @@ import { FormDesignKeyEnum } from '@lib/shared/enums/formDesignEnum';
 import { ValidateInfo } from '@lib/shared/models/system/org';
 
 import {
+  downloadAccountImportErrorFile,
   downloadAccountTemplate,
   downloadBusinessTitleTemplate,
   downloadContactTemplate,
@@ -43,6 +44,7 @@ export interface importRequestType {
   preCheck: (file: File) => Promise<{ data: ValidateInfo }>;
   save: (file: File) => Promise<any>;
   download?: () => Promise<File>;
+  downloadError?: (fileId: string) => Promise<any>;
 }
 
 export const importApiMap: Record<ImportApiType, importRequestType> = {
@@ -55,6 +57,7 @@ export const importApiMap: Record<ImportApiType, importRequestType> = {
     preCheck: preCheckImportAccount,
     save: importAccount,
     download: downloadAccountTemplate,
+    downloadError: downloadAccountImportErrorFile,
   },
   [FormDesignKeyEnum.CONTACT]: {
     preCheck: preCheckImportContact,

@@ -206,6 +206,16 @@ public class CustomerController {
         return customerService.batchToPool(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
+    @PostMapping("/batch/to-pool-by-condition")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_RECYCLE)
+    @Operation(summary = "按筛选条件批量移入公海")
+    public BatchAffectResponse batchToPoolByCondition(@Validated @RequestBody CustomerBatchToPoolByConditionRequest request) {
+        ConditionFilterUtils.parseCondition(request);
+        DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(SessionUtils.getUserId(),
+                OrganizationContext.getOrganizationId(), request.getViewId(), PermissionConstants.CUSTOMER_MANAGEMENT_READ);
+        return customerService.batchToPoolByCondition(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), deptDataPermission);
+    }
+
     @PostMapping("/option")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_READ)
     @Operation(summary = "客户选项")
@@ -268,6 +278,13 @@ public class CustomerController {
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_IMPORT)
     public ImportResponse realImport(@RequestPart(value = "file") MultipartFile file) {
         return customerService.realImport(file, OrganizationContext.getOrganizationId(), SessionUtils.getUserId());
+    }
+
+    @GetMapping("/import/error-file/{fileId}")
+    @Operation(summary = "下载客户导入错误文件")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_IMPORT)
+    public void downloadImportErrorFile(@PathVariable("fileId") String fileId, HttpServletResponse response) {
+        customerService.downloadImportErrorFile(fileId, response);
     }
 
     @PostMapping("/merge/page")

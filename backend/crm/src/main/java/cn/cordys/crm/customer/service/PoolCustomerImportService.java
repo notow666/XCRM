@@ -89,13 +89,13 @@ public class PoolCustomerImportService {
     private SseService sseService;
 
     private static final String OWNER_FIELD_KEY = "customerOwner";
-    
+
     /**
      * 分批查询数据库的手机号数量上限
      * MySQL IN 条件超过1000个值后效率急剧下降，设置为1000
      */
     private static final int BATCH_QUERY_SIZE = 1000;
-    
+
     /**
      * 错误类型常量
      */
@@ -103,7 +103,7 @@ public class PoolCustomerImportService {
     private static final String ERROR_TYPE_EXCEL_DUPLICATE = "EXCEL_DUPLICATE";
     private static final String ERROR_TYPE_OTHER_POOL_CONFLICT = "OTHER_POOL_CONFLICT";
     private static final String ERROR_TYPE_POOL_SOURCE_CONFLICT = "POOL_SOURCE_CONFLICT";
-    
+
     /**
      * 冲突类型常量（从数据库返回）
      */
@@ -117,18 +117,18 @@ public class PoolCustomerImportService {
         List<List<String>> headList = moduleFormService.getCustomImportHeadsNoRef(FormKey.CUSTOMER.getKey(), currentOrg);
         List<BaseField> allFields = moduleFormService.getAllCustomImportFields(FormKey.CUSTOMER.getKey(), currentOrg);
         List<BaseField> filteredFields = filterOwnerField(allFields);
-        
+
         List<List<String>> filteredHeadList = headList.stream()
                 .filter(head -> !OWNER_FIELD_KEY.equals(getFieldInternalKeyByName(head.get(0), allFields)))
                 .collect(Collectors.toList());
-        
+
         new EasyExcelExporter()
                 .exportMultiSheetTplWithSharedHandler(response, filteredHeadList,
                         Translator.get("pool.import.tpl.name"), Translator.get(SheetKey.DATA), Translator.get(SheetKey.COMMENT),
                         new CustomTemplateWriteHandler(filteredFields),
                         new CustomHeadColWidthStyleStrategy());
     }
-    
+
     private String getFieldInternalKeyByName(String fieldName, List<BaseField> fields) {
         return fields.stream()
                 .filter(field -> fieldName != null && fieldName.equals(field.getName()))
@@ -140,7 +140,7 @@ public class PoolCustomerImportService {
 
     /**
      * 公海导入预检查（重构版）
-     * 
+     *
      * 优化点：
      * 1. 合并数据库查询：一次查询替代原来两次查询（客户池+其他公海池）
      * 2. 分批处理：每批最多查询1000个手机号，避免SQL IN条件过长
@@ -157,49 +157,51 @@ public class PoolCustomerImportService {
         view.put("操作员", userId);
         view.put("公海池", poolId + "-" + pool.getName());
 
-        // 步骤2-获取表单字段
-        List<BaseField> fields = moduleFormService.getAllCustomImportFields(FormKey.CUSTOMER.getKey(), orgId);
-        List<BaseField> filteredFields = filterOwnerField(fields);
-        removeUniqueRules(filteredFields);
-
-        // 步骤3-读取Excel
-        PoolCustomerCheckEventListener checkListener = new PoolCustomerCheckEventListener(
-                filteredFields, "customer", "customer_field", orgId);
-        readExcel(file, checkListener);
+        // 步骤2-读取Excel并执行新版行级校验
+        ImportCheckContext checkContext = checkImportRows(file, orgId, poolId);
+        PoolCustomerCheckEventListener checkListener = checkContext.checkListener;
 
         view.put("读取成功行数", checkListener.getSuccess());
         view.put("读取错误行数", checkListener.getErrList().size());
 
-        int totalRows = checkListener.getSuccess() + checkListener.getErrList().size();
-        Map<Integer, String> rowMobileMap = checkListener.getRowMobileMap();
-        String mobileFieldName = checkListener.getMobileFieldName();
+        view.put("Excel总行数", checkContext.totalRows);
+        view.put("手机号数量", checkListener.getRowMobileMap().size());
 
-        view.put("Excel总行数", totalRows);
-        view.put("手机号数量", rowMobileMap.size());
-
-        // 步骤4-错误检查
-        ErrorCheckResult result = doErrorCheck(rowMobileMap, checkListener.getErrList(), orgId, poolId, mobileFieldName);
-
-        PoolCustomerImportCheckResponse response = buildResponse(result, totalRows);
-        if (!result.isPassed()) {
+        PoolCustomerImportCheckResponse response = buildResponse(checkContext.result, checkContext.totalRows);
+        if (!checkContext.result.isPassed()) {
             // 步骤5-写入错误Excel
             String errorFileId = IDGenerator.nextStr();
             String errorFileName = Translator.get("pool.import.error.file.name");
             try {
-                writeErrorExcelStreaming(file, result, errorFileId, orgId);
+                writeErrorExcelStreaming(file, checkContext.result, errorFileId, orgId);
                 response.setErrorFileId(errorFileId);
                 response.setErrorFileName(errorFileName);
 
-                view.put("错误行数", result.getRowErrorCount());
+                view.put("错误行数", checkContext.result.getRowErrorCount());
             } catch (Exception e) {
                 log.error("write error excel failed: {}", e.getMessage(), e);
             }
-            response.setErrorSummary(buildErrorSummary(result));
+            response.setErrorSummary(buildErrorSummary(checkContext.result));
         }
 
         log.info("========== 公海导入预检查完成 ========== 总耗时: {} s, 预检结果: {}, 预检详情: [{}]",
-                checkListener.getSeconds(), result.isPassed() ? "全部通过" : "有异常", JSON.toFormatJSONString(view));
+                checkListener.getSeconds(), checkContext.result.isPassed() ? "全部通过" : "有异常", JSON.toFormatJSONString(view));
         return response;
+    }
+
+    private ImportCheckContext checkImportRows(MultipartFile file, String orgId, String poolId) {
+        List<BaseField> fields = moduleFormService.getAllCustomImportFields(FormKey.CUSTOMER.getKey(), orgId);
+        List<BaseField> filteredFields = filterOwnerField(fields);
+        removeUniqueRules(filteredFields);
+
+        PoolCustomerCheckEventListener checkListener = new PoolCustomerCheckEventListener(
+                filteredFields, "customer", "customer_field", orgId);
+        readExcel(file, checkListener);
+
+        int totalRows = checkListener.getSuccess() + checkListener.getErrList().size();
+        ErrorCheckResult result = doRowLevelErrorCheck(checkListener.getRowMobileMap(), checkListener.getErrList(),
+                orgId, poolId, checkListener.getMobileFieldName());
+        return new ImportCheckContext(checkListener, result, totalRows);
     }
 
     /**
@@ -224,15 +226,32 @@ public class PoolCustomerImportService {
     }
 
     /**
-     * 执行分层错误检查（优先级校验）
-     * 
-     * 校验优先级：
-     * 1. 基础字段校验（必填、手机号格式） - 最优先
-     * 2. Excel内重复检查 - 第二优先
-     * 3. 其他公海池/公海来源客户冲突检查 - 第三优先
-     * 
-     * 如果第N层检查有错误，则不继续执行第N+1层检查
+     * 新版行级错误检查：错误行只跳过自身，剩余行继续执行后续校验。
      */
+    private ErrorCheckResult doRowLevelErrorCheck(Map<Integer, String> rowMobileMap, List<ExcelErrData> fieldErrors,
+                                                  String orgId, String poolId, String mobileFieldName) {
+        ErrorCheckResult result = new ErrorCheckResult();
+        Map<String, Object> view = new HashMap<>();
+
+        checkFieldValidation(rowMobileMap, fieldErrors, result, mobileFieldName);
+        view.put("Layer1-字段校验", result.getRowErrorCount());
+
+        checkImportableExcelDuplicate(rowMobileMap, result);
+        view.put("Layer2-Excel重复检查", result.getRowErrorCount());
+
+        checkImportableDatabaseConflicts(rowMobileMap, orgId, poolId, result, view);
+        view.put("Layer3-数据库冲突错误数", result.getRowErrorCount());
+
+        log.info("行级校验详情: [{}]", JSON.toFormatJSONString(view));
+
+        return result;
+    }
+
+    /**
+     * 旧版整体验证逻辑：任一层存在错误后会中断后续层级校验。
+     * 新版公海导入需要支持正确行继续导入，因此不再使用该方法。
+     */
+    @Deprecated
     private ErrorCheckResult doErrorCheck(Map<Integer, String> rowMobileMap, List<ExcelErrData> fieldErrors,
                                            String orgId, String poolId, String mobileFieldName) {
         ErrorCheckResult result = new ErrorCheckResult();
@@ -240,7 +259,7 @@ public class PoolCustomerImportService {
         // 第一层：基础字段校验（必填 + 手机号格式）
         checkFieldValidation(rowMobileMap, fieldErrors, result, mobileFieldName);
         view.put("Layer1-字段校验", result.getRowErrorCount());
-        
+
         // 如果第一层有错误，直接返回，不继续后续校验
         if (!result.isPassed()) {
             log.info("Layer 1 validation failed, skip layer 2/3. Error count: {}", result.getRowErrorCount());
@@ -269,7 +288,7 @@ public class PoolCustomerImportService {
 
     /**
      * 检查数据库冲突（其他公海池 + 公海来源客户）
-     * 
+     *
      * 优化策略：
      * - 一次数据库查询获取所有冲突信息（性能优化）
      * - 分层处理错误，公海体系冲突优先（逻辑优化）
@@ -293,6 +312,33 @@ public class PoolCustomerImportService {
         log.debug("冲突手机号数量: {}", mobileConflictTypeMap.size());
 
         processPoolRelatedConflicts(rowMobileMap, mobileConflictTypeMap, result);
+        view.put("Layer3-其他公海池冲突数", result.getOtherPoolConflictCount());
+        view.put("Layer3-公海来源客户冲突数", result.getPoolSourceConflictCount());
+    }
+
+    /**
+     * 新版行级数据库冲突检查：仅检查前置校验仍可导入的行。
+     */
+    private void checkImportableDatabaseConflicts(Map<Integer, String> rowMobileMap, String orgId, String poolId,
+                                                  ErrorCheckResult result, Map<String, Object> view) {
+        Map<Integer, String> importableRowMobileMap = rowMobileMap.entrySet().stream()
+                .filter(e -> !result.hasRowError(e.getKey()))
+                .filter(e -> StringUtils.isNotBlank(e.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a, LinkedHashMap::new));
+        List<String> validMobiles = importableRowMobileMap.values().stream()
+                .distinct()
+                .collect(Collectors.toList());
+
+        view.put("有效手机号数量", validMobiles.size());
+
+        if (CollectionUtils.isEmpty(validMobiles)) {
+            return;
+        }
+
+        Map<String, String> mobileConflictTypeMap = queryConflictsBatch(orgId, poolId, validMobiles);
+        log.debug("冲突手机号数量: {}", mobileConflictTypeMap.size());
+
+        processPoolRelatedConflicts(importableRowMobileMap, mobileConflictTypeMap, result);
         view.put("Layer3-其他公海池冲突数", result.getOtherPoolConflictCount());
         view.put("Layer3-公海来源客户冲突数", result.getPoolSourceConflictCount());
     }
@@ -366,7 +412,7 @@ public class PoolCustomerImportService {
             String mobile = entry.getValue();
             if (StringUtils.isNotBlank(mobile) && !PoolCustomerCheckEventListener.MOBILE_PATTERN.matcher(mobile).matches()) {
                 result.addInvalidMobileRow(entry.getKey());
-                result.addRowError(entry.getKey(), ERROR_TYPE_FIELD_VALIDATION, 
+                result.addRowError(entry.getKey(), ERROR_TYPE_FIELD_VALIDATION,
                         mobileFieldName + Translator.get("phone.wrong.format"));
                 result.incrementFieldValidationCount();
             }
@@ -405,6 +451,29 @@ public class PoolCustomerImportService {
     }
 
     /**
+     * 新版行级Excel重复检查：已存在错误的行不再参与重复判定。
+     */
+    private void checkImportableExcelDuplicate(Map<Integer, String> rowMobileMap, ErrorCheckResult result) {
+        Map<String, Set<Integer>> mobileRowCount = new HashMap<>();
+        for (Map.Entry<Integer, String> entry : rowMobileMap.entrySet()) {
+            if (StringUtils.isNotBlank(entry.getValue()) && !result.hasRowError(entry.getKey())) {
+                mobileRowCount.computeIfAbsent(entry.getValue(), k -> new HashSet<>()).add(entry.getKey());
+            }
+        }
+
+        for (Map.Entry<String, Set<Integer>> entry : mobileRowCount.entrySet()) {
+            if (entry.getValue().size() > 1) {
+                for (Integer rowNum : entry.getValue()) {
+                    if (!result.hasRowError(rowNum)) {
+                        result.addRowError(rowNum, ERROR_TYPE_EXCEL_DUPLICATE, null);
+                        result.incrementExcelDuplicateCount();
+                    }
+                }
+            }
+        }
+    }
+
+    /**
       * 构建响应对象
       */
     private PoolCustomerImportCheckResponse buildResponse(ErrorCheckResult result, int totalRows) {
@@ -417,6 +486,18 @@ public class PoolCustomerImportService {
                 .successCount(successCount)
                 .errorCount(errorCount)
                 .build();
+    }
+
+    private static class ImportCheckContext {
+        private final PoolCustomerCheckEventListener checkListener;
+        private final ErrorCheckResult result;
+        private final int totalRows;
+
+        private ImportCheckContext(PoolCustomerCheckEventListener checkListener, ErrorCheckResult result, int totalRows) {
+            this.checkListener = checkListener;
+            this.result = result;
+            this.totalRows = totalRows;
+        }
     }
 
     /**
@@ -645,7 +726,9 @@ public class PoolCustomerImportService {
                 Locale locale = resolveUserLocale(operator);
                 LocaleContextHolder.setLocale(locale);
 
-                String success = poolCustomerImportExecutor.executeImport(file, poolId, userId, orgId);
+                ImportCheckContext checkContext = checkImportRows(file, orgId, poolId);
+                Set<Integer> skipRows = new HashSet<>(checkContext.result.getRowErrorTypeMap().keySet());
+                String success = poolCustomerImportExecutor.executeImport(file, poolId, userId, orgId, skipRows);
                 sendImportNotice(userId, orgId, pool,true, success);
             } catch (Exception e) {
                 log.error("pool customer import error", e);

@@ -9,6 +9,7 @@ export const BatchDeleteCustomerByConditionUrl = '/account/batch/delete-by-condi
 export const BatchTransferCustomerUrl = '/account/batch/transfer'; // 批量转移客户
 export const BatchTransferCustomerByConditionUrl = '/account/batch/transfer-by-condition'; // 按筛选条件批量转移客户
 export const BatchMoveCustomerUrl = '/account/batch/to-pool'; // 批量移入公海
+export const BatchMoveCustomerByConditionUrl = '/account/batch/to-pool-by-condition'; // 按筛选条件批量移入公海
 export const MoveToCustomerUrl = '/account/to-pool'; // 移入公海
 export const UpdateCustomerFollowRecordUrl = '/account/follow/record/update'; // 更新跟进记录
 export const GetCustomerFollowRecordListUrl = '/account/follow/record/page'; // 获取跟进记录列表
@@ -128,6 +129,7 @@ export const DragContactViewUrl = '/account/contact/view/edit/pos';
 export const PreCheckAccountImportUrl = '/account/import/pre-check';
 export const DownloadAccountTemplateUrl = '/account/template/download';
 export const ImportAccountUrl = '/account/import';
+export const DownloadAccountImportErrorFileUrl = '/account/import/error-file';
 
 // 联系人导入
 export const PreCheckContactImportUrl = '/account/contact/import/pre-check';

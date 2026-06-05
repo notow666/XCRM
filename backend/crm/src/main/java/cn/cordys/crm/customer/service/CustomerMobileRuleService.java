@@ -231,7 +231,7 @@ public class CustomerMobileRuleService {
                 .eq(Customer::getOwner, ownerId)
                 .eq(Customer::getOrganizationId, orgId)
                 .eq(Customer::getInSharedPool, false)
-                .eq(Customer::getCreateSource, CustomerCreateSource.POOL_IMPORT);
+                .in(Customer::getCreateSource, CustomerCreateSource.poolSourceTypes());
         return customerMapper.selectListByLambda(queryWrapper).stream()
                 .map(Customer::getMobile)
                 .filter(StringUtils::isNotBlank)

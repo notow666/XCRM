@@ -72,6 +72,8 @@ import cn.cordys.crm.system.notice.CommonNoticeSendService;
 import cn.cordys.crm.system.service.*;
 import cn.cordys.excel.domain.ExcelErrData;
 import cn.cordys.excel.utils.EasyExcelExporter;
+import cn.cordys.context.TenantContext;
+import cn.cordys.file.engine.DefaultRepositoryDir;
 import cn.cordys.mmba.dto.CustomerWxSendRouteDTO;
 import cn.cordys.mmba.mapper.ExtMmbaAuditMapper;
 import cn.cordys.mmba.service.MmbaDeviceService;
@@ -93,12 +95,26 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Comment;
+import org.apache.poi.ss.usermodel.CreationHelper;
+import org.apache.poi.ss.usermodel.Drawing;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service.EmployeeStatEventRecordService;
 
+import java.io.*;
+import java.net.URLEncoder;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -113,7 +129,11 @@ public class CustomerService {
 
     private static final int BATCH_DELETE_BY_CONDITION_SIZE = 500;
     private static final int BATCH_TRANSFER_BY_CONDITION_MAX_SIZE = 2000;
+    private static final int BATCH_TO_POOL_BY_CONDITION_MAX_SIZE = 2000;
     private static final int AUTO_DELETE_POOL_IMPORT_BATCH_SIZE = 500;
+    private static final String CUSTOMER_IMPORT_ERROR_FILE_NAME = "客户导入_错误文件.xlsx";
+    private static final String MOBILE_REGEX = "^1[0-9]\\d{9}$";
+    private static final Pattern MOBILE_PATTERN = Pattern.compile(MOBILE_REGEX);
 
     @Resource
     private BaseMapper<Customer> customerMapper;
@@ -604,7 +624,8 @@ public class CustomerService {
         customer.setInSharedPool(true);
         customer.setOwner(null);
         customer.setCollectionTime(null);
-        customer.setCreateSource(CustomerCreateSource.POOL_IMPORT);
+        // 线索池自动分发生成的客户不属于公海导入数据，避免被仅清理 POOL_IMPORT 的定时删除误删。
+        customer.setCreateSource(CustomerCreateSource.CLUE_CREATE);
 
         // 设置客户阶段为第一个阶段，状态为NEW（待跟进）
         List<StageConfigResponse> stageConfigList = extCustomerStageConfigMapper.getStageConfigList(orgId);
@@ -813,7 +834,7 @@ public class CustomerService {
     }
 
     private void validatePoolMobileConflict(String customerId, String mobile, String orgId) {
-        customerMobileRuleService.validateForSave(customerId, null, mobile, CustomerCreateSource.POOL_IMPORT, null, orgId);
+        customerMobileRuleService.validateForSave(customerId, null, mobile, CustomerCreateSource.CLUE_CREATE, null, orgId);
     }
 
     @OperationLog(module = LogModule.CUSTOMER_INDEX, type = LogType.DELETE, resourceId = "{#id}")
@@ -1139,11 +1160,28 @@ public class CustomerService {
         List<Customer> customers = customerMapper.selectByIds(request.getIds());
         List<String> owners = getOwners(customers);
         dataScopeService.checkDataPermission(currentUser, orgId, owners, PermissionConstants.CUSTOMER_MANAGEMENT_RECYCLE);
+        return batchToPool(customers, request.getIds().size(), request.getPoolId(), request.getReasonId(), currentUser, orgId);
+    }
 
+    public BatchAffectResponse batchToPoolByCondition(CustomerBatchToPoolByConditionRequest request, String currentUser, String orgId,
+                                                      DeptDataPermissionDTO deptDataPermission) {
+        int moveCount = Math.min(Math.max(Optional.ofNullable(request.getMoveCount()).orElse(BATCH_TO_POOL_BY_CONDITION_MAX_SIZE), 1),
+                BATCH_TO_POOL_BY_CONDITION_MAX_SIZE);
+        PageHelper.startPage(1, moveCount, false);
+        List<Customer> customers = extCustomerMapper.listByCondition(request, orgId, currentUser, deptDataPermission);
+        if (CollectionUtils.isEmpty(customers)) {
+            return BatchAffectResponse.builder().success(0).fail(0).build();
+        }
+        List<String> owners = getOwners(customers);
+        dataScopeService.checkDataPermission(currentUser, orgId, owners, PermissionConstants.CUSTOMER_MANAGEMENT_RECYCLE);
+        return batchToPool(customers, customers.size(), request.getTargetPoolId(), request.getReasonId(), currentUser, orgId);
+    }
+
+    private BatchAffectResponse batchToPool(List<Customer> customers, int affectTotal, String poolId, String reasonId, String currentUser, String orgId) {
         // 如果指定了poolId，则使用指定的公海；否则使用责任人默认公海
         CustomerPool specifiedPool = null;
-        if (StringUtils.isNotBlank(request.getPoolId())) {
-            specifiedPool = customerPoolMapper.selectByPrimaryKey(request.getPoolId());
+        if (StringUtils.isNotBlank(poolId)) {
+            specifiedPool = customerPoolMapper.selectByPrimaryKey(poolId);
         }
 
         Map<String, CustomerPool> ownersDefaultPoolMap = null;
@@ -1183,7 +1221,7 @@ public class CustomerService {
 //                    NotificationConstants.Event.CUSTOMER_MOVED_HIGH_SEAS, customer.getName(), currentUser,
 //                    orgId, List.of(customer.getOwner()), true);
             // 插入责任人历史
-            customer.setReasonId(request.getReasonId());
+            customer.setReasonId(reasonId);
             customerOwnerHistoryService.add(customer, currentUser, true);
             customer.setPoolId(customerPool.getId());
             customer.setInSharedPool(true);
@@ -1206,7 +1244,7 @@ public class CustomerService {
             followUpPlanService.deleteByCustomerIds(customerIds);
         }
 
-        return BatchAffectResponse.builder().success(success).fail(request.getIds().size() - success).build();
+        return BatchAffectResponse.builder().success(success).fail(affectTotal - success).build();
     }
 
     /**
@@ -1324,6 +1362,8 @@ public class CustomerService {
      */
     public ImportResponse realImport(MultipartFile file, String currentOrg, String currentUser) {
         try {
+            CustomerImportCheckContext checkContext = checkCustomerImportRows(file, currentOrg, currentUser);
+            Set<Integer> skipRows = new HashSet<>(checkContext.eventListener.getErrRows());
             List<BaseField> fields = moduleFormService.getAllFields(FormKey.CUSTOMER.getKey(), currentOrg);
             List<BaseField> filteredFields = filterOwnerField(fields);
             removeCustomerMobileUniqueRule(filteredFields);
@@ -1376,11 +1416,12 @@ public class CustomerService {
                 //员工事件服务
                 employeeStatEventRecordService.recordCustomerCreateEvents(customers, currentUser, currentOrg);
             };
-            CustomFieldImportEventListener<Customer> eventListener = new CustomFieldImportEventListener<>(filteredFields, Customer.class, currentOrg, currentUser,
-                    "customer_field", afterDo, 2000, null, null);
+            CustomFieldImportEventListener<Customer> eventListener = new CustomerImportEventListener(filteredFields, currentOrg, currentUser, afterDo, skipRows);
             FastExcelFactory.read(file.getInputStream(), eventListener).headRowNumber(1).ignoreEmptyRow(true).sheet().doRead();
-            return ImportResponse.builder().errorMessages(eventListener.getErrList())
-                    .successCount(eventListener.getSuccessCount()).failCount(eventListener.getErrList().size()).build();
+            List<ExcelErrData> errList = new ArrayList<>(checkContext.eventListener.getErrList());
+            errList.addAll(eventListener.getErrList());
+            return ImportResponse.builder().errorMessages(errList)
+                    .successCount(eventListener.getSuccessCount()).failCount(errList.size()).build();
         } catch (Exception e) {
             log.error("customer import error: {}", e.getMessage());
             throw new GenericException(e.getMessage());
@@ -1397,27 +1438,45 @@ public class CustomerService {
      */
     private ImportResponse checkImportExcel(MultipartFile file, String currentOrg, String currentUser) {
         try {
-            List<BaseField> fields = moduleFormService.getAllCustomImportFields(FormKey.CUSTOMER.getKey(), currentOrg);
-            List<BaseField> filteredFields = filterOwnerField(fields);
-            removeCustomerMobileUniqueRule(filteredFields);
-            CustomerImportCheckEventListener eventListener = new CustomerImportCheckEventListener(filteredFields, "customer", "customer_field", currentOrg);
-            FastExcelFactory.read(file.getInputStream(), eventListener).headRowNumber(1).ignoreEmptyRow(true).sheet().doRead();
-            int extraFailCount = appendPrivateImportMobileErrors(eventListener, currentOrg, currentUser);
-            return ImportResponse.builder().errorMessages(eventListener.getErrList())
-                    .successCount(eventListener.getSuccess() - extraFailCount).failCount(eventListener.getErrList().size()).build();
+            CustomerImportCheckContext checkContext = checkCustomerImportRows(file, currentOrg, currentUser);
+            CustomerImportCheckEventListener eventListener = checkContext.eventListener;
+            ImportResponse response = ImportResponse.builder().errorMessages(eventListener.getErrList())
+                    .successCount(eventListener.getSuccess() - checkContext.extraFailCount).failCount(eventListener.getErrList().size()).build();
+            attachCustomerImportErrorFile(file, eventListener.getErrList(), response);
+            return response;
         } catch (Exception e) {
             log.error("customer import pre-check error: {}", e.getMessage());
             throw new GenericException(e.getMessage());
         }
     }
 
+    private CustomerImportCheckContext checkCustomerImportRows(MultipartFile file, String currentOrg, String currentUser) throws IOException {
+        List<BaseField> fields = moduleFormService.getAllCustomImportFields(FormKey.CUSTOMER.getKey(), currentOrg);
+        List<BaseField> filteredFields = filterOwnerField(fields);
+        removeCustomerMobileUniqueRule(filteredFields);
+        CustomerImportCheckEventListener eventListener = new CustomerImportCheckEventListener(filteredFields, "customer", "customer_field", currentOrg);
+        FastExcelFactory.read(file.getInputStream(), eventListener).headRowNumber(1).ignoreEmptyRow(true).sheet().doRead();
+        int extraFailCount = appendPrivateImportMobileErrors(eventListener, currentOrg, currentUser);
+        return new CustomerImportCheckContext(eventListener, extraFailCount);
+    }
+
     private int appendPrivateImportMobileErrors(CustomerImportCheckEventListener eventListener, String currentOrg, String currentUser) {
         Set<Integer> existingErrRows = new HashSet<>(eventListener.getErrRows());
         int extraFailCount = 0;
         Map<String, List<Integer>> mobileRowMap = new LinkedHashMap<>();
+        String mobileFieldName = StringUtils.defaultIfBlank(eventListener.getMobileFieldName(), "手机号");
         for (Map.Entry<Integer, String> entry : eventListener.getRowMobileMap().entrySet()) {
             String mobile = StringUtils.trimToNull(entry.getValue());
             if (mobile == null || existingErrRows.contains(entry.getKey())) {
+                continue;
+            }
+            if (!MOBILE_PATTERN.matcher(mobile).matches()) {
+                Integer rowIndex = entry.getKey();
+                eventListener.getErrRows().add(rowIndex);
+                eventListener.getErrList().add(new ExcelErrData(rowIndex,
+                        Translator.getWithArgs("row.error.tip", rowIndex + 1).concat(" " + mobileFieldName + Translator.get("phone.wrong.format"))));
+                existingErrRows.add(rowIndex);
+                extraFailCount++;
                 continue;
             }
             mobileRowMap.computeIfAbsent(mobile, key -> new ArrayList<>()).add(entry.getKey());
@@ -1435,8 +1494,6 @@ public class CustomerService {
                 currentUser,
                 currentOrg
         );
-        String mobileFieldName = StringUtils.defaultIfBlank(eventListener.getMobileFieldName(), "手机号");
-
         for (Map.Entry<String, List<Integer>> entry : mobileRowMap.entrySet()) {
             boolean duplicateInExcel = duplicateMobiles.contains(entry.getKey());
             boolean duplicateInDb = conflictMobiles.contains(entry.getKey());
@@ -1479,6 +1536,182 @@ public class CustomerService {
         );
         if (!conflictMobiles.isEmpty() || !ownerConflictMobiles.isEmpty()) {
             throw new GenericException(Translator.getWithArgs("common.field_value.repeat", "手机号"));
+        }
+    }
+
+    private void attachCustomerImportErrorFile(MultipartFile file, List<ExcelErrData> errList, ImportResponse response) {
+        if (CollectionUtils.isEmpty(errList)) {
+            return;
+        }
+        String errorFileId = IDGenerator.nextStr();
+        try {
+            writeCustomerImportErrorExcel(file, errList, errorFileId);
+            response.setErrorFileId(errorFileId);
+            response.setErrorFileName(CUSTOMER_IMPORT_ERROR_FILE_NAME);
+        } catch (Exception e) {
+            log.error("write customer import error excel failed: {}", e.getMessage(), e);
+        }
+    }
+
+    private void writeCustomerImportErrorExcel(MultipartFile file, List<ExcelErrData> errList, String fileId) throws IOException {
+        String exportDirPath = DefaultRepositoryDir.getDefaultDir() + File.separator
+                + DefaultRepositoryDir.getExportDir(TenantContext.requireTenantId()) + File.separator + fileId;
+        File dir = new File(exportDirPath);
+        if (!dir.exists() && !dir.mkdirs()) {
+            throw new RuntimeException("cannot create export dir: " + dir.getAbsolutePath());
+        }
+        File outputFile = new File(dir, CUSTOMER_IMPORT_ERROR_FILE_NAME);
+        try (InputStream inputStream = file.getInputStream();
+             Workbook workbook = WorkbookFactory.create(inputStream);
+             OutputStream os = new FileOutputStream(outputFile)) {
+            markCustomerImportErrorRows(workbook.getSheetAt(0), errList, workbook);
+            workbook.write(os);
+        }
+    }
+
+    private void markCustomerImportErrorRows(Sheet sheet, List<ExcelErrData> errList, Workbook workbook) {
+        Row headerRow = sheet.getRow(0);
+        if (headerRow == null) {
+            throw new GenericException(Translator.get("file_cannot_be_null"));
+        }
+        int columnCount = headerRow.getLastCellNum();
+        CustomerImportErrorRowStyleHandler styleHandler = new CustomerImportErrorRowStyleHandler();
+        for (ExcelErrData errData : errList) {
+            Row row = sheet.getRow(errData.getRowNum());
+            if (row == null) {
+                continue;
+            }
+            styleHandler.markRow(row, columnCount, errData.getErrMsg(), workbook);
+        }
+    }
+
+    public void downloadImportErrorFile(String fileId, HttpServletResponse response) {
+        String exportDirPath = DefaultRepositoryDir.getDefaultDir() + File.separator
+                + DefaultRepositoryDir.getExportDir(TenantContext.requireTenantId()) + File.separator + fileId;
+        File dir = new File(exportDirPath);
+        if (!dir.exists() || !dir.isDirectory()) {
+            throw new GenericException(Translator.get("file_cannot_be_null"));
+        }
+        File[] files = dir.listFiles((d, name) -> name.endsWith(".xlsx"));
+        if (files == null || files.length == 0) {
+            throw new GenericException(Translator.get("file_cannot_be_null"));
+        }
+        File errorFile = files[0];
+        try (FileInputStream fis = new FileInputStream(errorFile)) {
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + URLEncoder.encode(errorFile.getName(), "UTF-8") + "\"");
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = fis.read(buffer)) != -1) {
+                response.getOutputStream().write(buffer, 0, bytesRead);
+            }
+            response.getOutputStream().flush();
+        } catch (IOException e) {
+            log.error("download customer import error file failed: {}", e.getMessage());
+            throw new GenericException(e.getMessage());
+        }
+    }
+
+    private static class CustomerImportCheckContext {
+        private final CustomerImportCheckEventListener eventListener;
+        private final int extraFailCount;
+
+        private CustomerImportCheckContext(CustomerImportCheckEventListener eventListener, int extraFailCount) {
+            this.eventListener = eventListener;
+            this.extraFailCount = extraFailCount;
+        }
+    }
+
+    private static class CustomerImportEventListener extends CustomFieldImportEventListener<Customer> {
+
+        private final Set<Integer> skipRows;
+        private String mobileFieldName;
+
+        public CustomerImportEventListener(List<BaseField> fields, String currentOrg, String operator,
+                                           CustomImportAfterDoConsumer<Customer, BaseResourceSubField> consumer,
+                                           Set<Integer> skipRows) {
+            super(fields, Customer.class, currentOrg, operator, "customer_field", consumer, 2000, null, null);
+            this.skipRows = skipRows == null ? Collections.emptySet() : skipRows;
+            for (BaseField field : fields) {
+                if (BusinessModuleField.CUSTOMER_MOBILE.getKey().equals(field.getInternalKey())) {
+                    mobileFieldName = field.getName();
+                    break;
+                }
+            }
+        }
+
+        @Override
+        public void invoke(Map<Integer, String> data, AnalysisContext context) {
+            Integer rowIndex = context.readRowHolder().getRowIndex();
+            if (skipRows.contains(rowIndex)) {
+                return;
+            }
+            String mobileValue = getMobileValue(data);
+            if (StringUtils.isNotBlank(mobileValue) && !MOBILE_PATTERN.matcher(mobileValue).matches()) {
+                errRows.add(rowIndex);
+                String fieldName = StringUtils.defaultIfBlank(mobileFieldName, "手机号");
+                errList.add(new ExcelErrData(rowIndex,
+                        Translator.getWithArgs("row.error.tip", rowIndex + 1).concat(" " + fieldName + Translator.get("phone.wrong.format"))));
+                return;
+            }
+            super.invoke(data, context);
+        }
+
+        private String getMobileValue(Map<Integer, String> data) {
+            if (mobileFieldName == null || headMap == null) {
+                return null;
+            }
+            for (Map.Entry<Integer, String> entry : headMap.entrySet()) {
+                if (mobileFieldName.equals(entry.getValue())) {
+                    return StringUtils.trimToNull(data.get(entry.getKey()));
+                }
+            }
+            return null;
+        }
+    }
+
+    private static class CustomerImportErrorRowStyleHandler {
+        private final Map<Short, CellStyle> styleCache = new HashMap<>();
+
+        public void markRow(Row row, int columnCount, String errorMsg, Workbook workbook) {
+            for (int i = 0; i < columnCount; i++) {
+                Cell cell = row.getCell(i);
+                if (cell == null) {
+                    cell = row.createCell(i);
+                }
+                cell.setCellStyle(getOrCreateErrorStyle(workbook, cell.getCellStyle()));
+            }
+            if (StringUtils.isNotBlank(errorMsg)) {
+                addComment(row, errorMsg, workbook);
+            }
+        }
+
+        private CellStyle getOrCreateErrorStyle(Workbook workbook, CellStyle baseStyle) {
+            short baseStyleIndex = baseStyle == null ? -1 : baseStyle.getIndex();
+            return styleCache.computeIfAbsent(baseStyleIndex, key -> createErrorStyle(workbook, baseStyle));
+        }
+
+        private CellStyle createErrorStyle(Workbook workbook, CellStyle baseStyle) {
+            CellStyle style = workbook.createCellStyle();
+            if (baseStyle != null) {
+                style.cloneStyleFrom(baseStyle);
+            }
+            style.setFillForegroundColor(IndexedColors.RED.getIndex());
+            style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            return style;
+        }
+
+        private void addComment(Row row, String errorMsg, Workbook workbook) {
+            Cell firstCell = row.getCell(0);
+            if (firstCell == null) {
+                firstCell = row.createCell(0);
+            }
+            Drawing<?> drawing = row.getSheet().createDrawingPatriarch();
+            CreationHelper factory = workbook.getCreationHelper();
+            Comment comment = drawing.createCellComment(factory.createClientAnchor());
+            comment.setString(factory.createRichTextString(errorMsg));
+            comment.setAuthor("XCRM");
+            firstCell.setCellComment(comment);
         }
     }
 
