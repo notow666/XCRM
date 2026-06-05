@@ -2,8 +2,13 @@
   <CrmCard no-content-padding hide-footer>
     <div class="p-4">
       <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div class="text-base font-semibold text-[var(--text-n1)]">{{ t('menu.managementCenter.overview') }}</div>
-        <div class="text-xs text-[var(--text-n4)]">{{ t('managementCenter.overview.autoRefreshHint') }}</div>
+        <div class="text-base font-semibold text-[var(--text-n1)]">
+          <span>{{ t('menu.managementCenter.overview') }}</span>
+          <span class="font-mono tabular-nums ml-4 text-[var(--text-n4)]">{{ clockText }}</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 text-xs text-[var(--text-n4)]">
+          <span>{{ t('managementCenter.overview.autoRefreshHint') }}</span>
+        </div>
       </div>
 
       <n-spin :show="loading">
@@ -91,7 +96,9 @@
 <script setup lang="ts">
   import { computed, onMounted, onUnmounted, ref } from 'vue';
   import { NEmpty, NSpin } from 'naive-ui';
+  import dayjs from 'dayjs';
 
+  import { PLATFORM_FORCE_LOGOUT_DONE_DOM_EVENT } from '@lib/shared/constants/sseEventType';
   import { useI18n } from '@lib/shared/hooks/useI18n';
 
   import CrmCard from '@/components/pure/crm-card/index.vue';
@@ -106,8 +113,16 @@
 
   const loading = ref(false);
   const overview = ref<PlatformOverview | null>(null);
+  const now = ref(dayjs());
 
   let refreshTimer: ReturnType<typeof setInterval> | null = null;
+  let clockTimer: ReturnType<typeof setInterval> | null = null;
+
+  const clockText = computed(() => now.value.format('YYYY-MM-DD HH:mm:ss'));
+
+  function tickClock() {
+    now.value = dayjs();
+  }
 
   function mapSeriesLabel(name: string) {
     const key = String(name || '').toUpperCase();
@@ -183,14 +198,22 @@
   }
 
   onMounted(() => {
+    tickClock();
+    clockTimer = setInterval(tickClock, 1000);
     loadOverview();
     refreshTimer = setInterval(loadOverview, REFRESH_MS);
+    window.addEventListener(PLATFORM_FORCE_LOGOUT_DONE_DOM_EVENT, loadOverview);
   });
 
   onUnmounted(() => {
+    if (clockTimer) {
+      clearInterval(clockTimer);
+      clockTimer = null;
+    }
     if (refreshTimer) {
       clearInterval(refreshTimer);
       refreshTimer = null;
     }
+    window.removeEventListener(PLATFORM_FORCE_LOGOUT_DONE_DOM_EVENT, loadOverview);
   });
 </script>

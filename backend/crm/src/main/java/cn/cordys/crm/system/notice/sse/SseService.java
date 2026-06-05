@@ -42,7 +42,10 @@ public class SseService {
     private static final String USER_PREFIX = "msg_user:";
     private static final String MSG_PREFIX = "msg_content:";
     private static final String USER_READ_PREFIX = "user_read:";
+    private static final long PLATFORM_BROADCAST_DEDUPE_MS = 5_000L;
     private final Map<String, Map<String, ClientSinkWrapper>> userClients = new ConcurrentHashMap<>();
+    private final Map<String, Long> recentPlatformBroadcastAt = new ConcurrentHashMap<>();
+    private volatile long lastPlatformBroadcastCleanupAt;
     @Resource
     private ExtNotificationMapper extNotificationMapper;
     @Resource
@@ -87,11 +90,14 @@ public class SseService {
             SsePrincipalKind kind, String tenantId, String userId, String clientId, HttpServletRequest request) {
         log.info("SSE addClient kind={} userId={} clientId={}", kind, userId, clientId);
 
+        String effectiveTenantId = tenantId;
         if (kind == SsePrincipalKind.TENANT) {
             SessionUser sessionUser = SessionUtils.getUser(request);
+            effectiveTenantId = TenantSessionBindingSupport.resolveSseTenantId(sessionUser, tenantId);
             if (!TenantSessionBindingSupport.validateTenantSseSubscription(
                     sessionUser, tenantId, userId, extDataSpecialistMapper)) {
-                log.warn("SSE subscribe denied: kind={} tenantId={} userId={}", kind, tenantId, userId);
+                log.warn("SSE subscribe denied: kind={} requestTenantId={} sessionPresent={} sessionTenantId={} userId={}",
+                        kind, tenantId, sessionUser != null, sessionUser != null ? sessionUser.getTenantId() : null, userId);
                 return null;
             }
         }
@@ -100,7 +106,7 @@ public class SseService {
             log.info("Client ID is blank, cannot add client.");
             return null;
         }
-        String userKey = connectionKey(kind, tenantId, userId);
+        String userKey = connectionKey(kind, effectiveTenantId, userId);
         Map<String, ClientSinkWrapper> inner = userClients.computeIfAbsent(userKey,
                 k -> Collections.synchronizedMap(new LinkedHashMap<>()));
 
@@ -117,14 +123,18 @@ public class SseService {
                 old.complete();
             }
             wrapper.emit("HEARTBEAT: " + System.currentTimeMillis());
+            log.info("SSE client registered: kind={} userId={} clientId={} tenantId={}",
+                    kind, userId, clientId, effectiveTenantId);
             return wrapper.flux;
         }
     }
 
     public void removeClient(
             SsePrincipalKind kind, String tenantId, String userId, String clientId, HttpServletRequest request) {
+        String effectiveTenantId = tenantId;
         if (kind == SsePrincipalKind.TENANT) {
             SessionUser sessionUser = SessionUtils.getUser(request);
+            effectiveTenantId = TenantSessionBindingSupport.resolveSseTenantId(sessionUser, tenantId);
             if (!TenantSessionBindingSupport.validateTenantSseSubscription(
                     sessionUser, tenantId, userId, extDataSpecialistMapper)) {
                 return;
@@ -133,7 +143,7 @@ public class SseService {
         if (StringUtils.isBlank(clientId) || StringUtils.isBlank(userId)) {
             return;
         }
-        String userKey = connectionKey(kind, tenantId, userId);
+        String userKey = connectionKey(kind, effectiveTenantId, userId);
         Map<String, ClientSinkWrapper> map = userClients.get(userKey);
         if (map == null) {
             return;
@@ -158,6 +168,90 @@ public class SseService {
         if (map != null) {
             map.forEach((clientId, wrapper) -> wrapper.emit(JSON.toJSONString(data)));
         }
+    }
+
+    /**
+     * 平台级广播：向所有租户侧与数据专员 SSE 连接推送 JSON 文本帧。
+     * 短窗口内相同 payload 仅推送一次，避免本机直推与 Redis 订阅重复投递。
+     *
+     * @return 是否实际执行了推送（false 表示短窗口内重复消息已跳过）
+     */
+    public boolean tryBroadcastPlatformEvent(String payloadJson) {
+        if (StringUtils.isBlank(payloadJson)) {
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        String dedupeKey = Integer.toHexString(payloadJson.hashCode());
+        Long lastAt = recentPlatformBroadcastAt.put(dedupeKey, now);
+        if (lastAt != null && now - lastAt < PLATFORM_BROADCAST_DEDUPE_MS) {
+            return false;
+        }
+        if (now - lastPlatformBroadcastCleanupAt > PLATFORM_BROADCAST_DEDUPE_MS) {
+            lastPlatformBroadcastCleanupAt = now;
+            recentPlatformBroadcastAt.entrySet().removeIf(e -> now - e.getValue() > PLATFORM_BROADCAST_DEDUPE_MS);
+        }
+        broadcastPlatformEvent(payloadJson);
+        return true;
+    }
+
+    /**
+     * 平台级广播：向所有租户侧与数据专员 SSE 连接推送 JSON 文本帧。
+     */
+    public void broadcastPlatformEvent(String payloadJson) {
+        if (StringUtils.isBlank(payloadJson)) {
+            return;
+        }
+        int tenantGroups = 0;
+        int dataSpecialistGroups = 0;
+        int clientCount = 0;
+        for (Map.Entry<String, Map<String, ClientSinkWrapper>> entry : userClients.entrySet()) {
+            String userKey = entry.getKey();
+            if (userKey == null) {
+                continue;
+            }
+            if (!userKey.startsWith("TENANT:") && !userKey.startsWith("DATA_SPECIALIST:")) {
+                continue;
+            }
+            if (userKey.startsWith("TENANT:")) {
+                tenantGroups++;
+            } else {
+                dataSpecialistGroups++;
+            }
+            Map<String, ClientSinkWrapper> clients = entry.getValue();
+            if (clients == null || clients.isEmpty()) {
+                continue;
+            }
+            clientCount += clients.size();
+            clients.forEach((clientId, wrapper) -> wrapper.emit(payloadJson));
+        }
+        log.info("平台广播 SSE 已推送：租户连接分组 {}、数据专员连接分组 {}、客户端 {}（总注册分组 {}）",
+                tenantGroups, dataSpecialistGroups, clientCount, userClients.size());
+    }
+
+    /**
+     * 向所有管理中心平台管理员 SSE 连接推送 JSON 文本帧。
+     */
+    public void broadcastPlatformAdminEvent(String payloadJson) {
+        if (StringUtils.isBlank(payloadJson)) {
+            return;
+        }
+        int platformGroups = 0;
+        int clientCount = 0;
+        for (Map.Entry<String, Map<String, ClientSinkWrapper>> entry : userClients.entrySet()) {
+            String userKey = entry.getKey();
+            if (userKey == null || !userKey.startsWith("PLATFORM:")) {
+                continue;
+            }
+            platformGroups++;
+            Map<String, ClientSinkWrapper> clients = entry.getValue();
+            if (clients == null || clients.isEmpty()) {
+                continue;
+            }
+            clientCount += clients.size();
+            clients.forEach((clientId, wrapper) -> wrapper.emit(payloadJson));
+        }
+        log.info("平台管理 SSE 已推送：连接分组 {}、客户端 {}（总注册分组 {}）",
+                platformGroups, clientCount, userClients.size());
     }
 
     public void sendToClient(SsePrincipalKind kind, String tenantId, String userId, String clientId, Object data) {

@@ -43,6 +43,7 @@
   import { useRouter } from 'vue-router';
   import { NButton, NForm, NFormItem, NInput, NScrollbar, useMessage } from 'naive-ui';
 
+  import { getGenerateId } from '@lib/shared/method';
   import { setLoginExpires, setToken } from '@lib/shared/method/auth';
 
   import banner from '@/views/base/login/components/banner.vue';
@@ -78,6 +79,7 @@
       setToken(res.sessionId, res.csrfToken);
       setLoginExpires();
       userStore.setInfo(res as any);
+      userStore.$patch({ clientIdRandomId: getGenerateId() });
       appStore.setTenantId('');
       appStore.setOrgId('');
       await router.replace({ name: 'managementCenterOverview' });

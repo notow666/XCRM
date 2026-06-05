@@ -127,8 +127,7 @@ public class LoginController {
         if (SessionUtils.getUser() == null) {
             return "logout success";
         }
-        // 退出当前会话
-        SecurityUtils.getSubject().logout();
+        SessionUtils.logoutCurrentUser();
         return "logout success";
     }
 }

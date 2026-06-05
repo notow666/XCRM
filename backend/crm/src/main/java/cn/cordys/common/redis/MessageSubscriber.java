@@ -18,10 +18,9 @@ import java.util.Map;
 public class MessageSubscriber implements MessageListener {
 
     /**
-     * 所有Topic的消费者集合
+     * 所有 Topic 的消费者集合（勿使用 static，避免 DevTools 热重启后仍引用旧 SseService）。
      */
-    static Map<String, TopicConsumer> consumerMap = new HashMap<>();
-
+    private final Map<String, TopicConsumer> consumerMap = new HashMap<>();
 
     public MessageSubscriber(List<TopicConsumer> consumers) {
         consumers.forEach(consumer -> consumerMap.put(consumer.getChannel(), consumer));

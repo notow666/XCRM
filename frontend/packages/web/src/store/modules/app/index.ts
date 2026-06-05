@@ -4,8 +4,12 @@ import { cloneDeep } from 'lodash-es';
 import { SubscribeMessageUrl } from '@lib/shared/api/requrls/system/message';
 import {
   MMBA_DEVICE_SYNC_DOM_EVENT,
+  PLATFORM_FORCE_LOGOUT_DONE_DOM_EVENT,
   POOL_BATCH_BY_CONDITION_DOM_EVENT,
   SSE_EVENT_MMBA_DEVICE_SYNC,
+  SSE_EVENT_PLATFORM_FORCE_LOGOUT,
+  SSE_EVENT_PLATFORM_FORCE_LOGOUT_DONE,
+  SSE_EVENT_PLATFORM_SYSTEM_ANNOUNCEMENT,
   SSE_EVENT_POOL_BATCH_BY_CONDITION_DONE,
 } from '@lib/shared/constants/sseEventType';
 import { SSE_KIND_DATA_SPECIALIST, SSE_KIND_PLATFORM, SSE_KIND_TENANT } from '@lib/shared/constants/ssePrincipalKind';
@@ -13,9 +17,10 @@ import { CompanyTypeEnum } from '@lib/shared/enums/commonEnum';
 import { ModuleConfigEnum } from '@lib/shared/enums/moduleEnum';
 import { SystemMessageStatusEnum } from '@lib/shared/enums/systemEnum';
 import { useI18n } from '@lib/shared/hooks/useI18n';
-import { getSSE } from '@lib/shared/method';
+import { getGenerateId, getSSE } from '@lib/shared/method';
 import { withApiPathPrefix } from '@lib/shared/method/api-path';
 import { setLocalStorage } from '@lib/shared/method/local-storage';
+import { getSessionTenantId } from '@lib/shared/method/tenant-url';
 import type { MessageCenterItem } from '@lib/shared/models/system/message';
 
 import {
@@ -304,8 +309,11 @@ const useAppStore = defineStore('app', {
       const { t } = useI18n();
 
       await this.disconnectSystemMessageSSE();
-      if (!userStore.clientIdRandomId || !userStore.userInfo.id) {
+      if (!userStore.userInfo.id) {
         return;
+      }
+      if (!userStore.clientIdRandomId) {
+        userStore.$patch({ clientIdRandomId: getGenerateId() });
       }
       const src = userStore.userInfo.source || '';
       const params: Record<string, string> = {
@@ -318,7 +326,8 @@ const useAppStore = defineStore('app', {
       } else if (src === 'DATA_SPECIALIST') {
         params.kind = SSE_KIND_DATA_SPECIALIST;
       } else {
-        const tenantId = userStore.userInfo.tenantId || this.tenantId;
+        // SSE query tenantId 仅满足 TenantContextWebFilter；后端以 HttpSession 租户为准注册连接
+        const tenantId = getSessionTenantId() || userStore.userInfo.tenantId || this.tenantId;
         if (!tenantId) {
           return;
         }
@@ -369,6 +378,45 @@ const useAppStore = defineStore('app', {
               return;
             }
 
+            if (data.type === SSE_EVENT_PLATFORM_SYSTEM_ANNOUNCEMENT) {
+              if (userStore.userInfo.source !== 'PLATFORM') {
+                userStore.showPlatformSystemAnnouncement({
+                  subject: data.subject,
+                  content: data.content,
+                });
+              }
+              return;
+            }
+
+            if (data.type === SSE_EVENT_PLATFORM_FORCE_LOGOUT) {
+              if (userStore.userInfo.source !== 'PLATFORM') {
+                userStore.showPlatformForceLogout({
+                  message: data.message,
+                  countdownSeconds: data.countdownSeconds,
+                });
+              }
+              return;
+            }
+
+            if (data.type === SSE_EVENT_PLATFORM_FORCE_LOGOUT_DONE) {
+              if (userStore.userInfo.source === 'PLATFORM') {
+                window.dispatchEvent(
+                  new CustomEvent(PLATFORM_FORCE_LOGOUT_DONE_DOM_EVENT, {
+                    detail: {
+                      targetCount: Number(data.targetCount ?? 0),
+                      kickedCount: Number(data.kickedCount ?? 0),
+                      failedCount: Number(data.failedCount ?? 0),
+                      maintenanceMode: Boolean(data.maintenanceMode),
+                      onlineUserTotal: Number(data.onlineUserTotal ?? 0),
+                      onlineTenantUserTotal: Number(data.onlineTenantUserTotal ?? 0),
+                      onlineDataSpecialistUserCount: Number(data.onlineDataSpecialistUserCount ?? 0),
+                    },
+                  })
+                );
+              }
+              return;
+            }
+
             this.handleIncomingMessageInfo(data, callback);
           } catch (error) {
             // eslint-disable-next-line no-console
@@ -402,7 +450,7 @@ const useAppStore = defineStore('app', {
         } else if (src === 'DATA_SPECIALIST') {
           await closeMessageSubscribe({ ...base, kind: SSE_KIND_DATA_SPECIALIST });
         } else {
-          const tenantId = userStore.userInfo.tenantId || this.tenantId;
+          const tenantId = getSessionTenantId() || userStore.userInfo.tenantId || this.tenantId;
           if (!tenantId) {
             return;
           }

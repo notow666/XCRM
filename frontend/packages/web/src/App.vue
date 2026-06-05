@@ -122,6 +122,9 @@
           const platformUser = await platformIsLogin();
           if (platformUser?.source === 'PLATFORM') {
             userStore.setInfo(platformUser as any);
+            if (!userStore.clientIdRandomId) {
+              userStore.$patch({ clientIdRandomId: getGenerateId() });
+            }
           }
         }
       } catch (error) {

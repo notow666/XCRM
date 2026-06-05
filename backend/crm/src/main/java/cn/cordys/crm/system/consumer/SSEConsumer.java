@@ -1,5 +1,6 @@
 package cn.cordys.crm.system.consumer;
 
+import cn.cordys.common.constants.PlatformSseEventType;
 import cn.cordys.common.constants.TopicConstants;
 import cn.cordys.common.redis.TopicConsumer;
 import cn.cordys.common.util.JSON;
@@ -26,6 +27,14 @@ public class SSEConsumer implements TopicConsumer {
     @Override
     public void consume(String message) {
         NoticeRedisMessage noticeRedisMessage = JSON.parseObject(message, NoticeRedisMessage.class);
+        if (StringUtils.isNotBlank(noticeRedisMessage.getBroadcastScope())) {
+            if (PlatformSseEventType.BROADCAST_SCOPE_PLATFORM.equals(noticeRedisMessage.getBroadcastScope())) {
+                sseService.broadcastPlatformAdminEvent(noticeRedisMessage.getMessage());
+            } else {
+                sseService.tryBroadcastPlatformEvent(noticeRedisMessage.getMessage());
+            }
+            return;
+        }
         String tenantId = StringUtils.trimToNull(noticeRedisMessage.getTenantId());
         if (tenantId == null) {
             log.warn("SSE 消息缺少 tenantId，已跳过，避免误用默认租户");

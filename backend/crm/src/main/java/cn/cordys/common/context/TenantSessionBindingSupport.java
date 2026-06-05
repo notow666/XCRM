@@ -13,6 +13,8 @@ import org.apache.commons.lang3.Strings;
 public final class TenantSessionBindingSupport {
 
     private static final String PLACEHOLDER_TENANT = "---";
+    /** 与前端路由占位 {@code default} 一致：URL 未显式指定租户时，SSE 等应回落到会话租户 */
+    private static final String RESERVED_DEFAULT_TENANT_ID = "default";
 
     private TenantSessionBindingSupport() {
     }
@@ -85,6 +87,25 @@ public final class TenantSessionBindingSupport {
         }
     }
 
+    /**
+     * SSE 订阅使用的有效租户 ID。
+     * 租户 CRM 用户以会话租户为准（与 {@link #alignTenantContextFromSession} 一致），忽略 query 中可能过期的 tenantId。
+     */
+    public static String resolveSseTenantId(SessionUser user, String tenantId) {
+        if (user != null && isTenantCrmUser(user)) {
+            return StringUtils.trimToNull(user.getTenantId());
+        }
+        String tid = StringUtils.trimToNull(tenantId);
+        if (tid == null) {
+            tid = StringUtils.trimToNull(TenantContext.getTenantId());
+        }
+        if (user != null && isDataSpecialistUser(user) && tid != null
+                && RESERVED_DEFAULT_TENANT_ID.equalsIgnoreCase(tid)) {
+            tid = null;
+        }
+        return tid;
+    }
+
     public static void assertTenantSseSubscription(SessionUser user, String tenantId, String userId, ExtDataSpecialistMapper specialistMapper) {
         if (user == null) {
             throw new cn.cordys.common.exception.GenericException(cn.cordys.common.response.result.CrmHttpResultCode.FORBIDDEN, "未登录");
@@ -92,11 +113,8 @@ public final class TenantSessionBindingSupport {
         if (!Strings.CI.equals(StringUtils.trimToEmpty(user.getId()), StringUtils.trimToEmpty(userId))) {
             throw new cn.cordys.common.exception.GenericException(cn.cordys.common.response.result.CrmHttpResultCode.FORBIDDEN, "无权订阅该用户消息");
         }
-        String tid = StringUtils.trimToNull(tenantId);
-        if (tid == null) {
-            tid = StringUtils.trimToNull(TenantContext.getTenantId());
-        }
         if (isDataSpecialistUser(user)) {
+            String tid = resolveSseTenantId(user, tenantId);
             if (tid != null && !PLACEHOLDER_TENANT.equals(tid)) {
                 if (specialistMapper.existsTenantBinding(user.getId(), tid) <= 0) {
                     throw new cn.cordys.common.exception.GenericException(
@@ -110,10 +128,10 @@ public final class TenantSessionBindingSupport {
             return;
         }
         String sessionTenant = StringUtils.trimToNull(user.getTenantId());
-        if (sessionTenant == null || tid == null || !Strings.CI.equals(sessionTenant, tid)) {
+        if (sessionTenant == null) {
             throw new cn.cordys.common.exception.GenericException(
                     cn.cordys.common.response.result.CrmHttpResultCode.FORBIDDEN,
-                    "租户与会话不一致");
+                    "缺少会话租户");
         }
     }
 }

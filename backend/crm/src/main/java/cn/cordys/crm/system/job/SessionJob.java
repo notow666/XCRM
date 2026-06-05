@@ -3,7 +3,10 @@ package cn.cordys.crm.system.job;
 import cn.cordys.common.context.TenantTaskExecutor;
 import cn.cordys.common.util.JSON;
 import cn.cordys.crm.system.service.SystemService;
+import cn.cordys.platform.service.PlatformSessionOverviewService;
 import cn.cordys.quartz.anno.QuartzScheduled;
+import cn.cordys.security.OnlineSessionRegistry;
+import cn.cordys.security.OnlineSessionStats;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.reflect.MethodUtils;
@@ -33,6 +36,12 @@ public class SessionJob {
 
     @Resource
     private TenantTaskExecutor tenantTaskExecutor;
+
+    @Resource
+    private PlatformSessionOverviewService platformSessionOverviewService;
+
+    @Resource
+    private OnlineSessionRegistry onlineSessionRegistry;
 
     /**
      * 定时清理没有绑定用户的会话。
@@ -87,9 +96,23 @@ public class SessionJob {
             }
             tenantTaskExecutor.runForEachEnabledTenant("SessionJob.clearFormCache",
                     tenantId -> systemService.clearFormCache());
+            reconcileOnlineSessionRegistry();
             log.debug("用户会话统计: {}", JSON.toJSONString(userCount));
         } catch (Exception e) {
             log.error(e.getMessage(), e);
+        }
+    }
+
+    private void reconcileOnlineSessionRegistry() {
+        if (onlineSessionRegistry == null || platformSessionOverviewService == null) {
+            return;
+        }
+        try {
+            OnlineSessionStats scanned = platformSessionOverviewService.toOnlineSessionStats(
+                    platformSessionOverviewService.scanOnlineSessionsLegacy());
+            onlineSessionRegistry.reconcile(scanned);
+        } catch (Exception e) {
+            log.warn("在线 Session 注册表校准失败: {}", e.getMessage());
         }
     }
 }

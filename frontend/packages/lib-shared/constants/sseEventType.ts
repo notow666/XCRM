@@ -10,6 +10,18 @@ export const SSE_EVENT_POOL_BATCH_BY_CONDITION_DONE = 'POOL_BATCH_BY_CONDITION_D
 /** 公海按筛选批量任务完成 SSE 到达后，通知公海池列表刷新 */
 export const POOL_BATCH_BY_CONDITION_DOM_EVENT = 'pool-batch-by-condition-sse';
 
+/** 平台系统公告 SSE */
+export const SSE_EVENT_PLATFORM_SYSTEM_ANNOUNCEMENT = 'PLATFORM_SYSTEM_ANNOUNCEMENT';
+
+/** 平台强制全员下线 SSE */
+export const SSE_EVENT_PLATFORM_FORCE_LOGOUT = 'PLATFORM_FORCE_LOGOUT';
+
+/** 平台强制全员下线完成 SSE（仅管理中心） */
+export const SSE_EVENT_PLATFORM_FORCE_LOGOUT_DONE = 'PLATFORM_FORCE_LOGOUT_DONE';
+
+/** 强制全员下线完成后通知系统维护页刷新在线人数 */
+export const PLATFORM_FORCE_LOGOUT_DONE_DOM_EVENT = 'platform-force-logout-done';
+
 export type PoolBatchByConditionSseOperation = 'PICK' | 'ASSIGN' | 'TRANSFER';
 
 export interface PoolBatchByConditionSseDetail {

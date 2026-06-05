@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import JSEncrypt from 'jsencrypt';
 
 import { getApiPathPrefix } from './api-path';
+import { getToken } from './auth';
 import { isObject } from './is';
 import { CHINA_PCD, COUNTRIES_TREE } from '@cordys/web/src/components/business/crm-city-select/config';
 import type {
@@ -131,7 +132,12 @@ export const apiSSE = (url: string, host?: string): EventSource => {
  * @returns EventSource 实例
  */
 export function getSSE(sseUrl: string, params: Record<string, string>, host?: string): EventSource {
-  const queryString = new URLSearchParams(params).toString();
+  const merged = { ...params };
+  const token = getToken();
+  if (token.sessionId) {
+    merged.sessionId = token.sessionId;
+  }
+  const queryString = new URLSearchParams(merged).toString();
   return apiSSE(`${sseUrl}?${queryString}`, host);
 }
 

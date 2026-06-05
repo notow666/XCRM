@@ -60,7 +60,7 @@ public class DataSpecialistAuthService {
 
 
     public void logout() {
-        SecurityUtils.getSubject().logout();
+        SessionUtils.logoutCurrentUser();
     }
 
 

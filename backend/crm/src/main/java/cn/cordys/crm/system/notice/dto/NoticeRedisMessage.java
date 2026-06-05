@@ -15,4 +15,9 @@ public class NoticeRedisMessage extends RedisMessage {
      */
     private String tenantId;
 
+    /**
+     * 平台广播范围；非空时表示 {@link cn.cordys.common.constants.PlatformSseEventType#BROADCAST_SCOPE_TENANT_AND_DS} 等平台级广播。
+     */
+    private String broadcastScope;
+
 }

@@ -145,3 +145,53 @@ export interface PlatformOverview {
 export function getPlatformOverview() {
   return CDR.get<PlatformOverview>({ url: '/platform/admin/overview' });
 }
+
+export interface PlatformSystemAnnouncementItem {
+  id: string;
+  subject: string;
+  content: string;
+  operatorId: string;
+  createTime: number;
+}
+
+export interface PlatformSystemMaintenanceStatus {
+  maintenanceMode: boolean;
+  onlineUserTotal: number;
+  onlineTenantUserTotal: number;
+  onlineDataSpecialistUserCount: number;
+}
+
+export interface PlatformAnnouncementPageRequest {
+  current: number;
+  pageSize: number;
+}
+
+export function getPlatformSystemMaintenanceStatus() {
+  return CDR.get<PlatformSystemMaintenanceStatus>({ url: '/platform/admin/system-maintenance/status' });
+}
+
+export function pagePlatformSystemAnnouncements(data: PlatformAnnouncementPageRequest) {
+  return CDR.post<CommonList<PlatformSystemAnnouncementItem>>({
+    url: '/platform/admin/system-maintenance/announcement/page',
+    data,
+  });
+}
+
+export function publishPlatformSystemAnnouncement(data: { subject: string; content: string }) {
+  return CDR.post<PlatformSystemAnnouncementItem>({
+    url: '/platform/admin/system-maintenance/announcement',
+    data,
+  });
+}
+
+export function forcePlatformLogoutAll(data?: { graceSeconds?: number }) {
+  return CDR.post({ url: '/platform/admin/system-maintenance/force-logout', data: data ?? {} });
+}
+
+export function enterPlatformMaintenanceMode() {
+  return CDR.post({ url: '/platform/admin/system-maintenance/maintenance/enter' });
+}
+
+export function exitPlatformMaintenanceMode() {
+  return CDR.post({ url: '/platform/admin/system-maintenance/maintenance/exit' });
+}

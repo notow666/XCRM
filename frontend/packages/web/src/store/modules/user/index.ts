@@ -14,10 +14,12 @@ import type { LoginParams } from '@lib/shared/models/system/login';
 import type { MessageCenterItem } from '@lib/shared/models/system/message';
 import type { UserInfo } from '@lib/shared/models/user';
 
+import PlatformAnnouncementNotify from '@/components/business/crm-platform-announcement-notify/index.vue';
+import PlatformForceLogoutNotify from '@/components/business/crm-platform-force-logout-notify/index.vue';
 import NotifyContent from '@/views/system/message/components/notifyContent.vue';
 import NotifyToastContent from '@/views/system/message/components/notifyToastContent.vue';
 
-import { getApiKeyList, isLogin, login, signout } from '@/api/modules';
+import { dataSpecialistLogout, getApiKeyList, isLogin, login, signout } from '@/api/modules';
 import useDiscreteApi from '@/hooks/useDiscreteApi';
 import router from '@/router';
 import { WHITE_LIST_NAME } from '@/router/constants';
@@ -35,6 +37,7 @@ export interface UserState {
   userInfo: UserInfo;
   clientIdRandomId: string; // 客户端随机id
   notify: NotificationReactive | null;
+  platformNotify: NotificationReactive | null;
   apiKeyList: ApiKeyItem[];
 }
 
@@ -72,6 +75,7 @@ const useUserStore = defineStore('user', {
     },
     clientIdRandomId: '',
     notify: null,
+    platformNotify: null,
     apiKeyList: [],
   }),
 
@@ -123,6 +127,7 @@ const useUserStore = defineStore('user', {
       appStore.disconnectSystemMessageSSE();
       appStore.resetMessageNotifyState();
       this.destroySystemNotify();
+      this.destroyPlatformNotify();
       // 重置用户信息
       this.$reset();
       clearToken();
@@ -188,6 +193,9 @@ const useUserStore = defineStore('user', {
         appStore.setTenantId(res.tenantId || '');
         const lastOrganizationId = res.lastOrganizationId ?? res.organizationIds?.[0] ?? '';
         appStore.setOrgId(lastOrganizationId);
+        if (!this.clientIdRandomId) {
+          this.clientIdRandomId = getGenerateId();
+        }
         return true;
       } catch (err) {
         // eslint-disable-next-line no-console
@@ -284,6 +292,75 @@ const useUserStore = defineStore('user', {
       if (typeof this.notify?.destroy === 'function') {
         this.notify?.destroy();
       }
+    },
+    destroyPlatformNotify() {
+      if (typeof this.platformNotify?.destroy === 'function') {
+        this.platformNotify.destroy();
+      }
+      this.platformNotify = null;
+    },
+    showPlatformSystemAnnouncement(payload: { subject?: string; content?: string }) {
+      this.destroyPlatformNotify();
+      this.platformNotify = notification.create({
+        title: '',
+        content: () =>
+          h(PlatformAnnouncementNotify, {
+            subject: payload.subject || '',
+            content: payload.content || '',
+            onClose: () => this.destroyPlatformNotify(),
+          }),
+        duration: undefined,
+        maxCount: 1,
+      } as NotificationOptions);
+    },
+    showPlatformForceLogout(payload: { message?: string; countdownSeconds?: number }) {
+      this.destroyPlatformNotify();
+      const countdownSeconds = Math.max(5, Number(payload.countdownSeconds) || 30);
+      this.platformNotify = notification.create({
+        title: '',
+        content: () =>
+          h(PlatformForceLogoutNotify, {
+            messageText: payload.message || '',
+            countdownSeconds,
+            onExpired: () => {
+              this.destroyPlatformNotify();
+              this.performSilentForceLogout();
+            },
+          }),
+        duration: undefined,
+        closable: false,
+        maxCount: 1,
+      } as NotificationOptions);
+    },
+    async performSilentForceLogout() {
+      const appStore = useAppStoreAccessor();
+      const tenantIdToRedirect = resolveTenantIdForAuthRedirect({
+        routeTenantId: router.currentRoute.value.params?.tenantId,
+        userTenantId: this.userInfo?.tenantId,
+        appTenantId: appStore.tenantId,
+      });
+      const isDataSpecialist = this.userInfo.source === 'DATA_SPECIALIST';
+      try {
+        if (isDataSpecialist) {
+          await dataSpecialistLogout();
+        } else {
+          await signout();
+        }
+      } catch {
+        // 会话可能已被服务端清除
+      }
+      this.logoutCallBack();
+      appStore.setTenantId(tenantIdToRedirect);
+      appStore.setOrgId('');
+      const targetName = isDataSpecialist ? 'dataSpecialistLogin' : 'login';
+      if (targetName === 'login' && !tenantIdToRedirect) {
+        await router.push({ name: 'platformLogin' });
+        return;
+      }
+      await router.push({
+        name: targetName,
+        params: targetName === 'login' ? { tenantId: tenantIdToRedirect } : undefined,
+      });
     },
     async initApiKeyList() {
       if (!hasAnyPermission(['PERSONAL_API_KEY:READ'])) return;

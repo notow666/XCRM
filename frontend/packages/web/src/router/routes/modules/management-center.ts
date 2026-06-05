@@ -52,6 +52,15 @@ const managementCenter: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'system-maintenance',
+      name: ManagementCenterRouteEnum.MANAGEMENT_CENTER_SYSTEM_MAINTENANCE,
+      component: () => import('../../../views/management-center/system-maintenance/index.vue'),
+      meta: {
+        locale: 'menu.managementCenter.systemMaintenance',
+        permissions: ['PLATFORM_ADMIN:READ'],
+      },
+    },
+    {
       path: 'audit',
       name: ManagementCenterRouteEnum.MANAGEMENT_CENTER_AUDIT,
       component: () => import('@/views/management-center/audit/index.vue'),

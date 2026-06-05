@@ -49,7 +49,7 @@ public class PlatformAuthService {
     }
 
     public void logout() {
-        SecurityUtils.getSubject().logout();
+        SessionUtils.logoutCurrentUser();
     }
 
     public SessionUser isLogin() {

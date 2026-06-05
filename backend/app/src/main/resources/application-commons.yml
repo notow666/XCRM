@@ -1,4 +1,5 @@
 server:
+  shutdown: graceful
   compression:
     enabled: true
     mime-types: application/json,application/xml,text/html,text/xml,text/plain,application/javascript,text/css,text/javascript,image/jpeg
@@ -17,6 +18,8 @@ server:
 spring:
   application:
     name: cordys-crm
+  lifecycle:
+    timeout-per-shutdown-phase: 60s
   cache:
     type: redis
   datasource:
@@ -102,7 +105,7 @@ cordys:
   tenant:
     datasource:
       hikari:
-        maximum-pool-size: 25
+        maximum-pool-size: 30
         minimum-idle: 2
         connection-timeout: 60000
         idle-timeout: 300000

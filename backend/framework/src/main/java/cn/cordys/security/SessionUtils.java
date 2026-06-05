@@ -136,28 +136,40 @@ public class SessionUtils {
      * @param userId   用户ID
      */
     public static void kickOutUser(String source, String tenantId, String userId) {
+        kickOutUserAndCount(source, tenantId, userId);
+    }
+
+    /**
+     * 踢除指定用户并返回实际删除的 Session 数量。
+     */
+    public static int kickOutUserAndCount(String source, String tenantId, String userId) {
         if (StringUtils.isBlank(userId)) {
-            return;
-        }
-        // 获取 Redis session 存储库
-        RedisIndexedSessionRepository sessionRepository = CommonBeanFactory.getBean(RedisIndexedSessionRepository.class);
-        if (sessionRepository == null) {
-            return;
+            return 0;
         }
         String principalName = buildPrincipalName(source, tenantId, userId);
         if (StringUtils.isBlank(principalName)) {
             log.warn("kickOutUser 跳过：tenantId 为空，避免按默认租户误踢 userId={}", userId);
-            return;
+            return 0;
         }
 
-        // 根据 principal 索引查找会话
-        Map<String, ?> users = sessionRepository.findByPrincipalName(principalName);
-        if (MapUtils.isNotEmpty(users)) {
-            // 删除所有与该 principal 关联的 session
-            users.keySet().forEach(k -> {
-                sessionRepository.deleteById(k);
-            });
+        OnlineSessionRegistry registry = CommonBeanFactory.getBean(OnlineSessionRegistry.class);
+        if (registry != null) {
+            return registry.kickPrincipal(principalName);
         }
+        return kickOutUserByPrincipalIndex(principalName);
+    }
+
+    static int kickOutUserByPrincipalIndex(String principalName) {
+        RedisIndexedSessionRepository sessionRepository = CommonBeanFactory.getBean(RedisIndexedSessionRepository.class);
+        if (sessionRepository == null) {
+            return 0;
+        }
+        Map<String, ?> users = sessionRepository.findByPrincipalName(principalName);
+        if (MapUtils.isEmpty(users)) {
+            return 0;
+        }
+        users.keySet().forEach(sessionRepository::deleteById);
+        return users.size();
     }
 
     /**
@@ -214,12 +226,35 @@ public class SessionUtils {
      * @param sessionUser 当前用户对象
      */
     public static void putUser(SessionUser sessionUser) {
-        // 保存用户信息到 Session
-        SecurityUtils.getSubject().getSession().setAttribute(ATTR_USER, sessionUser);
-        // 保存租户隔离后的 principal 到 Session 索引
-        SecurityUtils.getSubject().getSession().setAttribute(
+        Session session = SecurityUtils.getSubject().getSession();
+        session.setAttribute(ATTR_USER, sessionUser);
+        session.setAttribute(
                 FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME,
                 buildPrincipalName(sessionUser)
         );
+        notifyOnlineSessionRegistry(sessionUser, (String) session.getId());
+    }
+
+    private static void notifyOnlineSessionRegistry(SessionUser sessionUser, String sessionId) {
+        if (sessionUser == null || StringUtils.isBlank(sessionId)) {
+            return;
+        }
+        OnlineSessionRegistry registry = CommonBeanFactory.getBean(OnlineSessionRegistry.class);
+        if (registry != null) {
+            registry.onSessionUserBound(sessionUser, sessionId);
+        }
+    }
+
+    /**
+     * 主动登出：先销毁当前 Session，再清理在线注册表。
+     */
+    public static void logoutCurrentUser() {
+        SessionUser sessionUser = getUser();
+        String sessionId = getSessionId();
+        SecurityUtils.getSubject().logout();
+        OnlineSessionRegistry registry = CommonBeanFactory.getBean(OnlineSessionRegistry.class);
+        if (registry != null && StringUtils.isNotBlank(sessionId)) {
+            registry.onSessionEnded(sessionId, sessionUser);
+        }
     }
 }

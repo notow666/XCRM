@@ -55,6 +55,11 @@ public class PlatformOverviewService {
         }
     }
 
+    public void invalidateOverviewCache() {
+        cached = null;
+        cacheExpireAt = 0L;
+    }
+
     private PlatformOverviewResponse buildOverview() {
         PlatformOverviewResponse response = new PlatformOverviewResponse();
 
