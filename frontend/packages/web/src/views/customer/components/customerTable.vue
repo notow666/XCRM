@@ -1293,8 +1293,8 @@
     customerListScrollbarVisible.value = true;
   }
 
-  function handleCustomerListVirtualScroll(event: Event) {
-    markListScrolling(event);
+  function handleCustomerListVirtualScroll() {
+    markListScrolling();
     syncCustomerListScrollbar();
   }
 
