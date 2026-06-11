@@ -78,6 +78,15 @@ public class FollowUpPlanListResponse {
     @Schema(description = "计划开始时间")
     private Long estimatedTime;
 
+    @Schema(description = "提醒时间")
+    private Long remindTime;
+
+    @Schema(description = "提醒状态")
+    private String remindStatus;
+
+    @Schema(description = "实际提醒时间")
+    private Long remindedTime;
+
     @Schema(description = "状态")
     private String status;
 

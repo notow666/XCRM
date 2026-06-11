@@ -37,6 +37,15 @@ public class FollowUpPlan extends BaseModel {
     @Schema(description = "预计开始时间")
     private Long estimatedTime;
 
+    @Schema(description = "提醒时间")
+    private Long remindTime;
+
+    @Schema(description = "提醒状态")
+    private String remindStatus;
+
+    @Schema(description = "实际提醒时间")
+    private Long remindedTime;
+
     @Schema(description = "跟进方式")
     private String method;
 

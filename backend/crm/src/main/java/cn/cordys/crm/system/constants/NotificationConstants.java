@@ -77,6 +77,9 @@ public class NotificationConstants {
         //跟进计划到期
         @Schema(description = "message.customer_follow_up_plan_due")
         String CUSTOMER_FOLLOW_UP_PLAN_DUE = "CUSTOMER_FOLLOW_UP_PLAN_DUE";
+        //跟进计划提醒
+        @Schema(description = "message.customer_follow_up_plan_remind")
+        String CUSTOMER_FOLLOW_UP_PLAN_REMIND = "CUSTOMER_FOLLOW_UP_PLAN_REMIND";
         //----线索管理----
         //自动移入线索池
         @Schema(description = "message.clue_automatic_move_pool")
@@ -105,6 +108,9 @@ public class NotificationConstants {
         //跟进计划到期
         @Schema(description = "message.clue_follow_up_plan_due")
         String CLUE_FOLLOW_UP_PLAN_DUE = "CLUE_FOLLOW_UP_PLAN_DUE";
+        //跟进计划提醒
+        @Schema(description = "message.clue_follow_up_plan_remind")
+        String CLUE_FOLLOW_UP_PLAN_REMIND = "CLUE_FOLLOW_UP_PLAN_REMIND";
         //-------商机管理----
         //商机删除
         @Schema(description = "message.business_deleted")
@@ -118,6 +124,9 @@ public class NotificationConstants {
         //跟进计划提醒
         @Schema(description = "message.business_follow_up_plan_due")
         String BUSINESS_FOLLOW_UP_PLAN_DUE = "BUSINESS_FOLLOW_UP_PLAN_DUE";
+
+        @Schema(description = "message.business_follow_up_plan_remind")
+        String BUSINESS_FOLLOW_UP_PLAN_REMIND = "BUSINESS_FOLLOW_UP_PLAN_REMIND";
 
         @Schema(description = "message.business_quotation_approval")
         String BUSINESS_QUOTATION_APPROVAL = "BUSINESS_QUOTATION_APPROVAL";
@@ -217,6 +226,9 @@ public class NotificationConstants {
         @Schema(description = "message.customer_follow_up_plan_due_text")
         String CUSTOMER_FOLLOW_UP_PLAN_DUE_TEXT = "CUSTOMER_FOLLOW_UP_PLAN_DUE_TEXT";
 
+        @Schema(description = "message.customer_follow_up_plan_remind_text")
+        String CUSTOMER_FOLLOW_UP_PLAN_REMIND_TEXT = "CUSTOMER_FOLLOW_UP_PLAN_REMIND_TEXT";
+
         //请注意！根据系统规则，您负责的${clueName}的销售线索，已被移入线索池！
         @Schema(description = "message.clue_automatic_move_pool_text")
         String CLUE_AUTOMATIC_MOVE_POOL_TEXT = "CLUE_AUTOMATIC_MOVE_POOL_TEXT";
@@ -253,6 +265,9 @@ public class NotificationConstants {
         @Schema(description = "message.clue_follow_up_plan_due_text")
         String CLUE_FOLLOW_UP_PLAN_DUE_TEXT = "CLUE_FOLLOW_UP_PLAN_DUE_TEXT";
 
+        @Schema(description = "message.clue_follow_up_plan_remind_text")
+        String CLUE_FOLLOW_UP_PLAN_REMIND_TEXT = "CLUE_FOLLOW_UP_PLAN_REMIND_TEXT";
+
         //请注意！您负责的${businessName}商机，已被${OPERATOR}删除！
         @Schema(description = "message.business_deleted_text")
         String BUSINESS_DELETED_TEXT = "BUSINESS_DELETED_TEXT";
@@ -268,6 +283,9 @@ public class NotificationConstants {
         //请注意！您创建的${businessName}商机跟进计划，已到预定时间，请及时跟进！
         @Schema(description = "message.business_follow_up_plan_due_text")
         String BUSINESS_FOLLOW_UP_PLAN_DUE_TEXT = "BUSINESS_FOLLOW_UP_PLAN_DUE_TEXT";
+
+        @Schema(description = "message.business_follow_up_plan_remind_text")
+        String BUSINESS_FOLLOW_UP_PLAN_REMIND_TEXT = "BUSINESS_FOLLOW_UP_PLAN_REMIND_TEXT";
 
         //${OPERATOR}审批了${name}报价单，审批结果为${state}
         @Schema(description = "message.business_quotation_approval_text")

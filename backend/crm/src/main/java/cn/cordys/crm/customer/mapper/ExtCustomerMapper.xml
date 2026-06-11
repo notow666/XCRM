@@ -560,7 +560,7 @@
         <if test="${conditions} != null and ${conditions}.size() > 0">
             <foreach collection="${conditions}" item="condition" index="i">
                 <if test="condition.name not in
-                {'name', 'owner', 'createTime', 'updateTime', 'follower', 'followTime', 'createUser', 'updateUser', 'departmentId', 'mobile', 'stage', 'stageStatus', 'callStatus', 'wechatFriendStatus'}">
+                {'name', 'owner', 'createTime', 'updateTime', 'follower', 'followTime', 'createUser', 'updateUser', 'departmentId', 'mobile', 'stage', 'stageStatus', 'callStatus', 'wechatFriendStatus', 'followRecordContent'}">
                     <if test="condition.multipleValue">
                         left join customer_field_blob ${tablePrefix}_${i}
                         on c.id = ${tablePrefix}_${i}.resource_id and ${tablePrefix}_${i}.field_id = #{condition.name}
@@ -737,6 +737,47 @@
                     <property name="condition" value="condition"/>
                     <property name="column" value="c.wechat_friend_status"/>
                 </include>
+            </when>
+            <when test="condition.name == 'followRecordContent'">
+                <choose>
+                    <when test="condition.operator == 'EMPTY'">
+                        NOT EXISTS (SELECT 1 FROM follow_up_record fur
+                        WHERE fur.customer_id = c.id
+                        AND fur.organization_id = #{orgId}
+                        AND fur.content IS NOT NULL
+                        AND fur.content != '')
+                    </when>
+                    <when test="condition.operator == 'NOT_EMPTY'">
+                        EXISTS (SELECT 1 FROM follow_up_record fur
+                        WHERE fur.customer_id = c.id
+                        AND fur.organization_id = #{orgId}
+                        AND fur.content IS NOT NULL
+                        AND fur.content != '')
+                    </when>
+                    <when test="condition.operator == 'NOT_CONTAINS'">
+                        NOT EXISTS (SELECT 1 FROM follow_up_record fur
+                        WHERE fur.customer_id = c.id
+                        AND fur.organization_id = #{orgId}
+                        AND <foreach collection="condition.value.split(' ')" item="item" separator="and">
+                                fur.content like CONCAT('%', #{item},'%')
+                            </foreach>)
+                    </when>
+                    <when test="condition.operator == 'NOT_EQUALS'">
+                        NOT EXISTS (SELECT 1 FROM follow_up_record fur
+                        WHERE fur.customer_id = c.id
+                        AND fur.organization_id = #{orgId}
+                        AND fur.content = #{condition.value})
+                    </when>
+                    <otherwise>
+                        EXISTS (SELECT 1 FROM follow_up_record fur
+                        WHERE fur.customer_id = c.id
+                        AND fur.organization_id = #{orgId}
+                        AND <include refid="cn.cordys.common.mapper.CommonMapper.condition">
+                                <property name="condition" value="condition"/>
+                                <property name="column" value="fur.content"/>
+                            </include>)
+                    </otherwise>
+                </choose>
             </when>
             <otherwise>
                 <include refid="cn.cordys.common.mapper.CommonMapper.moduleFieldCondition">

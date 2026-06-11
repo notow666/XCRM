@@ -91,6 +91,13 @@
         "weComEnable": false
       },
       {
+        "event": "CUSTOMER_FOLLOW_UP_PLAN_REMIND",
+        "eventName": "",
+        "emailEnable": false,
+        "sysEnable": true,
+        "weComEnable": false
+      },
+      {
         "event": "CUSTOMER_IMPORT",
         "eventName": "",
         "emailEnable": false,

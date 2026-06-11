@@ -111,6 +111,7 @@ export interface CustomerFollowRecordListItem {
 
 export interface SaveCustomerFollowPlanParams extends SaveCustomerFollowRecordParams {
   estimatedTime: number;
+  remindTime?: number;
 }
 
 export interface UpdateCustomerFollowPlanParams extends SaveCustomerFollowPlanParams {
@@ -127,6 +128,9 @@ export interface CustomerFollowPlanTableParams extends TableQueryParams {
 
 export interface CustomerFollowPlanListItem extends CustomerFollowRecordListItem {
   estimatedTime: number;
+  remindTime?: number;
+  remindStatus?: string;
+  remindedTime?: number;
   status: StatusTagKey;
   method: string;
   converted: boolean;

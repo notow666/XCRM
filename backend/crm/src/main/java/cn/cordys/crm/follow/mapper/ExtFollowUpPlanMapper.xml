@@ -14,6 +14,9 @@
         fup.owner,
         fup.contact_id,
         fup.estimated_time,
+        fup.remind_time,
+        fup.remind_status,
+        fup.reminded_time,
         fup.create_time,
         fup.update_time,
         fup.create_user,
@@ -131,6 +134,50 @@
         INNER JOIN sys_user on sys_user.id = fup.`owner` and sys_user.id = fup.`create_user`
         WHERE estimated_time = #{timestamp}
     </select>
+    <select id="selectPendingRemindPlans" resultType="cn.cordys.crm.follow.domain.FollowUpPlan">
+        SELECT fup.id,
+               fup.customer_id,
+               fup.opportunity_id,
+               fup.clue_id,
+               fup.organization_id,
+               fup.owner,
+               fup.processor,
+               fup.create_user,
+               fup.remind_time,
+               fup.remind_status,
+               fup.status,
+               fup.completion_status,
+               fup.customer_name
+        FROM follow_up_plan fup
+        WHERE fup.remind_time IS NOT NULL
+          AND fup.remind_time &lt;= #{timestamp}
+          AND fup.remind_status = 'PENDING'
+          AND (fup.status IS NULL OR fup.status NOT IN ('COMPLETED', 'CANCELLED'))
+          AND (fup.completion_status IS NULL OR fup.completion_status != 'COMPLETED')
+        ORDER BY fup.remind_time ASC
+        LIMIT #{limit}
+    </select>
+    <update id="markReminderSent">
+        UPDATE follow_up_plan
+        SET remind_status = 'SENT',
+            reminded_time = #{timestamp},
+            update_time = #{timestamp}
+        WHERE id = #{id}
+          AND organization_id = #{organizationId}
+          AND remind_time IS NOT NULL
+          AND remind_time &lt;= #{timestamp}
+          AND remind_status = 'PENDING'
+          AND (status IS NULL OR status NOT IN ('COMPLETED', 'CANCELLED'))
+          AND (completion_status IS NULL OR completion_status != 'COMPLETED')
+    </update>
+    <update id="cancelPendingReminder">
+        UPDATE follow_up_plan
+        SET remind_status = 'CANCELLED',
+            update_time = #{timestamp}
+        WHERE id = #{id}
+          AND remind_time IS NOT NULL
+          AND remind_status = 'PENDING'
+    </update>
     <select id="getNewFollowUpPlan" resultType="java.lang.Long">
         select count(*) from follow_up_plan c
 
@@ -168,6 +215,9 @@
         fup.owner,
         fup.contact_id,
         fup.estimated_time,
+        fup.remind_time,
+        fup.remind_status,
+        fup.reminded_time,
         fup.create_time,
         fup.update_time,
         fup.create_user,
@@ -278,7 +328,7 @@
                     and condition.name != 'owner' and condition.name != 'type'
                     and condition.name != 'customerId' and condition.name != 'opportunityId'
                     and condition.name != 'clueId' and condition.name != 'contactId'
-                    and condition.name != 'estimatedTime' and condition.name != 'method'
+                    and condition.name != 'estimatedTime' and condition.name != 'remindTime' and condition.name != 'method'
                     and condition.name != 'status' and condition.name != 'converted'
                     and condition.name != 'createTime' and condition.name != 'createUser'
                     and condition.name != 'updateUser' and condition.name != 'updateTime'">
@@ -308,7 +358,7 @@
                     and condition.name != 'owner' and condition.name != 'type'
                     and condition.name != 'customerId' and condition.name != 'opportunityId'
                     and condition.name != 'clueId' and condition.name != 'contactId'
-                    and condition.name != 'estimatedTime' and condition.name != 'method'
+                    and condition.name != 'estimatedTime' and condition.name != 'remindTime' and condition.name != 'method'
                     and condition.name != 'status' and condition.name != 'converted'
                     and condition.name != 'createTime' and condition.name != 'createUser'
                     and condition.name != 'updateUser' and condition.name != 'updateTime'">
@@ -333,7 +383,7 @@
 
     <sql id="fieldSortJoin">
         <if test="${sort} != null and ${sort}.valid() and ${sort}.name not in
-                {'content', 'owner', 'type', 'customerId', 'opportunityId', 'clueId', 'contactId', 'estimatedTime', 'method', 'status', 'converted',
+                {'content', 'owner', 'type', 'customerId', 'opportunityId', 'clueId', 'contactId', 'estimatedTime', 'remindTime', 'method', 'status', 'converted',
                 'create_user', 'update_user', 'create_time', 'update_time'}">
             <bind name="sortName" value="${sort}.name"/>
             LEFT JOIN follow_up_plan_field sort_table ON fup.id = sort_table.resource_id AND sort_table.field_id = #{sortName}
@@ -451,6 +501,12 @@
                     <property name="column" value="fup.estimated_time"/>
                 </include>
             </when>
+            <when test="condition.name == 'remindTime'">
+                <include refid="cn.cordys.common.mapper.CommonMapper.condition">
+                    <property name="condition" value="condition"/>
+                    <property name="column" value="fup.remind_time"/>
+                </include>
+            </when>
             <when test="condition.name == 'status'">
                 <include refid="cn.cordys.common.mapper.CommonMapper.condition">
                     <property name="condition" value="condition"/>
@@ -543,6 +599,9 @@
                     </when>
                     <when test="${sort}.name == 'estimated_time'">
                         fup.`estimated_time` ${sortType}, fup.id ASC
+                    </when>
+                    <when test="${sort}.name == 'remind_time' or ${sort}.name == 'remindTime'">
+                        fup.`remind_time` ${sortType}, fup.id ASC
                     </when>
                     <when test="${sort}.name == 'create_time'">
                         fup.`create_time` ${sortType}, fup.id ASC

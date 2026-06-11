@@ -43,6 +43,9 @@ public class FollowUpPlanAddRequest {
     @Schema(description = "预计开始时间")
     private Long estimatedTime;
 
+    @Schema(description = "提醒时间")
+    private Long remindTime;
+
     @Size(max = 32)
     @NotBlank
     @Schema(description = "跟进方式", requiredMode = Schema.RequiredMode.REQUIRED)

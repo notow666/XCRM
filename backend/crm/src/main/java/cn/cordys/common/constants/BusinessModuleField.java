@@ -208,6 +208,10 @@ public enum BusinessModuleField {
      */
     FOLLOW_PLAN_ESTIMATED_TIME("planStartTime", "estimatedTime", Set.of(), FormKey.FOLLOW_PLAN.getKey()),
     /**
+     * 提醒时间
+     */
+    FOLLOW_PLAN_REMIND_TIME("planRemindTime", "remindTime", Set.of(), FormKey.FOLLOW_PLAN.getKey()),
+    /**
      * 预计沟通内容
      */
     FOLLOW_PLAN_CONTENT("planContent", "content", Set.of(), FormKey.FOLLOW_PLAN.getKey()),

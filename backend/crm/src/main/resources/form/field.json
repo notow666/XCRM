@@ -1324,6 +1324,20 @@
       "mobile": true
     },
     {
+      "name": "提醒时间",
+      "internalKey": "planRemindTime",
+      "type": "DATE_TIME",
+      "dateType": "datetime",
+      "dateDefaultType": "custom",
+      "showLabel": true,
+      "readable": true,
+      "editable": true,
+      "fieldWidth": 0.5,
+      "pos": 7,
+      "rules": [],
+      "mobile": false
+    },
+    {
       "name": "预计沟通内容",
       "internalKey": "planContent",
       "type": "TEXTAREA",
@@ -1331,7 +1345,7 @@
       "readable": true,
       "editable": true,
       "fieldWidth": 1,
-      "pos": 7,
+      "pos": 8,
       "mobile": true
     },
     {
@@ -1342,7 +1356,7 @@
       "readable": true,
       "editable": true,
       "fieldWidth": 1,
-      "pos": 8,
+      "pos": 9,
       "mobile": true
     }
   ],

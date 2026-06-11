@@ -1769,6 +1769,11 @@
       dataIndex: 'followTime',
       type: FieldTypeEnum.TIME_RANGE_PICKER,
     },
+    {
+      title: t('customer.followRecordContent'),
+      dataIndex: 'followRecordContent',
+      type: FieldTypeEnum.TEXTAREA,
+    },
     ...baseFilterConfigList,
   ]);
 

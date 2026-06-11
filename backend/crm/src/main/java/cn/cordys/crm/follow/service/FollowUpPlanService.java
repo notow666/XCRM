@@ -84,6 +84,8 @@ public class FollowUpPlanService extends BaseFollowUpService {
     private CustomerStageService customerStageService;
     @Resource
     private CommonNoticeSendService commonNoticeSendService;
+    @Resource
+    private FollowUpPlanReminderService followUpPlanReminderService;
 
     /**
      * 新建跟进计划
@@ -95,6 +97,7 @@ public class FollowUpPlanService extends BaseFollowUpService {
      * @return
      */
     public FollowUpPlan add(FollowUpPlanAddRequest request, String userId, String orgId) {
+        followUpPlanReminderService.validateRemindTime(request.getRemindTime(), request.getEstimatedTime());
         // 先完成该客户最新未完成的计划
         completeOldPlanIfExists(request.getCustomerId(), orgId);
 
@@ -108,6 +111,7 @@ public class FollowUpPlanService extends BaseFollowUpService {
         followUpPlan.setStatus(FollowUpPlanStatusType.PREPARED.name());
         followUpPlan.setCompletionStatus(FollowUpPlanCompletionStatus.UNCOMPLETED.name());
         followUpPlan.setConverted(false);
+        followUpPlanReminderService.initReminder(followUpPlan);
         if (StringUtils.isBlank(request.getOwner())) {
             followUpPlan.setOwner(userId);
         }
@@ -123,6 +127,7 @@ public class FollowUpPlanService extends BaseFollowUpService {
 
         handleCustomerStageTransition(request, orgId);
         sendCustomerPlanNotice(followUpPlan, orgId);
+        followUpPlanReminderService.enqueueAfterCommit(followUpPlan);
 
         return followUpPlan;
     }

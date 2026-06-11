@@ -35,6 +35,12 @@ public interface ExtFollowUpPlanMapper {
 
     List<FollowUpPlan> selectPlanByTimestamp(@Param("timestamp") long timestamp);
 
+    List<FollowUpPlan> selectPendingRemindPlans(@Param("timestamp") long timestamp, @Param("limit") int limit);
+
+    int markReminderSent(@Param("id") String id, @Param("organizationId") String organizationId, @Param("timestamp") long timestamp);
+
+    int cancelPendingReminder(@Param("id") String id, @Param("timestamp") long timestamp);
+
     Long getNewFollowUpPlan(@Param("request") HomeStatisticSearchWrapperRequest request);
 
     /**
