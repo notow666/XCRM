@@ -33,6 +33,7 @@ import cn.cordys.crm.follow.dto.request.*;
 import cn.cordys.crm.follow.dto.response.FollowUpPlanDetailResponse;
 import cn.cordys.crm.follow.dto.response.FollowUpPlanListResponse;
 import cn.cordys.crm.follow.mapper.ExtFollowUpPlanMapper;
+import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service.EmployeeStatEventRecordService;
 import cn.cordys.crm.system.constants.NotificationConstants;
 import cn.cordys.crm.system.dto.response.ModuleFormConfigDTO;
 import cn.cordys.crm.system.dto.response.UserResponse;
@@ -86,6 +87,8 @@ public class FollowUpPlanService extends BaseFollowUpService {
     private CommonNoticeSendService commonNoticeSendService;
     @Resource
     private FollowUpPlanReminderService followUpPlanReminderService;
+    @Resource
+    private EmployeeStatEventRecordService employeeStatEventRecordService;
 
     /**
      * 新建跟进计划
@@ -125,7 +128,7 @@ public class FollowUpPlanService extends BaseFollowUpService {
         followUpPlanFieldService.saveModuleField(followUpPlan, orgId, userId, request.getModuleFields(), false);
         followUpPlanMapper.insert(followUpPlan);
 
-        handleCustomerStageTransition(request, orgId);
+        handleCustomerStageTransition(followUpPlan, request, orgId);
         sendCustomerPlanNotice(followUpPlan, orgId);
         followUpPlanReminderService.enqueueAfterCommit(followUpPlan);
 
@@ -204,7 +207,7 @@ public class FollowUpPlanService extends BaseFollowUpService {
         }
     }
 
-    private void handleCustomerStageTransition(FollowUpPlanAddRequest request, String orgId) {
+    private void handleCustomerStageTransition(FollowUpPlan followUpPlan, FollowUpPlanAddRequest request, String orgId) {
         if (StringUtils.isBlank(request.getCustomerId())) {
             return;
         }
@@ -213,12 +216,44 @@ public class FollowUpPlanService extends BaseFollowUpService {
             return;
         }
 
+        Customer oldCustomer = customerMapper.selectByPrimaryKey(request.getCustomerId());
+        boolean enteringVisitStage = oldCustomer != null
+                && !StringUtils.equals(CustomerStageService.VISIT_STAGE_ID, oldCustomer.getStage())
+                && StringUtils.equals(CustomerStageService.VISIT_STAGE_ID, request.getNextStage());
+        boolean leavingVisitStage = oldCustomer != null
+                && StringUtils.equals(CustomerStageService.VISIT_STAGE_ID, oldCustomer.getStage())
+                && !StringUtils.equals(CustomerStageService.VISIT_STAGE_ID, request.getNextStage());
+
         Customer customer = new Customer();
         customer.setId(request.getCustomerId());
         customer.setStage(request.getNextStage());
         customer.setStageStatus(CustomerStageService.STATUS_NEW);
 
-        customerMapper.update(customer);
+        Integer updated = customerMapper.update(customer);
+        if (updated == null || updated <= 0) {
+            return;
+        }
+        if (enteringVisitStage) {
+            employeeStatEventRecordService.recordVisitCustomerPendingEvent(
+                    oldCustomer,
+                    followUpPlan.getCreateUser(),
+                    orgId,
+                    followUpPlan.getCreateTime(),
+                    followUpPlan.getId(),
+                    "follow_up_plan"
+            );
+            return;
+        }
+        if (leavingVisitStage) {
+            employeeStatEventRecordService.confirmVisitCustomerEvent(
+                    oldCustomer,
+                    followUpPlan.getCreateUser(),
+                    orgId,
+                    followUpPlan.getCreateTime(),
+                    followUpPlan.getId(),
+                    "follow_up_plan"
+            );
+        }
     }
 
 

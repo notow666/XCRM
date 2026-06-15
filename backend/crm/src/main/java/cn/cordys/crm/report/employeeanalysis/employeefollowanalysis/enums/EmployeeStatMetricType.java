@@ -14,7 +14,9 @@ public enum EmployeeStatMetricType {
     /** 联系动作 */
     CONTACT("CONTACT"),
     /** 新增微信好友动作 */
-    WECHAT_FRIEND("WECHAT_FRIEND");
+    WECHAT_FRIEND("WECHAT_FRIEND"),
+    /** 上门客户动作 */
+    VISIT_CUSTOMER("VISIT_CUSTOMER");
 
     private final String value;
 

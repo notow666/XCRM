@@ -56,6 +56,9 @@ public class EmployeeStatDay {
     @Schema(description = "新增微信好友数量")
     private Integer newWechatFriendCount;
 
+    @Schema(description = "上门客户数")
+    private Integer visitCustomerCount;
+
     @Schema(description = "创建人")
     private String createUser;
 

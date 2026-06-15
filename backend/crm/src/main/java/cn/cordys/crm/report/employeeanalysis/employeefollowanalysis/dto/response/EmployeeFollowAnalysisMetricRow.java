@@ -17,6 +17,7 @@ public class EmployeeFollowAnalysisMetricRow {
     private Integer inboundCustomerFlag;
     private Integer contactedCustomerFlag;
     private Integer newWechatFriendFlag;
+    private Integer visitCustomerFlag;
     private Integer dialCount;
     private Integer connectedCount;
     private Integer callOver1minCount;

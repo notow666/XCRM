@@ -89,6 +89,12 @@ public class EmployeeFollowAnalysisDrilldownService {
                             + ", dimensionKey=" + request.getDimensionKey(),
                     () -> employeeStatAnalysisMapper.listWechatFriendDrilldown(request, orgId, visibleOperatorUserIds)
             );
+            case VISIT_CUSTOMER -> logSqlQuery(
+                    "listVisitCustomerDrilldown",
+                    "orgId=" + orgId + ", metricType=" + request.getMetricType() + ", dimensionType=" + request.getDimensionType()
+                            + ", dimensionKey=" + request.getDimensionKey(),
+                    () -> employeeStatAnalysisMapper.listVisitCustomerDrilldown(request, orgId, visibleOperatorUserIds)
+            );
             case DIAL_COUNT, CONNECTED_COUNT, CALL_OVER_1MIN, CALL_OVER_3MIN ->
                     logSqlQuery(
                             "listCallDrilldown",

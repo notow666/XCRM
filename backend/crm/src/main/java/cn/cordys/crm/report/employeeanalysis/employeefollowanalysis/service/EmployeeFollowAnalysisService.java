@@ -131,6 +131,11 @@ public class EmployeeFollowAnalysisService {
                 "startTime=" + startTime + ", endTime=" + endTime + ", orgId=" + orgId,
                 () -> employeeStatAnalysisMapper.listWechatRows(startTime, endTime, orgId, visibleOwnerUserIds)
         ));
+        metricRows.addAll(logSqlQuery(
+                "listVisitRows",
+                "startTime=" + startTime + ", endTime=" + endTime + ", orgId=" + orgId,
+                () -> employeeStatAnalysisMapper.listVisitRows(startTime, endTime, orgId, visibleOwnerUserIds)
+        ));
         return metricRows;
     }
 
@@ -290,6 +295,7 @@ public class EmployeeFollowAnalysisService {
             accumulator.setInboundCustomerBaseCount(accumulator.getInboundCustomerBaseCount() + defaultInt(row.getInboundCustomerCount()));
             accumulator.setContactedCustomerBaseCount(accumulator.getContactedCustomerBaseCount() + defaultInt(row.getContactedCustomerCount()));
             accumulator.setWechatCustomerBaseCount(accumulator.getWechatCustomerBaseCount() + defaultInt(row.getNewWechatFriendCount()));
+            accumulator.setVisitCustomerBaseCount(accumulator.getVisitCustomerBaseCount() + defaultInt(row.getVisitCustomerCount()));
             accumulator.setDialCount(accumulator.getDialCount() + defaultInt(row.getDialCount()));
             accumulator.setConnectedCount(accumulator.getConnectedCount() + defaultInt(row.getConnectedCount()));
             accumulator.setCallOver1MinCount(accumulator.getCallOver1MinCount() + defaultInt(row.getCallOver1minCount()));
@@ -321,6 +327,7 @@ public class EmployeeFollowAnalysisService {
             accumulator.getInboundCustomers().addIfFlag(row.getCustomerId(), row.getInboundCustomerFlag());
             accumulator.getContactedCustomers().addIfFlag(row.getCustomerId(), row.getContactedCustomerFlag());
             accumulator.getWechatCustomers().addIfFlag(row.getCustomerId(), row.getNewWechatFriendFlag());
+            accumulator.getVisitCustomers().addIfFlag(row.getCustomerId(), row.getVisitCustomerFlag());
             accumulator.setDialCount(accumulator.getDialCount() + defaultInt(row.getDialCount()));
             accumulator.setConnectedCount(accumulator.getConnectedCount() + defaultInt(row.getConnectedCount()));
             accumulator.setCallOver1MinCount(accumulator.getCallOver1MinCount() + defaultInt(row.getCallOver1minCount()));
@@ -338,9 +345,11 @@ public class EmployeeFollowAnalysisService {
             targetItem.setInboundCustomerBaseCount(targetItem.getInboundCustomerBaseCount() + sourceItem.getInboundCustomerBaseCount());
             targetItem.setContactedCustomerBaseCount(targetItem.getContactedCustomerBaseCount() + sourceItem.getContactedCustomerBaseCount());
             targetItem.setWechatCustomerBaseCount(targetItem.getWechatCustomerBaseCount() + sourceItem.getWechatCustomerBaseCount());
+            targetItem.setVisitCustomerBaseCount(targetItem.getVisitCustomerBaseCount() + sourceItem.getVisitCustomerBaseCount());
             targetItem.getInboundCustomers().addAll(sourceItem.getInboundCustomers());
             targetItem.getContactedCustomers().addAll(sourceItem.getContactedCustomers());
             targetItem.getWechatCustomers().addAll(sourceItem.getWechatCustomers());
+            targetItem.getVisitCustomers().addAll(sourceItem.getVisitCustomers());
             targetItem.setDialCount(targetItem.getDialCount() + sourceItem.getDialCount());
             targetItem.setConnectedCount(targetItem.getConnectedCount() + sourceItem.getConnectedCount());
             targetItem.setCallOver1MinCount(targetItem.getCallOver1MinCount() + sourceItem.getCallOver1MinCount());
@@ -400,6 +409,7 @@ public class EmployeeFollowAnalysisService {
             item.setInboundCustomerCount(accumulator.getInboundCustomerBaseCount() + accumulator.getInboundCustomers().size());
             item.setContactedCustomerCount(accumulator.getContactedCustomerBaseCount() + accumulator.getContactedCustomers().size());
             item.setNewWechatFriendCount(accumulator.getWechatCustomerBaseCount() + accumulator.getWechatCustomers().size());
+            item.setVisitCustomerCount(accumulator.getVisitCustomerBaseCount() + accumulator.getVisitCustomers().size());
             item.setDialCount(accumulator.getDialCount());
             item.setConnectedCount(accumulator.getConnectedCount());
             item.setCallOver1MinCount(accumulator.getCallOver1MinCount());
@@ -603,9 +613,11 @@ public class EmployeeFollowAnalysisService {
         private final UniqueCustomerSet inboundCustomers = new UniqueCustomerSet();
         private final UniqueCustomerSet contactedCustomers = new UniqueCustomerSet();
         private final UniqueCustomerSet wechatCustomers = new UniqueCustomerSet();
+        private final UniqueCustomerSet visitCustomers = new UniqueCustomerSet();
         private int inboundCustomerBaseCount;
         private int contactedCustomerBaseCount;
         private int wechatCustomerBaseCount;
+        private int visitCustomerBaseCount;
         private int dialCount;
         private int connectedCount;
         private int callOver1MinCount;

@@ -6,6 +6,7 @@ public enum EmployeeFollowAnalysisMetricType {
     INBOUND_CUSTOMER("inboundCustomer"),
     CONTACTED_CUSTOMER("contactedCustomer"),
     NEW_WECHAT_FRIEND("newWechatFriends"),
+    VISIT_CUSTOMER("visitCustomer"),
     DIAL_COUNT("dialCount"),
     CONNECTED_COUNT("connectedCount"),
     CALL_OVER_1MIN("callOver1Min"),

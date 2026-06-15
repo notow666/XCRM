@@ -169,6 +169,96 @@ public class EmployeeStatEventRecordService {
     }
 
     /**
+     * 上门客户待确认事件。
+     * 客户进入固定上门阶段后先沉淀待确认事件，实际完成或离开上门阶段时再确认。
+     */
+    public void recordVisitCustomerPendingEvent(Customer customer, String operatorUserId, String organizationId,
+                                                Long eventTime, String bizTraceId, String sourceTableName) {
+        if (customer == null || StringUtils.isAnyBlank(customer.getId(), customer.getOwner(), operatorUserId, organizationId)) {
+            return;
+        }
+        try {
+            EmployeeStatEvent event = buildVisitCustomerEvent(
+                    customer,
+                    operatorUserId,
+                    organizationId,
+                    eventTime,
+                    bizTraceId,
+                    sourceTableName,
+                    EmployeeStatEventType.VISIT_CUSTOMER_PENDING,
+                    0
+            );
+            if (event == null) {
+                return;
+            }
+            saveEvents(List.of(event));
+        } catch (Exception e) {
+            log.error("员工分析上门客户待确认事件沉淀失败, organizationId={}, customerId={}, bizTraceId={}",
+                    organizationId, customer.getId(), bizTraceId, e);
+        }
+    }
+
+    /**
+     * 上门客户确认事件。
+     * 优先确认最近一条待确认事件；若不存在待确认且已确认过，则不重复补；若都没有，则补一条确认事件兼容历史链路。
+     */
+    public void confirmVisitCustomerEvent(Customer customer, String operatorUserId, String organizationId,
+                                          Long eventTime, String bizTraceId, String sourceTableName) {
+        if (customer == null || StringUtils.isAnyBlank(customer.getId(), customer.getOwner(), operatorUserId, organizationId)) {
+            return;
+        }
+        try {
+            long actualEventTime = defaultEventTime(eventTime);
+            List<EmployeeStatEvent> pendingEvents = employeeStatAnalysisMapper.listPendingVisitCustomerEvents(customer.getId(), organizationId);
+            if (CollectionUtils.isNotEmpty(pendingEvents)) {
+                EmployeeStatEvent pendingEvent = pendingEvents.get(0);
+                EmployeeStatEvent confirmedEvent = buildVisitCustomerEvent(
+                        customer,
+                        operatorUserId,
+                        organizationId,
+                        actualEventTime,
+                        bizTraceId,
+                        sourceTableName,
+                        EmployeeStatEventType.VISIT_CUSTOMER_CONFIRMED,
+                        1
+                );
+                if (confirmedEvent == null) {
+                    return;
+                }
+                confirmedEvent.setId(pendingEvent.getId());
+                int updated = employeeStatAnalysisMapper.confirmVisitCustomerEvent(
+                        confirmedEvent
+                );
+                if (updated <= 0) {
+                    log.error("员工分析上门客户确认失败，待确认事件更新未生效 customerId={}, eventId={}, bizTraceId={}",
+                            customer.getId(), pendingEvent.getId(), bizTraceId);
+                }
+                return;
+            }
+            int confirmedCount = employeeStatAnalysisMapper.countConfirmedVisitCustomerEvents(customer.getId(), organizationId);
+            if (confirmedCount > 0) {
+                return;
+            }
+            EmployeeStatEvent event = buildVisitCustomerEvent(
+                    customer,
+                    operatorUserId,
+                    organizationId,
+                    actualEventTime,
+                    bizTraceId,
+                    sourceTableName,
+                    EmployeeStatEventType.VISIT_CUSTOMER_CONFIRMED,
+                    1
+            );
+            if (event != null) {
+                saveEvents(List.of(event));
+            }
+        } catch (Exception e) {
+            log.error("员工分析上门客户确认失败, organizationId={}, customerId={}, bizTraceId={}",
+                    organizationId, customer.getId(), bizTraceId, e);
+        }
+    }
+
+    /**
      * 新增微信好友待确认事件。
      * 发起添加微信好友请求成功后先落一条待确认事件，等待成功回调再更新为已确认。
      */
@@ -564,6 +654,48 @@ public class EmployeeStatEventRecordService {
             event.setOperatorDeptId(operatorSnapshot.getDepartmentId());
             event.setOperatorDeptName(operatorSnapshot.getDepartmentName());
         }
+        return event;
+    }
+
+    /**
+     * 上门客户场景构建事件。
+     */
+    private EmployeeStatEvent buildVisitCustomerEvent(Customer customer, String operatorUserId, String organizationId,
+                                                      Long eventTime, String bizTraceId, String sourceTableName,
+                                                      EmployeeStatEventType eventType, Integer validFlag) {
+        Map<String, UserSnapshot> userSnapshotMap = loadUserSnapshotMap(organizationId, operatorUserId, List.of(customer));
+        UserSnapshot ownerSnapshot = userSnapshotMap.get(customer.getOwner());
+        UserSnapshot operatorSnapshot = userSnapshotMap.get(operatorUserId);
+        long actualEventTime = defaultEventTime(eventTime);
+
+        EmployeeStatEvent event = new EmployeeStatEvent();
+        event.setId(IDGenerator.nextStr());
+        event.setOrganizationId(organizationId);
+        event.setEventTime(actualEventTime);
+        event.setStatDate(toStatDate(actualEventTime));
+        event.setMetricType(EmployeeStatMetricType.VISIT_CUSTOMER.getValue());
+        event.setEventType(eventType.getValue());
+        event.setCustomerId(customer.getId());
+        event.setCustomerName(customer.getName());
+        event.setCustomerMobile(customer.getMobile());
+        event.setCustomerSource(loadSingleCustomerSource(customer.getId(), organizationId));
+        event.setOwnerUserId(customer.getOwner());
+        if (ownerSnapshot != null) {
+            event.setOwnerUserName(ownerSnapshot.getUserName());
+            event.setOwnerDeptId(ownerSnapshot.getDepartmentId());
+            event.setOwnerDeptName(ownerSnapshot.getDepartmentName());
+        }
+        event.setOperatorUserId(operatorUserId);
+        if (operatorSnapshot != null) {
+            event.setOperatorUserName(operatorSnapshot.getUserName());
+            event.setOperatorDeptId(operatorSnapshot.getDepartmentId());
+            event.setOperatorDeptName(operatorSnapshot.getDepartmentName());
+        }
+        event.setSourceTableName(sourceTableName);
+        event.setBizTraceId(bizTraceId);
+        event.setValidFlag(validFlag);
+        event.setCreateUser(operatorUserId);
+        event.setCreateTime(defaultCreateTime(null, actualEventTime));
         return event;
     }
 

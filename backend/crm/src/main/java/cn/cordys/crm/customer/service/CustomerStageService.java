@@ -36,6 +36,7 @@ import java.util.Map;
 public class CustomerStageService {
 
     public static final Long DEFAULT_POS = 1L;
+    public static final String VISIT_STAGE_ID = "stage_visit";
 
     /**
      * 阶段状态枚举

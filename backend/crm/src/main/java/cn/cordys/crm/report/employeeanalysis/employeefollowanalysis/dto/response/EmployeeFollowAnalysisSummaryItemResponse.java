@@ -10,6 +10,7 @@ public class EmployeeFollowAnalysisSummaryItemResponse {
     private Integer inboundCustomerCount;
     private Integer contactedCustomerCount;
     private Integer newWechatFriendCount;
+    private Integer visitCustomerCount;
     private Integer dialCount;
     private Integer connectedCount;
     private Integer callOver1MinCount;

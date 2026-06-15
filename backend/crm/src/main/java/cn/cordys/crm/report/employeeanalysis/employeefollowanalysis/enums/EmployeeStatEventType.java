@@ -26,7 +26,11 @@ public enum EmployeeStatEventType {
     /** 微信回调自动补跟进 */
     WECHAT_AUTO_FOLLOW("WECHAT_AUTO_FOLLOW"),
     /** 新增微信好友成功 */
-    WECHAT_FRIEND_SUCCESS("WECHAT_FRIEND_SUCCESS");
+    WECHAT_FRIEND_SUCCESS("WECHAT_FRIEND_SUCCESS"),
+    /** 上门客户待确认 */
+    VISIT_CUSTOMER_PENDING("VISIT_CUSTOMER_PENDING"),
+    /** 上门客户已确认 */
+    VISIT_CUSTOMER_CONFIRMED("VISIT_CUSTOMER_CONFIRMED");
 
     private final String value;
 

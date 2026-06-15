@@ -15,6 +15,7 @@ export interface EmployeeFollowAnalysisSummaryItem {
   inboundCustomerCount: number;
   contactedCustomerCount: number;
   newWechatFriendCount: number;
+  visitCustomerCount: number;
   dialCount: number;
   connectedCount: number;
   callOver1MinCount: number;

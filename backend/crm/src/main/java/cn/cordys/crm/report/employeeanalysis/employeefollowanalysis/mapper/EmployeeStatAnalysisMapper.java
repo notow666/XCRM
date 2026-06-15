@@ -38,6 +38,11 @@ public interface EmployeeStatAnalysisMapper {
                                                          @Param("orgId") String orgId,
                                                          @Param("ownerUserIds") List<String> ownerUserIds);
 
+    List<EmployeeFollowAnalysisMetricRow> listVisitRows(@Param("startTime") Long startTime,
+                                                        @Param("endTime") Long endTime,
+                                                        @Param("orgId") String orgId,
+                                                        @Param("ownerUserIds") List<String> ownerUserIds);
+
     List<EmployeeFollowAnalysisMetricRow> listCallRows(@Param("startTime") Long startTime,
                                                        @Param("endTime") Long endTime,
                                                        @Param("orgId") String orgId,
@@ -60,6 +65,10 @@ public interface EmployeeStatAnalysisMapper {
                                                                                 @Param("orgId") String orgId,
                                                                                 @Param("ownerUserIds") List<String> ownerUserIds);
 
+    List<EmployeeFollowAnalysisDrilldownItemResponse> listVisitCustomerDrilldown(@Param("request") EmployeeFollowAnalysisDrilldownRequest request,
+                                                                                 @Param("orgId") String orgId,
+                                                                                 @Param("ownerUserIds") List<String> ownerUserIds);
+
     List<EmployeeFollowAnalysisDrilldownItemResponse> listCallDrilldown(@Param("request") EmployeeFollowAnalysisDrilldownRequest request,
                                                                         @Param("orgId") String orgId,
                                                                         @Param("ownerUserIds") List<String> ownerUserIds);
@@ -67,8 +76,16 @@ public interface EmployeeStatAnalysisMapper {
     List<EmployeeStatEvent> listPendingWechatFriendEvents(@Param("friendPhone") String friendPhone,
                                                           @Param("operatorUserIds") List<String> operatorUserIds);
 
+    List<EmployeeStatEvent> listPendingVisitCustomerEvents(@Param("customerId") String customerId,
+                                                           @Param("orgId") String orgId);
+
+    int countConfirmedVisitCustomerEvents(@Param("customerId") String customerId,
+                                          @Param("orgId") String orgId);
+
     int confirmWechatFriendSuccessEvent(@Param("id") String id,
                                         @Param("esId") String esId,
                                         @Param("eventTime") Long eventTime,
                                         @Param("statDate") String statDate);
+
+    int confirmVisitCustomerEvent(EmployeeStatEvent event);
 }

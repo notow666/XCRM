@@ -18,7 +18,8 @@
                call_duration_sec as callDurationSec,
                call_over_1min_count as callOver1minCount,
                call_over_3min_count as callOver3minCount,
-               new_wechat_friend_count as newWechatFriendCount
+               new_wechat_friend_count as newWechatFriendCount,
+               visit_customer_count as visitCustomerCount
         from report_employee_stat_day
         where stat_date between #{startDate} and #{endDate}
           and organization_id = #{orgId}
@@ -44,7 +45,8 @@
                0 as callDurationSec,
                0 as callOver1minCount,
                0 as callOver3minCount,
-               count(distinct case when e.metric_type = 'WECHAT_FRIEND' and ifnull(e.valid_flag, 1) = 1 then e.customer_id end) as newWechatFriendCount
+               count(distinct case when e.metric_type = 'WECHAT_FRIEND' and ifnull(e.valid_flag, 1) = 1 then e.customer_id end) as newWechatFriendCount,
+               count(distinct case when e.metric_type = 'VISIT_CUSTOMER' and ifnull(e.valid_flag, 1) = 1 then e.customer_id end) as visitCustomerCount
         from report_employee_stat_event e
         where e.stat_date = #{statDate}
           and e.organization_id is not null
@@ -62,7 +64,8 @@
                case when ifnull(cra.is_connected, 0) = 1 then 1 else 0 end as connectedCount,
                case when ifnull(cra.is_connected, 0) = 1 then ifnull(cra.duration, 0) else 0 end as callDurationSec,
                case when ifnull(cra.is_connected, 0) = 1 and ifnull(cra.duration, 0) &gt;= 60 then 1 else 0 end as callOver1minCount,
-               case when ifnull(cra.is_connected, 0) = 1 and ifnull(cra.duration, 0) &gt;= 180 then 1 else 0 end as callOver3minCount
+               case when ifnull(cra.is_connected, 0) = 1 and ifnull(cra.duration, 0) &gt;= 180 then 1 else 0 end as callOver3minCount,
+               0 as visitCustomerFlag
         from mmba_call_record_audit cra
         where cra.begin_timestamp between #{startTime} and #{endTime}
           and cra.direction = 0
@@ -79,6 +82,7 @@
                1 as inboundCustomerFlag,
                0 as contactedCustomerFlag,
                0 as newWechatFriendFlag,
+               0 as visitCustomerFlag,
                0 as dialCount,
                0 as connectedCount,
                0 as callOver1minCount,
@@ -107,6 +111,7 @@
                0 as inboundCustomerFlag,
                1 as contactedCustomerFlag,
                0 as newWechatFriendFlag,
+               0 as visitCustomerFlag,
                0 as dialCount,
                0 as connectedCount,
                0 as callOver1minCount,
@@ -135,6 +140,7 @@
                0 as inboundCustomerFlag,
                0 as contactedCustomerFlag,
                1 as newWechatFriendFlag,
+               0 as visitCustomerFlag,
                0 as dialCount,
                0 as connectedCount,
                0 as callOver1minCount,
@@ -156,6 +162,36 @@
                  e.owner_user_id
     </select>
 
+    <select id="listVisitRows" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisMetricRow">
+        select date_format(from_unixtime(e.event_time / 1000), '%Y-%m-%d') as statDate,
+               e.customer_id as customerId,
+               max(e.customer_source) as customerSource,
+               e.owner_user_id as operatorUserId,
+               0 as inboundCustomerFlag,
+               0 as contactedCustomerFlag,
+               0 as newWechatFriendFlag,
+               1 as visitCustomerFlag,
+               0 as dialCount,
+               0 as connectedCount,
+               0 as callOver1minCount,
+               0 as callOver3minCount,
+               0 as callDurationSec
+        from report_employee_stat_event e
+        where e.metric_type = 'VISIT_CUSTOMER'
+          and ifnull(e.valid_flag, 1) = 1
+          and e.event_time between #{startTime} and #{endTime}
+          and e.organization_id = #{orgId}
+          <if test="ownerUserIds != null">
+              and e.owner_user_id in
+              <foreach collection="ownerUserIds" item="ownerUserId" open="(" separator="," close=")">
+                  #{ownerUserId}
+              </foreach>
+          </if>
+        group by date_format(from_unixtime(e.event_time / 1000), '%Y-%m-%d'),
+                 e.customer_id,
+                 e.owner_user_id
+    </select>
+
     <select id="listCallRows" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisMetricRow">
         select date_format(from_unixtime(cra.begin_timestamp / 1000), '%Y-%m-%d') as statDate,
                cra.customer_id as customerId,
@@ -163,6 +199,7 @@
                0 as inboundCustomerFlag,
                0 as contactedCustomerFlag,
                0 as newWechatFriendFlag,
+               0 as visitCustomerFlag,
                1 as dialCount,
                case when ifnull(cra.is_connected, 0) = 1 then 1 else 0 end as connectedCount,
                case when ifnull(cra.is_connected, 0) = 1 and ifnull(cra.duration, 0) &gt;= 60 then 1 else 0 end as callOver1minCount,
@@ -332,6 +369,48 @@
         order by max(e.event_time) desc, max(e.biz_trace_id) desc
     </select>
 
+    <select id="listVisitCustomerDrilldown" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisDrilldownItemResponse">
+        select max(e.biz_trace_id) as auditId,
+               e.customer_id as customerId,
+               max(e.customer_name) as customerName,
+               max(e.customer_mobile) as mobile,
+               max(e.owner_user_name) as ownerName,
+               max(e.owner_dept_name) as departmentName,
+               max(e.customer_source) as customerSource,
+               max(e.event_time) as eventTime
+        from report_employee_stat_event e
+        where e.metric_type = 'VISIT_CUSTOMER'
+          and ifnull(e.valid_flag, 1) = 1
+          and e.organization_id = #{orgId}
+          and e.event_time between #{request.startTime} and #{request.endTime}
+          <if test="ownerUserIds != null">
+              and e.owner_user_id in
+              <foreach collection="ownerUserIds" item="ownerUserId" open="(" separator="," close=")">
+                  #{ownerUserId}
+              </foreach>
+          </if>
+          <if test="request.dimensionType == 'employeeName'">
+              and e.owner_user_id = #{request.dimensionKey}
+          </if>
+          <if test="request.dimensionType == 'employeeDept'">
+              and e.owner_dept_id = #{request.dimensionKey}
+          </if>
+          <if test="request.dimensionType == 'customerSource' and request.dimensionKey == '__EMPTY__'">
+              and ifnull(e.customer_source, '') = ''
+          </if>
+          <if test="request.dimensionType == 'customerSource' and request.dimensionKey != '__EMPTY__'">
+              and ifnull(e.customer_source, '') = #{request.dimensionKey}
+          </if>
+          <if test="request.dimensionType == 'statDay'">
+              and e.stat_date = #{request.dimensionKey}
+          </if>
+          <if test="request.dimensionType == 'statMonth'">
+              and substring(e.stat_date, 1, 7) = #{request.dimensionKey}
+          </if>
+        group by e.customer_id
+        order by max(e.event_time) desc, max(e.biz_trace_id) desc
+    </select>
+
     <select id="listCallDrilldown" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.response.EmployeeFollowAnalysisDrilldownItemResponse">
         select cra.es_id as auditId,
                cra.customer_id as customerId,
@@ -404,12 +483,57 @@
         limit 2
     </select>
 
+    <select id="listPendingVisitCustomerEvents" resultType="cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.domain.EmployeeStatEvent">
+        select id,
+               customer_id as customerId,
+               event_time as eventTime
+        from report_employee_stat_event
+        where metric_type = 'VISIT_CUSTOMER'
+          and valid_flag = 0
+          and organization_id = #{orgId}
+          and customer_id = #{customerId}
+        order by event_time desc, create_time desc
+        limit 2
+    </select>
+
+    <select id="countConfirmedVisitCustomerEvents" resultType="java.lang.Integer">
+        select count(1)
+        from report_employee_stat_event
+        where metric_type = 'VISIT_CUSTOMER'
+          and ifnull(valid_flag, 1) = 1
+          and organization_id = #{orgId}
+          and customer_id = #{customerId}
+    </select>
+
     <update id="confirmWechatFriendSuccessEvent">
         update report_employee_stat_event
         set valid_flag = 1,
             event_time = #{eventTime},
             stat_date = #{statDate},
             biz_trace_id = #{esId}
+        where id = #{id}
+          and valid_flag = 0
+    </update>
+
+    <update id="confirmVisitCustomerEvent">
+        update report_employee_stat_event
+        set valid_flag = 1,
+            event_type = #{eventType},
+            event_time = #{eventTime},
+            stat_date = #{statDate},
+            customer_name = #{customerName},
+            customer_mobile = #{customerMobile},
+            customer_source = #{customerSource},
+            owner_user_id = #{ownerUserId},
+            owner_user_name = #{ownerUserName},
+            owner_dept_id = #{ownerDeptId},
+            owner_dept_name = #{ownerDeptName},
+            operator_user_id = #{operatorUserId},
+            operator_user_name = #{operatorUserName},
+            operator_dept_id = #{operatorDeptId},
+            operator_dept_name = #{operatorDeptName},
+            biz_trace_id = #{bizTraceId},
+            source_table_name = #{sourceTableName}
         where id = #{id}
           and valid_flag = 0
     </update>

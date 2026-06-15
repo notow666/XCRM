@@ -133,8 +133,9 @@ public class FollowUpRecordService extends BaseFollowUpService {
         }
         String followResult = request.getFollowResult();
 
+        Customer customer = null;
         if (StringUtils.isNotBlank(request.getCustomerId())) {
-            Customer customer = customerMapper.selectByPrimaryKey(request.getCustomerId());
+            customer = customerMapper.selectByPrimaryKey(request.getCustomerId());
             if (customer != null) {
                 followUpRecord.setStage(customer.getStage());
                 followUpRecord.setStageStatus(followResult);
@@ -150,7 +151,21 @@ public class FollowUpRecordService extends BaseFollowUpService {
 
         handleFollowTimeAndFollower(request.getCustomerId(), request.getOpportunityId(), request.getClueId(), request.getFollowTime(), request.getOwner());
 
-        handleCustomerStageStatus(request, orgId);
+        Integer stageStatusUpdated = handleCustomerStageStatus(request, orgId);
+        if (customer != null
+                && StringUtils.equals(CustomerStageService.VISIT_STAGE_ID, customer.getStage())
+                && CustomerStageService.STATUS_COMPLETED.equals(followResult)
+                && stageStatusUpdated != null
+                && stageStatusUpdated > 0) {
+            employeeStatEventRecordService.confirmVisitCustomerEvent(
+                    customer,
+                    userId,
+                    orgId,
+                    followUpRecord.getCreateTime(),
+                    followUpRecord.getId(),
+                    "follow_up_record"
+            );
+        }
         sendCustomerFollowResultNotice(followUpRecord, orgId);
         //员工事件服务
         employeeStatEventRecordService.recordCustomerFollowEvent(followUpRecord, orgId, eventType);
@@ -184,16 +199,16 @@ public class FollowUpRecordService extends BaseFollowUpService {
 
 
 
-    private void handleCustomerStageStatus(FollowUpRecordAddRequest request, String orgId) {
+    private Integer handleCustomerStageStatus(FollowUpRecordAddRequest request, String orgId) {
         if (StringUtils.isBlank(request.getCustomerId())) {
-            return;
+            return 0;
         }
 
         String followResult = request.getFollowResult();
 
 
         if (StringUtils.isBlank(followResult)) {
-            return;
+            return 0;
         }
         Customer customer = new Customer();
         customer.setId(request.getCustomerId());
@@ -208,7 +223,7 @@ public class FollowUpRecordService extends BaseFollowUpService {
             }
         }
 
-        customerMapper.update(customer);
+        return customerMapper.update(customer);
     }
 
 

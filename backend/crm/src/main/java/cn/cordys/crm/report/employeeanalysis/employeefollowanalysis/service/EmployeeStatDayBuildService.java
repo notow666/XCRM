@@ -83,6 +83,7 @@ public class EmployeeStatDayBuildService {
             item.setCallOver1minCount(defaultInt(row.getCallOver1minCount()));
             item.setCallOver3minCount(defaultInt(row.getCallOver3minCount()));
             item.setNewWechatFriendCount(defaultInt(row.getNewWechatFriendCount()));
+            item.setVisitCustomerCount(defaultInt(row.getVisitCustomerCount()));
             item.setCreateUser(operatorUserId);
             item.setCreateTime(now);
             insertList.add(item);
@@ -132,6 +133,7 @@ public class EmployeeStatDayBuildService {
                 target.setCallOver1minCount(defaultInt(target.getCallOver1minCount()) + defaultInt(row.getCallOver1minCount()));
                 target.setCallOver3minCount(defaultInt(target.getCallOver3minCount()) + defaultInt(row.getCallOver3minCount()));
                 target.setNewWechatFriendCount(defaultInt(target.getNewWechatFriendCount()) + defaultInt(row.getNewWechatFriendCount()));
+                target.setVisitCustomerCount(defaultInt(target.getVisitCustomerCount()) + defaultInt(row.getVisitCustomerCount()));
             }
         }
         return new ArrayList<>(resultMap.values());
@@ -153,6 +155,7 @@ public class EmployeeStatDayBuildService {
         target.setCallOver1minCount(defaultInt(source.getCallOver1minCount()));
         target.setCallOver3minCount(defaultInt(source.getCallOver3minCount()));
         target.setNewWechatFriendCount(defaultInt(source.getNewWechatFriendCount()));
+        target.setVisitCustomerCount(defaultInt(source.getVisitCustomerCount()));
         return target;
     }
 

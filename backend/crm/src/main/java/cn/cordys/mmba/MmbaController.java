@@ -1,11 +1,13 @@
 package cn.cordys.mmba;
 
+import cn.cordys.common.constants.InternalUser;
 import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.dto.OptionDTO;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.pager.PagerWithOption;
 import cn.cordys.common.util.Translator;
 import cn.cordys.context.OrganizationContext;
+import cn.cordys.context.TenantContext;
 import cn.cordys.mmba.domain.MmbaCallRecordAudit;
 import cn.cordys.mmba.domain.MmbaCommandResult;
 import cn.cordys.mmba.domain.MmbaDevice;
@@ -16,24 +18,27 @@ import cn.cordys.mmba.domain.MmbaWxChatAudit;
 import cn.cordys.mmba.domain.MmbaWxFriendChangeAudit;
 import cn.cordys.mmba.domain.MmbaWxFriendListAudit;
 import cn.cordys.mmba.domain.MmbaWxLoginAudit;
+import cn.cordys.mmba.dto.MmbaMgmtSsoRedirectVO;
 import cn.cordys.mmba.dto.request.MmbaCallRecordAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaCommandResultPageRequest;
 import cn.cordys.mmba.dto.request.MmbaDeviceInfoAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaDevicePageRequest;
 import cn.cordys.mmba.dto.request.MmbaDeviceSaveRequest;
-import cn.cordys.mmba.dto.response.MmbaDeviceImportResponse;
 import cn.cordys.mmba.dto.request.MmbaSmsRecordAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxAccountAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxChatAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxFriendChangeAuditPageRequest;
+import cn.cordys.mmba.dto.request.MmbaWxFriendExportRequest;
 import cn.cordys.mmba.dto.request.MmbaWxFriendListAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxLoginAuditPageRequest;
-import cn.cordys.mmba.dto.MmbaMgmtSsoRedirectVO;
+import cn.cordys.mmba.dto.response.MmbaDeviceImportResponse;
+import cn.cordys.mmba.dto.response.MmbaWxFriendExportResponse;
 import cn.cordys.mmba.service.MmbaDeviceImportService;
 import cn.cordys.mmba.service.MmbaDeviceService;
 import cn.cordys.mmba.service.MmbaFacadeService;
 import cn.cordys.mmba.service.MmbaMgmtSsoService;
 import cn.cordys.mmba.service.MmbaQueryService;
+import cn.cordys.mmba.service.MmbaWxFriendExportService;
 import cn.cordys.security.SessionUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,6 +46,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -74,6 +80,8 @@ public class MmbaController {
     private MmbaDeviceImportService mmbaDeviceImportService;
     @Resource
     private MmbaMgmtSsoService mmbaMgmtSsoService;
+    @Resource
+    private MmbaWxFriendExportService mmbaWxFriendExportService;
 
     /**
      * 指掌易管理平台第三方 SSO：返回需整页打开的跳转 URL（含 ticket）。
@@ -155,6 +163,22 @@ public class MmbaController {
     @Operation(summary = "微信好友列表查询")
     public JsonNode queryWxFriendList(@RequestBody JsonNode request) {
         return mmbaFacadeService.queryWxFriendList(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
+    /**
+     * 管理员异步导出微信好友列表到服务器指定目录。
+     */
+    @PostMapping("/wx/friend/list/admin/export")
+    @Operation(summary = "管理员微信好友列表导出")
+    public MmbaWxFriendExportResponse exportWxFriendListForAdmin(@Valid @RequestBody MmbaWxFriendExportRequest request) {
+        String userId = SessionUtils.getUserId();
+        if (!StringUtils.equals(userId, InternalUser.ADMIN.getValue())) {
+            throw new GenericException("仅 admin 可以执行微信好友列表导出");
+        }
+        String tenantId = TenantContext.requireTenantId();
+        MmbaWxFriendExportResponse response = mmbaWxFriendExportService.prepareExport(request);
+        mmbaWxFriendExportService.exportAsync(response, tenantId, userId, OrganizationContext.getOrganizationId());
+        return response;
     }
 
     /**
