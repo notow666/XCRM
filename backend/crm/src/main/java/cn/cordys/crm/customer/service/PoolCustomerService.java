@@ -353,7 +353,7 @@ public class PoolCustomerService {
     public boolean preCheck4ClueMoveToPool(String phone, String targetPoolId, String currentOrgId) {
         CustomerPool targetPool = poolMapper.selectByPrimaryKey(targetPoolId);
         if (targetPool == null || !Boolean.TRUE.equals(targetPool.getEnable())) {
-            log.warn("线索池自动分发公海池预检查失败：{}", Translator.get("customer_pool_not_exist"));
+            log.warn("线索池自动分发公海池预检查失败：{}, phone=[{}]", Translator.get("customer_pool_not_exist"), phone);
             return false;
         }
 
@@ -362,7 +362,7 @@ public class PoolCustomerService {
                 conflicts.stream()
                         .noneMatch(m -> phone.equals(m.getMobile()) && !"NONE".equals(m.getConflictType()));
         if(!match) {
-            log.warn("线索池自动分发公海池预检查失败：{}", Translator.get("phone.exist"));
+            log.warn("线索池自动分发公海池预检查失败：{}, phone=[{}]", Translator.get("phone.exist"), phone);
         }
         return match;
     }

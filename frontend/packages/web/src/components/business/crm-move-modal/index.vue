@@ -171,16 +171,22 @@
           Message.warning(t('customer.moveCountInvalid', { max }));
           return;
         }
-        const { success, fail } = await batchMoveCustomerByCondition({
+        const data = await batchMoveCustomerByCondition({
           ...props.queryParams,
           targetPoolId: props.poolId,
           reasonId: form.value.reason,
           moveCount: count,
         });
-        successCount.value = success;
-        failCount.value = fail;
-        showToPoolResultModel.value = true;
-      } else if (isBatch) {
+        if (!data?.accepted) {
+          Message.warning(data?.message || t('common.operationFailed'));
+          return;
+        }
+        showModal.value = false;
+        Message.success(data.message || t('customer.batchToPoolTaskSubmitted'));
+        emit('refresh');
+        return;
+      }
+      if (isBatch) {
         const { success, fail } = await batchMoveApiMap[props.reasonKey]({
           ids: props.sourceId,
           poolId: props.poolId,

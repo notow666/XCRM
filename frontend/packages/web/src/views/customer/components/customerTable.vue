@@ -33,6 +33,12 @@
         >
           {{ t('customer.new') }}
         </n-button>
+        <CrmImportButton
+          v-if="hasAnyPermission(['CUSTOMER_MANAGEMENT:IMPORT'])"
+          :api-type="FormDesignKeyEnum.CUSTOMER"
+          :title="t('module.customerManagement')"
+          @import-success="() => searchData()"
+        />
         <n-button
           v-if="
             activeTab !== CustomerSearchTypeEnum.CUSTOMER_COLLABORATION &&
@@ -61,12 +67,20 @@
         >
           {{ t('customer.moveToOpenSeaByCondition') }}
         </n-button>
-        <CrmImportButton
-          v-if="hasAnyPermission(['CUSTOMER_MANAGEMENT:IMPORT'])"
-          :api-type="FormDesignKeyEnum.CUSTOMER"
-          :title="t('module.customerManagement')"
-          @import-success="() => searchData()"
-        />
+        <n-button
+          v-if="
+            activeTab !== CustomerSearchTypeEnum.CUSTOMER_COLLABORATION &&
+            hasAnyPermission(['CUSTOMER_MANAGEMENT:UPDATE']) &&
+            !props.readonly
+          "
+          type="primary"
+          ghost
+          class="n-btn-outline-primary"
+          :disabled="(propsRes.crmPagination?.itemCount || 0) === 0"
+          @click="handleEditByConditionClick"
+        >
+          {{ t('customer.editByCondition') }}
+        </n-button>
         <n-button
           v-if="
             hasAnyPermission(['CUSTOMER_MANAGEMENT:DELETE']) &&
@@ -165,7 +179,7 @@
         <CrmList
           v-if="propsRes.data.length"
           ref="crmListRef"
-          :key="String(activeTab ?? '')"
+          :key="`${String(activeTab ?? '')}-${customerListRenderKey}`"
           v-model:data="propsRes.data"
           key-field="id"
           mode="remote"
@@ -292,6 +306,20 @@
     :query-params="transferByConditionQueryParams"
     @success="handleTransferByConditionSuccess"
   />
+  <CrmCustomerToPoolByConditionModal
+    v-model:show="showToPoolByConditionModal"
+    :total="propsRes.crmPagination?.itemCount || 0"
+    :query-params="transferByConditionQueryParams"
+    @success="handleToPoolByConditionSuccess"
+  />
+  <CrmCustomerBatchEditByConditionModal
+    v-model:show="showEditByConditionModal"
+    :total="propsRes.crmPagination?.itemCount || 0"
+    :query-params="transferByConditionQueryParams"
+    :field-list="fieldList"
+    :form-key="FormDesignKeyEnum.CUSTOMER"
+    @success="handleEditByConditionSuccess"
+  />
   <customerOverviewDrawer
     v-model:show="showOverviewDrawer"
     :source-id="activeSourceId"
@@ -339,21 +367,11 @@
     :source-id="moveIds"
     :name="initialSourceName"
     :pool-id="selectedPoolId"
-    :by-condition="moveByCondition"
-    :query-params="transferByConditionQueryParams"
-    :total="propsRes.crmPagination?.itemCount || 0"
     type="warning"
     @refresh="handleMoveRefresh"
   />
   <CrmSelectPoolModal v-model:show="showSelectPoolModal" :name="initialSourceName" @confirm="handlePoolSelected" />
 
-  <CrmBatchEditModal
-    v-model:visible="showEditModal"
-    v-model:field-list="fieldList"
-    :ids="checkedRowKeys"
-    :form-key="FormDesignKeyEnum.CUSTOMER"
-    @refresh="() => (tableRefreshId += 1)"
-  />
   <customerSmsModal
     v-model:show="showReachModal"
     :mode="reachModal.mode"
@@ -370,6 +388,10 @@
   import { DataTableRowKey, NButton, NCheckbox, NDropdown, NIcon, NSpin, useMessage } from 'naive-ui';
   import { LogoWechat } from '@vicons/ionicons5';
 
+  import {
+    CUSTOMER_BATCH_BY_CONDITION_DOM_EVENT,
+    type CustomerBatchByConditionSseDetail,
+  } from '@lib/shared/constants/sseEventType';
   import { CustomerSearchTypeEnum } from '@lib/shared/enums/customerEnum';
   import { FieldTypeEnum, FormDesignKeyEnum, FormLinkScenarioEnum } from '@lib/shared/enums/formDesignEnum';
   import { ReasonTypeEnum } from '@lib/shared/enums/moduleEnum';
@@ -388,10 +410,11 @@
   import CrmTable from '@/components/pure/crm-table/index.vue';
   import { BatchActionConfig, type CrmDataTableColumn } from '@/components/pure/crm-table/type';
   import CrmTableButton from '@/components/pure/crm-table-button/index.vue';
-  import CrmBatchEditModal from '@/components/business/crm-batch-edit-modal/index.vue';
+  import CrmCustomerBatchEditByConditionModal from '@/components/business/crm-customer-batch-edit-by-condition-modal/index.vue';
   import CrmCustomerListDynamicTh from '@/components/business/crm-customer-list-dynamic-th/index.vue';
   import CrmCustomerListItem from '@/components/business/crm-customer-list-item/index.vue';
   import CrmCustomerListReach from '@/components/business/crm-customer-list-reach/index.vue';
+  import CrmCustomerToPoolByConditionModal from '@/components/business/crm-customer-to-pool-by-condition-modal/index.vue';
   import CrmCustomerTransferByConditionModal from '@/components/business/crm-customer-transfer-by-condition-modal/index.vue';
   import CrmFormCreateDrawer from '@/components/business/crm-form-create-drawer/index.vue';
   import CrmImportButton from '@/components/business/crm-import-button/index.vue';
@@ -525,11 +548,6 @@
         key: 'exportChecked',
         permission: ['CUSTOMER_MANAGEMENT:EXPORT'],
       },
-      {
-        label: t('common.batchEdit'),
-        key: 'batchEdit',
-        permission: ['CUSTOMER_MANAGEMENT:UPDATE'],
-      },
     ],
   }));
 
@@ -551,14 +569,17 @@
       negativeText: t('common.cancel'),
       onPositiveClick: async () => {
         try {
-          await batchDeleteCustomerByCondition({
+          const data = await batchDeleteCustomerByCondition({
             // eslint-disable-next-line no-use-before-define
             ...tableQueryParams.value,
             viewId: activeTab.value as CustomerSearchTypeEnum,
           });
+          if (!data?.accepted) {
+            Message.warning(data?.message || t('common.operationFailed'));
+            return;
+          }
           checkedRowKeys.value = [];
-          tableRefreshId.value += 1;
-          Message.success(t('common.deleteSuccess'));
+          Message.success(data.message || t('customer.batchDeleteTaskSubmitted'));
         } catch (error) {
           // eslint-disable-next-line no-console
           console.error(error);
@@ -569,8 +590,10 @@
 
   const showMoveModal = ref(false);
   const moveIds = ref<(string | number) | (string | number)[]>('');
-  const moveByCondition = ref(false);
   const showSelectPoolModal = ref(false);
+  const showToPoolByConditionModal = ref(false);
+  const showEditByConditionModal = ref(false);
+  const customerListRenderKey = ref(0);
   const selectedPoolId = ref<string>('');
 
   function handleMoveToOpenSea(row?: any) {
@@ -585,11 +608,6 @@
     showMoveModal.value = true;
   }
 
-  const showEditModal = ref(false);
-  function handleBatchEdit() {
-    showEditModal.value = true;
-  }
-
   function handleRowKeyChange(keys: DataTableRowKey[], _rows: InternalRowData[]) {
     selectedRows.value = _rows;
   }
@@ -600,12 +618,6 @@
   const isExportAll = ref(false);
   function handleBatchAction(item: ActionsItem) {
     switch (item.key) {
-      case 'batchEdit':
-        handleBatchEdit();
-        break;
-      case 'moveToOpenSea':
-        handleMoveToOpenSea();
-        break;
       case 'exportChecked':
         isExportAll.value = false;
         showExportModal.value = true;
@@ -1368,7 +1380,63 @@
 
   function handleTransferByConditionSuccess() {
     checkedRowKeys.value = [];
-    tableRefreshId.value += 1;
+  }
+
+  function handleToPoolByConditionSuccess() {
+    checkedRowKeys.value = [];
+  }
+
+  function handleEditByConditionClick() {
+    const total = propsRes.value.crmPagination?.itemCount || 0;
+    if (!total) {
+      Message.warning(t('customer.batchDeleteByConditionEmptyTip'));
+      return;
+    }
+    showEditByConditionModal.value = true;
+  }
+
+  function handleEditByConditionSuccess() {
+    checkedRowKeys.value = [];
+  }
+
+  function waitForListLoadIdle(timeoutMs = 15000): Promise<void> {
+    return new Promise((resolve) => {
+      const start = Date.now();
+      const check = () => {
+        if (!propsRes.value.loading || Date.now() - start >= timeoutMs) {
+          resolve();
+          return;
+        }
+        setTimeout(check, 50);
+      };
+      check();
+    });
+  }
+
+  async function refreshCustomerListAfterBatchByCondition() {
+    await waitForListLoadIdle();
+    checkedRowKeys.value = [];
+    if (useListLayout.value) {
+      resetNavigationBuffer();
+      customerListRenderKey.value += 1;
+      beginListLoad('replace');
+      propsRes.value.data = [];
+    }
+    setLoadListParams({ keyword: keyword.value, viewId: activeTab.value });
+    await loadList(false);
+    await waitForListLoadIdle();
+    crmTableRef.value?.scrollTo({ top: 0 });
+  }
+
+  function onCustomerBatchByConditionDone(event: Event) {
+    if (props.readonly || route.name !== CustomerRouteEnum.CUSTOMER_INDEX) {
+      return;
+    }
+    const { detail } = event as CustomEvent<CustomerBatchByConditionSseDetail>;
+    if (detail?.viewId && String(detail.viewId) !== String(activeTab.value)) {
+      return;
+    }
+    refreshCustomerListAfterBatchByCondition().catch(() => undefined);
   }
 
   const advancedNumberFilterFields = new Set(['callStatus', 'wechatFriendStatus']);
@@ -1938,14 +2006,11 @@
       Message.warning(t('customer.batchDeleteByConditionEmptyTip'));
       return;
     }
-    moveByCondition.value = true;
-    initialSourceName.value = '';
-    moveIds.value = [];
-    showSelectPoolModal.value = true;
+     showToPoolByConditionModal.value = true;
   }
 
   function handleMoveRefresh() {
-    if (moveByCondition.value || Array.isArray(moveIds.value)) {
+    if (Array.isArray(moveIds.value)) {
       checkedRowKeys.value = [];
       tableRefreshId.value += 1;
       return;
@@ -1972,9 +2037,11 @@
       activeSourceId.value = route.query.id as string;
       showOverviewDrawer.value = true;
     }
+    window.addEventListener(CUSTOMER_BATCH_BY_CONDITION_DOM_EVENT, onCustomerBatchByConditionDone);
   });
 
   onBeforeUnmount(() => {
+    window.removeEventListener(CUSTOMER_BATCH_BY_CONDITION_DOM_EVENT, onCustomerBatchByConditionDone);
     sessionStorage.removeItem(STORAGE_VIEW_CHART_KEY);
   });
 </script>

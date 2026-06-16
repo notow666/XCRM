@@ -107,7 +107,6 @@ import java.util.stream.Stream;
  * @date 2025-02-08 16:24:22
  */
 @Service
-@Transactional(rollbackFor = Exception.class)
 @Slf4j
 public class ClueService {
 
@@ -414,165 +413,7 @@ public class ClueService {
         return clueGetResponse;
     }
 
-//    public List<ClueGetResponse> get(List<Clue> clues) {
-//        if (CollectionUtils.isEmpty(clues)) {
-//            return new ArrayList<>();
-//        }
-//
-//        // 批量转换基础对象
-//        List<ClueGetResponse> clueGetResponses = new ArrayList<>();
-//        Map<String, Clue> clueMap = new HashMap<>();
-//        for (Clue clue : clues) {
-//            if (clue == null) {
-//                continue;
-//            }
-//            ClueGetResponse clueGetResponse = BeanUtils.copyBean(new ClueGetResponse(), clue);
-//            clueGetResponse = baseService.setCreateUpdateOwnerUserName(clueGetResponse);
-//            clueGetResponses.add(clueGetResponse);
-//            clueMap.put(clue.getId(), clue);
-//        }
-//
-//        if (CollectionUtils.isEmpty(clueGetResponses)) {
-//            return new ArrayList<>();
-//        }
-//
-//        // 批量获取所有线索的模块字段
-//        List<String> clueIds = clues.stream()
-//                .filter(Objects::nonNull)
-//                .map(Clue::getId)
-//                .collect(Collectors.toList());
-//        List<BaseModuleFieldValue> allClueFields = clueFieldService.getModuleFieldValuesByResourceIds(clueIds);
-//
-//        // 按线索ID分组
-//        Map<String, List<BaseModuleFieldValue>> clueFieldsMap = allClueFields.stream()
-//                .collect(Collectors.groupingBy(BaseModuleFieldValue::getResourceId));
-//
-//        // 获取组织ID（假设同一个批次属于同一组织，否则需要按组织分别处理）
-//        String organizationId = clues.stream()
-//                .filter(Objects::nonNull)
-//                .findFirst()
-//                .map(Clue::getOrganizationId)
-//                .orElse(null);
-//
-//        // 获取表单配置（同一组织共用）
-//        ModuleFormConfigDTO customerFormConfig = getFormConfig(organizationId);
-//
-//        // 批量获取所有自定义字段选项数据
-//        Map<String, List<OptionDTO>> optionMap = moduleFormService.getOptionMap(customerFormConfig, allClueFields);
-//
-//        // 批量获取所有负责人选项
-//        Map<String, List<OptionDTO>> ownerOptionsMap = new HashMap<>();
-//        for (ClueGetResponse response : clueGetResponses) {
-//            List<OptionDTO> ownerFieldOption = moduleFormService.getBusinessFieldOption(response,
-//                    ClueGetResponse::getOwner, ClueGetResponse::getOwnerName);
-//            ownerOptionsMap.put(response.getId(), ownerFieldOption);
-//        }
-//
-//        // 批量获取意向产品选项（同一组织共用）
-//        List<OptionDTO> productOption = extProductMapper.getOptions(organizationId);
-//
-//        // 批量获取线索池原因配置（同一组织共用）
-//        DictConfigDTO dictConf = dictService.getDictConf(DictModule.CLUE_POOL_RS.name(), organizationId);
-//        List<Dict> dictList = dictConf.getDictList();
-//        Map<String, String> dictMap = dictList.stream().collect(Collectors.toMap(Dict::getId, Dict::getName));
-//
-//        // 收集所有有负责人的用户ID
-//        List<String> ownerUserIds = clueGetResponses.stream()
-//                .filter(response -> response.getOwner() != null)
-//                .map(ClueGetResponse::getOwner)
-//                .collect(Collectors.toList());
-//
-//        // 批量获取负责人线索池信息
-//        Map<String, CluePool> ownersDefaultPoolMap = new HashMap<>();
-//        if (CollectionUtils.isNotEmpty(ownerUserIds)) {
-//            ownersDefaultPoolMap = cluePoolService.getOwnersDefaultPoolMap(ownerUserIds, organizationId);
-//        }
-//
-//        // 批量获取回收规则
-//        List<String> poolIds = ownersDefaultPoolMap.values().stream()
-//                .map(CluePool::getId)
-//                .distinct()
-//                .collect(Collectors.toList());
-//        Map<String, CluePoolRecycleRule> recycleRuleMap = new HashMap<>();
-//        if (CollectionUtils.isNotEmpty(poolIds)) {
-//            LambdaQueryWrapper<CluePoolRecycleRule> recycleRuleWrapper = new LambdaQueryWrapper<>();
-//            recycleRuleWrapper.in(CluePoolRecycleRule::getPoolId, poolIds);
-//            List<CluePoolRecycleRule> recycleRules = recycleRuleMapper.selectListByLambda(recycleRuleWrapper);
-//            recycleRuleMap = recycleRules.stream().collect(Collectors.toMap(CluePoolRecycleRule::getPoolId, rule -> rule));
-//        }
-//
-//        // 批量获取用户部门信息
-//        Map<String, UserDeptDTO> userDeptMap = new HashMap<>();
-//        if (CollectionUtils.isNotEmpty(ownerUserIds)) {
-//            userDeptMap = baseService.getUserDeptMapByUserIds(ownerUserIds, organizationId);
-//        }
-//
-//        // 收集所有跟进人ID
-//        List<String> followerUserIds = clueGetResponses.stream()
-//                .filter(response -> response.getFollower() != null)
-//                .map(ClueGetResponse::getFollower)
-//                .collect(Collectors.toList());
-//
-//        // 批量获取跟进人名称
-//        Map<String, String> followerNameMap = new HashMap<>();
-//        if (CollectionUtils.isNotEmpty(followerUserIds)) {
-//            followerNameMap = baseService.getUserNameMap(followerUserIds);
-//        }
-//
-//        // 批量获取附件信息
-//        Map<String, Map<String, List<Attachment>>> attachmentMap = moduleFormService.getAttachmentMapBatch(customerFormConfig, allClueFields);
-//
-//        // 为每个响应对象设置属性
-//        for (ClueGetResponse clueGetResponse : clueGetResponses) {
-//            String clueId = clueGetResponse.getId();
-//            Clue originalClue = clueMap.get(clueId);
-//
-//            // 设置模块字段
-//            List<BaseModuleFieldValue> clueFields = clueFieldsMap.getOrDefault(clueId, new ArrayList<>());
-//            clueGetResponse.setModuleFields(clueFields);
-//
-//            // 复制optionMap（需要深拷贝或重新构建）
-//            Map<String, List<OptionDTO>> responseOptionMap = new HashMap<>(optionMap);
-//            responseOptionMap.put(BusinessModuleField.CLUE_OWNER.getBusinessKey(), ownerOptionsMap.get(clueId));
-//            responseOptionMap.put(BusinessModuleField.OPPORTUNITY_PRODUCTS.getBusinessKey(), productOption);
-//            clueGetResponse.setOptionMap(responseOptionMap);
-//
-//            // 设置线索池原因
-//            if (StringUtils.isNotBlank(clueGetResponse.getReasonId())) {
-//                clueGetResponse.setReasonName(dictMap.get(clueGetResponse.getReasonId()));
-//            }
-//
-//            // 设置负责人相关
-//            if (clueGetResponse.getOwner() != null) {
-//                // 设置回收公海
-//                CluePool reservePool = ownersDefaultPoolMap.get(clueGetResponse.getOwner());
-//                clueGetResponse.setRecyclePoolName(reservePool != null ? reservePool.getName() : null);
-//
-//                // 计算剩余归属天数
-//                clueGetResponse.setReservedDays(cluePoolService.calcReservedDay(reservePool,
-//                        reservePool != null ? recycleRuleMap.get(reservePool.getId()) : null,
-//                        clueGetResponse.getCollectionTime(), clueGetResponse.getCreateTime()));
-//
-//                // 设置部门信息
-//                UserDeptDTO userDeptDTO = userDeptMap.get(clueGetResponse.getOwner());
-//                if (userDeptDTO != null) {
-//                    clueGetResponse.setDepartmentId(userDeptDTO.getDeptId());
-//                    clueGetResponse.setDepartmentName(userDeptDTO.getDeptName());
-//                }
-//            }
-//
-//            // 设置跟进人名称
-//            if (clueGetResponse.getFollower() != null) {
-//                clueGetResponse.setFollowerName(followerNameMap.get(clueGetResponse.getFollower()));
-//            }
-//
-//            // 设置附件信息
-//            clueGetResponse.setAttachmentMap(attachmentMap.getOrDefault(clueId, new HashMap<>()));
-//        }
-//
-//        return clueGetResponses;
-//    }
-
+    @Transactional(rollbackFor = Exception.class)
     @OperationLog(module = LogModule.CLUE_INDEX, type = LogType.ADD, resourceName = "{#request.name}")
     public Clue add(ClueAddRequest request, String userId, String orgId) {
         productService.checkProductList(request.getProducts());
@@ -641,7 +482,8 @@ public class ClueService {
         }
     }
 
-    private Clue add(CluePushRequest request, String poolId, String userId, String orgId) {
+    @Transactional(rollbackFor = Exception.class)
+    public Clue add(CluePushRequest request, String poolId, String userId, String orgId) {
         long currented = System.currentTimeMillis();
         Clue clue = new Clue();
         clue.setName(request.getName());
@@ -675,6 +517,7 @@ public class ClueService {
         return clue;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @OperationLog(module = LogModule.CLUE_INDEX, type = LogType.UPDATE, resourceId = "{#request.id}")
     public Clue update(ClueUpdateRequest request, String userId, String orgId) {
         productService.checkProductList(request.getProducts());
@@ -718,6 +561,7 @@ public class ClueService {
                 orgId, List.of(toUser), true));
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @OperationLog(module = LogModule.CLUE_INDEX, type = LogType.UPDATE, resourceId = "{#request.id}")
     public void updateStatus(ClueStatusUpdateRequest request, String userId, String orgId) {
         Clue originClue = clueMapper.selectByPrimaryKey(request.getId());
@@ -756,6 +600,7 @@ public class ClueService {
      * @param userId  用户ID
      * @param orgId   组织ID
      */
+    @Transactional(rollbackFor = Exception.class)
     public void transitionCustomer(ClueTransitionCustomerRequest request, String userId, String orgId) {
         Customer customer = customerService.add(request, userId, orgId);
         Clue clue = clueMapper.selectByPrimaryKey(request.getClueId());
@@ -779,12 +624,12 @@ public class ClueService {
             Customer customer = generateCustomerByLinkForm(clue, clue.getOwner(), orgId, customerPoolId);
             return true;
         } catch (Exception e) {
-            log.error("系统自动将线索池内线索转客户并移入指定公海失败：{}", e.getMessage());
+            log.error("系统自动将线索池内线索转客户并移入指定公海失败：{}, clue=[{}]", e.getMessage(), clue.getId());
             return false;
         }
     }
 
-
+    @Transactional(rollbackFor = Exception.class)
     @OperationLog(module = LogModule.CLUE_INDEX, type = LogType.DELETE, resourceId = "{#id}")
     public void delete(String id, String userId, String orgId) {
         Clue clue = clueMapper.selectByPrimaryKey(id);
@@ -890,6 +735,7 @@ public class ClueService {
      * @param orgId       组织ID
      * @param currentUser 当前用户
      */
+    @Transactional(rollbackFor = Exception.class)
     public BatchAffectResponse batchToPool(BatchPoolReasonRequest request, String currentUser, String orgId) {
         LambdaQueryWrapper<Clue> wrapper = new LambdaQueryWrapper<>();
         wrapper.in(Clue::getId, request.getIds());

@@ -3,9 +3,11 @@ import { cloneDeep } from 'lodash-es';
 
 import { SubscribeMessageUrl } from '@lib/shared/api/requrls/system/message';
 import {
+  CUSTOMER_BATCH_BY_CONDITION_DOM_EVENT,
   MMBA_DEVICE_SYNC_DOM_EVENT,
   PLATFORM_FORCE_LOGOUT_DONE_DOM_EVENT,
   POOL_BATCH_BY_CONDITION_DOM_EVENT,
+  SSE_EVENT_CUSTOMER_BATCH_BY_CONDITION_DONE,
   SSE_EVENT_MMBA_DEVICE_SYNC,
   SSE_EVENT_PLATFORM_FORCE_LOGOUT,
   SSE_EVENT_PLATFORM_FORCE_LOGOUT_DONE,
@@ -368,6 +370,21 @@ const useAppStore = defineStore('app', {
                 new CustomEvent(POOL_BATCH_BY_CONDITION_DOM_EVENT, {
                   detail: {
                     poolId: String(data.poolId ?? ''),
+                    operation: data.operation,
+                    submittedCount: Number(data.submittedCount ?? 0),
+                    successCount: Number(data.successCount ?? 0),
+                    failCount: Number(data.failCount ?? 0),
+                  },
+                })
+              );
+              return;
+            }
+
+            if (data.type === SSE_EVENT_CUSTOMER_BATCH_BY_CONDITION_DONE) {
+              window.dispatchEvent(
+                new CustomEvent(CUSTOMER_BATCH_BY_CONDITION_DOM_EVENT, {
+                  detail: {
+                    viewId: String(data.viewId ?? ''),
                     operation: data.operation,
                     submittedCount: Number(data.submittedCount ?? 0),
                     successCount: Number(data.successCount ?? 0),

@@ -1,7 +1,9 @@
 package cn.cordys.crm.system.notice.sse;
 
 import cn.cordys.common.constants.SsePrincipalKind;
+import cn.cordys.common.constants.TopicConstants;
 import cn.cordys.common.exception.GenericException;
+import cn.cordys.common.redis.MessagePublisher;
 import cn.cordys.common.response.result.CrmHttpResultCode;
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.JSON;
@@ -12,6 +14,7 @@ import cn.cordys.crm.system.constants.NotificationConstants;
 import cn.cordys.crm.system.domain.Notification;
 import cn.cordys.crm.system.dto.response.NotificationDTO;
 import cn.cordys.crm.system.mapper.ExtNotificationMapper;
+import cn.cordys.crm.system.notice.dto.NoticeRedisMessage;
 import cn.cordys.crm.system.notice.dto.SseMessageDTO;
 import cn.cordys.common.context.TenantSessionBindingSupport;
 import cn.cordys.crm.system.service.SendModuleService;
@@ -54,6 +57,8 @@ public class SseService {
     private StringRedisTemplate stringRedisTemplate;
     @Resource
     private ExtDataSpecialistMapper extDataSpecialistMapper;
+    @Resource
+    private MessagePublisher messagePublisher;
 
     private String tenantRedisKey(String rawKey) {
         return TenantRedisKeyBuilder.tenantKey(rawKey);
@@ -168,6 +173,24 @@ public class SseService {
         if (map != null) {
             map.forEach((clientId, wrapper) -> wrapper.emit(JSON.toJSONString(data)));
         }
+    }
+
+    /**
+     * 向租户内指定用户推送自定义 JSON 事件：本机直推 + Redis 广播，避免异步任务节点与 SSE 连接节点不一致时丢消息。
+     */
+    public void publishTenantUserCustomEvent(String tenantId, String userId, String noticeType, Object payload) {
+        if (StringUtils.isAnyBlank(tenantId, userId, noticeType) || payload == null) {
+            return;
+        }
+        sendToPrincipal(SsePrincipalKind.TENANT, tenantId, userId, payload);
+        Map<String, Object> envelope = new LinkedHashMap<>();
+        envelope.put("userId", userId);
+        envelope.put("payload", payload);
+        NoticeRedisMessage noticeRedisMessage = new NoticeRedisMessage();
+        noticeRedisMessage.setTenantId(tenantId);
+        noticeRedisMessage.setNoticeType(noticeType);
+        noticeRedisMessage.setMessage(JSON.toJSONString(envelope));
+        messagePublisher.publish(TopicConstants.SSE_TOPIC, JSON.toJSONString(noticeRedisMessage));
     }
 
     /**

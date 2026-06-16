@@ -353,6 +353,8 @@ export const {
   getCustomerFormConfig,
   batchTransferCustomer,
   batchTransferCustomerByCondition,
+  batchToPoolCustomerByCondition,
+  batchUpdateCustomerByCondition,
   addCustomerFollowPlan,
   getCustomerFollowPlan,
   updateCustomerContact,

@@ -144,8 +144,14 @@ export default function useTable<T>(
     return item;
   }
 
+  let reloadAfterCurrent = false;
+
   async function loadList(isPageChange = false, refreshId: string | number | undefined = undefined) {
-    if (!loadListFunc || propsRes.value.loading) return;
+    if (!loadListFunc) return;
+    if (propsRes.value.loading) {
+      reloadAfterCurrent = true;
+      return;
+    }
     setLoading(true);
     try {
       tableQueryParams.value = {
@@ -238,6 +244,10 @@ export default function useTable<T>(
       throw error;
     } finally {
       setLoading(false);
+      if (reloadAfterCurrent) {
+        reloadAfterCurrent = false;
+        loadList(false).catch(() => undefined);
+      }
     }
   }
 

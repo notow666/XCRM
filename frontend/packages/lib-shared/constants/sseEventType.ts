@@ -10,6 +10,12 @@ export const SSE_EVENT_POOL_BATCH_BY_CONDITION_DONE = 'POOL_BATCH_BY_CONDITION_D
 /** 公海按筛选批量任务完成 SSE 到达后，通知公海池列表刷新 */
 export const POOL_BATCH_BY_CONDITION_DOM_EVENT = 'pool-batch-by-condition-sse';
 
+/** 与后端 {@code CustomerBatchConstants.SSE_CUSTOMER_BATCH_BY_CONDITION_DONE} 一致 */
+export const SSE_EVENT_CUSTOMER_BATCH_BY_CONDITION_DONE = 'CUSTOMER_BATCH_BY_CONDITION_DONE';
+
+/** 客户列表按筛选批量任务完成 SSE 到达后，通知客户列表刷新 */
+export const CUSTOMER_BATCH_BY_CONDITION_DOM_EVENT = 'customer-batch-by-condition-sse';
+
 /** 平台系统公告 SSE */
 export const SSE_EVENT_PLATFORM_SYSTEM_ANNOUNCEMENT = 'PLATFORM_SYSTEM_ANNOUNCEMENT';
 
@@ -27,6 +33,16 @@ export type PoolBatchByConditionSseOperation = 'PICK' | 'ASSIGN' | 'TRANSFER';
 export interface PoolBatchByConditionSseDetail {
   poolId: string;
   operation: PoolBatchByConditionSseOperation;
+  successCount: number;
+  failCount: number;
+  submittedCount: number;
+}
+
+export type CustomerBatchByConditionSseOperation = 'DELETE' | 'TRANSFER' | 'TO_POOL' | 'UPDATE';
+
+export interface CustomerBatchByConditionSseDetail {
+  viewId: string;
+  operation: CustomerBatchByConditionSseOperation;
   successCount: number;
   failCount: number;
   submittedCount: number;

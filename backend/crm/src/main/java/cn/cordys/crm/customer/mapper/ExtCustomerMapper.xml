@@ -70,7 +70,7 @@
     </update>
 
     <select id="list" resultType="cn.cordys.crm.customer.dto.response.CustomerListResponse">
-        select c.id, c.`name`, if(c.in_shared_pool, null, c.owner) as owner, c.create_time, c.update_time, c.create_user, c.update_user, c.collection_time, c.pool_id,
+        select distinct c.id, c.`name`, if(c.in_shared_pool, null, c.owner) as owner, c.create_time, c.update_time, c.create_user, c.update_user, c.collection_time, c.pool_id,
                c.create_source as createSource,
                c.follower, c.follow_time, c.reason_id, c.mobile, c.stage, c.stage_status, c.call_status as callStatus,
                c.wechat_friend_status as wechatFriendStatus,

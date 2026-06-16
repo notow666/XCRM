@@ -115,13 +115,12 @@
       ownerUserIds: selectedUserIds.value,
     })
       .then((data) => {
-        showModal.value = false;
-        const failCount = typeof data === 'number' ? data : 0;
-        if (failCount > 0) {
-          Message.warning(t('customer.transferByConditionPartial', { count: failCount }));
-        } else {
-          Message.success(t('common.transferSuccess'));
+        if (!data?.accepted) {
+          Message.warning(data?.message || t('common.operationFailed'));
+          return;
         }
+        showModal.value = false;
+        Message.success(data.message || t('customer.batchTransferTaskSubmitted'));
         emit('success');
       })
       .catch(() => {

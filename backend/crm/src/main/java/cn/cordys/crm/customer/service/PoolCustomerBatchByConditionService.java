@@ -9,7 +9,6 @@ import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.Translator;
 import cn.cordys.context.TenantContext;
-import cn.cordys.common.constants.SsePrincipalKind;
 import cn.cordys.crm.customer.constants.PoolCustomerBatchConstants;
 import cn.cordys.crm.customer.domain.Customer;
 import cn.cordys.crm.customer.domain.CustomerPool;
@@ -738,7 +737,8 @@ public class PoolCustomerBatchByConditionService {
         payload.put("submittedCount", submitted);
         payload.put("successCount", success);
         payload.put("failCount", fail);
-        sseService.sendToPrincipal(SsePrincipalKind.TENANT, tenantId, operatorUserId, payload);
+        sseService.publishTenantUserCustomEvent(tenantId, operatorUserId,
+                PoolCustomerBatchConstants.SSE_POOL_BATCH_BY_CONDITION_DONE, payload);
     }
 
     private MessageDetailDTO buildOperatorMessageDetail(String taskId, String orgId) {

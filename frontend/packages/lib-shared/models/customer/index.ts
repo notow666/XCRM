@@ -273,6 +273,24 @@ export interface BatchTransferCustomerByConditionParams extends CustomerTablePar
   ownerUserIds?: string[];
 }
 
+export interface BatchCustomerByConditionSubmitResult {
+  accepted: boolean;
+  taskId: string;
+  message: string;
+}
+
+export interface BatchToPoolCustomerByConditionParams extends CustomerTableParams {
+  toPoolCount: number;
+  targetPoolId?: string;
+  reasonId?: string;
+}
+
+export interface BatchUpdateCustomerByConditionParams extends CustomerTableParams {
+  updateCount: number;
+  fieldId: string | null;
+  fieldValue: any;
+}
+
 export interface PickOpenSeaCustomerParams {
   customerId: string;
   poolId: string | number;

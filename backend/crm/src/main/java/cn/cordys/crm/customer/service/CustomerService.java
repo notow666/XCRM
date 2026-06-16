@@ -1165,7 +1165,7 @@ public class CustomerService {
 
     public BatchAffectResponse batchToPoolByCondition(CustomerBatchToPoolByConditionRequest request, String currentUser, String orgId,
                                                       DeptDataPermissionDTO deptDataPermission) {
-        int moveCount = Math.min(Math.max(Optional.ofNullable(request.getMoveCount()).orElse(BATCH_TO_POOL_BY_CONDITION_MAX_SIZE), 1),
+        int moveCount = Math.min(Math.max(Optional.ofNullable(request.getToPoolCount()).orElse(BATCH_TO_POOL_BY_CONDITION_MAX_SIZE), 1),
                 BATCH_TO_POOL_BY_CONDITION_MAX_SIZE);
         PageHelper.startPage(1, moveCount, false);
         List<Customer> customers = extCustomerMapper.listByCondition(request, orgId, currentUser, deptDataPermission);

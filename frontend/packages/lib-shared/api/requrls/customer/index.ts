@@ -10,6 +10,7 @@ export const BatchTransferCustomerUrl = '/account/batch/transfer'; // 批量转�
 export const BatchTransferCustomerByConditionUrl = '/account/batch/transfer-by-condition'; // 按筛选条件批量转移客户
 export const BatchMoveCustomerUrl = '/account/batch/to-pool'; // 批量移入公海
 export const BatchMoveCustomerByConditionUrl = '/account/batch/to-pool-by-condition'; // 按筛选条件批量移入公海
+export const BatchUpdateCustomerByConditionUrl = '/account/batch/update-by-condition'; // 按筛选条件批量编辑客户
 export const MoveToCustomerUrl = '/account/to-pool'; // 移入公海
 export const UpdateCustomerFollowRecordUrl = '/account/follow/record/update'; // 更新跟进记录
 export const GetCustomerFollowRecordListUrl = '/account/follow/record/page'; // 获取跟进记录列表

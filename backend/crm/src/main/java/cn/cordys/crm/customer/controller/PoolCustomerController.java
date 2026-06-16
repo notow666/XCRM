@@ -2,6 +2,7 @@ package cn.cordys.crm.customer.controller;
 
 import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.dto.ExportSelectRequest;
+import cn.cordys.common.dto.SortRequest;
 import cn.cordys.common.dto.chart.ChartResult;
 import cn.cordys.common.pager.PagerWithOption;
 import cn.cordys.common.utils.ConditionFilterUtils;
@@ -57,7 +58,7 @@ public class PoolCustomerController {
     @Operation(summary = "客户列表")
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_POOL_READ})
     public PagerWithOption<List<CustomerListResponse>> list(@Validated @RequestBody CustomerPageRequest request) {
-        ConditionFilterUtils.parseCondition(request);
+        preparePoolCustomerQueryRequest(request);
         return customerService.list(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), null);
     }
 
@@ -101,7 +102,7 @@ public class PoolCustomerController {
     @Operation(summary = "按筛选条件批量领取公海客户")
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_POOL_PICK})
     public Map<String, Object> batchPickByCondition(@Validated @RequestBody PoolBatchPickByConditionRequest request) {
-        ConditionFilterUtils.parseCondition(request);
+        preparePoolCustomerQueryRequest(request);
         return poolCustomerService.batchPickByCondition(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
@@ -109,7 +110,7 @@ public class PoolCustomerController {
     @Operation(summary = "按筛选条件批量删除公海客户")
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_POOL_DELETE})
     public Map<String, Object> batchDeleteByCondition(@Validated @RequestBody CustomerPageRequest request) {
-        ConditionFilterUtils.parseCondition(request);
+        preparePoolCustomerQueryRequest(request);
         return poolCustomerService.batchDeleteByCondition(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
@@ -117,7 +118,7 @@ public class PoolCustomerController {
     @Operation(summary = "按筛选条件批量分配公海客户")
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_POOL_ASSIGN})
     public Map<String, Object> batchAssignByCondition(@Validated @RequestBody PoolBatchAssignByConditionRequest request) {
-        ConditionFilterUtils.parseCondition(request);
+        preparePoolCustomerQueryRequest(request);
         return poolCustomerService.batchAssignByCondition(request, OrganizationContext.getOrganizationId(), SessionUtils.getUserId());
     }
 
@@ -125,7 +126,7 @@ public class PoolCustomerController {
     @Operation(summary = "按筛选条件批量转移公海客户")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_POOL_TRANSFER)
     public Map<String, Object> batchTransferByCondition(@Validated @RequestBody PoolBatchTransferByConditionRequest request) {
-        ConditionFilterUtils.parseCondition(request);
+        preparePoolCustomerQueryRequest(request);
         return poolCustomerService.batchTransferByCondition(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
@@ -133,7 +134,7 @@ public class PoolCustomerController {
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_POOL_UPDATE)
     @Operation(summary = "按筛选条件批量更新客户")
     public Map<String, Object> batchUpdateByCondition(@Validated @RequestBody PoolBatchUpdateByConditionRequest request) {
-        ConditionFilterUtils.parseCondition(request);
+        preparePoolCustomerQueryRequest(request);
         return poolCustomerService.batchUpdateByCondition(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
@@ -141,7 +142,7 @@ public class PoolCustomerController {
     @Operation(summary = "客户导出全部")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_POOL_EXPORT)
     public String customerPoolExportAll(@Validated @RequestBody CustomerExportRequest request) {
-        ConditionFilterUtils.parseCondition(request);
+        preparePoolCustomerQueryRequest(request);
         return customerPoolExportService.exportCrossPage(SessionUtils.getUserId(), request, OrganizationContext.getOrganizationId(), null, LocaleContextHolder.getLocale());
     }
 
@@ -186,5 +187,13 @@ public class PoolCustomerController {
     @Operation(summary = "下载公海导入错误文件")
     public void downloadErrorFile(@PathVariable("fileId") String fileId, HttpServletResponse response) {
         poolCustomerImportService.downloadErrorFile(fileId, OrganizationContext.getOrganizationId(), response);
+    }
+
+    /**
+     * 统一公海列表与按筛选批量操作的查询条件：视图筛选解析 + 列表默认排序（保留 poolId 以限定公海范围）。
+     */
+    private static void preparePoolCustomerQueryRequest(CustomerPageRequest request) {
+        ConditionFilterUtils.parseCondition(request);
+        request.setSort(SortRequest.customerPage());
     }
 }

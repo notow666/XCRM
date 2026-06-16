@@ -3,6 +3,7 @@ package cn.cordys.mmba.domain;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Data;
+import org.apache.commons.lang3.StringUtils;
 
 @Data
 @Table(name = "mmba_wx_chat_audit")
@@ -56,4 +57,16 @@ public class MmbaWxChatAudit {
     private String um;
     private String contactMobile;
     private String callbackRecordId;
+
+    /**
+     * TODO 数据过长，暂时截断
+     * @param memberNickName
+     */
+    public void setMemberNickName(String memberNickName) {
+        if(StringUtils.isNotBlank(memberNickName) && memberNickName.length() > 128) {
+            this.memberNickName = memberNickName.substring(0, 122) + "...";
+        } else {
+            this.memberNickName = memberNickName;
+        }
+    }
 }

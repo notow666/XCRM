@@ -26,6 +26,7 @@ import {
   BatchPickOpenSeaCustomerUrl,
   BatchTransferCustomerByConditionUrl,
   BatchTransferCustomerUrl,
+  BatchUpdateCustomerByConditionUrl,
   BatchUpdateAccountUrl,
   BatchUpdateContactUrl,
   CancelCustomerFollowPlanUrl,
@@ -193,6 +194,9 @@ import type {
   BatchUpdateOpenSeaCustomerByConditionParams,
   BatchUpdateOpenSeaCustomerByConditionSubmitResult,
   BatchTransferCustomerByConditionParams,
+  BatchCustomerByConditionSubmitResult,
+  BatchToPoolCustomerByConditionParams,
+  BatchUpdateCustomerByConditionParams,
   BatchMoveToPublicPoolByConditionParams,
   BatchMoveToPublicPoolParams,
   BatchOperationOpenSeaCustomerParams,
@@ -440,7 +444,7 @@ export default function useProductApi(CDR: CordysAxios) {
 
   // 按筛选条件批量删除客户
   function batchDeleteCustomerByCondition(data: CustomerTableParams) {
-    return CDR.post<number>({ url: BatchDeleteCustomerByConditionUrl, data });
+    return CDR.post<BatchCustomerByConditionSubmitResult>({ url: BatchDeleteCustomerByConditionUrl, data });
   }
 
   // 批量转移客户
@@ -450,7 +454,7 @@ export default function useProductApi(CDR: CordysAxios) {
 
   // 按筛选条件批量转移客户
   function batchTransferCustomerByCondition(data: BatchTransferCustomerByConditionParams) {
-    return CDR.post<number>({ url: BatchTransferCustomerByConditionUrl, data });
+    return CDR.post<BatchCustomerByConditionSubmitResult>({ url: BatchTransferCustomerByConditionUrl, data });
   }
 
   // 批量移入公海
@@ -459,8 +463,22 @@ export default function useProductApi(CDR: CordysAxios) {
   }
 
   // 按筛选条件批量移入公海
+  function batchToPoolCustomerByCondition(data: BatchToPoolCustomerByConditionParams) {
+    return CDR.post<BatchCustomerByConditionSubmitResult>({ url: BatchMoveCustomerByConditionUrl, data });
+  }
+
   function batchMoveCustomerByCondition(data: BatchMoveToPublicPoolByConditionParams) {
-    return CDR.post({ url: BatchMoveCustomerByConditionUrl, data });
+    return batchToPoolCustomerByCondition({
+      ...data,
+      toPoolCount: data.moveCount ?? 1,
+      targetPoolId: data.targetPoolId ?? undefined,
+      reasonId: data.reasonId ?? undefined,
+    });
+  }
+
+  // 按筛选条件批量编辑客户
+  function batchUpdateCustomerByCondition(data: BatchUpdateCustomerByConditionParams) {
+    return CDR.post<BatchCustomerByConditionSubmitResult>({ url: BatchUpdateCustomerByConditionUrl, data });
   }
 
   // 移入公海
@@ -1150,7 +1168,9 @@ export default function useProductApi(CDR: CordysAxios) {
     batchTransferCustomer,
     batchTransferCustomerByCondition,
     batchMoveCustomer,
+    batchToPoolCustomerByCondition,
     batchMoveCustomerByCondition,
+    batchUpdateCustomerByCondition,
     addCustomerFollowRecord,
     updateCustomerFollowRecord,
     deleteCustomerFollowRecord,

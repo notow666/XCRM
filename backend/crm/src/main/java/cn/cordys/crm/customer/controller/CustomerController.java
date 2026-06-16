@@ -23,6 +23,7 @@ import cn.cordys.crm.customer.dto.request.*;
 import cn.cordys.crm.customer.dto.response.CustomerGetResponse;
 import cn.cordys.crm.customer.dto.response.CustomerListResponse;
 import cn.cordys.crm.customer.dto.response.CustomerCallRecordListResponse;
+import cn.cordys.crm.customer.service.CustomerBatchByConditionService;
 import cn.cordys.crm.customer.service.CustomerCallRecordService;
 import cn.cordys.crm.customer.service.CustomerExportService;
 import cn.cordys.crm.customer.service.CustomerService;
@@ -58,6 +59,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -91,6 +93,8 @@ public class CustomerController {
     private OrderService orderService;
     @Resource
     private CustomerCallRecordService customerCallRecordService;
+    @Resource
+    private CustomerBatchByConditionService customerBatchByConditionService;
 
     @GetMapping("/module/form/{tag}")
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_READ, PermissionConstants.CUSTOMER_MANAGEMENT_POOL_READ}, logical = Logical.OR)
@@ -115,10 +119,9 @@ public class CustomerController {
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_READ)
     @Operation(summary = "客户列表")
     public PagerWithOption<List<CustomerListResponse>> list(@Validated @RequestBody CustomerPageRequest request) {
-        ConditionFilterUtils.parseCondition(request);
+        prepareCustomerListQueryRequest(request);
         DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(SessionUtils.getUserId(),
                 OrganizationContext.getOrganizationId(), request.getViewId(), PermissionConstants.CUSTOMER_MANAGEMENT_READ);
-        request.setSort(SortRequest.customerPage());
         return customerService.list(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), deptDataPermission);
     }
 
@@ -153,11 +156,11 @@ public class CustomerController {
     @PostMapping("/batch/transfer-by-condition")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_TRANSFER)
     @Operation(summary = "按筛选条件批量转移客户")
-    public int batchTransferByCondition(@Validated @RequestBody CustomerBatchTransferByConditionRequest request) {
-        ConditionFilterUtils.parseCondition(request);
+    public Map<String, Object> batchTransferByCondition(@Validated @RequestBody CustomerBatchTransferByConditionRequest request) {
+        prepareCustomerListQueryRequest(request);
         DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(SessionUtils.getUserId(),
                 OrganizationContext.getOrganizationId(), request.getViewId(), PermissionConstants.CUSTOMER_MANAGEMENT_READ);
-        return customerService.batchTransferByCondition(request, SessionUtils.getUserId(),
+        return customerBatchByConditionService.batchTransferByCondition(request, SessionUtils.getUserId(),
                 OrganizationContext.getOrganizationId(), deptDataPermission);
     }
 
@@ -185,11 +188,34 @@ public class CustomerController {
     @PostMapping("/batch/delete-by-condition")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_DELETE)
     @Operation(summary = "按筛选条件批量删除客户")
-    public int batchDeleteByCondition(@Validated @RequestBody CustomerPageRequest request) {
-        ConditionFilterUtils.parseCondition(request);
+    public Map<String, Object> batchDeleteByCondition(@Validated @RequestBody CustomerPageRequest request) {
+        prepareCustomerListQueryRequest(request);
         DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(SessionUtils.getUserId(),
                 OrganizationContext.getOrganizationId(), request.getViewId(), PermissionConstants.CUSTOMER_MANAGEMENT_READ);
-        return customerService.batchDeleteByCondition(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), deptDataPermission);
+        return customerBatchByConditionService.batchDeleteByCondition(request, SessionUtils.getUserId(),
+                OrganizationContext.getOrganizationId(), deptDataPermission);
+    }
+
+    @PostMapping("/batch/to-pool-by-condition")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_RECYCLE)
+    @Operation(summary = "按筛选条件批量移入公海")
+    public Map<String, Object> batchToPoolByCondition(@Validated @RequestBody CustomerBatchToPoolByConditionRequest request) {
+        prepareCustomerListQueryRequest(request);
+        DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(SessionUtils.getUserId(),
+                OrganizationContext.getOrganizationId(), request.getViewId(), PermissionConstants.CUSTOMER_MANAGEMENT_READ);
+        return customerBatchByConditionService.batchToPoolByCondition(request, SessionUtils.getUserId(),
+                OrganizationContext.getOrganizationId(), deptDataPermission);
+    }
+
+    @PostMapping("/batch/update-by-condition")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE)
+    @Operation(summary = "按筛选条件批量编辑客户")
+    public Map<String, Object> batchUpdateByCondition(@Validated @RequestBody CustomerBatchUpdateByConditionRequest request) {
+        prepareCustomerListQueryRequest(request);
+        DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(SessionUtils.getUserId(),
+                OrganizationContext.getOrganizationId(), request.getViewId(), PermissionConstants.CUSTOMER_MANAGEMENT_READ);
+        return customerBatchByConditionService.batchUpdateByCondition(request, SessionUtils.getUserId(),
+                OrganizationContext.getOrganizationId(), deptDataPermission);
     }
 
     @PostMapping("/to-pool")
@@ -204,16 +230,6 @@ public class CustomerController {
     @Operation(summary = "批量移入公海")
     public BatchAffectResponse batchToPool(@RequestBody BatchPoolReasonRequest request) {
         return customerService.batchToPool(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
-    }
-
-    @PostMapping("/batch/to-pool-by-condition")
-    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_RECYCLE)
-    @Operation(summary = "按筛选条件批量移入公海")
-    public BatchAffectResponse batchToPoolByCondition(@Validated @RequestBody CustomerBatchToPoolByConditionRequest request) {
-        ConditionFilterUtils.parseCondition(request);
-        DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(SessionUtils.getUserId(),
-                OrganizationContext.getOrganizationId(), request.getViewId(), PermissionConstants.CUSTOMER_MANAGEMENT_READ);
-        return customerService.batchToPoolByCondition(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), deptDataPermission);
     }
 
     @PostMapping("/option")
@@ -422,5 +438,14 @@ public class CustomerController {
         response.setInvoicedAmount(invoiceAmount);
         response.setUninvoicedAmount(response.getContractAmount().subtract(invoiceAmount));
         return response;
+    }
+
+    /**
+     * 统一客户列表与按筛选批量操作的查询条件：视图筛选解析 + 列表默认排序 + 私海范围。
+     */
+    private static void prepareCustomerListQueryRequest(CustomerPageRequest request) {
+        ConditionFilterUtils.parseCondition(request);
+        request.setSort(SortRequest.customerPage());
+        request.setPoolId(null);
     }
 }
