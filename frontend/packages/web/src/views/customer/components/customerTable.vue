@@ -453,7 +453,7 @@
   import useModal from '@/hooks/useModal';
   import useViewChartParams, { STORAGE_VIEW_CHART_KEY, ViewChartResult } from '@/hooks/useViewChartParams';
   import useViewStore from '@/store/modules/view';
-  import { getExportColumns } from '@/utils/export';
+  import { appendCustomerReachStatusExportFields, getExportColumns } from '@/utils/export';
   import { hasAnyPermission } from '@/utils/permission';
 
   import { CustomerRouteEnum } from '@/enums/routeEnum';
@@ -1846,7 +1846,13 @@
   ]);
 
   const exportColumns = computed<ExportTableColumnItem[]>(() =>
-    getExportColumns(propsRes.value.columns, customFieldsFilterConfig.value as FilterFormItem[])
+    appendCustomerReachStatusExportFields(
+      getExportColumns(propsRes.value.columns, customFieldsFilterConfig.value as FilterFormItem[]),
+      (key) => {
+        const field = fieldList.value?.find((item) => item.businessKey === key);
+        return field?.name ?? t(key === 'callStatus' ? 'customer.callStatus' : 'customer.wechatFriendStatus');
+      }
+    )
   );
 
   const isAdvancedSearchMode = ref(false);

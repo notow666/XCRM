@@ -41,4 +41,27 @@ export function getExportColumns(
   return result;
 }
 
+const CUSTOMER_REACH_STATUS_EXPORT_KEYS = ['callStatus', 'wechatFriendStatus'] as const;
+
+export function appendCustomerReachStatusExportFields(
+  columns: ExportTableColumnItem[],
+  getTitle: (businessKey: (typeof CUSTOMER_REACH_STATUS_EXPORT_KEYS)[number]) => string
+): ExportTableColumnItem[] {
+  const existingKeys = new Set(columns.map((column) => column.key));
+  const result = [...columns];
+
+  CUSTOMER_REACH_STATUS_EXPORT_KEYS.forEach((key) => {
+    if (existingKeys.has(key)) {
+      return;
+    }
+    result.push({
+      key,
+      title: getTitle(key),
+      columnType: ColumnTypeEnum.CUSTOM,
+    });
+  });
+
+  return result;
+}
+
 export default {};

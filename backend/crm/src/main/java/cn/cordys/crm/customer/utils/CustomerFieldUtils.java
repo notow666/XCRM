@@ -22,6 +22,8 @@ public class CustomerFieldUtils {
         systemFieldMap.put("reservedDays", data.getReservedDays());
         systemFieldMap.put("recyclePoolName", data.getRecyclePoolName());
         systemFieldMap.put("departmentId", data.getDepartmentName());
+        systemFieldMap.put("callStatus", CustomerReachStatusUtils.formatCallStatus(data.getCallStatus()));
+        systemFieldMap.put("wechatFriendStatus", CustomerReachStatusUtils.formatWechatFriendStatus(data.getWechatFriendStatus()));
         return systemFieldMap;
     }
 
