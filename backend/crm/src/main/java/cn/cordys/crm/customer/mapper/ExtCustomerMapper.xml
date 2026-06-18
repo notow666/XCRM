@@ -907,6 +907,7 @@
         select c.id, c.`name`, c.owner, c.create_time, c.update_time, c.create_user, c.update_user, c.collection_time, c.pool_id,
                c.create_source as createSource,
                c.follower, c.follow_time, c.in_shared_pool, c.organization_id, c.reason_id, c.mobile, c.stage, c.stage_status,
+               c.call_status as callStatus, c.wechat_friend_status as wechatFriendStatus,
                IFNULL(ssc.name, '') as stage_name
         from customer c
         LEFT JOIN customer_stage_config ssc ON c.stage = ssc.id

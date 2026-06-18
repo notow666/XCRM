@@ -392,6 +392,7 @@
     CUSTOMER_BATCH_BY_CONDITION_DOM_EVENT,
     type CustomerBatchByConditionSseDetail,
   } from '@lib/shared/constants/sseEventType';
+  import { ColumnTypeEnum } from '@lib/shared/enums/commonEnum';
   import { CustomerSearchTypeEnum } from '@lib/shared/enums/customerEnum';
   import { FieldTypeEnum, FormDesignKeyEnum, FormLinkScenarioEnum } from '@lib/shared/enums/formDesignEnum';
   import { ReasonTypeEnum } from '@lib/shared/enums/moduleEnum';
@@ -1845,9 +1846,28 @@
     ...baseFilterConfigList,
   ]);
 
-  const exportColumns = computed<ExportTableColumnItem[]>(() =>
-    getExportColumns(propsRes.value.columns, customFieldsFilterConfig.value as FilterFormItem[])
-  );
+  const customerStatusExportColumns = computed<ExportTableColumnItem[]>(() => [
+    {
+      key: 'callStatus',
+      title: t('customer.callStatus'),
+      columnType: ColumnTypeEnum.SYSTEM,
+    },
+    {
+      key: 'wechatFriendStatus',
+      title: t('customer.wechatFriendStatus'),
+      columnType: ColumnTypeEnum.SYSTEM,
+    },
+  ]);
+
+  const exportColumns = computed<ExportTableColumnItem[]>(() => {
+    const statusColumns = customerStatusExportColumns.value;
+    const statusColumnMap = new Map(statusColumns.map((item) => [item.key, item]));
+    const columns = getExportColumns(propsRes.value.columns, customFieldsFilterConfig.value as FilterFormItem[]).map(
+      (item) => statusColumnMap.get(item.key) || item
+    );
+    const columnKeys = new Set(columns.map((item) => item.key));
+    return [...columns, ...statusColumns.filter((item) => !columnKeys.has(item.key))];
+  });
 
   const isAdvancedSearchMode = ref(false);
   const advancedOriginalForm = ref<FilterForm | undefined>();
@@ -2006,7 +2026,7 @@
       Message.warning(t('customer.batchDeleteByConditionEmptyTip'));
       return;
     }
-     showToPoolByConditionModal.value = true;
+    showToPoolByConditionModal.value = true;
   }
 
   function handleMoveRefresh() {
