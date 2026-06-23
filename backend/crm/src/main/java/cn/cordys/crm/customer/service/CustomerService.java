@@ -234,6 +234,16 @@ public class CustomerService {
         return PageUtils.setPageInfoWithOption(page, buildList, optionMap);
     }
 
+    public PagerWithOption<List<CustomerListResponse>> globalPoolPage(GlobalPoolCustomerPageRequest request, String userId, String orgId) {
+        request.setMobile(StringUtils.trim(request.getMobile()));
+        request.setSort(SortRequest.customerPage());
+        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
+        List<CustomerListResponse> list = extCustomerMapper.globalPoolPage(request);
+        List<CustomerListResponse> buildList = buildListData(list, userId, orgId);
+        Map<String, List<OptionDTO>> optionMap = buildOptionMap(orgId, list, buildList);
+        return PageUtils.setPageInfoWithOption(page, buildList, optionMap);
+    }
+
     public PagerWithOption<List<CustomerListResponse>> transitionList(CustomerPageRequest request, String userId, String orgId) {
         /*
          * 数据范围: 当前用户所在公海&私海客户(协作客户&&数据权限客户)

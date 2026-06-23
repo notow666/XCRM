@@ -62,6 +62,13 @@ public class PoolCustomerController {
         return customerService.list(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), null);
     }
 
+    @PostMapping("/global-search/page")
+    @Operation(summary = "全局公海客户搜索")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_POOL_GLOBAL_READ)
+    public PagerWithOption<List<CustomerListResponse>> globalSearch(@Validated @RequestBody GlobalPoolCustomerPageRequest request) {
+        return customerService.globalPoolPage(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
     @PostMapping("/pick")
     @Operation(summary = "领取客户")
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_POOL_PICK})

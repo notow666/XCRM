@@ -7,6 +7,7 @@ import { QuotationStatusEnum } from '@lib/shared/enums/opportunityEnum';
 import { SpecialColumnEnum, TableKeyEnum } from '@lib/shared/enums/tableEnum';
 import { useI18n } from '@lib/shared/hooks/useI18n';
 import { formatNumberValueToString, transformData } from '@lib/shared/method/formCreate';
+import type { CommonList } from '@lib/shared/models/common';
 import type { StageConfigItem } from '@lib/shared/models/opportunity';
 
 import type { CrmDataTableColumn } from '@/components/pure/crm-table/type';
@@ -78,6 +79,8 @@ export interface FormCreateTableProps {
   customerStage?: StageConfigItem[]; // 客户阶段筛选项
   hiddenAllScreen?: boolean;
   hiddenRefresh?: boolean;
+  showSetting?: boolean;
+  listApi?: (data: any) => Promise<CommonList<any>>;
 }
 
 export default async function useFormCreateTable(props: FormCreateTableProps) {
@@ -1386,10 +1389,10 @@ export default async function useFormCreateTable(props: FormCreateTableProps) {
     props.formKey === FormDesignKeyEnum.CUSTOMER && props.containerClass === '' && !props.readonly;
 
   const useTableRes = useTable(
-    getFormListApiMap[props.formKey],
+    props.listApi ?? getFormListApiMap[props.formKey],
     {
       tableKey: tableKeyMap[props.formKey],
-      showSetting: !!tableKeyMap[props.formKey],
+      showSetting: props.showSetting ?? !!tableKeyMap[props.formKey],
       showPagination,
       columns,
       permission: props.permission,

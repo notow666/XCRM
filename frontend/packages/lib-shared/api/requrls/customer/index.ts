@@ -41,6 +41,7 @@ export const SwitchCustomerOpenSeaUrl = '/account-pool/switch'; // 启用/禁用
 export const IsCustomerOpenSeaNoPickUrl = '/account-pool/no-pick'; // 公海是否存在未领取线索
 export const DeleteCustomerOpenSeaUrl = '/account-pool/delete'; // 删除公海
 export const GetOpenSeaCustomerListUrl = '/pool/account/page'; // 公海客户列表
+export const GetGlobalPoolCustomerPageUrl = '/pool/account/global-search/page'; // 全局公海客户搜索
 export const PickOpenSeaCustomerUrl = '/pool/account/pick'; // 领取公海客户
 export const BatchPickOpenSeaCustomerUrl = '/pool/account/batch-pick'; // 批量领取公海客户
 export const BatchPickOpenSeaCustomerByConditionUrl = '/pool/account/batch-pick-by-condition'; // 按筛选条件批量领取公海客户

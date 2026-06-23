@@ -33,6 +33,7 @@ export interface CustomerListItem {
   collectionTime: number;
   reservedDays: number; // 剩余归属天数
   mobile: string;
+  poolName?: string;
   wxFriendAdded: boolean;
   moduleFields: ModuleField[];
 }
@@ -364,6 +365,10 @@ export interface AssignOpenSeaCustomerParams {
 
 export interface OpenSeaCustomerTableParams extends TableQueryParams {
   poolId: string;
+}
+
+export interface GlobalPoolCustomerTableParams extends TableQueryParams {
+  mobile: string;
 }
 
 export interface HeaderHistoryItem {

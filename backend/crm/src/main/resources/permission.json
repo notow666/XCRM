@@ -206,6 +206,15 @@
         ]
       },
       {
+        "id": "CUSTOMER_MANAGEMENT_POOL_GLOBAL",
+        "name": "permission.customer_management.pool.global.name",
+        "permissions": [
+          {
+            "id": "CUSTOMER_MANAGEMENT_POOL_GLOBAL:READ"
+          }
+        ]
+      },
+      {
         "id": "CUSTOMER_MANAGEMENT_CONTACT",
         "name": "permission.customer.customer_contact.name",
         "display": false,

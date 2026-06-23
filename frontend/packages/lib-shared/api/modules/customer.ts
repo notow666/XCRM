@@ -102,6 +102,7 @@ import {
   GetGlobalCustomerListUrl,
   GetGlobalModuleCountUrl,
   GetGlobalOpenSeaCustomerListUrl,
+  GetGlobalPoolCustomerPageUrl,
   GetOpenSeaCustomerListUrl,
   GetOpenSeaCustomerUrl,
   GetOpenSeaOptionsUrl,
@@ -222,6 +223,7 @@ import type {
   CustomerTabHidden,
   CustomerTableParams,
   FollowDetailItem,
+  GlobalPoolCustomerTableParams,
   MergeAccountParams,
   MoveToPublicPoolParams,
   OpenSeaCustomerTableParams,
@@ -673,6 +675,10 @@ export default function useProductApi(CDR: CordysAxios) {
   // 获取公海客户列表
   function getOpenSeaCustomerList(data: OpenSeaCustomerTableParams) {
     return CDR.post<CommonList<CustomerOpenSeaListItem>>({ url: GetOpenSeaCustomerListUrl, data });
+  }
+
+  function getGlobalPoolCustomerPage(data: GlobalPoolCustomerTableParams) {
+    return CDR.post<CommonList<CustomerListItem>>({ url: GetGlobalPoolCustomerPageUrl, data });
   }
 
   // 领取公海客户
@@ -1161,6 +1167,7 @@ export default function useProductApi(CDR: CordysAxios) {
     deleteCustomer,
     getGlobalCustomerList,
     getGlobalOpenSeaCustomerList,
+    getGlobalPoolCustomerPage,
     getGlobalCustomerContactList,
     getGlobalModuleCount,
     batchDeleteCustomer,
