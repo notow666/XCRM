@@ -201,6 +201,8 @@ public class PoolCustomerController {
      */
     private static void preparePoolCustomerQueryRequest(CustomerPageRequest request) {
         ConditionFilterUtils.parseCondition(request);
-        request.setSort(SortRequest.customerPage());
+        if (request.getSort() == null || !request.getSort().valid()) {
+            request.setSort(SortRequest.customerPage());
+        }
     }
 }
