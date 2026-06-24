@@ -10,7 +10,12 @@ const customer: AppRouteRecordRaw = {
   component: DEFAULT_LAYOUT,
   meta: {
     locale: 'module.customerManagement',
-    permissions: ['CUSTOMER_MANAGEMENT:READ', 'CUSTOMER_MANAGEMENT_POOL:READ', 'CUSTOMER_MANAGEMENT_CONTACT:READ'],
+    permissions: [
+      'CUSTOMER_MANAGEMENT:READ',
+      'CUSTOMER_MANAGEMENT_POOL:READ',
+      'CUSTOMER_MANAGEMENT_POOL_GLOBAL:READ',
+      'CUSTOMER_MANAGEMENT_CONTACT:READ',
+    ],
     icon: 'iconicon_customer',
     hideChildrenInMenu: true,
     collapsedLocale: 'menu.customer',
@@ -44,6 +49,16 @@ const customer: AppRouteRecordRaw = {
         locale: 'module.openSea',
         isTopMenu: true,
         permissions: ['CUSTOMER_MANAGEMENT_POOL:READ'],
+      },
+    },
+    {
+      path: 'globalOpenSea',
+      name: CustomerRouteEnum.CUSTOMER_GLOBAL_OPEN_SEA,
+      component: () => import('../../../views/customer/globalOpenSea.vue'),
+      meta: {
+        locale: 'customer.globalPoolSearch',
+        isTopMenu: true,
+        permissions: ['CUSTOMER_MANAGEMENT_POOL_GLOBAL:READ'],
       },
     },
   ],

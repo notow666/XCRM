@@ -1,4 +1,8 @@
 export default {
+  'customer.globalPoolSearch': 'Global Pool Search',
+  'customer.globalPoolSearchPlaceholder': 'Enter the full phone number',
+  'customer.globalPoolSearchMobileInvalid': 'Please enter a complete 11-digit phone number',
+  'customer.poolName': 'Account Pool',
   'customer.all': 'All  Accounts',
   'customer.mine': 'My  Accounts',
   'customer.deptCustomer': 'Department  Accounts',

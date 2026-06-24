@@ -10,6 +10,7 @@ import cn.cordys.crm.customer.dto.MobileConflictDTO;
 import cn.cordys.crm.customer.dto.request.CustomerBatchTransferRequest;
 import cn.cordys.crm.customer.dto.request.CustomerChartAnalysisDbRequest;
 import cn.cordys.crm.customer.dto.request.CustomerPageRequest;
+import cn.cordys.crm.customer.dto.request.GlobalPoolCustomerPageRequest;
 import cn.cordys.crm.customer.dto.response.CustomerListResponse;
 import cn.cordys.crm.home.dto.request.HomeStatisticSearchWrapperRequest;
 import cn.cordys.crm.search.response.advanced.AdvancedCustomerPoolResponse;
@@ -29,6 +30,8 @@ public interface ExtCustomerMapper {
 
     List<CustomerListResponse> list(@Param("request") CustomerPageRequest request, @Param("orgId") String orgId,
                                     @Param("userId") String userId, @Param("dataPermission") DeptDataPermissionDTO deptDataPermission);
+
+    List<CustomerListResponse> globalPoolPage(@Param("request") GlobalPoolCustomerPageRequest request);
 
     List<String> listIds(@Param("request") CustomerPageRequest request, @Param("orgId") String orgId,
                          @Param("userId") String userId, @Param("dataPermission") DeptDataPermissionDTO deptDataPermission);

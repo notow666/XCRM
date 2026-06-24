@@ -1,4 +1,8 @@
 export default {
+  'customer.globalPoolSearch': '全局公海搜索',
+  'customer.globalPoolSearchPlaceholder': '请输入完整手机号',
+  'customer.globalPoolSearchMobileInvalid': '请输入完整的11位手机号',
+  'customer.poolName': '所属公海',
   'customer.all': '所有客户',
   'customer.mine': '我的客户',
   'customer.deptCustomer': '部门客户',

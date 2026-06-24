@@ -305,11 +305,12 @@
         key: 'exportChecked',
         permission: ['CUSTOMER_MANAGEMENT_POOL:EXPORT'],
       },
-      {
-        label: t('common.batchDelete'),
-        key: 'batchDelete',
-        permission: ['CUSTOMER_MANAGEMENT_POOL:DELETE'],
-      },
+      // 产品要求公海页隐藏“批量删除”，避免通过选中数据入口删除公海客户。
+      // {
+      //   label: t('common.batchDelete'),
+      //   key: 'batchDelete',
+      //   permission: ['CUSTOMER_MANAGEMENT_POOL:DELETE'],
+      // },
     ],
   };
 

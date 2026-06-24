@@ -27,6 +27,7 @@ export enum CustomerRouteEnum {
   CUSTOMER_INDEX = 'accountIndex',
   CUSTOMER_CONTACT = 'accountContact',
   CUSTOMER_OPEN_SEA = 'accountOpenSea',
+  CUSTOMER_GLOBAL_OPEN_SEA = 'accountGlobalOpenSea',
 }
 
 export enum ContractRouteEnum {

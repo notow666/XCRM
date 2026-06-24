@@ -73,6 +73,9 @@ public class CustomerListResponse {
     @Schema(description = "公海ID")
     private String poolId;
 
+    @Schema(description = "所属公海名称")
+    private String poolName;
+
     @Schema(description = "默认回收公海名称")
     private String recyclePoolName;
 

@@ -176,6 +176,24 @@
         </include>
     </select>
 
+    <select id="globalPoolPage" resultType="cn.cordys.crm.customer.dto.response.CustomerListResponse">
+        select distinct c.id, c.`name`, c.owner, c.create_time, c.update_time, c.create_user, c.update_user,
+               c.collection_time, c.pool_id, cp.name as poolName, c.create_source as createSource,
+               c.follower, c.follow_time, c.reason_id, c.mobile,
+               c.call_status as callStatus, c.wechat_friend_status as wechatFriendStatus
+        from customer c
+        inner join customer_pool cp on c.pool_id = cp.id
+        <include refid="fieldSortJoin">
+            <property name="sort" value="request.sort"/>
+        </include>
+        where c.in_shared_pool is true
+          and c.pool_id is not null
+          and c.mobile = #{request.mobile}
+        <include refid="sort">
+            <property name="sort" value="request.sort"/>
+        </include>
+    </select>
+
     <select id="listIds" resultType="java.lang.String">
         select distinct c.id
         from customer c

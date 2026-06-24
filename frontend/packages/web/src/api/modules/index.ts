@@ -417,6 +417,7 @@ export const {
   getCustomerContactFormConfig,
   getCustomerCollaborationList,
   getGlobalOpenSeaCustomerList,
+  getGlobalPoolCustomerPage,
   getGlobalCustomerContactList,
   generateCustomerContactChart,
   exportCustomerOpenSeaSelected,
