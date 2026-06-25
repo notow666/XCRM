@@ -1,6 +1,6 @@
 <template>
   <CrmTable
-    v-bind="propsRes"
+    v-bind="tableProps"
     class="crm-global-open-sea-table"
     :columns="columns"
     @page-change="propsEvent.pageChange"
@@ -56,12 +56,17 @@
     listApi: getGlobalPoolCustomerPage,
   });
   const { propsRes, propsEvent, loadList, setLoadListParams } = useTableRes;
+  const tableProps = computed(() => {
+    const restProps = { ...(propsRes.value as Record<string, unknown>) };
+    delete restProps.onSorterChange;
+    return restProps;
+  });
 
   const columns = computed<CrmDataTableColumn[]>(() => {
     const removedColumnKeys = new Set(['follower', 'followTime']);
     const baseColumns = propsRes.value.columns
-      .filter((item) => !removedColumnKeys.has(String(item.key)))
-      .map((item) => ({ ...item, filter: false, sorter: false }));
+      .filter((item) => item.key && !removedColumnKeys.has(String(item.key)))
+      .map((item) => ({ ...item, filter: false, sorter: false })) as CrmDataTableColumn[];
     const poolColumn: CrmDataTableColumn = {
       title: t('customer.poolName'),
       key: 'poolName',

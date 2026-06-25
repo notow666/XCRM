@@ -445,7 +445,9 @@ public class CustomerController {
      */
     private static void prepareCustomerListQueryRequest(CustomerPageRequest request) {
         ConditionFilterUtils.parseCondition(request);
-        request.setSort(SortRequest.customerPage());
+        if (request.getSort() == null || !request.getSort().valid()) {
+            request.setSort(SortRequest.customerPage());
+        }
         request.setPoolId(null);
     }
 }
