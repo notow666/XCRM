@@ -68,6 +68,33 @@ export interface PlatformTenantProvisionTask {
   updateTime: number;
 }
 
+export interface PlatformTenantDataCleanupTask {
+  taskId: string;
+  tenantId: string;
+  status: 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED';
+  detail: string;
+  operatorId: string;
+  createTime: number;
+  updateTime: number;
+}
+
+export interface PlatformTenantDataCleanupTaskPageRequest {
+  current: number;
+  pageSize: number;
+  tenantId?: string;
+  status?: string;
+}
+
+export interface PlatformTenantDataCleanupSubmitRequest {
+  tenantIds: string[];
+  startDate: string;
+  endDate: string;
+}
+
+export interface PlatformTenantDataCleanupSubmitResult {
+  tasks: PlatformTenantDataCleanupTask[];
+}
+
 export function pagePlatformTenants(data: PlatformTenantPageRequest) {
   return CDR.post<CommonList<PlatformTenantItem>>({ url: '/platform/admin/tenant/page', data });
 }
@@ -105,6 +132,24 @@ export function getPlatformTenantHealth(tenantId: string) {
 
 export function rerunPlatformTenantMigrate(tenantId: string) {
   return CDR.post({ url: `/platform/admin/tenant/${tenantId}/migrate` });
+}
+
+export function submitPlatformTenantDataCleanup(data: PlatformTenantDataCleanupSubmitRequest) {
+  return CDR.post<PlatformTenantDataCleanupSubmitResult>({
+    url: '/platform/admin/data-cleanup/submit',
+    data,
+  });
+}
+
+export function pagePlatformTenantDataCleanupTasks(data: PlatformTenantDataCleanupTaskPageRequest) {
+  return CDR.post<CommonList<PlatformTenantDataCleanupTask>>({
+    url: '/platform/admin/data-cleanup/task/page',
+    data,
+  });
+}
+
+export function getPlatformTenantDataCleanupTask(taskId: string) {
+  return CDR.get<PlatformTenantDataCleanupTask>({ url: `/platform/admin/data-cleanup/task/${taskId}` });
 }
 
 export function pagePlatformAudits(data: PlatformAuditPageRequest) {

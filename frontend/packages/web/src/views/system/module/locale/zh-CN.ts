@@ -122,7 +122,7 @@ export default {
   'module.customerAutoDeleteDaysPlaceholder': '输入天数（1-365）',
   'module.customerAutoDeleteDaysRequired': '请输入删除天数',
   'module.customerAutoDeleteTip':
-    '系统会按客户创建时间判断，自动删除创建来源为公海导入且超过设置天数的客户，执行时间固定为每日 00:30',
+    '系统每日固定 22:30 会依据客户创建时间来执行自动清理公海导入客户。举例：1 月 1 日导入的公海客户，若删除阈值设置为 1 天，该数据将于 1 月 1 日 22:30 自动删除。',
   'module.approvalSwitch': '{name}审批',
   'module.invoiceApproval': '发票',
   'module.configReasonTooltip': '配置后可开启',

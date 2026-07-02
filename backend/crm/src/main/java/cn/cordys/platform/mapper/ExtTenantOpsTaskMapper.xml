@@ -43,4 +43,58 @@
             update_time = #{updateTime}
         WHERE id = #{taskId}
     </update>
+
+    <select id="selectDataCleanupTaskById" resultType="cn.cordys.platform.dto.response.PlatformTenantDataCleanupTaskResponse">
+        SELECT id          AS taskId,
+               tenant_id   AS tenantId,
+               status,
+               detail,
+               operator_id AS operatorId,
+               create_time AS createTime,
+               update_time AS updateTime
+        FROM tenant_ops_task
+        WHERE id = #{taskId}
+          AND task_type = 'TENANT_DATA_CLEANUP'
+        LIMIT 1
+    </select>
+
+    <select id="selectLatestRunningDataCleanupTask" resultType="cn.cordys.platform.dto.response.PlatformTenantDataCleanupTaskResponse">
+        SELECT id          AS taskId,
+               tenant_id   AS tenantId,
+               status,
+               detail,
+               operator_id AS operatorId,
+               create_time AS createTime,
+               update_time AS updateTime
+        FROM tenant_ops_task
+        WHERE tenant_id = #{tenantId}
+          AND task_type = 'TENANT_DATA_CLEANUP'
+          AND status IN ('PENDING', 'RUNNING')
+        ORDER BY create_time DESC
+        LIMIT 1
+    </select>
+
+    <select id="countDataCleanupTasks" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM tenant_ops_task
+        WHERE task_type = 'TENANT_DATA_CLEANUP'
+          AND (#{tenantId} = '' OR tenant_id = #{tenantId})
+          AND (#{status} = '' OR status = #{status})
+    </select>
+
+    <select id="pageDataCleanupTasks" resultType="cn.cordys.platform.dto.response.PlatformTenantDataCleanupTaskResponse">
+        SELECT id          AS taskId,
+               tenant_id   AS tenantId,
+               status,
+               detail,
+               operator_id AS operatorId,
+               create_time AS createTime,
+               update_time AS updateTime
+        FROM tenant_ops_task
+        WHERE task_type = 'TENANT_DATA_CLEANUP'
+          AND (#{tenantId} = '' OR tenant_id = #{tenantId})
+          AND (#{status} = '' OR status = #{status})
+        ORDER BY create_time DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
 </mapper>

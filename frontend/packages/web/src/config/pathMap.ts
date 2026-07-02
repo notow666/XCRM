@@ -311,6 +311,11 @@ export const pathMap: PathMapItem[] = [
         locale: 'menu.managementCenter.tenant',
       },
       {
+        key: 'MANAGEMENT_CENTER_DATA_CLEANUP',
+        route: AppRouteEnum.MANAGEMENT_CENTER_DATA_CLEANUP,
+        locale: 'menu.managementCenter.dataCleanup',
+      },
+      {
         key: 'MANAGEMENT_CENTER_DATA_SPECIALIST',
         route: AppRouteEnum.MANAGEMENT_CENTER_DATA_SPECIALIST,
         locale: 'menu.managementCenter.dataSpecialist',

@@ -68,6 +68,7 @@ public class CustomerAutoDeleteService {
 
         long cutoffTime = LocalDate.now()
                 .minusDays(config.getDays() - 1L)
+                .plusDays(1)
                 .atStartOfDay(ZoneId.systemDefault())
                 .toInstant()
                 .toEpochMilli();

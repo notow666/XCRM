@@ -43,6 +43,15 @@ const managementCenter: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'data-cleanup',
+      name: ManagementCenterRouteEnum.MANAGEMENT_CENTER_DATA_CLEANUP,
+      component: () => import('../../../views/management-center/data-cleanup/index.vue'),
+      meta: {
+        locale: 'menu.managementCenter.dataCleanup',
+        permissions: ['PLATFORM_ADMIN:READ'],
+      },
+    },
+    {
       path: 'data-specialist',
       name: ManagementCenterRouteEnum.MANAGEMENT_CENTER_DATA_SPECIALIST,
       component: () => import('../../../views/management-center/data-specialist/index.vue'),

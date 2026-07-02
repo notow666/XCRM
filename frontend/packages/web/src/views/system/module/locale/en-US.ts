@@ -150,7 +150,7 @@ export default {
   'module.customerAutoDeleteDaysPlaceholder': 'Enter days (1-365)',
   'module.customerAutoDeleteDaysRequired': 'Please enter deletion days',
   'module.customerAutoDeleteTip':
-    'The system deletes customers created from POOL_IMPORT whose create time exceeds the configured days. The task runs daily at 00:30',
+    'The system automatically cleans up pool-imported customers by customer create time every day at 22:30. Example: if a pool customer is imported on Jan 1 and the deletion threshold is set to 1 day, the data will be automatically deleted at 22:30 on Jan 1.',
   'module.dataCleanupDays': 'Cleanup days',
   'module.dataCleanupFields': 'Cleanup fields',
   'module.dataCleanupDaysRequired': 'Please enter cleanup days',
