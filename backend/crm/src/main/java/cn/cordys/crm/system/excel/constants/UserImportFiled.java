@@ -20,7 +20,7 @@ public enum UserImportFiled {
     GENDER("gender", "性别", "Gender", UserExcelData::getGender),
     DEPARTMENT("department", "部门", "Department", UserExcelData::getDepartment),
     POSITION("position", "职位", "Position", UserExcelData::getPosition),
-    PHONE("phone", "手机号", "Phone", UserExcelData::getPhone),
+    PHONE("phone", "登录账号", "Login account", UserExcelData::getPhone),
     EMAIL("email", "邮箱", "Email", UserExcelData::getEmail),
     SUPERVISOR("supervisor", "直属上级", "Supervisor", UserExcelData::getSupervisor),
     WORK_CITY("workCity", "工作城市", "Work City", UserExcelData::getWorkCity),

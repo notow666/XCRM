@@ -24,7 +24,7 @@ public class UserResponse {
     @Schema(description = "性别(0-男/1-女)")
     private Boolean gender;
 
-    @Schema(description = "手机号")
+    @Schema(description = "登录账号")
     private String phone;
 
     @Schema(description = "邮箱")

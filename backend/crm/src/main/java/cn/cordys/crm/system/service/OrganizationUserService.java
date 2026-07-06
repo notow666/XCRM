@@ -222,7 +222,7 @@ public class OrganizationUserService {
     @OperationLog(module = LogModule.SYSTEM_ORGANIZATION, type = LogType.ADD, operator = "{#operatorId}")
     public void addUser(UserAddRequest request, String organizationId, String operatorId) {
         String id = IDGenerator.nextStr();
-        //邮箱和手机号唯一性校验
+        //邮箱和登录账号唯一性校验
         checkEmailAndPhone(request.getEmail(), request.getPhone(), id);
         //add user base
         User user = addUserBaseData(request, organizationId, operatorId, id);
@@ -289,7 +289,7 @@ public class OrganizationUserService {
     }
 
     /**
-     * 邮箱和手机号唯一性校验
+     * 邮箱和登录账号唯一性校验
      *
      * @param email
      * @param phone
@@ -299,7 +299,7 @@ public class OrganizationUserService {
             throw new GenericException(Translator.get("email.exist"));
         }
         if (extUserMapper.countByPhone(phone, id) > 0) {
-            throw new GenericException(Translator.get("phone.exist"));
+            throw new GenericException(Translator.get("login_account.exist"));
         }
 
     }
@@ -360,7 +360,7 @@ public class OrganizationUserService {
     @OperationLog(module = LogModule.SYSTEM_ORGANIZATION, type = LogType.UPDATE, operator = "{#operatorId}")
     public void updateUser(UserUpdateRequest request, String operatorId, String orgId) {
         UserResponse oldUser = getUserDetail(request.getId());
-        //邮箱和手机号唯一性校验
+        //邮箱和登录账号唯一性校验
         checkEmailAndPhone(request.getEmail(), request.getPhone(), oldUser.getUserId());
         //update user info
         updateUserInfo(request, operatorId, oldUser);
@@ -442,7 +442,7 @@ public class OrganizationUserService {
         if (!Strings.CI.equals(userId, InternalUser.ADMIN.getValue())) {
             User user = userMapper.selectByPrimaryKey(userId);
             if (StringUtils.isBlank(user.getPhone())) {
-                throw new GenericException(Translator.get("user_phone_not_exist"));
+                throw new GenericException(Translator.get("login_account_not_exist"));
             }
             user.setPassword(CodingUtils.md5(user.getPhone().substring(user.getPhone().length() - 6)));
             user.setUpdateTime(System.currentTimeMillis());
@@ -505,7 +505,7 @@ public class OrganizationUserService {
     public void batchResetPassword(UserBatchRequest request, String operatorId, String orgId) {
         List<User> userList = extOrganizationUserMapper.getUserList(request);
         if (CollectionUtils.isEmpty(userList)) {
-            throw new GenericException(Translator.get("user_phone_not_exist"));
+            throw new GenericException(Translator.get("login_account_not_exist"));
         }
 
         List<LogDTO> logs = new ArrayList<>();
@@ -836,7 +836,7 @@ public class OrganizationUserService {
 
 
     /**
-     * 导入校验电话号码唯一
+     * 导入校验登录账号唯一
      *
      * @param phone
      *

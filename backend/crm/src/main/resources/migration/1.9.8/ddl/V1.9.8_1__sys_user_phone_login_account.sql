@@ -1,0 +1,2 @@
+ALTER TABLE sys_user
+    MODIFY COLUMN phone VARCHAR(64) COMMENT '登录账号';

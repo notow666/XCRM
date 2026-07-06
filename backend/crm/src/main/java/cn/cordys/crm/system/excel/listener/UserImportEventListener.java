@@ -29,13 +29,14 @@ import java.util.regex.Pattern;
 public class UserImportEventListener extends AnalysisEventListener<Map<Integer, String>> {
 
     protected static final int NAME_LENGTH = 255;
-    protected static final int PHONE_LENGTH = 20;
+    protected static final int LOGIN_ACCOUNT_MIN_LENGTH = 6;
+    protected static final int LOGIN_ACCOUNT_MAX_LENGTH = 64;
     protected static final int BATCH_COUNT = 1000;
     private static final String ERROR_MSG_SEPARATOR = ";";
     private static final String EMAIL_REGEX = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
-    private static final String PHONE_REGEX = "^1[0-9]\\d{9}$";
+    private static final String LOGIN_ACCOUNT_REGEX = "^[A-Za-z0-9]+$";
     private static final Pattern EMAIL_PATTERN = Pattern.compile(EMAIL_REGEX);
-    private static final Pattern PHONE_PATTERN = Pattern.compile(PHONE_REGEX);
+    private static final Pattern LOGIN_ACCOUNT_PATTERN = Pattern.compile(LOGIN_ACCOUNT_REGEX);
     // 字段赋值映射，简化 parseDataToModel
     private static final Map<String, BiConsumer<UserExcelData, String>> FIELD_SETTERS = new HashMap<>();
 
@@ -237,21 +238,21 @@ public class UserImportEventListener extends AnalysisEventListener<Map<Integer, 
             return; // 交给 Bean 校验，不在此重复报错
         }
 
-        if (phone.length() > PHONE_LENGTH) {
-            errMsg.append(Translator.get("phone_length")).append(ERROR_MSG_SEPARATOR);
+        if (phone.length() < LOGIN_ACCOUNT_MIN_LENGTH || phone.length() > LOGIN_ACCOUNT_MAX_LENGTH) {
+            errMsg.append(Translator.get("login_account_length")).append(ERROR_MSG_SEPARATOR);
         }
         if (organizationUserService.checkPhone(phone)) {
-            errMsg.append(Translator.get("phone.exist")).append(ERROR_MSG_SEPARATOR);
+            errMsg.append(Translator.get("login_account.exist")).append(ERROR_MSG_SEPARATOR);
         }
 
-        if (!PHONE_PATTERN.matcher(phone).matches()) {
-            errMsg.append(Translator.get("import_phone_validate")).append(ERROR_MSG_SEPARATOR);
+        if (!LOGIN_ACCOUNT_PATTERN.matcher(phone).matches()) {
+            errMsg.append(Translator.get("login_account_format_error")).append(ERROR_MSG_SEPARATOR);
         }
 
         if (CollectionUtils.isNotEmpty(list)) {
             for (UserExcelData userExcelData : list) {
                 if (Strings.CI.equals(userExcelData.getPhone(), phone)) {
-                    errMsg.append(Translator.get("phone.repeat"))
+                    errMsg.append(Translator.get("login_account.repeat"))
                             .append(phone)
                             .append(ERROR_MSG_SEPARATOR);
                     break;

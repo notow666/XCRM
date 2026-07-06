@@ -30,7 +30,7 @@
             </n-space>
           </n-radio-group>
         </n-form-item>
-        <n-form-item require-mark-placement="left" label-placement="left" path="phone" :label="t('common.phoneNumber')">
+        <n-form-item require-mark-placement="left" label-placement="left" path="phone" :label="t('org.loginAccount')">
           <n-input v-model:value="form.phone" type="text" :placeholder="t('common.pleaseInput')" />
         </n-form-item>
         <n-form-item
@@ -228,7 +228,7 @@
   import { cloneDeep } from 'lodash-es';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
-  import { validateEmail, validatePhone } from '@lib/shared/method/validate';
+  import { validateEmail } from '@lib/shared/method/validate';
   import type { MemberParams } from '@lib/shared/models/system/org';
 
   import CrmDrawer from '@/components/pure/crm-drawer/index.vue';
@@ -307,10 +307,10 @@
 
   function validateUserPhone(rule: FormItemRule, value: string) {
     if (!value) {
-      return new Error(t('common.notNull', { value: `${t('common.phoneNumber')}` }));
+      return new Error(t('common.notNull', { value: `${t('org.loginAccount')}` }));
     }
-    if (!validatePhone(value)) {
-      return new Error(t('common.userPhoneErrTip'));
+    if (!/^[A-Za-z0-9]{6,64}$/.test(value)) {
+      return new Error(t('org.loginAccountErrTip'));
     }
     return true;
   }
