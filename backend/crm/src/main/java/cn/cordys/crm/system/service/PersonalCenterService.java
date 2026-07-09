@@ -194,7 +194,7 @@ public class PersonalCenterService {
         User oldUser = userBaseMapper.selectByPrimaryKey(userId);
         int countByPhone = extUserMapper.countByPhone(personalInfoRequest.getPhone(), userId);
         if (countByPhone > 0) {
-            throw new GenericException(Translator.get("phone.exist"));
+            throw new GenericException(Translator.get("login_account.exist"));
         }
         int countByEmail = extUserMapper.countByEmail(personalInfoRequest.getEmail(), userId);
         if (countByEmail > 0) {

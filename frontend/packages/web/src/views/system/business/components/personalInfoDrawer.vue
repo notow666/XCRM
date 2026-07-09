@@ -66,9 +66,6 @@
           </div>
         </div>
         <div class="py-[24px]">
-          <n-button type="primary" ghost class="mx-[8px]" @click="edit">
-            {{ t('common.edit') }}
-          </n-button>
           <n-button @click="changePassword">
             {{ t('system.personal.changePassword') }}
           </n-button>
@@ -117,7 +114,6 @@
       <apiKey v-if="activeTab === PersonalEnum.API_KEY" />
     </n-scrollbar>
   </CrmDrawer>
-  <EditPersonalInfoModal v-model:show="showEditPersonalModal" :integration="currentInfo" @init-sync="searchData()" />
   <EditPasswordModal v-model:show="showEditPasswordModal" @init-sync="searchData()" />
 </template>
 
@@ -129,7 +125,7 @@
 
   import { PersonalEnum } from '@lib/shared/enums/systemEnum';
   import { useI18n } from '@lib/shared/hooks/useI18n';
-  import { PersonalInfoRequest, PersonalWechatResponse } from '@lib/shared/models/system/business';
+  import { PersonalWechatResponse } from '@lib/shared/models/system/business';
   import { OrgUserInfo } from '@lib/shared/models/system/org';
 
   import CrmCard from '@/components/pure/crm-card/index.vue';
@@ -140,7 +136,6 @@
   import FollowDetail from '@/components/business/crm-follow-detail/index.vue';
   import apiKey from './apiKey.vue';
   import EditPasswordModal from '@/views/system/business/components/editPasswordModal.vue';
-  import EditPersonalInfoModal from '@/views/system/business/components/editPersonalInfoModal.vue';
 
   import { getPersonalInfo, getPersonalWechat } from '@/api/modules';
   import { defaultUserInfo } from '@/config/business';
@@ -169,14 +164,8 @@
   });
   const wechatLoading = ref(false);
 
-  const currentInfo = ref<PersonalInfoRequest>({
-    phone: '',
-    email: '',
-  });
-
   const bodyClass = ref<string>('crm-drawer-content');
 
-  const showEditPersonalModal = ref<boolean>(false);
   const showEditPasswordModal = ref<boolean>(false);
   const refreshKey = ref(0);
 
@@ -238,12 +227,6 @@
         wechatLoading.value = false;
       }
     }
-  }
-
-  function edit() {
-    currentInfo.value.email = personalInfo.value.email;
-    currentInfo.value.phone = personalInfo.value.phone;
-    showEditPersonalModal.value = true;
   }
 
   function changePassword() {

@@ -634,7 +634,7 @@
       },
     },
     {
-      title: t('common.phoneNumber'),
+      title: t('org.loginAccount'),
       key: 'phone',
       ellipsis: {
         tooltip: true,
@@ -955,7 +955,7 @@
       },
     },
     {
-      title: t('common.phoneNumber'),
+      title: t('org.loginAccount'),
       dataIndex: 'phoneNumber',
       type: FieldTypeEnum.INPUT,
     },

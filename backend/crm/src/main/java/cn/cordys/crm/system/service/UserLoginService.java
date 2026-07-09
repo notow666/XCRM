@@ -136,7 +136,7 @@ public class UserLoginService {
     /**
      * 认证用户并获取用户详细信息
      *
-     * @param userKey 用户标识（用户名/手机号/邮箱）
+     * @param userKey 用户标识（登录账号/邮箱）
      *
      * @return 用户详细信息
      *
@@ -167,14 +167,14 @@ public class UserLoginService {
         // 设置用户权限和角色信息
         setupUserPermissions(userDTO, organizationId, orgIds, tenant);
 
-        //默认密码检查
+        // 默认密码检查
         checkDefaultPwd(userDTO);
 
         return userDTO;
     }
 
     /**
-     * 检查默认密码
+     * 检查默认密码（登录账号后6位）
      *
      * @param userDTO
      */

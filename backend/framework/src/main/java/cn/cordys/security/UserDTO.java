@@ -51,7 +51,7 @@ public class UserDTO implements java.io.Serializable {
     @Schema(description = "当前组织ID")
     private String lastOrganizationId;
 
-    @Schema(description = "手机号")
+    @Schema(description = "登录账号")
     private String phone;
 
     @Schema(description = "来源：LOCAL OIDC CAS OAUTH2", requiredMode = Schema.RequiredMode.REQUIRED)

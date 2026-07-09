@@ -151,7 +151,7 @@ export default {
   'system.personal.expiredTip': '可在【设置】内更改到期时间',
   'system.personal.noData': '暂无数据，请 ',
   'system.personal.empty': '暂无数据',
-  'system.personal.phone': '手机',
+  'system.personal.phone': '登录账号',
   'system.personal.phone.length': '手机号码格式错误',
   'system.personal.email': '邮箱',
   'system.personal.email.empty': '邮箱为空',

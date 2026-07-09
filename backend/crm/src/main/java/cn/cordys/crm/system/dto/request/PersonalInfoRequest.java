@@ -9,8 +9,9 @@ import lombok.Data;
 @Data
 public class PersonalInfoRequest {
 
-    @Size(max = 11)
-    @Schema(description = "手机号")
+    @Size(min = 6, max = 64, message = "{login_account_length}")
+    @Pattern(regexp = "^[A-Za-z0-9]+$", message = "{login_account_format_error}")
+    @Schema(description = "登录账号")
     @NotBlank
     private String phone;
 

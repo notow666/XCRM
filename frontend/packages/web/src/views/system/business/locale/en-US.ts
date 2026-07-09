@@ -160,7 +160,7 @@ export default {
   'system.personal.expiredTip': 'Change expiration time in Settings',
   'system.personal.noData': 'No data, please ',
   'system.personal.empty': 'No data',
-  'system.personal.phone': 'phone',
+  'system.personal.phone': 'Login account',
   'system.personal.phone.length': 'The mobile number format is incorrect',
   'system.personal.email': 'email',
   'system.personal.email.empty': 'Email is empty',

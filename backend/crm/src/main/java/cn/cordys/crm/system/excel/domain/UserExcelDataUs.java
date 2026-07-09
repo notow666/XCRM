@@ -41,8 +41,8 @@ public class UserExcelDataUs extends UserExcelData {
 
     @NotBlank(message = "{cannot_be_null}")
     @ColumnWidth(50)
-    @Length(max = 255)
-    @ExcelProperty("Phone")
+    @Length(max = 64)
+    @ExcelProperty("Login account")
     private String phone;
 
     @ColumnWidth(50)
