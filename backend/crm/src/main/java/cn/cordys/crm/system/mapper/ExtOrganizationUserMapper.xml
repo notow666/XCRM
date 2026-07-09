@@ -535,4 +535,12 @@
         from sys_organization_user
         where user_id = #{userId} limit 1
     </select>
+
+    <select id="getDepartmentByOrgIdAndUserId" resultType="java.lang.String">
+        select department_id
+        from sys_organization_user
+        where organization_id = #{orgId}
+          and user_id = #{userId}
+        limit 1
+    </select>
 </mapper>

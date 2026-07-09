@@ -24,7 +24,7 @@
       v-model:selected-list="selectedUsers"
       :multiple="[FieldTypeEnum.MEMBER_MULTIPLE, FieldTypeEnum.DEPARTMENT_MULTIPLE].includes(fieldConfig.type)"
       :drawer-title="t('crmFormDesign.selectDataSource', { type: props.fieldConfig.name })"
-      :api-type-key="MemberApiTypeEnum.FORM_FIELD"
+      :api-type-key="memberApiTypeKey"
       :disabled="props.fieldConfig.editable === false || !!props.fieldConfig.resourceFieldId"
       :member-types="memberTypes"
       :disabled-node-types="
@@ -73,6 +73,11 @@
     default: [],
   });
   const selectedUsers = ref<SelectedUsersItem[]>(props.fieldConfig.initialOptions || []);
+  const memberApiTypeKey = computed(() => {
+    return props.fieldConfig.internalKey === 'planProcessor'
+      ? MemberApiTypeEnum.FORM_FIELD_CURRENT_DEPT
+      : MemberApiTypeEnum.FORM_FIELD;
+  });
   const memberTypes = computed(() => {
     if ([FieldTypeEnum.MEMBER, FieldTypeEnum.MEMBER_MULTIPLE].includes(props.fieldConfig.type)) {
       return [

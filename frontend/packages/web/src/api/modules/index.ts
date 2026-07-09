@@ -710,6 +710,7 @@ export const {
   getCustomerPoolListByEnable,
   getFormDesignConfig,
   getFieldDeptUerTree,
+  getFieldCurrentDeptUserTree,
   getFieldContactList,
   getFieldProductList,
   getModuleTopNavList,

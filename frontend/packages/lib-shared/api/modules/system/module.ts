@@ -28,6 +28,7 @@ import {
   GetFieldContractPaymentRecordListUrl,
   GetFieldContactListUrl,
   GetFieldCustomerListUrl,
+  GetFieldCurrentDeptUserTreeUrl,
   GetFieldDeptTreeUrl,
   GetFieldDeptUerTreeUrl,
   GetFieldOpportunityListUrl,
@@ -286,6 +287,10 @@ export default function useProductApi(CDR: CordysAxios) {
     return CDR.get<DeptUserTreeNode[]>({ url: GetFieldDeptUerTreeUrl });
   }
 
+  function getFieldCurrentDeptUserTree() {
+    return CDR.get<DeptUserTreeNode[]>({ url: GetFieldCurrentDeptUserTreeUrl });
+  }
+
   function getFieldDeptTree() {
     return CDR.get<DeptUserTreeNode[]>({ url: GetFieldDeptTreeUrl }, { ignoreCancelToken: true });
   }
@@ -494,6 +499,7 @@ export default function useProductApi(CDR: CordysAxios) {
     saveFormDesignConfig,
     getFormDesignConfig,
     getFieldDeptUerTree,
+    getFieldCurrentDeptUserTree,
     getFieldDeptTree,
     getFieldClueList,
     getFieldContractList,

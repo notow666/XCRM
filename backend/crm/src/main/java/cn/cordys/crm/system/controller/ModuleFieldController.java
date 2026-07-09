@@ -119,6 +119,12 @@ public class ModuleFieldController {
         return moduleService.getDeptUserTree(OrganizationContext.getOrganizationId());
     }
 
+    @GetMapping("/user/current-dept/tree")
+    @Operation(summary = "获取当前部门及下级部门用户树")
+    public List<DeptUserTreeNode> getCurrentDeptUserTree() {
+        return moduleService.getCurrentDeptUserTree(OrganizationContext.getOrganizationId(), SessionUtils.getUserId());
+    }
+
     @PostMapping("/source/lead")
     @Operation(summary = "分页获取线索")
     public Pager<List<ClueListResponse>> sourceCluePage(@Valid @RequestBody CluePageRequest request) {

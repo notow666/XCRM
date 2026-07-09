@@ -27,6 +27,7 @@ import cn.cordys.crm.system.dto.request.ModuleSortRequest;
 import cn.cordys.crm.system.dto.response.RoleListResponse;
 import cn.cordys.crm.system.mapper.ExtDepartmentMapper;
 import cn.cordys.crm.system.mapper.ExtModuleMapper;
+import cn.cordys.crm.system.mapper.ExtOrganizationUserMapper;
 import cn.cordys.crm.system.mapper.ExtUserRoleMapper;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
@@ -53,6 +54,8 @@ public class ModuleService {
     private ExtModuleMapper extModuleMapper;
     @Resource
     private ExtDepartmentMapper extDepartmentMapper;
+    @Resource
+    private ExtOrganizationUserMapper extOrganizationUserMapper;
     @Resource
     private ExtUserRoleMapper extUserRoleMapper;
     @Resource
@@ -172,11 +175,33 @@ public class ModuleService {
      * @return List<DeptUserTreeNode>
      */
     public List<DeptUserTreeNode> getDeptUserTree(String orgId) {
+        List<DeptUserTreeNode> userNodes = getDeptUserNodes(orgId);
+        return BaseTreeNode.buildTree(userNodes);
+    }
+
+    /**
+     * 获取当前用户部门及下级部门用户树
+     *
+     * @return List<DeptUserTreeNode>
+     */
+    public List<DeptUserTreeNode> getCurrentDeptUserTree(String orgId, String userId) {
+        if (Strings.CS.equals(userId, InternalUser.ADMIN.getValue())) {
+            return getDeptUserTree(orgId);
+        }
+        String departmentId = extOrganizationUserMapper.getDepartmentByOrgIdAndUserId(orgId, userId);
+        if (departmentId == null || departmentId.isBlank()) {
+            return List.of();
+        }
+        List<DeptUserTreeNode> userNodes = getDeptUserNodes(orgId);
+        return BaseTreeNode.buildTree(userNodes, departmentId);
+    }
+
+    private List<DeptUserTreeNode> getDeptUserNodes(String orgId) {
         List<DeptUserTreeNode> treeNodes = extDepartmentMapper.selectDeptUserTreeNode(orgId);
         List<DeptUserTreeNode> userNodes = extUserRoleMapper.selectUserDeptForOrg(orgId);
         userNodes = departmentService.sortByCommander(orgId, userNodes);
         userNodes.addAll(treeNodes);
-        return BaseTreeNode.buildTree(userNodes);
+        return userNodes;
     }
 
     /**

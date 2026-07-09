@@ -57,6 +57,7 @@ export const NoPickCustomerPoolUrl = '/account-pool/no-pick'; // 未领取线索
 export const GetFormDesignConfigUrl = '/module/form/config'; // 获取表单设计配置
 export const SaveFormDesignConfigUrl = '/module/form/save'; // 保存表单设计配置
 export const GetFieldDeptUerTreeUrl = '/field/user/dept/tree'; // 获取部门成员树
+export const GetFieldCurrentDeptUserTreeUrl = '/field/user/current-dept/tree'; // 获取当前部门及下级成员树
 export const GetFieldDeptTreeUrl = '/field/dept/tree'; // 获取部门树
 export const GetFieldProductListUrl = '/field/source/product'; // 获取产品列表
 export const GetFieldOpportunityListUrl = '/field/source/opportunity'; // 获取商机列表
