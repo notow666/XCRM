@@ -22,6 +22,7 @@ import cn.cordys.platform.service.PlatformOverviewService;
 import cn.cordys.platform.service.PlatformTenantProvisionTaskExecutor;
 import cn.cordys.security.SessionUtils;
 import cn.cordys.security.SessionUser;
+import cn.cordys.tenant.dto.TenantShadowMetaDTO;
 import cn.cordys.tenant.dto.request.TenantProvisionRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -203,6 +204,34 @@ public class PlatformAdminController {
     public Pager<List<PlatformAuditLogResponse>> pageAudits(@Valid @RequestBody PlatformAuditPageRequest request) {
         assertPlatformAdmin();
         return platformAdminService.pageAuditLogs(request);
+    }
+
+    @PostMapping("/tenant/{tenantId}/shadow/enable")
+    @Operation(summary = "开通租户影子库")
+    public void enableTenantShadow(@PathVariable("tenantId") String tenantId) {
+        String operator = assertPlatformAdmin();
+        platformAdminService.enableTenantShadow(tenantId, operator);
+    }
+
+    @GetMapping("/tenant/{tenantId}/shadow/status")
+    @Operation(summary = "租户影子库状态")
+    public TenantShadowMetaDTO tenantShadowStatus(@PathVariable("tenantId") String tenantId) {
+        assertPlatformAdmin();
+        return platformAdminService.getTenantShadowStatus(tenantId);
+    }
+
+    @PostMapping("/tenant/{tenantId}/shadow/switch-to-shadow")
+    @Operation(summary = "切换租户至影子库")
+    public void switchTenantToShadow(@PathVariable("tenantId") String tenantId) {
+        String operator = assertPlatformAdmin();
+        platformAdminService.switchTenantToShadow(tenantId, operator);
+    }
+
+    @PostMapping("/tenant/{tenantId}/shadow/switch-to-primary")
+    @Operation(summary = "切换租户回主库")
+    public void switchTenantToPrimary(@PathVariable("tenantId") String tenantId) {
+        String operator = assertPlatformAdmin();
+        platformAdminService.switchTenantToPrimary(tenantId, operator);
     }
 
     private String assertPlatformAdmin() {

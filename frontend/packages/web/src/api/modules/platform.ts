@@ -13,6 +13,17 @@ export interface PlatformTenantItem {
   enabled: boolean;
   createTime: number;
   updateTime: number;
+  shadowEnabled?: boolean;
+  activeDbRole?: 'PRIMARY' | 'SHADOW' | string;
+  shadowMaintenanceState?: 'PRE_NOTICE' | 'BLOCKING' | string | null;
+}
+
+export interface PlatformTenantShadowMeta {
+  tenantId: string;
+  shadowEnabled: boolean;
+  activeDbRole: 'PRIMARY' | 'SHADOW';
+  maintenanceState?: 'PRE_NOTICE' | 'BLOCKING' | null;
+  maintenanceUntil?: number | null;
 }
 
 export interface PlatformTenantHealth {
@@ -132,6 +143,22 @@ export function getPlatformTenantHealth(tenantId: string) {
 
 export function rerunPlatformTenantMigrate(tenantId: string) {
   return CDR.post({ url: `/platform/admin/tenant/${tenantId}/migrate` });
+}
+
+export function enablePlatformTenantShadow(tenantId: string) {
+  return CDR.post({ url: `/platform/admin/tenant/${tenantId}/shadow/enable` });
+}
+
+export function getPlatformTenantShadowStatus(tenantId: string) {
+  return CDR.get<PlatformTenantShadowMeta>({ url: `/platform/admin/tenant/${tenantId}/shadow/status` });
+}
+
+export function switchPlatformTenantToShadow(tenantId: string) {
+  return CDR.post({ url: `/platform/admin/tenant/${tenantId}/shadow/switch-to-shadow` });
+}
+
+export function switchPlatformTenantToPrimary(tenantId: string) {
+  return CDR.post({ url: `/platform/admin/tenant/${tenantId}/shadow/switch-to-primary` });
 }
 
 export function submitPlatformTenantDataCleanup(data: PlatformTenantDataCleanupSubmitRequest) {

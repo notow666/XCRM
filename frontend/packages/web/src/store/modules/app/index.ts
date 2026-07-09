@@ -13,6 +13,8 @@ import {
   SSE_EVENT_PLATFORM_FORCE_LOGOUT_DONE,
   SSE_EVENT_PLATFORM_SYSTEM_ANNOUNCEMENT,
   SSE_EVENT_POOL_BATCH_BY_CONDITION_DONE,
+  SSE_EVENT_SHADOW_PRE_NOTICE,
+  SSE_EVENT_SHADOW_SWITCH_COMPLETE,
 } from '@lib/shared/constants/sseEventType';
 import { SSE_KIND_DATA_SPECIALIST, SSE_KIND_PLATFORM, SSE_KIND_TENANT } from '@lib/shared/constants/ssePrincipalKind';
 import { CompanyTypeEnum } from '@lib/shared/enums/commonEnum';
@@ -430,6 +432,28 @@ const useAppStore = defineStore('app', {
                     },
                   })
                 );
+              }
+              return;
+            }
+
+            if (data.type === SSE_EVENT_SHADOW_PRE_NOTICE) {
+              if (userStore.userInfo.source !== 'PLATFORM' && userStore.userInfo.source !== 'DATA_SPECIALIST') {
+                message.warning(
+                  typeof data.message === 'string' ? data.message : t('shadowSwitch.preNotice')
+                );
+              }
+              return;
+            }
+
+            if (data.type === SSE_EVENT_SHADOW_SWITCH_COMPLETE) {
+              if (userStore.userInfo.source !== 'PLATFORM' && userStore.userInfo.source !== 'DATA_SPECIALIST') {
+                message.info(
+                  typeof data.message === 'string' ? data.message : t('shadowSwitch.complete'),
+                  { duration: 8000 }
+                );
+                window.setTimeout(() => {
+                  window.location.reload();
+                }, 1500);
               }
               return;
             }

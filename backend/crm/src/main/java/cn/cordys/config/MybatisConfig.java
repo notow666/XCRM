@@ -4,6 +4,7 @@ import cn.cordys.common.handler.ListTypeHandler;
 import cn.cordys.common.interceptor.UserDesensitizationInterceptor;
 import cn.cordys.mybatis.interceptor.MybatisInterceptor;
 import cn.cordys.quartz.anno.QuartzDataSource;
+import cn.cordys.tenant.service.TenantDataSourceLookupResolver;
 import com.github.pagehelper.PageInterceptor;
 import com.zaxxer.hikari.HikariDataSource;
 import org.apache.ibatis.plugin.Interceptor;
@@ -53,7 +54,8 @@ public class MybatisConfig {
     @Bean
     public DynamicTenantRoutingDataSource tenantRoutingDataSource(
             @Qualifier("dataSourceProperties") DataSourceProperties properties,
-            TenantHikariDataSourceFactory tenantHikariDataSourceFactory) {
+            TenantHikariDataSourceFactory tenantHikariDataSourceFactory,
+            TenantDataSourceLookupResolver lookupResolver) {
         DataSource defaultDataSource = tenantHikariDataSourceFactory.create(
                 properties.determineDriverClassName(),
                 properties.determineUrl(),
@@ -67,6 +69,7 @@ public class MybatisConfig {
 
         DynamicTenantRoutingDataSource routingDataSource = new DynamicTenantRoutingDataSource();
         routingDataSource.setDefaultTargetDataSource(Objects.requireNonNull(defaultDataSource));
+        routingDataSource.setLookupResolver(lookupResolver);
         routingDataSource.initTargets(targetDataSources);
         return routingDataSource;
     }

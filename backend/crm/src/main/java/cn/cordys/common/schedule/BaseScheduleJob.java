@@ -2,6 +2,8 @@ package cn.cordys.common.schedule;
 
 import cn.cordys.common.constants.MdcConstants;
 import cn.cordys.common.uid.IDGenerator;
+import cn.cordys.context.RoutingContext;
+import cn.cordys.context.RoutingPurpose;
 import cn.cordys.context.TenantContext;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -28,6 +30,7 @@ public abstract class BaseScheduleJob implements Job {
     @Override
     public void execute(JobExecutionContext context) {
         String previousTenantId = TenantContext.getTenantId();
+        RoutingPurpose previousPurpose = RoutingContext.getPurpose();
         String previousMdcTraceId = MDC.get(MdcConstants.TRACE_ID_KEY);
         String previousMdcTenantId = MDC.get(MdcConstants.TENANT_ID_KEY);
         try {
@@ -40,10 +43,12 @@ public abstract class BaseScheduleJob implements Job {
             String tenantId = resolveTenantId(jobDataMap, jobKey);
             if (StringUtils.isNotBlank(tenantId)) {
                 TenantContext.setTenantId(tenantId);
+                RoutingContext.setPurpose(RoutingPurpose.PRODUCTION_MAINTAIN);
                 MDC.put(MdcConstants.TRACE_ID_KEY, IDGenerator.nextStr());
                 MDC.put(MdcConstants.TENANT_ID_KEY, tenantId);
             } else {
                 TenantContext.clear();
+                RoutingContext.clear();
                 MDC.remove(MdcConstants.TRACE_ID_KEY);
                 MDC.remove(MdcConstants.TENANT_ID_KEY);
             }
@@ -55,6 +60,11 @@ public abstract class BaseScheduleJob implements Job {
                 TenantContext.clear();
             } else {
                 TenantContext.setTenantId(previousTenantId);
+            }
+            if (previousPurpose == null) {
+                RoutingContext.clear();
+            } else {
+                RoutingContext.setPurpose(previousPurpose);
             }
             if (StringUtils.isBlank(previousMdcTraceId)) {
                 MDC.remove(MdcConstants.TRACE_ID_KEY);

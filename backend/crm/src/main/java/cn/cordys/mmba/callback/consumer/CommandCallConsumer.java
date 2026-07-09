@@ -1,6 +1,8 @@
 package cn.cordys.mmba.callback.consumer;
 
 import cn.cordys.common.constants.CrmLoggers;
+import cn.cordys.context.RoutingContext;
+import cn.cordys.context.RoutingPurpose;
 import cn.cordys.context.TenantContext;
 import cn.cordys.mmba.MmbaConstants;
 import cn.cordys.mmba.callback.AbstractZZYConsumer;
@@ -44,6 +46,7 @@ public class CommandCallConsumer extends AbstractZZYConsumer {
             MmbaAuditRequest tenantDto = dto.copyWithData(entry.getValue());
             try {
                 TenantContext.setTenantId(tenantId);
+                RoutingContext.setPurpose(RoutingPurpose.INTEGRATION_PRIMARY);
                 prepareResult = mmbaCallbackProcessService.prepareCallbackRecord(tenantDto);
                 if (!prepareResult.shouldProcess()) {
                     continue;
@@ -65,6 +68,7 @@ public class CommandCallConsumer extends AbstractZZYConsumer {
                 }
                 throw e;
             } finally {
+                RoutingContext.clear();
                 TenantContext.clear();
             }
         }

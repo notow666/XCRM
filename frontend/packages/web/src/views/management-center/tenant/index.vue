@@ -5,8 +5,8 @@
         <NInput
           v-model:value="keyword"
           clearable
-          placeholder="tenantId/code/name"
-          class="w-[280px]"
+          :placeholder="t('managementCenter.tenant.keywordPlaceholder')"
+          class="min-w-[200px] flex-1 sm:max-w-[280px]"
           @keyup.enter="handleSearch"
         />
         <NButton type="primary" @click="handleSearch">{{ t('common.search') }}</NButton>
@@ -68,22 +68,130 @@
       <NInput v-model:value="nameEditForm.name" placeholder="租户名称" />
     </NSpace>
   </NModal>
+
+  <NModal
+    v-model:show="showShadow"
+    preset="card"
+    :title="t('managementCenter.tenant.shadowModalTitle')"
+    class="w-[520px]"
+    @after-leave="stopShadowPolling"
+  >
+    <NSpin :show="shadowLoading">
+      <div class="space-y-4">
+        <div class="text-sm leading-relaxed text-[var(--text-n4)]">
+          {{ t('managementCenter.tenant.shadowModalHint') }}
+        </div>
+        <div class="rounded border border-[var(--text-n8)] bg-[var(--text-n10)] p-3 text-sm">
+          <div class="mb-2 font-medium text-[var(--text-n2)]"
+            >{{ shadowForm.tenantName }} ({{ shadowForm.tenantId }})</div
+          >
+          <div class="grid gap-2">
+            <div class="flex justify-between gap-4">
+              <span class="text-[var(--text-n4)]">{{ t('managementCenter.tenant.shadowStatusEnabled') }}</span>
+              <NTag :type="shadowStatus?.shadowEnabled ? 'success' : 'default'" size="small">
+                {{
+                  shadowStatus?.shadowEnabled
+                    ? t('managementCenter.tenant.shadowStatusEnabled')
+                    : t('managementCenter.tenant.shadowStatusDisabled')
+                }}
+              </NTag>
+            </div>
+            <div v-if="shadowStatus?.shadowEnabled" class="flex justify-between gap-4">
+              <span class="text-[var(--text-n4)]">{{ t('managementCenter.tenant.shadowActiveRole') }}</span>
+              <NTag :type="shadowStatus.activeDbRole === 'SHADOW' ? 'warning' : 'info'" size="small">
+                {{
+                  shadowStatus.activeDbRole === 'SHADOW'
+                    ? t('managementCenter.tenant.shadowActive')
+                    : t('managementCenter.tenant.shadowPrimary')
+                }}
+              </NTag>
+            </div>
+            <div v-if="shadowStatus?.maintenanceState" class="flex justify-between gap-4">
+              <span class="text-[var(--text-n4)]">{{ t('managementCenter.tenant.shadowMaintenance') }}</span>
+              <span>{{ formatMaintenanceState(shadowStatus.maintenanceState) }}</span>
+            </div>
+            <div v-if="shadowStatus?.maintenanceUntil" class="flex justify-between gap-4">
+              <span class="text-[var(--text-n4)]">{{ t('managementCenter.tenant.shadowMaintenanceUntil') }}</span>
+              <span>{{ formatDateTime(shadowStatus.maintenanceUntil) }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <NButton :loading="shadowLoading" @click="refreshShadowStatus">
+            {{ t('managementCenter.tenant.shadowRefreshStatus') }}
+          </NButton>
+          <NPopconfirm v-if="shadowForm.active && !shadowStatus?.shadowEnabled" @positive-click="handleEnableShadow">
+            <template #trigger>
+              <NButton type="primary" :loading="shadowActionLoading">
+                {{ t('managementCenter.tenant.shadowEnable') }}
+              </NButton>
+            </template>
+            {{ t('managementCenter.tenant.shadowEnableConfirm') }}
+          </NPopconfirm>
+          <NPopconfirm
+            v-if="
+              shadowStatus?.shadowEnabled && shadowStatus.activeDbRole !== 'SHADOW' && !shadowStatus.maintenanceState
+            "
+            @positive-click="handleSwitchToShadow"
+          >
+            <template #trigger>
+              <NButton type="warning" :loading="shadowActionLoading">
+                {{ t('managementCenter.tenant.shadowSwitchToShadow') }}
+              </NButton>
+            </template>
+            {{ t('managementCenter.tenant.shadowSwitchToShadowConfirm') }}
+          </NPopconfirm>
+          <NPopconfirm
+            v-if="
+              shadowStatus?.shadowEnabled && shadowStatus.activeDbRole === 'SHADOW' && !shadowStatus.maintenanceState
+            "
+            @positive-click="handleSwitchToPrimary"
+          >
+            <template #trigger>
+              <NButton type="info" :loading="shadowActionLoading">
+                {{ t('managementCenter.tenant.shadowSwitchToPrimary') }}
+              </NButton>
+            </template>
+            {{ t('managementCenter.tenant.shadowSwitchToPrimaryConfirm') }}
+          </NPopconfirm>
+        </div>
+        <div v-if="!shadowForm.active" class="text-xs text-[var(--warning-color)]">
+          {{ t('managementCenter.tenant.shadowTenantFrozenHint') }}
+        </div>
+      </div>
+    </NSpin>
+  </NModal>
 </template>
 
 <script setup lang="ts">
-  import { computed, h, onMounted, reactive, ref } from 'vue';
-  import { NButton, NDataTable, NInput, NModal, NPagination, NSpace, NTag, useMessage } from 'naive-ui';
+  import { computed, h, onMounted, onUnmounted, reactive, ref } from 'vue';
+  import {
+    NButton,
+    NDataTable,
+    NInput,
+    NModal,
+    NPagination,
+    NPopconfirm,
+    NSpace,
+    NSpin,
+    NTag,
+    useMessage,
+  } from 'naive-ui';
 
   import { useI18n } from '@lib/shared/hooks/useI18n';
 
   import CrmCard from '@/components/pure/crm-card/index.vue';
 
   import {
+    enablePlatformTenantShadow,
     getPlatformTenantHealth,
+    getPlatformTenantShadowStatus,
     pagePlatformTenants,
     type PlatformTenantItem,
+    type PlatformTenantShadowMeta,
     provisionPlatformTenant,
-    rerunPlatformTenantMigrate,
+    switchPlatformTenantToPrimary,
+    switchPlatformTenantToShadow,
     updatePlatformTenantName,
     updatePlatformTenantOrgId,
     updatePlatformTenantStatus,
@@ -117,6 +225,16 @@
     tenantId: '',
     name: '',
   });
+  const showShadow = ref(false);
+  const shadowLoading = ref(false);
+  const shadowActionLoading = ref(false);
+  const shadowStatus = ref<PlatformTenantShadowMeta | null>(null);
+  const shadowForm = reactive({
+    tenantId: '',
+    tenantName: '',
+    active: true,
+  });
+  let shadowPollTimer: ReturnType<typeof setInterval> | null = null;
 
   async function loadData() {
     loading.value = true;
@@ -190,24 +308,44 @@
     );
   }
 
-  async function rerunMigrate(row: PlatformTenantItem) {
-    await rerunPlatformTenantMigrate(row.tenantId);
-    message.success('迁移完成');
-  }
-
   function openOrgSync(row: PlatformTenantItem) {
     orgSyncForm.tenantId = row.tenantId;
     orgSyncForm.orgId = row.orgId || '';
     showOrgSync.value = true;
   }
 
-  function formatDateTime(ms?: number) {
+  function formatDateTime(ms?: number | null) {
     if (ms == null) return '-';
     const d = new Date(ms);
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(
       d.getMinutes()
     )}:${pad(d.getSeconds())}`;
+  }
+
+  function formatMaintenanceState(state?: string | null) {
+    if (state === 'PRE_NOTICE') return t('managementCenter.tenant.shadowMaintenancePreNotice');
+    if (state === 'BLOCKING') return t('managementCenter.tenant.shadowMaintenanceBlocking');
+    return t('managementCenter.tenant.shadowMaintenanceNone');
+  }
+
+  function renderShadowTag(row: PlatformTenantItem) {
+    if (!row.shadowEnabled) {
+      return h(
+        NTag,
+        { size: 'small', bordered: false },
+        { default: () => t('managementCenter.tenant.shadowNotEnabled') }
+      );
+    }
+    const isShadow = row.activeDbRole === 'SHADOW';
+    return h(
+      NTag,
+      { size: 'small', type: isShadow ? 'warning' : 'info' },
+      {
+        default: () =>
+          isShadow ? t('managementCenter.tenant.shadowActive') : t('managementCenter.tenant.shadowPrimary'),
+      }
+    );
   }
 
   async function handleSaveOrgId() {
@@ -244,6 +382,102 @@
     return true;
   }
 
+  function stopShadowPolling() {
+    if (shadowPollTimer) {
+      clearInterval(shadowPollTimer);
+      shadowPollTimer = null;
+    }
+  }
+
+  async function fetchShadowStatus() {
+    if (!shadowForm.tenantId) return;
+    shadowLoading.value = true;
+    try {
+      shadowStatus.value = await getPlatformTenantShadowStatus(shadowForm.tenantId);
+    } finally {
+      shadowLoading.value = false;
+    }
+  }
+
+  function startShadowPolling() {
+    stopShadowPolling();
+    shadowPollTimer = setInterval(async () => {
+      await fetchShadowStatus();
+      if (!shadowStatus.value?.maintenanceState) {
+        stopShadowPolling();
+      }
+      loadData();
+    }, 5000);
+  }
+
+  async function refreshShadowStatus() {
+    await fetchShadowStatus();
+    if (shadowStatus.value?.maintenanceState) {
+      startShadowPolling();
+    } else {
+      stopShadowPolling();
+    }
+  }
+
+  async function openShadow(row: PlatformTenantItem) {
+    shadowForm.tenantId = row.tenantId;
+    shadowForm.tenantName = row.name;
+    shadowForm.active = row.status === 'ACTIVE';
+    shadowStatus.value = null;
+    showShadow.value = true;
+    await refreshShadowStatus();
+  }
+
+  async function doEnableShadow() {
+    shadowActionLoading.value = true;
+    try {
+      await enablePlatformTenantShadow(shadowForm.tenantId);
+      message.success(t('managementCenter.tenant.shadowEnableSuccess'));
+      await refreshShadowStatus();
+      await loadData();
+    } finally {
+      shadowActionLoading.value = false;
+    }
+  }
+
+  function handleEnableShadow() {
+    doEnableShadow();
+  }
+
+  async function doSwitchToShadow() {
+    shadowActionLoading.value = true;
+    try {
+      await switchPlatformTenantToShadow(shadowForm.tenantId);
+      message.success(t('managementCenter.tenant.shadowSwitchToShadowSuccess'));
+      startShadowPolling();
+      await refreshShadowStatus();
+      await loadData();
+    } finally {
+      shadowActionLoading.value = false;
+    }
+  }
+
+  function handleSwitchToShadow() {
+    doSwitchToShadow();
+  }
+
+  async function doSwitchToPrimary() {
+    shadowActionLoading.value = true;
+    try {
+      await switchPlatformTenantToPrimary(shadowForm.tenantId);
+      message.success(t('managementCenter.tenant.shadowSwitchToPrimarySuccess'));
+      stopShadowPolling();
+      await refreshShadowStatus();
+      await loadData();
+    } finally {
+      shadowActionLoading.value = false;
+    }
+  }
+
+  function handleSwitchToPrimary() {
+    doSwitchToPrimary();
+  }
+
   const columns = computed(() => [
     { title: '租户名称', key: 'name' },
     { title: '唯一标识', key: 'tenantId' },
@@ -254,6 +488,11 @@
     },
     { title: 'org_id', key: 'orgId' },
     { title: 'dbName', key: 'dbName' },
+    {
+      title: t('managementCenter.tenant.shadowColumn'),
+      key: 'activeDbRole',
+      render: (row: PlatformTenantItem) => renderShadowTag(row),
+    },
     {
       title: 'status',
       key: 'status',
@@ -268,11 +507,15 @@
       title: 'action',
       key: 'action',
       render: (row: PlatformTenantItem) =>
-        h('div', { class: 'flex gap-2' }, [
+        h('div', { class: 'flex flex-wrap gap-2' }, [
           h(NButton, { size: 'small', onClick: () => openEditName(row) }, { default: () => '编辑名称' }),
           h(NButton, { size: 'small', onClick: () => openOrgSync(row) }, { default: () => 'MMBA部门同步' }),
+          h(
+            NButton,
+            { size: 'small', onClick: () => openShadow(row) },
+            { default: () => t('managementCenter.tenant.shadowManage') }
+          ),
           h(NButton, { size: 'small', onClick: () => showHealth(row) }, { default: () => '健康' }),
-          // h(NButton, { size: 'small', onClick: () => rerunMigrate(row) }, { default: () => '重跑迁移' }),
           h(
             NButton,
             {
@@ -288,5 +531,9 @@
 
   onMounted(() => {
     loadData();
+  });
+
+  onUnmounted(() => {
+    stopShadowPolling();
   });
 </script>

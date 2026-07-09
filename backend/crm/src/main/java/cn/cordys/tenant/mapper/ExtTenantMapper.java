@@ -2,6 +2,7 @@ package cn.cordys.tenant.mapper;
 
 import cn.cordys.platform.dto.response.PlatformTenantItemResponse;
 import cn.cordys.tenant.domain.Tenant;
+import cn.cordys.tenant.dto.TenantShadowMetaDTO;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
@@ -59,4 +60,27 @@ public interface ExtTenantMapper {
     List<Map<String, Object>> countGroupByStatus();
 
     List<PlatformTenantItemResponse> listTenantBrief();
+
+    TenantShadowMetaDTO selectShadowMetaByTenantId(@Param("tenantId") String tenantId);
+
+    int enableShadow(@Param("tenantId") String tenantId,
+                     @Param("updateTime") long updateTime,
+                     @Param("updateUser") String updateUser);
+
+    int updateActiveDbRole(@Param("tenantId") String tenantId,
+                           @Param("activeDbRole") String activeDbRole,
+                           @Param("updateTime") long updateTime,
+                           @Param("updateUser") String updateUser);
+
+    int updateShadowMaintenance(@Param("tenantId") String tenantId,
+                                @Param("maintenanceState") String maintenanceState,
+                                @Param("maintenanceUntil") Long maintenanceUntil,
+                                @Param("updateTime") long updateTime,
+                                @Param("updateUser") String updateUser);
+
+    int clearShadowMaintenance(@Param("tenantId") String tenantId,
+                               @Param("updateTime") long updateTime,
+                               @Param("updateUser") String updateUser);
+
+    List<String> listShadowEnabledTenantIds();
 }

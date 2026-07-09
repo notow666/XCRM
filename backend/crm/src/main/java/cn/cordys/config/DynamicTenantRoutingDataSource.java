@@ -1,6 +1,7 @@
 package cn.cordys.config;
 
 import cn.cordys.context.TenantContext;
+import cn.cordys.tenant.service.TenantDataSourceLookupResolver;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
 
@@ -22,10 +23,23 @@ public class DynamicTenantRoutingDataSource extends AbstractRoutingDataSource {
 
     private final Map<Object, Object> tenantTargets = new ConcurrentHashMap<>();
 
+    private volatile TenantDataSourceLookupResolver lookupResolver;
+
+    public void setLookupResolver(TenantDataSourceLookupResolver lookupResolver) {
+        this.lookupResolver = lookupResolver;
+    }
+
     @Override
     protected Object determineCurrentLookupKey() {
-        // 未绑定租户时返回 null，由 AbstractRoutingDataSource 走 defaultTargetDataSource，不向字面量 default 误映射
-        return StringUtils.trimToNull(TenantContext.getTenantId());
+        String tenantId = StringUtils.trimToNull(TenantContext.getTenantId());
+        if (tenantId == null) {
+            return null;
+        }
+        TenantDataSourceLookupResolver resolver = this.lookupResolver;
+        if (resolver != null) {
+            return resolver.resolveLookupKey(tenantId);
+        }
+        return tenantId;
     }
 
     /**

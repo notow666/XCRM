@@ -14,4 +14,7 @@ public class PlatformTenantItemResponse {
     private Boolean enabled;
     private Long createTime;
     private Long updateTime;
+    private Boolean shadowEnabled;
+    private String activeDbRole;
+    private String shadowMaintenanceState;
 }

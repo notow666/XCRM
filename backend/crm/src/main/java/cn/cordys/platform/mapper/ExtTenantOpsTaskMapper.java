@@ -30,4 +30,6 @@ public interface ExtTenantOpsTaskMapper {
                                                                      @Param("status") String status,
                                                                      @Param("limit") int limit,
                                                                      @Param("offset") int offset);
+
+    Long countRunningByTenantId(@Param("tenantId") String tenantId);
 }

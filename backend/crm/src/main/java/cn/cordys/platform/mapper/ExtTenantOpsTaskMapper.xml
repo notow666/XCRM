@@ -97,4 +97,11 @@
         ORDER BY create_time DESC
         LIMIT #{limit} OFFSET #{offset}
     </select>
+
+    <select id="countRunningByTenantId" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM tenant_ops_task
+        WHERE tenant_id = #{tenantId}
+          AND status IN ('PENDING', 'RUNNING')
+    </select>
 </mapper>

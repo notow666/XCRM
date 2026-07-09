@@ -22,8 +22,26 @@ public class TenantJdbcResolver {
         return "crm_tenant_" + tenantId.replace('-', '_');
     }
 
+    public static String shadowDatabaseName(String tenantId) {
+        return tenantDatabaseName(tenantId) + "_shadow";
+    }
+
     public TenantDbConfigDTO resolveConnection(String tenantId) {
         String dbName = tenantDatabaseName(tenantId);
+        String templateUrl = dataSourceProperties.determineUrl();
+        String jdbcUrl = JdbcUrlUtils.replaceMysqlDatabase(templateUrl, dbName);
+        TenantDbConfigDTO dto = new TenantDbConfigDTO();
+        dto.setTenantId(tenantId);
+        dto.setDbName(dbName);
+        dto.setJdbcUrl(jdbcUrl);
+        dto.setDbUsername(dataSourceProperties.determineUsername());
+        dto.setDbPassword(dataSourceProperties.determinePassword());
+        dto.setDriverClassName(dataSourceProperties.determineDriverClassName());
+        return dto;
+    }
+
+    public TenantDbConfigDTO resolveShadowConnection(String tenantId) {
+        String dbName = shadowDatabaseName(tenantId);
         String templateUrl = dataSourceProperties.determineUrl();
         String jdbcUrl = JdbcUrlUtils.replaceMysqlDatabase(templateUrl, dbName);
         TenantDbConfigDTO dto = new TenantDbConfigDTO();

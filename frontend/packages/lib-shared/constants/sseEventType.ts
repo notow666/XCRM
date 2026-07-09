@@ -28,6 +28,12 @@ export const SSE_EVENT_PLATFORM_FORCE_LOGOUT_DONE = 'PLATFORM_FORCE_LOGOUT_DONE'
 /** 强制全员下线完成后通知系统维护页刷新在线人数 */
 export const PLATFORM_FORCE_LOGOUT_DONE_DOM_EVENT = 'platform-force-logout-done';
 
+/** 影子库切换预告 SSE（租户侧） */
+export const SSE_EVENT_SHADOW_PRE_NOTICE = 'SHADOW_PRE_NOTICE';
+
+/** 影子库切换完成 SSE（租户侧） */
+export const SSE_EVENT_SHADOW_SWITCH_COMPLETE = 'SHADOW_SWITCH_COMPLETE';
+
 export type PoolBatchByConditionSseOperation = 'PICK' | 'ASSIGN' | 'TRANSFER';
 
 export interface PoolBatchByConditionSseDetail {

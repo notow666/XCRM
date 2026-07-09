@@ -11,4 +11,8 @@ public class Tenant extends BaseModel {
     private String name;
     private String status;
     private String orgId;
+    private Boolean shadowEnabled;
+    private String activeDbRole;
+    private String shadowMaintenanceState;
+    private Long shadowMaintenanceUntil;
 }

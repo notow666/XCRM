@@ -1,5 +1,7 @@
 package cn.cordys.common.context;
 
+import cn.cordys.context.RoutingContext;
+import cn.cordys.context.RoutingPurpose;
 import cn.cordys.context.TenantContext;
 import org.slf4j.MDC;
 import org.springframework.util.StringUtils;
@@ -17,7 +19,7 @@ public final class ContextPropagation {
     }
 
     public static Snapshot capture() {
-        return new Snapshot(MDC.getCopyOfContextMap(), TenantContext.getTenantId());
+        return new Snapshot(MDC.getCopyOfContextMap(), TenantContext.getTenantId(), RoutingContext.getPurpose());
     }
 
     public static Runnable wrap(Runnable runnable, Snapshot snapshot) {
@@ -45,6 +47,7 @@ public final class ContextPropagation {
             throw new RuntimeException(e);
         } finally {
             MDC.clear();
+            RoutingContext.clear();
             TenantContext.clear();
         }
     }
@@ -52,10 +55,12 @@ public final class ContextPropagation {
     public static final class Snapshot {
         private final Map<String, String> mdc;
         private final String tenantId;
+        private final RoutingPurpose routingPurpose;
 
-        Snapshot(Map<String, String> mdc, String tenantId) {
+        Snapshot(Map<String, String> mdc, String tenantId, RoutingPurpose routingPurpose) {
             this.mdc = mdc;
             this.tenantId = tenantId;
+            this.routingPurpose = routingPurpose;
         }
 
         void apply() {
@@ -64,6 +69,11 @@ public final class ContextPropagation {
             }
             if (StringUtils.hasText(tenantId)) {
                 TenantContext.setTenantId(tenantId);
+            }
+            if (routingPurpose != null) {
+                RoutingContext.setPurpose(routingPurpose);
+            } else {
+                RoutingContext.clear();
             }
         }
     }

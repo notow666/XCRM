@@ -252,6 +252,32 @@ public class SseService {
     }
 
     /**
+     * 向租户内所有在线 SSE 连接推送 JSON 文本帧。
+     */
+    public void broadcastTenantEvent(String tenantId, String payloadJson) {
+        if (StringUtils.isAnyBlank(tenantId, payloadJson)) {
+            return;
+        }
+        String prefix = "TENANT:" + tenantId.trim() + ":";
+        int groups = 0;
+        int clientCount = 0;
+        for (Map.Entry<String, Map<String, ClientSinkWrapper>> entry : userClients.entrySet()) {
+            String userKey = entry.getKey();
+            if (userKey == null || !userKey.startsWith(prefix)) {
+                continue;
+            }
+            groups++;
+            Map<String, ClientSinkWrapper> clients = entry.getValue();
+            if (clients == null || clients.isEmpty()) {
+                continue;
+            }
+            clientCount += clients.size();
+            clients.forEach((clientId, wrapper) -> wrapper.emit(payloadJson));
+        }
+        log.info("租户 SSE 广播已推送：tenantId={}, 连接分组={}, 客户端={}", tenantId, groups, clientCount);
+    }
+
+    /**
      * 向所有管理中心平台管理员 SSE 连接推送 JSON 文本帧。
      */
     public void broadcastPlatformAdminEvent(String payloadJson) {

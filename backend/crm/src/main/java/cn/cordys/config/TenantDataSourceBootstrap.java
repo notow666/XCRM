@@ -1,6 +1,9 @@
 package cn.cordys.config;
 
 import cn.cordys.tenant.dto.TenantDbConfigDTO;
+import cn.cordys.tenant.constants.TenantDataSourceKeys;
+import cn.cordys.tenant.mapper.ExtTenantMapper;
+import cn.cordys.tenant.service.TenantJdbcResolver;
 import cn.cordys.tenant.service.TenantMetaService;
 import jakarta.annotation.Resource;
 import org.flywaydb.core.Flyway;
@@ -26,6 +29,12 @@ public class TenantDataSourceBootstrap implements ApplicationRunner, Ordered {
 
     @Resource
     private TenantMetaService tenantMetaService;
+
+    @Resource
+    private ExtTenantMapper extTenantMapper;
+
+    @Resource
+    private TenantJdbcResolver tenantJdbcResolver;
 
     @Resource
     private TenantHikariDataSourceFactory tenantHikariDataSourceFactory;
@@ -94,7 +103,41 @@ public class TenantDataSourceBootstrap implements ApplicationRunner, Ordered {
                 log.error("register tenant datasource on startup failed, tenantId={}", tenantId, e);
             }
         }
+        registerShadowDataSources();
         log.info("TenantDataSourceBootstrap done");
+    }
+
+    private void registerShadowDataSources() {
+        List<String> shadowTenantIds = extTenantMapper.listShadowEnabledTenantIds();
+        if (shadowTenantIds == null || shadowTenantIds.isEmpty()) {
+            return;
+        }
+        for (String tenantId : shadowTenantIds) {
+            if (StringUtils.isBlank(tenantId) || DEFAULT_TENANT_ID.equals(tenantId)) {
+                continue;
+            }
+            String shadowKey = TenantDataSourceKeys.shadow(tenantId);
+            if (tenantRoutingDataSource.hasTenantDataSource(shadowKey)) {
+                continue;
+            }
+            try {
+                TenantDbConfigDTO shadowConfig = tenantJdbcResolver.resolveShadowConnection(tenantId);
+                migrateTenantSchema(shadowConfig);
+                tenantRoutingDataSource.registerTenantDataSource(
+                        shadowKey,
+                        tenantHikariDataSourceFactory.createTenantPool(
+                                shadowConfig.getDriverClassName(),
+                                shadowConfig.getJdbcUrl(),
+                                shadowConfig.getDbUsername(),
+                                shadowConfig.getDbPassword(),
+                                shadowKey
+                        )
+                );
+                log.info("Shadow datasource registered, tenantId={}, dbName={}", tenantId, shadowConfig.getDbName());
+            } catch (Exception e) {
+                log.error("register shadow datasource on startup failed, tenantId={}", tenantId, e);
+            }
+        }
     }
 
     @Override

@@ -11,6 +11,8 @@ import cn.cordys.common.pager.PagerWithOption;
 import cn.cordys.common.service.DataScopeService;
 import cn.cordys.common.utils.ConditionFilterUtils;
 import cn.cordys.context.OrganizationContext;
+import cn.cordys.context.RoutingContext;
+import cn.cordys.context.RoutingPurpose;
 import cn.cordys.context.TenantContext;
 import cn.cordys.crm.clue.domain.Clue;
 import cn.cordys.crm.clue.dto.request.*;
@@ -101,9 +103,11 @@ public class ClueController {
     public ResponseEntity<String> push(@Validated @RequestBody CluePushRequest request) {
         try {
             TenantContext.setTenantId(request.getTenant());
+            RoutingContext.setPurpose(RoutingPurpose.INTEGRATION_PRIMARY);
             clueService.push(request);
             return ResponseEntity.ok("接口请求成功");
         } finally {
+            RoutingContext.clear();
             TenantContext.clear();
         }
     }

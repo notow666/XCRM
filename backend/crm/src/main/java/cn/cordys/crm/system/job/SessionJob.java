@@ -75,7 +75,7 @@ public class SessionJob {
 
                 // 删除没有绑定用户的会话
                 if (!exists) {
-                    redisIndexedSessionRepository.deleteById(sessionId);
+                    deleteOrphanSession(sessionId, key);
                 } else {
                     // 获取用户信息并检查会话过期时间
                     Object user = redisIndexedSessionRepository.getSessionRedisOperations().opsForHash().get(key, "sessionAttr:user");
@@ -101,6 +101,28 @@ public class SessionJob {
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
+    }
+
+    /**
+     * 删除未绑定用户的 Session。部分 Redis 残留 hash 缺少 Spring Session 必填字段（如 creationTime），
+     * 此时 {@link RedisIndexedSessionRepository#deleteById} 会抛错，需降级为直接删 key。
+     */
+    private void deleteOrphanSession(String sessionId, String sessionKey) {
+        if (!Boolean.TRUE.equals(stringRedisTemplate.opsForHash().hasKey(sessionKey, "creationTime"))) {
+            purgeSessionKeys(sessionId);
+            return;
+        }
+        try {
+            redisIndexedSessionRepository.deleteById(sessionId);
+        } catch (Exception e) {
+            log.warn("Spring Session deleteById 失败 sessionId={}，改用 Redis 直删: {}", sessionId, e.getMessage());
+            purgeSessionKeys(sessionId);
+        }
+    }
+
+    private void purgeSessionKeys(String sessionId) {
+        stringRedisTemplate.delete("spring:session:sessions:" + sessionId);
+        stringRedisTemplate.delete("spring:session:sessions:expires:" + sessionId);
     }
 
     private void reconcileOnlineSessionRegistry() {

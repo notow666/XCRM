@@ -50,6 +50,9 @@
                t.name,
                t.status,
                t.org_id      AS orgId,
+               IFNULL(t.shadow_enabled, 0) AS shadowEnabled,
+               IFNULL(t.active_db_role, 'PRIMARY') AS activeDbRole,
+               t.shadow_maintenance_state AS shadowMaintenanceState,
                t.create_time AS createTime,
                t.update_time AS updateTime
         FROM tenant t
@@ -64,6 +67,9 @@
                t.name,
                t.status,
                t.org_id      AS orgId,
+               IFNULL(t.shadow_enabled, 0) AS shadowEnabled,
+               IFNULL(t.active_db_role, 'PRIMARY') AS activeDbRole,
+               t.shadow_maintenance_state AS shadowMaintenanceState,
                t.create_time AS createTime,
                t.update_time AS updateTime
         FROM tenant t
@@ -119,4 +125,59 @@
             update_user = #{updateUser}
         WHERE id = #{tenantId}
     </update>
+
+    <select id="selectShadowMetaByTenantId" resultType="cn.cordys.tenant.dto.TenantShadowMetaDTO">
+        SELECT id              AS tenantId,
+               IFNULL(shadow_enabled, 0) AS shadowEnabled,
+               IFNULL(active_db_role, 'PRIMARY') AS activeDbRole,
+               shadow_maintenance_state AS maintenanceState,
+               shadow_maintenance_until AS maintenanceUntil
+        FROM tenant
+        WHERE id = #{tenantId}
+        LIMIT 1
+    </select>
+
+    <update id="enableShadow">
+        UPDATE tenant
+        SET shadow_enabled = 1,
+            active_db_role = 'PRIMARY',
+            shadow_maintenance_state = NULL,
+            shadow_maintenance_until = NULL,
+            update_time = #{updateTime},
+            update_user = #{updateUser}
+        WHERE id = #{tenantId}
+    </update>
+
+    <update id="updateActiveDbRole">
+        UPDATE tenant
+        SET active_db_role = #{activeDbRole},
+            update_time = #{updateTime},
+            update_user = #{updateUser}
+        WHERE id = #{tenantId}
+    </update>
+
+    <update id="updateShadowMaintenance">
+        UPDATE tenant
+        SET shadow_maintenance_state = #{maintenanceState},
+            shadow_maintenance_until = #{maintenanceUntil},
+            update_time = #{updateTime},
+            update_user = #{updateUser}
+        WHERE id = #{tenantId}
+    </update>
+
+    <update id="clearShadowMaintenance">
+        UPDATE tenant
+        SET shadow_maintenance_state = NULL,
+            shadow_maintenance_until = NULL,
+            update_time = #{updateTime},
+            update_user = #{updateUser}
+        WHERE id = #{tenantId}
+    </update>
+
+    <select id="listShadowEnabledTenantIds" resultType="java.lang.String">
+        SELECT id
+        FROM tenant
+        WHERE shadow_enabled = 1
+          AND status = 'ACTIVE'
+    </select>
 </mapper>

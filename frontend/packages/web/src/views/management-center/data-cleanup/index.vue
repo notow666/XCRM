@@ -10,7 +10,7 @@
             v-model:value="tenantKeyword"
             clearable
             :placeholder="t('managementCenter.dataCleanup.tenantKeywordPlaceholder')"
-            class="w-[280px]"
+            class="min-w-[200px] flex-1 sm:max-w-[280px]"
             @keyup.enter="handleTenantSearch"
           />
           <NButton type="primary" @click="handleTenantSearch">{{ t('common.search') }}</NButton>
@@ -72,7 +72,7 @@
             v-model:value="taskTenantId"
             clearable
             :placeholder="t('managementCenter.dataCleanup.taskTenantPlaceholder')"
-            class="w-[220px]"
+            class="min-w-[200px] flex-1 sm:max-w-[280px]"
             @keyup.enter="handleTaskSearch"
           />
           <NSelect

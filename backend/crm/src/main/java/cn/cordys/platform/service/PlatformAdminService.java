@@ -24,8 +24,11 @@ import cn.cordys.tenant.dto.response.TenantProvisionResponse;
 import cn.cordys.tenant.dto.TenantDbConfigDTO;
 import cn.cordys.tenant.mapper.ExtTenantMapper;
 import cn.cordys.tenant.service.TenantJdbcResolver;
-import cn.cordys.tenant.service.TenantProvisioningService;
 import cn.cordys.tenant.service.TenantMetaService;
+import cn.cordys.tenant.service.TenantProvisioningService;
+import cn.cordys.tenant.dto.TenantShadowMetaDTO;
+import cn.cordys.tenant.service.TenantShadowProvisioningService;
+import cn.cordys.tenant.service.TenantShadowSwitchService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -85,6 +88,12 @@ public class PlatformAdminService {
 
     @Resource
     private PlatformTenantDataCleanupTaskExecutor platformTenantDataCleanupTaskExecutor;
+
+    @Resource
+    private TenantShadowProvisioningService tenantShadowProvisioningService;
+
+    @Resource
+    private TenantShadowSwitchService tenantShadowSwitchService;
 
     public Pager<List<PlatformTenantItemResponse>> pageTenants(PlatformTenantPageRequest request) {
         int current = Math.max(1, request.getCurrent());
@@ -489,5 +498,28 @@ public class PlatformAdminService {
         if (lifecycle != null) {
             lifecycle.purgeTenantSchedules(tenantId);
         }
+    }
+
+    public void enableTenantShadow(String tenantId, String operatorId) {
+        tenantShadowProvisioningService.enableShadow(tenantId, operatorId);
+        recordAudit(operatorId, "TENANT_SHADOW_ENABLE", tenantId, "SUCCESS", "", 0L);
+    }
+
+    public TenantShadowMetaDTO getTenantShadowStatus(String tenantId) {
+        TenantShadowMetaDTO meta = tenantShadowSwitchService.getShadowStatus(tenantId);
+        if (meta == null) {
+            throw new GenericException("租户不存在");
+        }
+        return meta;
+    }
+
+    public void switchTenantToShadow(String tenantId, String operatorId) {
+        tenantShadowSwitchService.switchToShadowAsync(tenantId, operatorId);
+        recordAudit(operatorId, "TENANT_SWITCH_TO_SHADOW", tenantId, "ACCEPTED", "async", 0L);
+    }
+
+    public void switchTenantToPrimary(String tenantId, String operatorId) {
+        tenantShadowSwitchService.switchToPrimary(tenantId, operatorId);
+        recordAudit(operatorId, "TENANT_SWITCH_TO_PRIMARY", tenantId, "SUCCESS", "", 0L);
     }
 }

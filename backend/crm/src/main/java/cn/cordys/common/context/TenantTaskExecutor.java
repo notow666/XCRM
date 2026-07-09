@@ -2,6 +2,8 @@ package cn.cordys.common.context;
 
 import cn.cordys.common.constants.MdcConstants;
 import cn.cordys.common.uid.IDGenerator;
+import cn.cordys.context.RoutingContext;
+import cn.cordys.context.RoutingPurpose;
 import cn.cordys.context.TenantContext;
 import cn.cordys.tenant.service.TenantMetaService;
 import jakarta.annotation.Resource;
@@ -34,15 +36,18 @@ public class TenantTaskExecutor {
 
         for (String tenantId : tenantIds) {
             String previousTenantId = TenantContext.getTenantId();
+            RoutingPurpose previousPurpose = RoutingContext.getPurpose();
             String previousMdcTraceId = MDC.get(MdcConstants.TRACE_ID_KEY);
             String previousMdcTenantId = MDC.get(MdcConstants.TENANT_ID_KEY);
             try {
                 if (StringUtils.isNotBlank(tenantId)) {
                     TenantContext.setTenantId(tenantId);
+                    RoutingContext.setPurpose(RoutingPurpose.PRODUCTION_MAINTAIN);
                     MDC.put(MdcConstants.TRACE_ID_KEY, IDGenerator.nextStr());
                     MDC.put(MdcConstants.TENANT_ID_KEY, tenantId);
                 } else {
                     TenantContext.clear();
+                    RoutingContext.clear();
                     MDC.remove(MdcConstants.TRACE_ID_KEY);
                     MDC.remove(MdcConstants.TENANT_ID_KEY);
                 }
@@ -54,6 +59,11 @@ public class TenantTaskExecutor {
                     TenantContext.clear();
                 } else {
                     TenantContext.setTenantId(previousTenantId);
+                }
+                if (previousPurpose == null) {
+                    RoutingContext.clear();
+                } else {
+                    RoutingContext.setPurpose(previousPurpose);
                 }
                 if (StringUtils.isBlank(previousMdcTraceId)) {
                     MDC.remove(MdcConstants.TRACE_ID_KEY);
