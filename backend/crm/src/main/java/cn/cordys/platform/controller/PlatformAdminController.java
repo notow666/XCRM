@@ -207,21 +207,21 @@ public class PlatformAdminController {
     }
 
     @PostMapping("/tenant/{tenantId}/shadow/enable")
-    @Operation(summary = "开通租户影子库")
+    @Operation(summary = "开通租户备用库")
     public void enableTenantShadow(@PathVariable("tenantId") String tenantId) {
         String operator = assertPlatformAdmin();
         platformAdminService.enableTenantShadow(tenantId, operator);
     }
 
     @GetMapping("/tenant/{tenantId}/shadow/status")
-    @Operation(summary = "租户影子库状态")
+    @Operation(summary = "租户备用库状态")
     public TenantShadowMetaDTO tenantShadowStatus(@PathVariable("tenantId") String tenantId) {
         assertPlatformAdmin();
         return platformAdminService.getTenantShadowStatus(tenantId);
     }
 
     @PostMapping("/tenant/{tenantId}/shadow/switch-to-shadow")
-    @Operation(summary = "切换租户至影子库")
+    @Operation(summary = "切换租户至备用库")
     public void switchTenantToShadow(@PathVariable("tenantId") String tenantId) {
         String operator = assertPlatformAdmin();
         platformAdminService.switchTenantToShadow(tenantId, operator);

@@ -6,7 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.Set;
 
 /**
- * MMBA 出站类接口路径（影子库 active 时禁止）。
+ * MMBA 出站类接口路径（备用库 active 时禁止）。
  */
 public final class MmbaOutboundPaths {
 

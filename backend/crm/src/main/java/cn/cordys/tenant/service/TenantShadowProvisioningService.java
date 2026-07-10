@@ -29,7 +29,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 /**
- * 为指定租户开通影子库（空库 + Flyway + 默认配置初始化），并注册 JDBC 路由。
+ * 为指定租户开通备用库（空库 + Flyway + 默认配置初始化），并注册 JDBC 路由。
  */
 @Slf4j
 @Service
@@ -109,7 +109,7 @@ public class TenantShadowProvisioningService {
     }
 
     /**
-     * 初始化影子库默认配置（模块、表单、字段等），与主库开通逻辑一致，但不注册 Quartz。
+     * 初始化备用库默认配置（模块、表单、字段等），与主库开通逻辑一致，但不注册 Quartz。
      */
     private void initializeShadowTenantData(String tenantId) {
         String previousTenantId = TenantContext.getTenantId();

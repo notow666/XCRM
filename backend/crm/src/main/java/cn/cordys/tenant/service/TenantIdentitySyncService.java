@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * 切换前将主库 A 的 sys_* 身份表增量同步至影子库 B。
+ * 切换前将主库 A 的 sys_* 身份表增量同步至备用库 B。
  */
 @Slf4j
 @Service

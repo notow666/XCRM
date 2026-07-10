@@ -3,7 +3,7 @@ package cn.cordys.tenant.constants;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * 动态租户数据源路由键：主库使用 tenantId，影子库使用 tenantId@shadow。
+ * 动态租户数据源路由键：主库使用 tenantId，备用库使用 tenantId@shadow。
  */
 public final class TenantDataSourceKeys {
 

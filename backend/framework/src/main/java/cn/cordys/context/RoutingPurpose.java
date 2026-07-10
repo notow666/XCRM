@@ -23,9 +23,9 @@ public enum RoutingPurpose {
     /** 定时任务、异步提醒队列等生产维护 */
     PRODUCTION_MAINTAIN,
 
-    /** 影子 active 下禁止的 MMBA 出站等（由 Filter 拦截，不应到达数据源） */
+    /** 备用 active 下禁止的 MMBA 出站等（由 Filter 拦截，不应到达数据源） */
     SHADOW_FORBIDDEN,
 
-    /** 影子库开通/补初始化：强制路由至 B（不看 active_db_role） */
+    /** 备用库开通/补初始化：强制路由至 B（不看 active_db_role） */
     SHADOW_PROVISION
 }

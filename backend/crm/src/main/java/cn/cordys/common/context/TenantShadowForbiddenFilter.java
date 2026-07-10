@@ -21,7 +21,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 /**
- * 影子库 active 时禁止 MMBA 出站类接口。
+ * 备用库 active 时禁止 MMBA 出站类接口。
  */
 public class TenantShadowForbiddenFilter extends OncePerRequestFilter {
 

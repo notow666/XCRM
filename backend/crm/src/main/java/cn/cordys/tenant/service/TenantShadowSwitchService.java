@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 租户主库 A 与影子库 B 切换编排。
+ * 租户主库 A 与备用库 B 切换编排。
  */
 @Slf4j
 @Service
