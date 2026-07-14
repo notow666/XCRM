@@ -110,3 +110,4 @@ export const GetModuleMaskSearchConfigUrl = '/mask/config/get'; // 获取搜索�
 // 系统导航栏
 export const GetModuleTopNavListUrl = '/navigation/list'; // 获取顶导配置
 export const SetModuleTopNavSortUrl = '/navigation/sort'; // 顶导排序
+export const callLogCleanConfigUrl = '/call-log-clean/config'; // 定时清除通话记录配置

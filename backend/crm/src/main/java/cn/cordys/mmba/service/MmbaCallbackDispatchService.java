@@ -13,6 +13,7 @@ import cn.cordys.crm.system.notice.common.Receiver;
 import cn.cordys.crm.system.notice.sender.insite.InSiteNoticeSender;
 import cn.cordys.crm.system.service.GlobalPhoneMaskConfigService;
 import cn.cordys.mmba.MmbaBehaviorTypes;
+import cn.cordys.mmba.MmbaBizTypes;
 import cn.cordys.mmba.MmbaConstants;
 import cn.cordys.mmba.domain.*;
 import cn.cordys.mmba.dto.MmbaAuditRequest;
@@ -107,13 +108,12 @@ public class MmbaCallbackDispatchService {
                 mmbaAutoCustomerFollowService.handleSmsDelivered(previousSmsAudit, smsAudit, smsAuditResult.isInserted());
             }
             case MmbaBehaviorTypes.WX_CHAT_AUDIT -> {
-                MmbaAuditPersistenceService.SaveOrUpdateResult<MmbaWxChatAudit> wxChatAuditResult =
-                        mmbaAuditPersistenceService.saveOrUpdateWxChatAuditWithResult(
-                                buildWxChatAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER
-                        );
-                MmbaWxChatAudit previousWxChatAudit = wxChatAuditResult.getPrevious();
-                MmbaWxChatAudit wxChatAudit = wxChatAuditResult.getCurrent();
-                mmbaAutoCustomerFollowService.handleWxChatSuccess(previousWxChatAudit, wxChatAudit);
+                MmbaWxChatAudit wxChatAudit = buildWxChatAudit(data, callbackRecord);
+                MmbaWxChatAudit previousWxChatAudit = mmbaAuditPersistenceService.findWxChatAuditByEsId(wxChatAudit.getEsId());
+                // 2026-07-13：仅保留成功生成客户跟进的微信聊天审计记录，减少无效数据入库。
+                if (mmbaAutoCustomerFollowService.handleWxChatSuccess(previousWxChatAudit, wxChatAudit)) {
+                    mmbaAuditPersistenceService.saveOrUpdateWxChatAudit(wxChatAudit, MmbaConstants.SYSTEM_USER);
+                }
             }
             case MmbaBehaviorTypes.WX_FRIEND_CHANGE_AUDIT -> {
                 mmbaAuditPersistenceService.saveOrUpdateWxFriendChangeAudit(buildWxFriendChangeAudit(data, callbackRecord), MmbaConstants.SYSTEM_USER);
@@ -182,6 +182,9 @@ public class MmbaCallbackDispatchService {
             if (saveResult.isCreated()) {
                 sendAddWechatFriendReceiptNotice(data);
             }
+        }
+        if (dto.getBehaviorType() == MmbaBehaviorTypes.CALL_LOG_CLEAN_RECEIPT && saveResult.isCreated()) {
+            sendCallLogCleanReceiptNotice(data);
         }
     }
 
@@ -876,6 +879,84 @@ public class MmbaCallbackDispatchService {
             return value;
         }
         return StringUtils.trimToNull(bizExtInfo.path(fallbackField).asText(null));
+    }
+
+    /**
+     * 清除回执逐条通知手动执行人。第三方不会回传 bizExtInfo，因此 reqId 请求流水是唯一关联来源。
+     * 操作人和目标员工均读取发送时保存的 bizExtInfo 快照，不能使用第三方 staffName 代替 CRM 员工姓名。
+     */
+    private void sendCallLogCleanReceiptNotice(ZzyData data) {
+        String reqId = data == null ? null : StringUtils.trimToNull(data.getReqId());
+        if (reqId == null) {
+            log.warn("MMBA清除通话记录回执通知跳过，reqId为空");
+            return;
+        }
+        try {
+            MmbaRequestRecord requestRecord = mmbaRequestRecordService.findByReqId(reqId);
+            if (requestRecord == null || !MmbaBizTypes.CALL_LOG_CLEAN.equals(requestRecord.getBizType())) {
+                log.warn("MMBA清除通话记录回执通知跳过，未找到对应清除请求 reqId={} bizType={}",
+                        reqId, requestRecord == null ? null : requestRecord.getBizType());
+                return;
+            }
+            JsonNode requestBody = StringUtils.isBlank(requestRecord.getRequestBody())
+                    ? null : JSON.parseObject(requestRecord.getRequestBody(), JsonNode.class);
+            JsonNode requestBizExtInfo = requestBody == null ? null : requestBody.path("bizExtInfo");
+            String operatorUserId = readBizExtText(requestBizExtInfo, "operator_user_id", "operatorUserId");
+            if (MmbaConstants.SYSTEM_USER.equals(operatorUserId)) {
+                log.debug("MMBA定时清除通话记录回执不发送通知 reqId={}", reqId);
+                return;
+            }
+            if (operatorUserId == null) {
+                log.warn("MMBA清除通话记录回执通知跳过，bizExtInfo操作人为空 reqId={}", reqId);
+                return;
+            }
+            String organizationId = readBizExtText(requestBizExtInfo, "organization_id", "organizationId");
+            String targetUserId = readBizExtText(requestBizExtInfo, "target_user_id", "targetUserId");
+            String targetUserName = readBizExtText(requestBizExtInfo, "target_user_name", "targetUserName");
+            if (StringUtils.isBlank(targetUserName)) {
+                log.warn("MMBA清除通话记录回执通知跳过，bizExtInfo目标员工姓名为空 reqId={} targetUserId={}",
+                        reqId, targetUserId);
+                return;
+            }
+            Integer processStatus = toInteger(firstNotBlank(data.getProcessStatus(), data.getStatus()));
+            String context = "员工【" + targetUserName + "】的通话记录" + resolveCallLogCleanStatusText(processStatus);
+            MessageDetailDTO detail = new MessageDetailDTO();
+            detail.setId(reqId);
+            detail.setEvent(NotificationConstants.Event.MMBA_CALL_LOG_CLEAN_RECEIPT);
+            detail.setTaskType(NotificationConstants.Module.SYSTEM);
+            detail.setOrganizationId(organizationId);
+            detail.setSysEnable(true);
+            Map<String, Object> paramMap = new HashMap<>();
+            paramMap.put("organizationId", StringUtils.defaultString(organizationId));
+            paramMap.put("resourceId", StringUtils.defaultIfBlank(targetUserId, reqId));
+            paramMap.put("name", targetUserName);
+            NoticeModel model = NoticeModel.builder()
+                    .operator(MmbaConstants.SYSTEM_USER)
+                    .event(NotificationConstants.Event.MMBA_CALL_LOG_CLEAN_RECEIPT)
+                    .paramMap(paramMap)
+                    .receivers(List.of(new Receiver(operatorUserId, NotificationConstants.Type.SYSTEM_NOTICE.name())))
+                    .excludeSelf(false)
+                    .build();
+            inSiteNoticeSender.sendAnnouncement(detail, model, context, "清除通话记录执行结果");
+            log.info("MMBA清除通话记录回执通知发送完成 reqId={} operatorUserId={} processStatus={}",
+                    reqId, operatorUserId, processStatus);
+        } catch (Exception e) {
+            // 通知失败不能回滚已成功落表的第三方回执。
+            log.error("MMBA清除通话记录回执通知发送失败 reqId={}", reqId, e);
+        }
+    }
+
+    private String resolveCallLogCleanStatusText(Integer processStatus) {
+        if (processStatus == null) {
+            return "清除结果未知。";
+        }
+        return switch (processStatus) {
+            case 0 -> "清除成功。";
+            case 1 -> "清除失败。";
+            case 2 -> "清除失败：设备不支持。";
+            case 3 -> "清除指令已超时。";
+            default -> "清除结果未知（状态码：" + processStatus + "）。";
+        };
     }
     private String resolveAddWechatFriendProcessStatusText(Integer processStatus) {
         return switch (processStatus) {

@@ -16,7 +16,12 @@
         </n-tooltip>
       </div>
       <div
-        v-if="[OperationTypeEnum.UPDATE, OperationTypeEnum.MERGE,OperationTypeEnum.APPROVAL].includes(props.detail?.type as OperationTypeEnum)"
+        v-if="[
+          OperationTypeEnum.UPDATE,
+          OperationTypeEnum.MERGE,
+          OperationTypeEnum.APPROVAL,
+          OperationTypeEnum.CLEAN,
+        ].includes(props.detail?.type as OperationTypeEnum)"
         class="flex flex-col gap-[8px]"
       >
         <div

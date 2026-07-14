@@ -76,4 +76,10 @@ export default {
   'org.setDirectSuperiors': '设置直属上级',
   'org.onboardingDate': '入职日期',
   'org.Syncing': '同步组织架构中',
+  'org.cleanCallLog': '清除通话记录',
+  'org.cleanCallLogConfirmTitle': '确认清理选中的 {number} 名员工吗？',
+  'org.cleanCallLogConfirmContent':
+    '清理操作会将选中员工对应设备的所有通话记录进行清理，操作执行需要设备为在线状态，操作不可逆',
+  'org.confirmCleanCallLog': '确认清理',
+  'org.cleanCallLogIssuedResult': '指令已下发 {issued} 人，UM为空跳过 {skipped} 人，下发失败 {failed} 人',
 };

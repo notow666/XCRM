@@ -4,6 +4,7 @@ export default {
   'common.saveAndContinue': 'Save & continue',
   'common.edit': 'Edit',
   'common.delete': 'Delete',
+  'common.clean': 'Clean',
   'common.save': 'Save',
   'common.cancel': 'Cancel',
   'common.confirm': 'Confirm',

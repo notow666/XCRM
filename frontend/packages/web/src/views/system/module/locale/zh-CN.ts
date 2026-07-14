@@ -111,6 +111,12 @@ export default {
   'module.customerFailReasonConfig': '客户失败原因设置',
   'module.customerDataCleanup': '数据清理设置',
   'module.customerAutoDelete': '定时删除客户设置',
+  'module.callLogCleanConfig': '定时清除通话记录配置',
+  'module.callLogCleanEnable': '开启定时清除',
+  'module.callLogCleanEmployees': '需要清除通话记录的员工',
+  'module.callLogCleanEmployeesRequired': '请选择需要清除通话记录的员工',
+  'module.callLogCleanTip':
+    '系统每日固定01:00进行清理，清理操作会将选中用户设备的所有通话记录进行清理，操作不可逆',
   'module.dataCleanupDays': '清理天数',
   'module.dataCleanupDaysPlaceholder': '输入天数（1-365）',
   'module.dataCleanupFields': '清理字段',

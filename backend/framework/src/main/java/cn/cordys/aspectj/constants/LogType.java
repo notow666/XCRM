@@ -15,6 +15,10 @@ public final class LogType {
      */
     public static final String DELETE = "DELETE";
     /**
+     * 清除操作
+     */
+    public static final String CLEAN = "CLEAN";
+    /**
      * 更新操作
      */
     public static final String UPDATE = "UPDATE";

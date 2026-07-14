@@ -19,6 +19,10 @@ export const logTypeOption = [
     label: 'common.delete',
   },
   {
+    value: OperationTypeEnum.CLEAN,
+    label: 'common.clean',
+  },
+  {
     value: OperationTypeEnum.IMPORT,
     label: 'common.import',
   },

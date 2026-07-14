@@ -11,6 +11,9 @@ public final class ScheduleResourceType {
     /** 内置：客户定时删除（{@link cn.cordys.crm.customer.job.CustomerAutoDeleteExecuteJob}） */
     public static final String BUILTIN_CUSTOMER_AUTO_DELETE = "BUILTIN_CUSTOMER_AUTO_DELETE";
 
+    /** 内置：每天清除已配置员工的通话记录。 */
+    public static final String BUILTIN_CALL_LOG_CLEAN = "BUILTIN_CALL_LOG_CLEAN";
+
     /** 租户自定义定时任务 */
     public static final String CUSTOM = "CUSTOM";
 

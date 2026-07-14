@@ -81,6 +81,7 @@ import {
   SetCustomerRepeatRuleConfigUrl,
   GetFieldRefDetailListUrl,
   GetFieldOrderListUrl,
+  callLogCleanConfigUrl,
  } from '@lib/shared/api/requrls/system/module';
 import { QuotationItem } from '@lib/shared/models/opportunity';
 import { ModuleConfigEnum, ReasonTypeEnum } from '@lib/shared/enums/moduleEnum';
@@ -123,6 +124,13 @@ import type { OrderItem } from '@lib/shared/models/order';
 import { resolveClientTenantId } from '@lib/shared/method/tenant-url';
 
 export default function useProductApi(CDR: CordysAxios) {
+  function getCallLogCleanConfig() {
+    return CDR.get<{ enable: boolean; userIds: string[] }>({ url: callLogCleanConfigUrl });
+  }
+
+  function saveCallLogCleanConfig(data: { enable: boolean; userIds: string[] }) {
+    return CDR.post({ url: callLogCleanConfigUrl, data });
+  }
   // 模块首页-导航模块列表
   function getModuleNavConfigList(data: { organizationId: string }) {
     return CDR.post<ModuleNavBaseInfoItem[]>({ url: getModuleNavConfigListUrl, data });
@@ -467,6 +475,8 @@ export default function useProductApi(CDR: CordysAxios) {
   }
 
   return {
+    getCallLogCleanConfig,
+    saveCallLogCleanConfig,
     getFieldDisplayList,
     getModuleNavConfigList,
     moduleNavListSort,

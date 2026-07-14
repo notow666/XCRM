@@ -9,6 +9,9 @@ import java.util.Map;
  */
 public final class MmbaBehaviorTypes {
 
+    /** 通话记录清除指令回执。 */
+    public static final int CALL_LOG_CLEAN_RECEIPT = 15;
+
     private MmbaBehaviorTypes() {
     }
 
@@ -107,6 +110,7 @@ public final class MmbaBehaviorTypes {
     private static Map<Integer, String> init() {
         Map<Integer, String> groups = new HashMap<>(16);
         groups.put(CALL_RECORD_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
+        groups.put(CALL_LOG_CLEAN_RECEIPT, MmbaConstants.GROUP_BY_COMMAND);
         groups.put(DIAL_FAIL_RECEIPT, MmbaConstants.GROUP_BY_COMMAND);
         groups.put(SMS_RECORD_AUDIT, MmbaConstants.GROUP_BY_AUDIT);
         groups.put(SMS_FAIL_RECEIPT, MmbaConstants.GROUP_BY_COMMAND);

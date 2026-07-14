@@ -137,6 +137,7 @@
     batchResetUserPassword,
     batchToggleStatusUser,
     checkSync,
+    cleanCallLog,
     deleteUser,
     deleteUserCheck,
     getConfigSynchronization,
@@ -224,6 +225,11 @@
         key: 'resetPassWord',
         permission: ['SYS_ORGANIZATION_USER:RESET_PASSWORD'],
       },
+      {
+        label: t('org.cleanCallLog'),
+        key: 'cleanCallLog',
+        permission: ['SYS_ORGANIZATION_USER:CLEAN_CALL_LOG'],
+      },
     ],
     // TODO 不上
     // moreAction: [
@@ -307,6 +313,27 @@
     });
   }
 
+  function confirmCleanCallLog(userIds: string[]) {
+    openModal({
+      type: 'error',
+      title: t('org.cleanCallLogConfirmTitle', { number: userIds.length }),
+      content: t('org.cleanCallLogConfirmContent'),
+      positiveText: t('org.confirmCleanCallLog'),
+      negativeText: t('common.cancel'),
+      onPositiveClick: async () => {
+        const result = await cleanCallLog({ userIds });
+        Message.success(
+          t('org.cleanCallLogIssuedResult', {
+            issued: result.issuedCount,
+            skipped: result.skippedCount,
+            failed: result.failedCount,
+          })
+        );
+        checkedRowKeys.value = [];
+      },
+    });
+  }
+
   function handleBatchAction(item: ActionsItem) {
     switch (item.key) {
       case 'batchEdit':
@@ -324,6 +351,9 @@
       case 'resetPassWord':
         batchResetPassWord();
         break;
+      case 'cleanCallLog':
+        confirmCleanCallLog(checkedRowKeys.value.map(String));
+        break;
       default:
         break;
     }
@@ -339,6 +369,11 @@
       label: t('org.resetPassWord'),
       key: 'resetPassWord',
       permission: ['SYS_ORGANIZATION_USER:RESET_PASSWORD'],
+    },
+    {
+      label: t('org.cleanCallLog'),
+      key: 'cleanCallLog',
+      permission: ['SYS_ORGANIZATION_USER:CLEAN_CALL_LOG'],
     },
     {
       label: 'more',
@@ -481,6 +516,9 @@
         break;
       case 'delete':
         deleteMember(row);
+        break;
+      case 'cleanCallLog':
+        confirmCleanCallLog([row.userId]);
         break;
       default:
         break;
@@ -802,7 +840,11 @@
       tableKey: TableKeyEnum.SYSTEM_ORG_TABLE,
       showSetting: true,
       columns,
-      permission: ['SYS_ORGANIZATION:UPDATE', 'SYS_ORGANIZATION_USER:RESET_PASSWORD'],
+      permission: [
+        'SYS_ORGANIZATION:UPDATE',
+        'SYS_ORGANIZATION_USER:RESET_PASSWORD',
+        'SYS_ORGANIZATION_USER:CLEAN_CALL_LOG',
+      ],
       containerClass: '.crm-organization-table',
     },
     (row: MemberItem) => {

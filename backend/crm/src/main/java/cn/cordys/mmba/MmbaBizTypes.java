@@ -19,6 +19,9 @@ public final class MmbaBizTypes {
      */
     public static final String CALL_LIMIT = "CALL_LIMIT";
 
+    /** 清除通话记录。 */
+    public static final String CALL_LOG_CLEAN = "CALL_LOG_CLEAN";
+
     /**
      * 发送短信。
      */

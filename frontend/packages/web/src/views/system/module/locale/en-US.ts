@@ -1,4 +1,10 @@
 export default {
+  'module.callLogCleanConfig': 'Scheduled call log cleanup',
+  'module.callLogCleanEnable': 'Enable scheduled cleanup',
+  'module.callLogCleanEmployees': 'Employees to clean',
+  'module.callLogCleanEmployeesRequired': 'Select at least one employee',
+  'module.callLogCleanTip':
+    'The system runs daily at 01:00. All call logs on selected devices will be cleared. Devices must be online and the operation is irreversible.',
   'module.workbenchHome': 'Home',
   'module.customerManagement': 'Account',
   'module.clueManagement': 'Lead',

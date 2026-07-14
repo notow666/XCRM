@@ -54,6 +54,11 @@ public class MmbaAuditRequest implements Serializable {
         List<ZzyData> invalid = new ArrayList<>();
         for (int i = 0; i < sourceData.size(); i++) {
             ZzyData zzy = sourceData.get(i);
+            // 2026-07-13：过滤无法匹配客户的微信聊天审计数据，避免无效记录进入后续处理链路并增加数据库压力。
+            if (MmbaBehaviorTypes.WX_CHAT_AUDIT == mmbaAuditRequest.getBehaviorType()
+                    && !StringUtils.hasText(zzy.getFriendPhone())) {
+                continue;
+            }
             if (!StringUtils.hasText(zzy.getDeptIdPath())) {
                 invalid.add(zzy);
                 continue;

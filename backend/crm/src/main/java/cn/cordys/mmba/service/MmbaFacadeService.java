@@ -36,6 +36,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
@@ -54,7 +55,6 @@ import java.util.function.Function;
  */
 @Slf4j
 @Service
-@Transactional(rollbackFor = Exception.class)
 public class MmbaFacadeService {
 
     private static final int WX_FRIEND_LIST_MAX_LIMIT = 100;
@@ -91,6 +91,8 @@ public class MmbaFacadeService {
     /**
      * 拨打电话。
      */
+    // 2026-07-14：
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public JsonNode dial(JsonNode request, String userId, String organizationId) {
         ObjectNode payload = enrichDialRequest(request, userId, organizationId);
         JsonNode response = executeJson(
@@ -110,6 +112,16 @@ public class MmbaFacadeService {
      */
     public JsonNode callLimit(JsonNode request, String userId, String organizationId) {
         return executeJson(MmbaBizTypes.CALL_LIMIT, MmbaApiPaths.PHONE_CALL_LIMIT, request, userId, organizationId, mmbaIntegrationService::callLimit);
+    }
+
+    /**
+     * 下发通话记录清除指令，统一复用 MMBA 请求流水，确保每个 reqId 均可追溯到执行人。
+     */
+    public JsonNode cleanCallLog(JsonNode request, String userId, String organizationId) {
+        ObjectNode payload = normalizeRequest(request);
+        enrichOperatorBizExtInfo(payload, userId, organizationId);
+        return executeJson(MmbaBizTypes.CALL_LOG_CLEAN, MmbaApiPaths.PHONE_CLEAN_CALL_LOG,
+                payload, userId, organizationId, mmbaIntegrationService::cleanCallLog);
     }
 
     /**
@@ -579,6 +591,29 @@ public class MmbaFacadeService {
             putIfNotBlank(bizExtInfo, "owner_dept_id", ownerDept.getDeptId());
             putIfNotBlank(bizExtInfo, "owner_dept_name", ownerDept.getDeptName());
         }
+        if (operatorDept != null) {
+            putIfNotBlank(bizExtInfo, "operator_dept_id", operatorDept.getDeptId());
+            putIfNotBlank(bizExtInfo, "operator_dept_name", operatorDept.getDeptName());
+        }
+    }
+
+    /**
+     * 按拨打电话相同的字段约定补齐操作人上下文。
+     * 清除通话记录没有客户对象，因此只写拨号 bizExtInfo 中与操作人相关的公共字段。
+     */
+    private void enrichOperatorBizExtInfo(ObjectNode payload, String userId, String organizationId) {
+        ObjectNode bizExtInfo = payload.with("bizExtInfo");
+        putIfNotBlank(bizExtInfo, "organization_id", organizationId);
+        putIfNotBlank(bizExtInfo, "operator_user_id", userId);
+
+        Map<String, User> userMap = loadUserMap(userId, null);
+        User operatorUser = userMap.get(userId);
+        if (operatorUser != null) {
+            putIfNotBlank(bizExtInfo, "operator_user_name", operatorUser.getName());
+        }
+
+        Map<String, UserDeptDTO> userDeptMap = loadUserDeptMap(userId, null, organizationId);
+        UserDeptDTO operatorDept = userDeptMap.get(userId);
         if (operatorDept != null) {
             putIfNotBlank(bizExtInfo, "operator_dept_id", operatorDept.getDeptId());
             putIfNotBlank(bizExtInfo, "operator_dept_name", operatorDept.getDeptName());

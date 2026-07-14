@@ -78,14 +78,14 @@ public class MmbaAutoCustomerFollowService {
                 current.getTimestamp(), current.getReqId(), "短信");
     }
 
-    public void handleWxChatSuccess(MmbaWxChatAudit previous, MmbaWxChatAudit current) {
+    public boolean handleWxChatSuccess(MmbaWxChatAudit previous, MmbaWxChatAudit current) {
         if (current == null || !isWxChatSuccess(current)) {
-            return;
+            return false;
         }
         if (previous != null && isWxChatSuccess(previous)) {
-            return;
+            return false;
         }
-        createCustomerFollow(current.getUm(), current.getFriendPhone(), FOLLOW_WAY_WECHAT,
+        return createCustomerFollow(current.getUm(), current.getFriendPhone(), FOLLOW_WAY_WECHAT,
                 StringUtils.trimToNull(current.getContent()), current.getTimestamp(), current.getEsId(), "微信");
     }
 
@@ -104,30 +104,30 @@ public class MmbaAutoCustomerFollowService {
                 && Integer.valueOf(WX_CHAT_STATUS_SUCCESS).equals(record.getStatus());
     }
 
-    private void createCustomerFollow(String um, String mobile, String followWayName, String content, Long followTime, String reqId, String scene) {
+    private boolean createCustomerFollow(String um, String mobile, String followWayName, String content, Long followTime, String reqId, String scene) {
         Customer customer = findOwnedCustomer(um, mobile);
         if (customer == null) {
             log.warn("MMBA自动新增客户跟进跳过，未找到客户 scene={} reqId={} um={} mobile={}", scene, reqId, um, mobile);
-            return;
+            return false;
         }
         if (followTime == null) {
             log.warn("MMBA自动新增客户跟进跳过，时间为空 scene={} reqId={} customerId={}", scene, reqId, customer.getId());
-            return;
+            return false;
         }
         if (StringUtils.isBlank(content)) {
             log.warn("MMBA自动新增客户跟进跳过，内容为空 scene={} reqId={} customerId={}", scene, reqId, customer.getId());
-            return;
+            return false;
         }
         CustomerFollowWayConfig followWay = customerFollowWayService.findByName(followWayName);
         if (followWay == null || StringUtils.isBlank(followWay.getId())) {
             log.warn("MMBA自动新增客户跟进跳过，未找到跟进方式 scene={} reqId={} followWayName={}", scene, reqId, followWayName);
-            return;
+            return false;
         }
         String operatorUserId = resolveOperatorUserId(um);
         if (StringUtils.isBlank(operatorUserId)) {
             log.warn("MMBA自动新增客户跟进跳过，未找到创建人 scene={} reqId={} um={} customerId={}",
                     scene, reqId, um, customer.getId());
-            return;
+            return false;
         }
         FollowUpRecordAddRequest request = new FollowUpRecordAddRequest();
         request.setType(FOLLOW_TYPE_CUSTOMER);
@@ -149,6 +149,7 @@ public class MmbaAutoCustomerFollowService {
         followUpRecordService.add(request, operatorUserId, customer.getOrganizationId(),eventType);
         log.info("MMBA自动新增客户跟进成功 scene={} reqId={} customerId={} followWayId={} operatorUserId={}",
                 scene, reqId, customer.getId(), followWay.getId(), operatorUserId);
+        return true;
     }
 
     private Customer findOwnedCustomer(String um, String mobile) {

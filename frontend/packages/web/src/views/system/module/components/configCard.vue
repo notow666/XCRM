@@ -9,7 +9,9 @@
       </div>
       <div class="nav-config-item-action">
         <CrmButtonGroup
-          v-permission="['MODULE_SETTING:UPDATE']"
+          v-permission="
+            item.key === ModuleConfigEnum.SYSTEM_SETTINGS ? ['CALL_LOG_CLEAN_CONFIG:UPDATE'] : ['MODULE_SETTING:UPDATE']
+          "
           :list="item.groupList"
           @select="(key) => handleSelect(key, item)"
         >
@@ -85,6 +87,7 @@
   />
   <CustomerDataCleanupDrawer v-model:visible="customerDataCleanupVisible" />
   <CustomerAutoDeleteDrawer v-model:visible="customerAutoDeleteVisible" />
+  <CallLogCleanConfigDrawer v-model:visible="callLogCleanConfigVisible" />
   <stateFlowDrawer v-model:visible="orderStateFlowVisible" :type="FormDesignKeyEnum.ORDER" />
   <ContractFormFormDrawer v-model:visible="contractFormVisible" />
   <OrderFormFormDrawer v-model:visible="orderFormVisible" />
@@ -106,6 +109,7 @@
 
   import { getReasonConfig, toggleModuleNavStatus, updateReasonEnable } from '@/api/modules';
   import CustomerAutoDeleteDrawer from '@/components/business/crm-customer-auto-delete-drawer/index.vue';
+  import CallLogCleanConfigDrawer from '@/components/business/crm-call-log-clean-config-drawer/index.vue';
   import CustomerConfigDrawer from '@/components/business/crm-customer-config-drawer/index.vue';
   import CustomerDataCleanupDrawer from '@/components/business/crm-customer-data-cleanup-drawer/index.vue';
   import stateFlowDrawer from '@/components/business/crm-status-config-drawer/index.vue';
@@ -562,6 +566,19 @@
       enable: true,
     },
     {
+      label: t('menu.settings'),
+      key: ModuleConfigEnum.SYSTEM_SETTINGS,
+      icon: 'iconicon_set_up',
+      groupList: [
+        {
+          label: t('module.callLogCleanConfig'),
+          key: 'callLogCleanConfig',
+          permission: ['CALL_LOG_CLEAN_CONFIG:UPDATE'],
+        },
+      ],
+      enable: true,
+    },
+    {
       label: t('module.mmbaAudit'),
       key: ModuleConfigEnum.MMBA_AUDIT,
       icon: 'iconicon_dashboard1',
@@ -651,6 +668,7 @@
   const customerFailReasonConfigVisible = ref(false);
   const customerDataCleanupVisible = ref(false);
   const customerAutoDeleteVisible = ref(false);
+  const callLogCleanConfigVisible = ref(false);
   const orderFormVisible = ref(false);
   const orderStateFlowVisible = ref(false);
 
@@ -702,6 +720,11 @@
           clueManagementCluePoolVisible.value = true;
         } else if (key === 'capacitySet') {
           capacitySetVisible.value = true;
+        }
+        break;
+      case ModuleConfigEnum.SYSTEM_SETTINGS:
+        if (key === 'callLogCleanConfig') {
+          callLogCleanConfigVisible.value = true;
         }
         break;
       case ModuleConfigEnum.BUSINESS_MANAGEMENT:

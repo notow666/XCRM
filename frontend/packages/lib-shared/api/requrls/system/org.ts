@@ -27,3 +27,4 @@ export const checkSyncUserFromThirdUrl = '/user/sync-check'; // 用户(员工)-�
 export const updateUserNameUrl = '/user/update/name'; // 用户(员工)-更新用户名称
 export const getOrgDepartmentUserUrl = '/user/get'; // 用户(员工)-更新用户名称
 export const CheckSyncUrl = '/user/sync/check'; // 检查异步是否完成接口
+export const cleanCallLogUrl = '/call-log-clean/execute'; // 清除员工通话记录

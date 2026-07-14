@@ -16,4 +16,8 @@ public class TenantHikariProperties {
     private long idleTimeout = 300_000L;
     private long maxLifetime = 1_800_000L;
     private String connectionTestQuery = "SELECT 1";
+    /**
+     * 连接泄漏检测阈值，0表示关闭。
+     */
+    private long leakDetectionThreshold = 0L;
 }

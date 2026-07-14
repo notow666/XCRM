@@ -43,6 +43,16 @@ public class SystemModuleLogService extends BaseModuleLogService {
                 differ.setOldValueName(differ.getOldValue());
                 differ.setNewValueName(differ.getNewValue());
             }
+            if (Strings.CS.equals("callLogClean.enable", differ.getColumn())) {
+                differ.setColumnName(Translator.get("log.callLogClean.enable"));
+                differ.setOldValueName(toEnableText(differ.getOldValue()));
+                differ.setNewValueName(toEnableText(differ.getNewValue()));
+            }
+            if (Strings.CS.equals("callLogClean.employeeScope", differ.getColumn())) {
+                differ.setColumnName(Translator.get("log.callLogClean.employeeScope"));
+                differ.setOldValueName(differ.getOldValue());
+                differ.setNewValueName(differ.getNewValue());
+            }
             if (Strings.CS.equals("fields", differ.getColumn())) {
                 differ.setColumnName(Translator.get("log." + differ.getColumn()));
                 handleFieldsLogDetail(differ);
@@ -85,6 +95,14 @@ public class SystemModuleLogService extends BaseModuleLogService {
         });
 
         return differences;
+    }
+
+    /** 仅转换定时清除通话记录配置的开关值，不改变其他系统模块日志。 */
+    private Object toEnableText(Object value) {
+        if (value == null) {
+            return null;
+        }
+        return Translator.get(Boolean.parseBoolean(String.valueOf(value)) ? "log.enable.true" : "log.enable.false");
     }
 
     private List<String> getBtnContentList(Object value) {

@@ -4,6 +4,7 @@ export default {
   'common.saveAndContinue': '保存并继续添加',
   'common.edit': '编辑',
   'common.delete': '删除',
+  'common.clean': '清除',
   'common.save': '保存',
   'common.cancel': '取消',
   'common.confirm': '确认',

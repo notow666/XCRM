@@ -15,7 +15,7 @@ public class FollowUpPlanReminderCompensationJob {
 
     @QuartzScheduled(cron = "0 0/10 * * * ?")
     public void execute() {
-        log.info("执行跟进计划提醒补偿任务");
-        followUpPlanReminderService.compensateAllTenants();
+//        log.info("执行跟进计划提醒补偿任务");
+//        followUpPlanReminderService.compensateAllTenants();
     }
 }

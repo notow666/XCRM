@@ -39,6 +39,7 @@ public class PermissionConstants {
     public static final String SYS_ORGANIZATION_IMPORT = "SYS_ORGANIZATION:IMPORT";
     public static final String SYS_ORGANIZATION_SYNC = "SYS_ORGANIZATION:SYNC";
     public static final String SYS_ORGANIZATION_USER_RESET_PASSWORD = "SYS_ORGANIZATION_USER:RESET_PASSWORD";
+    public static final String SYS_ORGANIZATION_USER_CLEAN_CALL_LOG = "SYS_ORGANIZATION_USER:CLEAN_CALL_LOG";
 
     /*------ end: SYS_DEPARTMENT ------*/
 
@@ -54,6 +55,7 @@ public class PermissionConstants {
      */
     public static final String MODULE_SETTING_READ = "MODULE_SETTING:READ";
     public static final String MODULE_SETTING_UPDATE = "MODULE_SETTING:UPDATE";
+    public static final String CALL_LOG_CLEAN_CONFIG_UPDATE = "CALL_LOG_CLEAN_CONFIG:UPDATE";
 
 
     /*------ start: CUSTOMER_MANAGEMENT------*/

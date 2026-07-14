@@ -27,6 +27,7 @@ import {
   sortDepartmentUrl,
   syncOrgUrl,
   updateUserNameUrl,
+  cleanCallLogUrl,
   updateUserUrl,
 } from '@lib/shared/api/requrls/system/org';
 import type { CommonList } from '@lib/shared/models/common';
@@ -175,6 +176,13 @@ export default function useProductApi(CDR: CordysAxios) {
     return CDR.get<boolean>({ url: CheckSyncUrl });
   }
 
+  function cleanCallLog(data: { userIds: string[] }) {
+    return CDR.post<{ selectedCount: number; issuedCount: number; skippedCount: number; failedCount: number }>({
+      url: cleanCallLogUrl,
+      data,
+    });
+  }
+
   return {
     getDepartmentTree,
     addDepartment,
@@ -203,5 +211,6 @@ export default function useProductApi(CDR: CordysAxios) {
     updateOrgUserName,
     getOrgDepartmentUser,
     checkSync,
+    cleanCallLog,
   };
 }

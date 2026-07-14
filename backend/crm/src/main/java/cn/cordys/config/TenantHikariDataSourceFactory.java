@@ -34,6 +34,11 @@ public class TenantHikariDataSourceFactory {
                 .username(username)
                 .password(password)
                 .build();
+        if (properties.getLeakDetectionThreshold() > 0) {
+            dataSource.setLeakDetectionThreshold(
+                    properties.getLeakDetectionThreshold()
+            );
+        }
         dataSource.setPoolName(poolName);
         dataSource.setMaximumPoolSize(properties.getMaximumPoolSize());
         dataSource.setMinimumIdle(properties.getMinimumIdle());

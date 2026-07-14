@@ -43,6 +43,7 @@ export enum OperationTypeEnum {
   UPDATE = 'UPDATE',
   ADD = 'ADD',
   DELETE = 'DELETE',
+  CLEAN = 'CLEAN',
   IMPORT = 'IMPORT',
   EXPORT = 'EXPORT',
   SYNC = 'SYNC',

@@ -736,6 +736,8 @@ export const {
   getFieldBusinessTitleList,
   getDatasourceRefDetailList,
   batchUserCapacity,
+  getCallLogCleanConfig,
+  saveCallLogCleanConfig,
 } = moduleApi;
 
 export const {
@@ -766,6 +768,7 @@ export const {
   checkDeleteDepartment,
   batchResetUserPassword,
   checkSyncUserFromThird,
+  cleanCallLog,
 } = orgApi;
 
 export const {

@@ -22,6 +22,9 @@ public interface MmbaApiPaths {
      */
     String PHONE_CALL_LIMIT = "/mmba/api/phone/v3/callLimit";
 
+    /** 清除指定 UM 对应设备的全部通话记录。 */
+    String PHONE_CLEAN_CALL_LOG = "/mmba/api/phone/v3/cleanCallLog";
+
     /**
      * 发送短信。
      */

@@ -130,13 +130,17 @@ public class SysOperationLogService {
             differences = filterIgnoreFields(differences);
 
             if (CollectionUtils.isNotEmpty(differences)) {
-                // 获取模块对应处理服务
-                BaseModuleLogService moduleLogService = ModuleLogServiceFactory.getModuleLogService(operationLog.getModule());
-
-                if (moduleLogService != null) {
-                    differences = moduleLogService.handleLogField(differences, orgId);
+                if (Strings.CI.equals(operationLog.getType(), LogType.CLEAN)) {
+                    // 清除日志保存的是独立的审计字段，不应被所属模块的业务表单字段过滤掉。
+                    differences.forEach(BaseModuleLogService::translatorDifferInfo);
                 } else {
-                    handleDefaultDifferences(operationLog, differences);
+                    // 获取模块对应处理服务
+                    BaseModuleLogService moduleLogService = ModuleLogServiceFactory.getModuleLogService(operationLog.getModule());
+                    if (moduleLogService != null) {
+                        differences = moduleLogService.handleLogField(differences, orgId);
+                    } else {
+                        handleDefaultDifferences(operationLog, differences);
+                    }
                 }
             }
 

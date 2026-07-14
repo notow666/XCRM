@@ -1,4 +1,11 @@
 export default {
+  'org.cleanCallLog': 'Clear call logs',
+  'org.cleanCallLogConfirmTitle': 'Clear call logs for the selected {number} employees?',
+  'org.cleanCallLogConfirmContent':
+    'This irreversible operation clears all call logs on the selected employees devices and requires the devices to be online.',
+  'org.confirmCleanCallLog': 'Confirm cleanup',
+  'org.cleanCallLogIssuedResult':
+    'Commands issued for {issued}; skipped without UM: {skipped}; failed to issue: {failed}',
   'org.addSubDepartment': 'Add sub-department',
   'org.setDepartmentHead': 'Set head',
   'org.deleteExistUserDepartment':

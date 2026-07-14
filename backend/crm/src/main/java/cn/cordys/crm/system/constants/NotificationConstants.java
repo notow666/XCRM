@@ -164,6 +164,9 @@ public class NotificationConstants {
 
         @Schema(description = "message.mmba_add_wechat_friend_receipt")
         String MMBA_ADD_WECHAT_FRIEND_RECEIPT = "MMBA_ADD_WECHAT_FRIEND_RECEIPT";
+
+        @Schema(description = "message.mmba_call_log_clean_receipt")
+        String MMBA_CALL_LOG_CLEAN_RECEIPT = "MMBA_CALL_LOG_CLEAN_RECEIPT";
     }
 
     public interface RelatedUser {

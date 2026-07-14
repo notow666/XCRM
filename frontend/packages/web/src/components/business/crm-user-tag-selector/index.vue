@@ -37,7 +37,7 @@
 <script setup lang="ts">
   import { NSelect, SelectOption } from 'naive-ui';
 
-  import { MemberApiTypeEnum } from '@lib/shared/enums/moduleEnum';
+  import { MemberApiTypeEnum, MemberSelectTypeEnum } from '@lib/shared/enums/moduleEnum';
   import { DeptNodeTypeEnum } from '@lib/shared/enums/systemEnum';
   import { useI18n } from '@lib/shared/hooks/useI18n';
   import { SelectedUsersItem } from '@lib/shared/models/system/module';
@@ -62,6 +62,7 @@
     fetchMemberParams?: Record<string, any>; // 成员入参
     baseParams?: Record<string, any>; // 基础公共入参
     status?: 'error' | 'success' | 'warning';
+    expandOrgToMembers?: boolean; // 选择组织节点时，是否展开为该组织下的全部员工
   };
   const props = withDefaults(defineProps<UserTagSelectorProps>(), {
     multiple: true,
@@ -86,11 +87,31 @@
     showSelectDrawer.value = true;
   }
 
-  function handleSelectConfirm(params: SelectedUsersItem[]) {
+  function handleSelectConfirm(params: SelectedUsersItem[], offspringNodes: Record<string, any>[] = []) {
+    let confirmedUsers = params;
+    if (props.expandOrgToMembers) {
+      // 选择抽屉已返回所选节点及其全部后代；本模式仅保留员工节点，避免把组织 ID 当成员 ID 保存。
+      const memberMap = new Map<string, SelectedUsersItem>();
+      offspringNodes
+        .filter((node) => node.nodeType === DeptNodeTypeEnum.USER)
+        .forEach((node) => {
+          const id = String(node.id ?? node.value ?? '');
+          if (!id) return;
+          memberMap.set(id, {
+            id,
+            name: String(node.name ?? node.label ?? ''),
+            scope: MemberSelectTypeEnum.MEMBER,
+          });
+        });
+      confirmedUsers = Array.from(memberMap.values());
+    }
     if (props.multiple) {
-      selectedList.value = [...(selectedList.value || []), ...params];
+      const selectedMap = new Map(
+        [...(selectedList.value || []), ...confirmedUsers].map((item) => [item.id, item] as const)
+      );
+      selectedList.value = Array.from(selectedMap.values());
     } else {
-      selectedList.value = params;
+      selectedList.value = confirmedUsers;
     }
     showSelectDrawer.value = false;
     emit('confirm');

@@ -291,9 +291,12 @@
             onClick: async () => {
               activeLogDetail.value = row;
               if (
-                [OperationTypeEnum.UPDATE, OperationTypeEnum.MERGE, OperationTypeEnum.APPROVAL].includes(
-                  row.type as OperationTypeEnum
-                )
+                [
+                  OperationTypeEnum.UPDATE,
+                  OperationTypeEnum.MERGE,
+                  OperationTypeEnum.APPROVAL,
+                  OperationTypeEnum.CLEAN,
+                ].includes(row.type as OperationTypeEnum)
               ) {
                 await getLogDetail(row.id);
               }

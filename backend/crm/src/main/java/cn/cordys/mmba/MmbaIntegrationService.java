@@ -37,6 +37,10 @@ public class MmbaIntegrationService {
         return invoke(MmbaApiPaths.PHONE_CALL_LIMIT, request);
     }
 
+    public JsonNode cleanCallLog(JsonNode request) {
+        return invoke(MmbaApiPaths.PHONE_CLEAN_CALL_LOG, request);
+    }
+
     public JsonNode sendSms(JsonNode request) {
         return invoke(MmbaApiPaths.PHONE_SEND_MSG, wrapSmsData(request));
     }

@@ -30,6 +30,10 @@
           {
             "id": "SYS_ORGANIZATION_USER:RESET_PASSWORD",
             "name": "permission.organization.user.reset_password"
+          },
+          {
+            "id": "SYS_ORGANIZATION_USER:CLEAN_CALL_LOG",
+            "name": "permission.organization.user.clean_call_log"
           }
         ]
       },
@@ -68,6 +72,10 @@
           },
           {
             "id": "MODULE_SETTING:UPDATE"
+          },
+          {
+            "id": "CALL_LOG_CLEAN_CONFIG:UPDATE",
+            "name": "permission.call_log_clean_config.update"
           }
         ]
       },
