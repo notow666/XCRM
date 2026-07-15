@@ -106,10 +106,11 @@ public class CustomerCallRecordService {
             throw new GenericException("通话记录不存在");
         }
         MmbaCallRecordAudit audit = mmbaCallRecordAuditBaseMapper.selectByPrimaryKey(auditId);
-        if (audit == null || StringUtils.isBlank(audit.getCustomerId())) {
+        if (audit == null) {
             throw new GenericException("通话记录不存在");
         }
-        customerService.getWithDataPermissionCheck(audit.getCustomerId(), userId, orgId);
+        // 2026-07-15：客户详情列表已完成数据权限校验，录音预览不再根据回调中的 customerId 重复拦截。
+        // customerService.getWithDataPermissionCheck(audit.getCustomerId(), userId, orgId);
         return audit;
     }
 
