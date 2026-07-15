@@ -4,4 +4,15 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="cn.cordys.mmba.mapper.ExtMmbaCallbackRecordMapper">
 
+    <update id="markSuccessAndClearPayload" parameterType="cn.cordys.mmba.domain.MmbaCallbackRecord">
+        UPDATE mmba_callback_record
+        SET process_status = #{processStatus},
+            process_result = #{processResult},
+            error_message = NULL,
+            payload_raw = NULL,
+            update_time = #{updateTime},
+            update_user = #{updateUser}
+        WHERE id = #{id}
+    </update>
+
 </mapper>

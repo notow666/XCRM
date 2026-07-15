@@ -64,7 +64,9 @@ public class MmbaCallbackProcessService {
         record.setProcessStatus(MmbaConstants.CALLBACK_PROCESS_SUCCESS);
         record.setProcessResult("processed");
         record.setErrorMessage(null);
-        mmbaCallbackRecordService.update(record, MmbaConstants.SYSTEM_USER);
+        // 2026-07-15：成功回调仅保留哈希和处理状态用于去重，释放原始报文占用的存储空间。
+        record.setPayloadRaw(null);
+        mmbaCallbackRecordService.markSuccessAndClearPayload(record, MmbaConstants.SYSTEM_USER);
         log.info("MMBA回调处理成功 streamId={} consumer={} callbackRecordId={} behaviorType={} tenantId={} reqId={} esId={}",
                 dto == null ? null : dto.getStreamId(), dto == null ? null : dto.getStreamConsumer(),
                 record.getId(), record.getBehaviorType(), TenantContext.getTenantId(),

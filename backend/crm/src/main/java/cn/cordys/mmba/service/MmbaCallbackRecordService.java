@@ -2,6 +2,7 @@ package cn.cordys.mmba.service;
 
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.mmba.domain.MmbaCallbackRecord;
+import cn.cordys.mmba.mapper.ExtMmbaCallbackRecordMapper;
 import cn.cordys.mybatis.BaseMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,8 @@ public class MmbaCallbackRecordService {
 
     @Resource
     private BaseMapper<MmbaCallbackRecord> mmbaCallbackRecordMapper;
+    @Resource
+    private ExtMmbaCallbackRecordMapper extMmbaCallbackRecordMapper;
 
     public MmbaCallbackRecord init(MmbaCallbackRecord record, String userId) {
         long now = System.currentTimeMillis();
@@ -33,6 +36,12 @@ public class MmbaCallbackRecordService {
         record.setUpdateTime(System.currentTimeMillis());
         record.setUpdateUser(userId);
         mmbaCallbackRecordMapper.update(record);
+    }
+
+    public void markSuccessAndClearPayload(MmbaCallbackRecord record, String userId) {
+        record.setUpdateTime(System.currentTimeMillis());
+        record.setUpdateUser(userId);
+        extMmbaCallbackRecordMapper.markSuccessAndClearPayload(record);
     }
 
     public MmbaCallbackRecord findLatestByPayloadHash(String payloadHash) {
