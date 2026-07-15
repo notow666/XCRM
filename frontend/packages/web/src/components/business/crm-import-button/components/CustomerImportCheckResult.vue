@@ -68,9 +68,7 @@
           @click="confirmImport"
         >
           {{
-            validateResultInfo.failCount > 0
-              ? t('crmImportButton.customerPartialContinueImport')
-              : t('common.import')
+            validateResultInfo.failCount > 0 ? t('crmImportButton.customerPartialContinueImport') : t('common.import')
           }}
         </n-button>
       </div>

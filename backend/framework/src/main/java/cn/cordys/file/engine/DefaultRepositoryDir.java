@@ -2,11 +2,12 @@ package cn.cordys.file.engine;
 
 import org.apache.commons.lang3.StringUtils;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
  * 默认的资源目录工具类；逻辑路径首段为租户 ID。调用方必须传入非空的 tenantId，禁止静默回退到默认租户。
+ * <p>
+ * 路径形态：tmp 为 /{tenantId}/tmp/...；export / pic 为 /{tenantId}/{func}/{module}/...。
  */
 public final class DefaultRepositoryDir {
 
@@ -64,45 +65,21 @@ public final class DefaultRepositoryDir {
     }
 
     /**
-     * 导出目录相对段（无首斜杠，便于与 {@link java.io.File} 拼接）：{tenantId}/export
+     * 导出目录相对段（无首斜杠，便于与 {@link java.io.File} 拼接）：{tenantId}/export/{module}
      */
-    public static String getExportDir(String tenantId) {
-        return Paths.get(tenantSegment(tenantId), EXPORT_SEGMENT).toString();
+    public static String getExportDir(String tenantId, String module) {
+        return Paths.get(tenantSegment(tenantId), EXPORT_SEGMENT, normalizeModule(module)).toString();
     }
 
     /**
-     * 转存附件目录：/{tenantId}/pic/{resourceId}/{fileId}
+     * 转存附件目录：/{tenantId}/pic/{module}/{resourceId}/{fileId}
      */
-    public static String getTransferFileDir(String tenantId, String resourceId, String fileId) {
-        return "/" + tenantSegment(tenantId) + "/" + PIC_SEGMENT + "/" + resourceId + "/" + fileId;
+    public static String getTransferFileDir(String tenantId, String module, String resourceId, String fileId) {
+        return "/" + tenantSegment(tenantId) + "/" + PIC_SEGMENT + "/" + normalizeModule(module) + "/" + resourceId + "/" + fileId;
     }
 
     public static String getDefaultDir() {
         return repositoryRoot;
-    }
-
-    public static Path getFullTmpPath(String tenantId) {
-        if (shadowFilePathActive()) {
-            String base = normalizeTenant(tenantId);
-            return Paths.get(repositoryRoot, base, SHADOW_SEGMENT, TMP_SEGMENT);
-        }
-        return Paths.get(repositoryRoot, normalizeTenant(tenantId), TMP_SEGMENT);
-    }
-
-    public static Path getFullPicPath(String tenantId) {
-        if (shadowFilePathActive()) {
-            String base = normalizeTenant(tenantId);
-            return Paths.get(repositoryRoot, base, SHADOW_SEGMENT, PIC_SEGMENT);
-        }
-        return Paths.get(repositoryRoot, normalizeTenant(tenantId), PIC_SEGMENT);
-    }
-
-    public static Path getFullExportPath(String tenantId) {
-        if (shadowFilePathActive()) {
-            String base = normalizeTenant(tenantId);
-            return Paths.get(repositoryRoot, base, SHADOW_SEGMENT, EXPORT_SEGMENT);
-        }
-        return Paths.get(repositoryRoot, normalizeTenant(tenantId), EXPORT_SEGMENT);
     }
 
     private static String tenantSegment(String tenantId) {
@@ -119,5 +96,16 @@ public final class DefaultRepositoryDir {
             throw new IllegalArgumentException("Invalid tenantId: " + tenantId);
         }
         return t;
+    }
+
+    private static String normalizeModule(String module) {
+        String m = StringUtils.trimToNull(module);
+        if (m == null) {
+            throw new IllegalArgumentException("module must not be null or blank for file repository paths");
+        }
+        if (m.indexOf('/') >= 0 || m.indexOf('\\') >= 0 || m.contains("..")) {
+            throw new IllegalArgumentException("Invalid module: " + module);
+        }
+        return m;
     }
 }

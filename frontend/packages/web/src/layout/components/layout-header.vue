@@ -8,12 +8,12 @@
         <CrmTopMenu v-if="!isPlatformUser" />
       </div>
       <div class="flex shrink-0 items-center gap-[8px]">
-         <span
-             v-if="!isPlatformUser && currentTenantName"
-             class="tenant-name-label truncate text-[14px] font-medium text-[var(--text-n1)]"
-             :style="{ fontSize: '18px', fontWeight: '600' }"
-             :title="currentTenantName"
-         >
+        <span
+          v-if="!isPlatformUser && currentTenantName"
+          class="tenant-name-label truncate text-[14px] font-medium text-[var(--text-n1)]"
+          :style="{ fontSize: '18px', fontWeight: '600' }"
+          :title="currentTenantName"
+        >
           {{ currentTenantName }}
         </span>
       </div>

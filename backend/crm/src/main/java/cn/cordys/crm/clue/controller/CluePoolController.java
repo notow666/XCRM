@@ -2,7 +2,6 @@ package cn.cordys.crm.clue.controller;
 
 import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.dto.BasePageRequest;
-import cn.cordys.common.pager.PageUtils;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.crm.clue.dto.CluePoolDTO;
@@ -10,8 +9,6 @@ import cn.cordys.crm.clue.dto.request.CluePoolAddRequest;
 import cn.cordys.crm.clue.dto.request.CluePoolUpdateRequest;
 import cn.cordys.crm.clue.service.CluePoolService;
 import cn.cordys.security.SessionUtils;
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -33,8 +30,7 @@ public class CluePoolController {
     @Operation(summary = "分页获取线索池")
     @RequiresPermissions(value = {PermissionConstants.MODULE_SETTING_UPDATE})
     public Pager<List<CluePoolDTO>> page(@Validated @RequestBody BasePageRequest request) {
-        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
-        return PageUtils.setPageInfo(page, cluePoolService.page(request, OrganizationContext.getOrganizationId()));
+        return cluePoolService.page(request, OrganizationContext.getOrganizationId());
     }
 
     @PostMapping("/add")

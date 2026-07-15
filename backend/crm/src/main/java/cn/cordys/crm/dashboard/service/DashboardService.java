@@ -380,10 +380,11 @@ public class DashboardService extends DashboardSortService {
      *
      * @return
      */
-    public List<DashboardPageResponse> collectList(BasePageRequest request, String userId, String orgId) {
+    public Pager<List<DashboardPageResponse>> collectList(BasePageRequest request, String userId, String orgId) {
+        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         List<DashboardPageResponse> dashboardList = extDashboardCollectionMapper.collectList(request, userId, orgId);
         handleData(dashboardList, userId);
-        return dashboardList;
+        return PageUtils.setPageInfo(page, dashboardList);
     }
 
     public void unCollect(String dashboardId, String userId) {

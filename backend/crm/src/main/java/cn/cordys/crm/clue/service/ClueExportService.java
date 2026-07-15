@@ -101,7 +101,8 @@ public class ClueExportService extends BaseExportService {
                 .toList();
 
         // 准备导出文件
-        File file = prepareExportFile(fileId, request.getFileName(), exportTask.getOrganizationId());
+        File file = prepareExportFile(fileId, request.getFileName(), exportTask.getOrganizationId(),
+                exportTask.getResourceType());
         try (ExcelWriter writer = EasyExcel.write(file)
                 .head(headList)
                 .excelType(ExcelTypeEnum.XLSX)

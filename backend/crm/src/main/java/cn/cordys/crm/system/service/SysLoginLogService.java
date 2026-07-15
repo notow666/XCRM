@@ -2,11 +2,15 @@ package cn.cordys.crm.system.service;
 
 
 import cn.cordys.common.exception.GenericException;
+import cn.cordys.common.pager.PageUtils;
+import cn.cordys.common.pager.Pager;
 import cn.cordys.common.service.BaseService;
 import cn.cordys.common.util.Translator;
 import cn.cordys.crm.system.dto.request.LoginLogRequest;
 import cn.cordys.crm.system.dto.response.LoginLogListResponse;
 import cn.cordys.crm.system.mapper.ExtLoginLogMapper;
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -63,9 +67,10 @@ public class SysLoginLogService {
      *
      * @return
      */
-    public List<LoginLogListResponse> list(LoginLogRequest request, String orgId) {
+    public Pager<List<LoginLogListResponse>> list(LoginLogRequest request, String orgId) {
         checkTime(request.getStartTime(), request.getEndTime());
+        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         List<LoginLogListResponse> list = extLoginLogMapper.list(request, orgId);
-        return handleData(list);
+        return PageUtils.setPageInfo(page, handleData(list));
     }
 }

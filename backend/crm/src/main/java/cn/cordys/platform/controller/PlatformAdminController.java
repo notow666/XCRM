@@ -10,8 +10,11 @@ import cn.cordys.platform.dto.request.PlatformTenantDataCleanupTaskPageRequest;
 import cn.cordys.platform.dto.request.PlatformTenantNameUpdateRequest;
 import cn.cordys.platform.dto.request.PlatformTenantOrgIdUpdateRequest;
 import cn.cordys.platform.dto.request.PlatformTenantPageRequest;
+import cn.cordys.platform.dto.request.PlatformPhoneSegmentPageRequest;
 import cn.cordys.platform.dto.response.PlatformAuditLogResponse;
 import cn.cordys.platform.dto.response.PlatformOverviewResponse;
+import cn.cordys.platform.dto.response.PlatformPhoneSegmentResponse;
+import cn.cordys.platform.dto.response.PhoneSegmentRegionNodeResponse;
 import cn.cordys.platform.dto.response.PlatformTenantDataCleanupSubmitResponse;
 import cn.cordys.platform.dto.response.PlatformTenantDataCleanupTaskResponse;
 import cn.cordys.platform.dto.response.PlatformTenantHealthResponse;
@@ -19,6 +22,7 @@ import cn.cordys.platform.dto.response.PlatformTenantItemResponse;
 import cn.cordys.platform.dto.response.PlatformTenantProvisionTaskResponse;
 import cn.cordys.platform.service.PlatformAdminService;
 import cn.cordys.platform.service.PlatformOverviewService;
+import cn.cordys.platform.service.PlatformPhoneSegmentService;
 import cn.cordys.platform.service.PlatformTenantProvisionTaskExecutor;
 import cn.cordys.security.SessionUtils;
 import cn.cordys.security.SessionUser;
@@ -51,6 +55,9 @@ public class PlatformAdminController {
 
     @Resource
     private PlatformOverviewService platformOverviewService;
+
+    @Resource
+    private PlatformPhoneSegmentService platformPhoneSegmentService;
 
     @GetMapping("/overview")
     @Operation(summary = "平台概览驾驶舱")
@@ -204,6 +211,21 @@ public class PlatformAdminController {
     public Pager<List<PlatformAuditLogResponse>> pageAudits(@Valid @RequestBody PlatformAuditPageRequest request) {
         assertPlatformAdmin();
         return platformAdminService.pageAuditLogs(request);
+    }
+
+    @PostMapping("/phone-segment/page")
+    @Operation(summary = "号段管理分页")
+    public Pager<List<PlatformPhoneSegmentResponse>> pagePhoneSegments(
+            @Valid @RequestBody PlatformPhoneSegmentPageRequest request) {
+        assertPlatformAdmin();
+        return platformPhoneSegmentService.page(request);
+    }
+
+    @GetMapping("/phone-segment/regions")
+    @Operation(summary = "号段省市选项")
+    public List<PhoneSegmentRegionNodeResponse> phoneSegmentRegions() {
+        assertPlatformAdmin();
+        return platformPhoneSegmentService.listRegions();
     }
 
     @PostMapping("/tenant/{tenantId}/shadow/enable")

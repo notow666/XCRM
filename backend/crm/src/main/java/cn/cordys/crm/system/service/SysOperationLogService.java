@@ -5,6 +5,8 @@ import cn.cordys.aspectj.constants.LogType;
 import cn.cordys.common.dto.JsonDifferenceDTO;
 import cn.cordys.common.dto.OptionDTO;
 import cn.cordys.common.exception.GenericException;
+import cn.cordys.common.pager.PageUtils;
+import cn.cordys.common.pager.Pager;
 import cn.cordys.common.service.BaseService;
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.JsonDifferenceUtils;
@@ -17,6 +19,8 @@ import cn.cordys.crm.system.dto.response.OperationLogResponse;
 import cn.cordys.crm.system.mapper.ExtOperationLogMapper;
 import cn.cordys.crm.system.mapper.ExtUserMapper;
 import cn.cordys.mybatis.BaseMapper;
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
@@ -53,11 +57,12 @@ public class SysOperationLogService {
     /**
      * 操作日志列表查询
      */
-    public List<OperationLogResponse> list(OperationLogRequest request, String orgId) {
+    public Pager<List<OperationLogResponse>> list(OperationLogRequest request, String orgId) {
         checkTime(request.getStartTime(), request.getEndTime());
+        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         List<OperationLogResponse> list = extOperationLogMapper.list(request, orgId);
         handleData(list);
-        return list;
+        return PageUtils.setPageInfo(page, list);
     }
 
     /**

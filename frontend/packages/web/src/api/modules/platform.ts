@@ -267,3 +267,36 @@ export function enterPlatformMaintenanceMode() {
 export function exitPlatformMaintenanceMode() {
   return CDR.post({ url: '/platform/admin/system-maintenance/maintenance/exit' });
 }
+
+export interface PlatformPhoneSegmentItem {
+  id: string;
+  province: string;
+  city: string;
+  segment: string;
+  isp?: string;
+  areaCode?: string;
+}
+
+export interface PlatformPhoneSegmentPageRequest {
+  current: number;
+  pageSize: number;
+  province?: string;
+  city?: string;
+}
+
+export interface PhoneSegmentRegionNode {
+  label: string;
+  value: string;
+  children?: PhoneSegmentRegionNode[];
+}
+
+export function pagePlatformPhoneSegments(data: PlatformPhoneSegmentPageRequest) {
+  return CDR.post<CommonList<PlatformPhoneSegmentItem>>({
+    url: '/platform/admin/phone-segment/page',
+    data,
+  });
+}
+
+export function getPlatformPhoneSegmentRegions() {
+  return CDR.get<PhoneSegmentRegionNode[]>({ url: '/platform/admin/phone-segment/regions' });
+}

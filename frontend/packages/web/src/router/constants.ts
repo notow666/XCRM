@@ -14,6 +14,7 @@ import {
   SystemRouteEnum,
   TaskRouteEnum,
   TenderRouteEnum,
+  ToolsRouteEnum,
   WorkbenchRouteEnum,
 } from '@/enums/routeEnum';
 
@@ -72,6 +73,7 @@ export const featureRouteMap: Record<string, any> = {
   [TaskRouteEnum.TASK]: ModuleConfigEnum.TASK,
   [ReportRouteEnum.REPORT]: ModuleConfigEnum.REPORT,
   [MMBAAuditRouteEnum.MMBA_AUDIT]: ModuleConfigEnum.MMBA_AUDIT,
+  [ToolsRouteEnum.TOOLS]: ModuleConfigEnum.TOOLS,
 };
 
 export const allMenuRouteMap: Record<string, any> = {

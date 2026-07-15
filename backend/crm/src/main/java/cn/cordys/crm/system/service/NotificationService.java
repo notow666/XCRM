@@ -3,6 +3,8 @@ package cn.cordys.crm.system.service;
 
 import cn.cordys.common.constants.TopicConstants;
 import cn.cordys.common.dto.OptionCountDTO;
+import cn.cordys.common.pager.PageUtils;
+import cn.cordys.common.pager.Pager;
 import cn.cordys.common.redis.MessagePublisher;
 import cn.cordys.common.redis.TenantRedisKeyBuilder;
 import cn.cordys.common.util.JSON;
@@ -14,6 +16,8 @@ import cn.cordys.crm.system.dto.response.NotificationDTO;
 import cn.cordys.crm.system.mapper.ExtNotificationMapper;
 import cn.cordys.crm.system.notice.dto.NoticeRedisMessage;
 import cn.cordys.mybatis.BaseMapper;
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -93,11 +97,12 @@ public class NotificationService {
         }
     }
 
-    public List<NotificationDTO> listNotification(NotificationRequest notificationRequest, String userId, String organizationId) {
+    public Pager<List<NotificationDTO>> listNotification(NotificationRequest notificationRequest, String userId, String organizationId) {
         buildParam(notificationRequest, userId);
+        Page<Object> page = PageHelper.startPage(notificationRequest.getCurrent(), notificationRequest.getPageSize(), true);
         List<NotificationDTO> notifications = extNotificationMapper.listNotification(notificationRequest, organizationId);
         notifications.forEach(notification -> notification.setContentText(new String(notification.getContent())));
-        return notifications;
+        return PageUtils.setPageInfo(page, notifications);
     }
 
     public int read(String id, String userId, String orgId) {

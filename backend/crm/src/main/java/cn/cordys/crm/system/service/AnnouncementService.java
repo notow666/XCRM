@@ -15,6 +15,8 @@ import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.SubListUtils;
 import cn.cordys.common.util.Translator;
+import cn.cordys.common.pager.PageUtils;
+import cn.cordys.common.pager.Pager;
 import cn.cordys.context.TenantContext;
 import cn.cordys.crm.system.constants.NotificationConstants;
 import cn.cordys.crm.system.domain.Announcement;
@@ -33,6 +35,8 @@ import cn.cordys.crm.system.mapper.ExtNotificationMapper;
 import cn.cordys.crm.system.mapper.ExtUserMapper;
 import cn.cordys.crm.system.notice.dto.NoticeRedisMessage;
 import cn.cordys.mybatis.BaseMapper;
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -312,7 +316,8 @@ public class AnnouncementService {
      *
      * @return 公告列表
      */
-    public List<AnnouncementDTO> page(AnnouncementPageRequest request) {
+    public Pager<List<AnnouncementDTO>> page(AnnouncementPageRequest request) {
+        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         List<AnnouncementDTO> announcementDTOS = extAnnouncementMapper.selectByBaseRequest(request);
         if (CollectionUtils.isNotEmpty(announcementDTOS)) {
             for (AnnouncementDTO announcementDTO : announcementDTOS) {
@@ -320,7 +325,7 @@ public class AnnouncementService {
                 setReceiverNameOption(announcementDTO);
             }
         }
-        return announcementDTOS;
+        return PageUtils.setPageInfo(page, announcementDTOS);
     }
 
     /**

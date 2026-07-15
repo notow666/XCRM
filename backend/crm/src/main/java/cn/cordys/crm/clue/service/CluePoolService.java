@@ -12,6 +12,8 @@ import cn.cordys.common.dto.BasePageRequest;
 import cn.cordys.common.dto.condition.CombineSearch;
 import cn.cordys.common.dto.condition.FilterCondition;
 import cn.cordys.common.exception.GenericException;
+import cn.cordys.common.pager.PageUtils;
+import cn.cordys.common.pager.Pager;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.JSON;
@@ -36,6 +38,8 @@ import cn.cordys.crm.system.service.ModuleFormCacheService;
 import cn.cordys.crm.system.service.UserExtendService;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -79,10 +83,11 @@ public class CluePoolService {
      *
      * @return 线索池列表
      */
-    public List<CluePoolDTO> page(BasePageRequest request, String organizationId) {
+    public Pager<List<CluePoolDTO>> page(BasePageRequest request, String organizationId) {
+        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         List<CluePoolDTO> pools = extCluePoolMapper.list(request, organizationId);
         if (CollectionUtils.isEmpty(pools)) {
-            return new ArrayList<>();
+            return PageUtils.setPageInfo(page, new ArrayList<>());
         }
 
         List<String> userIds = pools.stream().flatMap(pool -> Stream.of(pool.getCreateUser(), pool.getUpdateUser())).toList();
@@ -186,7 +191,7 @@ public class CluePoolService {
             pool.setFieldConfigs(getCluePoolFieldConfigs(fields, hiddenFieldIds));
         });
 
-        return pools;
+        return PageUtils.setPageInfo(page, pools);
     }
 
     private void delOldTimeConditions(List<RuleConditionDTO> conditions) {

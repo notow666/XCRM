@@ -122,7 +122,8 @@ public class CustomerExportService extends BaseExportService {
                 .map(head -> Collections.singletonList(head.getTitle()))
                 .toList();
         // 准备导出文件
-        File file = prepareExportFile(exportTask.getFileId(), request.getFileName(), exportTask.getOrganizationId());
+        File file = prepareExportFile(exportTask.getFileId(), request.getFileName(), exportTask.getOrganizationId(),
+                exportTask.getResourceType());
         try (ExcelWriter writer = EasyExcel.write(file)
                 .head(headList)
                 .excelType(ExcelTypeEnum.XLSX)

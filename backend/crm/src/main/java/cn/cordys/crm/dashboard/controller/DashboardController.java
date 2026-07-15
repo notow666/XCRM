@@ -3,7 +3,6 @@ package cn.cordys.crm.dashboard.controller;
 
 import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.dto.BasePageRequest;
-import cn.cordys.common.pager.PageUtils;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.crm.dashboard.domain.Dashboard;
@@ -12,8 +11,6 @@ import cn.cordys.crm.dashboard.dto.response.DashboardDetailResponse;
 import cn.cordys.crm.dashboard.dto.response.DashboardPageResponse;
 import cn.cordys.crm.dashboard.service.DashboardService;
 import cn.cordys.security.SessionUtils;
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -99,8 +96,7 @@ public class DashboardController {
     @RequiresPermissions(PermissionConstants.DASHBOARD_READ)
     @Operation(summary = "仪表板收藏列表")
     public Pager<List<DashboardPageResponse>> collectPage(@Validated @RequestBody BasePageRequest request) {
-        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
-        return PageUtils.setPageInfo(page, dashboardService.collectList(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId()));
+        return dashboardService.collectList(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
     @PostMapping("/edit/pos")

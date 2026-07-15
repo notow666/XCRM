@@ -84,6 +84,30 @@ public class AsyncConfig implements AsyncConfigurer {
         return ContextPropagatingExecutor.wrap(executor);
     }
 
+    @Bean(name = ExecutorBeanNames.NUMBER_CUBE_GENERATE)
+    public Executor numberCubeGenerateExecutor() {
+        ThreadPoolTaskExecutor executor = createExecutor(
+                "number-cube-generate-",
+                2,
+                4,
+                64,
+                KEEP_ALIVE_SECONDS);
+        executor.initialize();
+        return ContextPropagatingExecutor.wrap(executor);
+    }
+
+    @Bean(name = ExecutorBeanNames.NUMBER_CUBE_DOWNLOAD)
+    public Executor numberCubeDownloadExecutor() {
+        ThreadPoolTaskExecutor executor = createExecutor(
+                "number-cube-download-",
+                2,
+                4,
+                64,
+                KEEP_ALIVE_SECONDS);
+        executor.initialize();
+        return ContextPropagatingExecutor.wrap(executor);
+    }
+
     @Bean("callbackMainTaskExecutor")
     public ExecutorService callbackMainTaskExecutor() {
         ThreadPoolTaskExecutor executor = createExecutor(

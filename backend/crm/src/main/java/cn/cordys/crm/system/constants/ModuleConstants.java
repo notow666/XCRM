@@ -13,6 +13,7 @@ public class ModuleConstants {
             "contract",
             "report",
             "mmbaAudit",
+            "tools",
             ModuleKey.SETTING.getKey()
     );
 }

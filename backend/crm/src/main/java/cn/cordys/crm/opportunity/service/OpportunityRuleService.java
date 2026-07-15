@@ -7,6 +7,8 @@ import cn.cordys.aspectj.context.OperationLogContext;
 import cn.cordys.aspectj.dto.LogContextInfo;
 import cn.cordys.common.dto.BasePageRequest;
 import cn.cordys.common.dto.condition.CombineSearch;
+import cn.cordys.common.pager.PageUtils;
+import cn.cordys.common.pager.Pager;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.JSON;
@@ -24,6 +26,8 @@ import cn.cordys.crm.system.domain.User;
 import cn.cordys.crm.system.dto.RuleConditionDTO;
 import cn.cordys.crm.system.service.UserExtendService;
 import cn.cordys.mybatis.BaseMapper;
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -55,10 +59,11 @@ public class OpportunityRuleService {
      *
      * @return 商机规则列表
      */
-    public List<OpportunityRuleDTO> page(BasePageRequest request, String organizationId) {
+    public Pager<List<OpportunityRuleDTO>> page(BasePageRequest request, String organizationId) {
+        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         List<OpportunityRuleDTO> rules = extOpportunityRuleMapper.list(request, organizationId);
         if (CollectionUtils.isEmpty(rules)) {
-            return new ArrayList<>();
+            return PageUtils.setPageInfo(page, new ArrayList<>());
         }
         List<String> userIds = rules.stream().flatMap(rule -> Stream.of(rule.getCreateUser(), rule.getUpdateUser())).toList();
         List<User> createOrUpdateUsers = userMapper.selectByIds(userIds.toArray(new String[0]));
@@ -70,7 +75,7 @@ public class OpportunityRuleService {
             rule.setCreateUserName(userMap.get(rule.getCreateUser()));
             rule.setUpdateUserName(userMap.get(rule.getUpdateUser()));
         });
-        return rules;
+        return PageUtils.setPageInfo(page, rules);
     }
 
     private void delOldTime(OpportunityRuleDTO rule) {

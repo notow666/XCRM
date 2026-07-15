@@ -243,6 +243,11 @@
       key: ModuleConfigEnum.MMBA_AUDIT,
       icon: 'iconicon_dashboard1',
     },
+    {
+      label: t('module.tools'),
+      key: ModuleConfigEnum.TOOLS,
+      icon: 'iconicon_set_up',
+    },
   ]);
 
   const moduleNavList = ref<ModuleNavItem[]>([]);

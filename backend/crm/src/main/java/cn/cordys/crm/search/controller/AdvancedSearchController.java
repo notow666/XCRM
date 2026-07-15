@@ -3,7 +3,6 @@ package cn.cordys.crm.search.controller;
 import cn.cordys.aspectj.constants.GlobalSearchModule;
 import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.dto.BasePageRequest;
-import cn.cordys.common.pager.PageUtils;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.common.pager.PagerWithOption;
 import cn.cordys.context.OrganizationContext;
@@ -17,8 +16,6 @@ import cn.cordys.crm.search.service.advanced.AdvancedCustomerSearchService;
 import cn.cordys.crm.search.service.advanced.AdvancedSearchServiceFactory;
 import cn.cordys.crm.system.dto.request.RepeatCustomerDetailPageRequest;
 import cn.cordys.security.SessionUtils;
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -68,16 +65,14 @@ public class AdvancedSearchController {
     @Operation(summary = "全局搜索线索详情")
     @RequiresPermissions(value = {PermissionConstants.CLUE_MANAGEMENT_READ, PermissionConstants.CLUE_MANAGEMENT_POOL_READ}, logical = Logical.OR)
     public Pager<List<AdvancedClueResponse>> getRepeatClueDetail(@Validated @RequestBody RepeatCustomerDetailPageRequest request) {
-        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
-        return PageUtils.setPageInfo(page, globalSearchCustomerService.getRepeatClueDetail(request, OrganizationContext.getOrganizationId()));
+        return globalSearchCustomerService.getRepeatClueDetail(request, OrganizationContext.getOrganizationId());
     }
 
     @PostMapping("/opportunity/detail")
     @Operation(summary = "全局搜索商机详情")
     @RequiresPermissions(value = {PermissionConstants.OPPORTUNITY_MANAGEMENT_READ})
     public Pager<List<OpportunityRepeatResponse>> getRepeatOpportunityDetail(@Validated @RequestBody RepeatCustomerDetailPageRequest request) {
-        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
-        return PageUtils.setPageInfo(page, globalSearchCustomerService.getRepeatOpportunityDetail(request));
+        return globalSearchCustomerService.getRepeatOpportunityDetail(request);
     }
 
 

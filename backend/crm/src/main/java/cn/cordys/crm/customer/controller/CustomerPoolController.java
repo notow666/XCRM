@@ -2,7 +2,6 @@ package cn.cordys.crm.customer.controller;
 
 import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.dto.BasePageRequest;
-import cn.cordys.common.pager.PageUtils;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.crm.customer.dto.CustomerPoolDTO;
@@ -10,8 +9,6 @@ import cn.cordys.crm.customer.dto.request.CustomerPoolAddRequest;
 import cn.cordys.crm.customer.dto.request.CustomerPoolUpdateRequest;
 import cn.cordys.crm.customer.service.CustomerPoolService;
 import cn.cordys.security.SessionUtils;
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -33,8 +30,7 @@ public class CustomerPoolController {
     @Operation(summary = "分页获取公海池")
     @RequiresPermissions(value = {PermissionConstants.MODULE_SETTING_UPDATE})
     public Pager<List<CustomerPoolDTO>> page(@RequestBody BasePageRequest request) {
-        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
-        return PageUtils.setPageInfo(page, customerPoolService.page(request, OrganizationContext.getOrganizationId()));
+        return customerPoolService.page(request, OrganizationContext.getOrganizationId());
     }
 
     @PostMapping("/list")

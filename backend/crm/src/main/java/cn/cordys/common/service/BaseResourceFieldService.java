@@ -18,6 +18,7 @@ import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.Translator;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.crm.system.constants.FieldSourceType;
+import cn.cordys.crm.system.constants.FormFileModuleMapper;
 import cn.cordys.crm.system.domain.ModuleField;
 import cn.cordys.crm.system.dto.field.DatasourceField;
 import cn.cordys.crm.system.dto.field.SerialNumberField;
@@ -992,7 +993,8 @@ public abstract class BaseResourceFieldService<T extends BaseResourceField, V ex
                 tmpPicIds.addAll((List<String>) processValue);
             }
             AttachmentService attachmentService = CommonBeanFactory.getBean(AttachmentService.class);
-            UploadTransferRequest transferRequest = new UploadTransferRequest(orgId, resourceId, userId, tmpPicIds);
+            UploadTransferRequest transferRequest = new UploadTransferRequest(
+                    orgId, resourceId, userId, tmpPicIds, FormFileModuleMapper.toModule(getFormKey()));
             if (attachmentService != null) {
                 attachmentService.processTemp(transferRequest);
             }

@@ -175,8 +175,7 @@ export default {
   'customer.reach.addWechatSending': 'The add-WeChat-friend request has been sent, please wait',
   'customer.reach.dialSending': 'Dialing in progress, please wait',
   'customer.reach.notOwner': 'Only the account owner can use reach actions',
-  'customer.reach.wechatFriendAwaitingApproval':
-    'The WeChat friend request has not been approved yet. Please wait.',
+  'customer.reach.wechatFriendAwaitingApproval': 'The WeChat friend request has not been approved yet. Please wait.',
   'customer.reach.smsPending': 'SMS action is mocked on the page and can be wired after backend integration.',
   'customer.reach.wechatFriendPending':
     'Add WeChat action is mocked on the page and can be wired after backend integration.',

@@ -2,15 +2,12 @@ package cn.cordys.crm.system.controller;
 
 
 import cn.cordys.common.dto.OptionCountDTO;
-import cn.cordys.common.pager.PageUtils;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.crm.system.dto.request.NotificationRequest;
 import cn.cordys.crm.system.dto.response.NotificationDTO;
 import cn.cordys.crm.system.service.NotificationService;
 import cn.cordys.security.SessionUtils;
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -30,8 +27,7 @@ public class NotificationController {
     @PostMapping(value = "/list/all/page")
     @Operation(summary = "消息中心-获取消息中心所有消息列表")
     public Pager<List<NotificationDTO>> listNotification(@Validated @RequestBody NotificationRequest notificationRequest) {
-        Page<Object> page = PageHelper.startPage(notificationRequest.getCurrent(), notificationRequest.getPageSize(), true);
-        return PageUtils.setPageInfo(page, notificationService.listNotification(notificationRequest, SessionUtils.getUserId(), OrganizationContext.getOrganizationId()));
+        return notificationService.listNotification(notificationRequest, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
 

@@ -4,7 +4,7 @@
       <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div class="text-base font-semibold text-[var(--text-n1)]">
           <span>{{ t('menu.managementCenter.overview') }}</span>
-          <span class="font-mono tabular-nums ml-4 text-[var(--text-n4)]">{{ clockText }}</span>
+          <span class="ml-4 font-mono tabular-nums text-[var(--text-n4)]">{{ clockText }}</span>
         </div>
         <div class="flex flex-wrap items-center gap-3 text-xs text-[var(--text-n4)]">
           <span>{{ t('managementCenter.overview.autoRefreshHint') }}</span>

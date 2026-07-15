@@ -111,9 +111,7 @@ export function findRouteByName(name: string) {
 export function getFirstRouterNameByCurrentRoute(parentName: string) {
   const currentRoute = findRouteByName(parentName);
   if (currentRoute) {
-    const hasAuthChildrenRouter = currentRoute.children?.find((item) =>
-      hasAnyPermission(item.meta?.permissions || [])
-    );
+    const hasAuthChildrenRouter = currentRoute.children?.find((item) => hasAnyPermission(item.meta?.permissions || []));
     return hasAuthChildrenRouter ? hasAuthChildrenRouter.name : parentName;
   }
   return parentName;

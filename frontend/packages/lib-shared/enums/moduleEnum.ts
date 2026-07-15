@@ -43,6 +43,9 @@ export enum ModuleConfigEnum {
 
   /** MMBA审计 */
   MMBA_AUDIT = 'mmbaAudit',
+
+  /** 工具 */
+  TOOLS = 'tools',
 }
 
 // 添加员工API

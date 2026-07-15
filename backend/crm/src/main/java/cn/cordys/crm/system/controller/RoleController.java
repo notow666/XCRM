@@ -4,7 +4,6 @@ import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.dto.BaseTreeNode;
 import cn.cordys.common.dto.DeptUserTreeNode;
 import cn.cordys.common.dto.RoleUserTreeNode;
-import cn.cordys.common.pager.PageUtils;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.common.permission.PermissionDefinitionItem;
 import cn.cordys.context.OrganizationContext;
@@ -21,8 +20,6 @@ import cn.cordys.crm.system.service.DepartmentService;
 import cn.cordys.crm.system.service.RoleService;
 import cn.cordys.crm.system.service.UserRoleService;
 import cn.cordys.security.SessionUtils;
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -93,8 +90,7 @@ public class RoleController {
     @Operation(summary = "查看拥有该权限的用户")
     @RequiresPermissions(PermissionConstants.SYSTEM_ROLE_READ)
     public Pager<List<RoleUserListResponse>> listUser(@Validated @RequestBody RoleUserPageRequest request) {
-        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
-        return PageUtils.setPageInfo(page, userRoleService.listUserByRoleId(request, OrganizationContext.getOrganizationId()));
+        return userRoleService.listUserByRoleId(request, OrganizationContext.getOrganizationId());
     }
 
     @GetMapping("/dept/tree")

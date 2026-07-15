@@ -70,6 +70,15 @@ const managementCenter: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'phone-segment',
+      name: ManagementCenterRouteEnum.MANAGEMENT_CENTER_PHONE_SEGMENT,
+      component: () => import('@/views/management-center/phone-segment/index.vue'),
+      meta: {
+        locale: 'menu.managementCenter.phoneSegment',
+        permissions: ['PLATFORM_ADMIN:READ'],
+      },
+    },
+    {
       path: 'audit',
       name: ManagementCenterRouteEnum.MANAGEMENT_CENTER_AUDIT,
       component: () => import('@/views/management-center/audit/index.vue'),

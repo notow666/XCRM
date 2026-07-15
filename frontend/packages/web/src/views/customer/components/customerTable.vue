@@ -2017,7 +2017,7 @@
       Message.warning(t('customer.batchDeleteByConditionEmptyTip'));
       return;
     }
-     showToPoolByConditionModal.value = true;
+    showToPoolByConditionModal.value = true;
   }
 
   function handleMoveRefresh() {

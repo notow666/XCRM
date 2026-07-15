@@ -18,7 +18,7 @@ spring:
                 connection-timeout: 30000
                 idle-timeout: 300000
                 max-lifetime: 1800000
-                maximum-pool-size: 30
+                maximum-pool-size: 20
                 minimum-idle: 5
                 pool-name: CordysMasterHikariCP
             password: root
@@ -43,6 +43,20 @@ cordys:
             drop-database-on-failure: true
     file:
         root-dir: D:\workSpace\CordysCRM\files
+    number-cube:
+        python-path: python
+        generate-script-path: scripts/generate_number_cube_segments.py
+        pack-script-path: scripts/pack_number_cube_export.py
+        python-workers: 8
+        generate-batch-size: 20
+        max-tasks-per-child: 50
+        max-concurrent-generate-jobs: 2
+        max-concurrent-downloads: 2
+        rows-per-excel: 1000000
+        max-segments-per-task: 20000
+        generate-timeout-hours: 1
+        callback-local-only: true
+        callback-port: 8081
 
 dashboard:
     whitelist:

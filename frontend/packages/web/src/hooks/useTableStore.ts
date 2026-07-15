@@ -117,25 +117,25 @@ export default function useTableStore() {
           // 如果不相等，说明有变动将新的column存入indexDB
           const newColumns = pruneCustomerColumns(
             sortByOldOrder(prunedStoredColumn, column).map((e) => {
-            const sameItem = tableColumnsMap.column.find((item) => item.key === e.key);
-            if (sameItem) {
-              // 如果是相同的列，则更新除了宽度、显隐、固定以外的属性
-              let { width } = sameItem;
-              if (e.key === SpecialColumnEnum.OPERATION) {
-                const operationColumn = column.find((item) => item.key === SpecialColumnEnum.OPERATION);
-                width = operationColumn?.width;
-              } else if (e.key === SpecialColumnEnum.ORDER) {
-                const orderColumn = column.find((item) => item.key === SpecialColumnEnum.ORDER);
-                width = orderColumn?.width;
+              const sameItem = tableColumnsMap.column.find((item) => item.key === e.key);
+              if (sameItem) {
+                // 如果是相同的列，则更新除了宽度、显隐、固定以外的属性
+                let { width } = sameItem;
+                if (e.key === SpecialColumnEnum.OPERATION) {
+                  const operationColumn = column.find((item) => item.key === SpecialColumnEnum.OPERATION);
+                  width = operationColumn?.width;
+                } else if (e.key === SpecialColumnEnum.ORDER) {
+                  const orderColumn = column.find((item) => item.key === SpecialColumnEnum.ORDER);
+                  width = orderColumn?.width;
+                }
+                return {
+                  ...e,
+                  width,
+                  showInTable: e.columnSelectorDisabled === true ? true : sameItem.showInTable,
+                  fixed: sameItem.fixed || e.fixed,
+                };
               }
-              return {
-                ...e,
-                width,
-                showInTable: e.columnSelectorDisabled === true ? true : sameItem.showInTable,
-                fixed: sameItem.fixed || e.fixed,
-              };
-            }
-            return e;
+              return e;
             }),
             tableKey
           );

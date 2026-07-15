@@ -14,6 +14,7 @@ import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.*;
 import cn.cordys.context.TenantContext;
 import cn.cordys.crm.system.constants.ExportConstants;
+import cn.cordys.crm.system.constants.ExportFileModuleMapper;
 import cn.cordys.crm.system.domain.ExportTask;
 import cn.cordys.crm.system.dto.field.base.BaseField;
 import cn.cordys.crm.system.dto.field.base.OptionProp;
@@ -86,7 +87,7 @@ public abstract class BaseExportService {
 
     public <T extends BasePageRequest> void batchHandleData(String fileId, List<List<String>> headList, ExportTask task, String fileName, T t, CustomFunction<T, List<?>> func) throws InterruptedException {
         // 准备导出文件
-        File file = prepareExportFile(fileId, fileName, task.getOrganizationId());
+        File file = prepareExportFile(fileId, fileName, task.getOrganizationId(), task.getResourceType());
 
         try (ExcelWriter writer = EasyExcel.write(file)
                 .head(headList)
@@ -136,7 +137,7 @@ public abstract class BaseExportService {
                                                                              List<Integer> mergeColumns, T t,
                                                                              CustomFunction<T, MergeResult> func) throws InterruptedException {
 
-        File file = prepareExportFile(task.getFileId(), fileName, task.getOrganizationId());
+        File file = prepareExportFile(task.getFileId(), fileName, task.getOrganizationId(), task.getResourceType());
 
         try (ExcelWriter writer = EasyExcel.write(file)
                 .head(headList)
@@ -180,12 +181,14 @@ public abstract class BaseExportService {
     /**
      * 准备导出文件
      *
-     * @param fileId   文件ID
-     * @param fileName 文件名
+     * @param fileId     文件ID
+     * @param fileName   文件名
+     * @param orgId      组织ID
+     * @param exportType 导出类型（见 {@link ExportConstants.ExportType}）
      *
      * @return 导出文件
      */
-    public File prepareExportFile(String fileId, String fileName, String orgId) {
+    public File prepareExportFile(String fileId, String fileName, String orgId, String exportType) {
         if (fileId == null || fileName == null || orgId == null) {
             throw new IllegalArgumentException("文件ID、文件名和组织ID不能为空");
         }
@@ -193,7 +196,7 @@ public abstract class BaseExportService {
         // 构建导出目录路径
         String exportDirPath = DefaultRepositoryDir.getDefaultDir()
                 + File.separator
-                + DefaultRepositoryDir.getExportDir(TenantContext.requireTenantId())
+                + DefaultRepositoryDir.getExportDir(TenantContext.requireTenantId(), ExportFileModuleMapper.toModule(exportType))
                 + File.separator + fileId;
 
         File dir = new File(exportDirPath);
@@ -264,7 +267,8 @@ public abstract class BaseExportService {
         List<Integer> mergeColumns = getMergeColumns(exportHeads);
         exportParam.setMergeHeads(getMergeHeads(exportParam.getHeadList(), exportParam.getFormKey(), exportParam.getOrgId()));
         return exportWithMergeStrategy(exportParam, (task) -> {
-            File file = prepareExportFile(task.getFileId(), exportParam.getFileName(), task.getOrganizationId());
+            File file = prepareExportFile(task.getFileId(), exportParam.getFileName(), task.getOrganizationId(),
+                    exportParam.getExportType());
             try (ExcelWriter writer = EasyExcel.write(file).head(exportHeads).excelType(ExcelTypeEnum.XLSX)
                     .registerWriteHandler(new CustomHeadColWidthStyleStrategy()).build()) {
                 WriteSheet sheet = EasyExcel.writerSheet("导出数据").build();
@@ -699,7 +703,8 @@ public abstract class BaseExportService {
                 .map(head -> Collections.singletonList(head.getTitle()))
                 .toList();
         // 准备导出文件
-        File file = prepareExportFile(exportTask.getFileId(), exportDTO.getFileName(), exportTask.getOrganizationId());
+        File file = prepareExportFile(exportTask.getFileId(), exportDTO.getFileName(), exportTask.getOrganizationId(),
+                exportDTO.getExportType());
         try (ExcelWriter writer = EasyExcel.write(file)
                 .head(headList)
                 .excelType(ExcelTypeEnum.XLSX)

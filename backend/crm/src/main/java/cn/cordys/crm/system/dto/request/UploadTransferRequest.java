@@ -24,4 +24,7 @@ public class UploadTransferRequest {
 
     @Schema(description = "转存文件临时ID")
     private List<String> tempFileIds;
+
+    @Schema(description = "文件来源模块")
+    private String module;
 }

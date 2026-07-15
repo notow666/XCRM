@@ -6,6 +6,7 @@ import cn.cordys.common.dto.OptionDTO;
 import cn.cordys.common.dto.UserDeptDTO;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.pager.PageUtils;
+import cn.cordys.common.pager.Pager;
 import cn.cordys.common.pager.PagerWithOption;
 import cn.cordys.common.service.BaseService;
 import cn.cordys.common.service.DataScopeService;
@@ -36,6 +37,7 @@ import cn.cordys.crm.system.service.ModuleFormCacheService;
 import cn.cordys.crm.system.service.ModuleFormService;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
+import com.github.pagehelper.Page;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import jakarta.annotation.Resource;
@@ -319,17 +321,18 @@ public class AdvancedCustomerSearchService extends BaseSearchService<CustomerPag
         });
     }
 
-    public List<AdvancedClueResponse> getRepeatClueDetail(RepeatCustomerDetailPageRequest request,
+    public Pager<List<AdvancedClueResponse>> getRepeatClueDetail(RepeatCustomerDetailPageRequest request,
                                                           String organizationId) {
+        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         List<AdvancedClueResponse> repeatClueList = extClueMapper.getRepeatClueList(request.getName(), organizationId);
         if (CollectionUtils.isEmpty(repeatClueList)) {
-            return repeatClueList;
+            return PageUtils.setPageInfo(page, repeatClueList);
         }
         List<OptionDTO> productOption = extProductMapper.getOptions(organizationId);
         // 设置产品名称
         getProductNames(productOption, repeatClueList);
 
-        return repeatClueList;
+        return PageUtils.setPageInfo(page, repeatClueList);
     }
 
     /**
@@ -339,14 +342,15 @@ public class AdvancedCustomerSearchService extends BaseSearchService<CustomerPag
      *
      * @return 重复商机响应列表(包含产品名称信息)
      */
-    public List<OpportunityRepeatResponse> getRepeatOpportunityDetail(
+    public Pager<List<OpportunityRepeatResponse>> getRepeatOpportunityDetail(
             RepeatCustomerDetailPageRequest request) {
 
+        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         // 1. 获取基础重复商机列表
         List<OpportunityRepeatResponse> responses = extOpportunityMapper.getRepeatList(request.getId());
 
         if (CollectionUtils.isEmpty(responses)) {
-            return responses;
+            return PageUtils.setPageInfo(page, responses);
         }
 
         // 2. 获取所有不重复的产品ID列表
@@ -373,7 +377,7 @@ public class AdvancedCustomerSearchService extends BaseSearchService<CustomerPag
             response.setProductNames(names);
         });
 
-        return responses;
+        return PageUtils.setPageInfo(page, responses);
     }
 
 }

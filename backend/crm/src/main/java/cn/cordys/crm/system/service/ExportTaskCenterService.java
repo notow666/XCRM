@@ -5,6 +5,7 @@ import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.redis.MessagePublisher;
 import cn.cordys.common.util.Translator;
 import cn.cordys.crm.system.constants.ExportConstants;
+import cn.cordys.crm.system.constants.ExportFileModuleMapper;
 import cn.cordys.crm.system.domain.ExportTask;
 import cn.cordys.context.TenantContext;
 import cn.cordys.crm.system.dto.request.ExportTaskCenterQueryRequest;
@@ -93,7 +94,9 @@ public class ExportTaskCenterService {
     }
 
     private String getFilePath(ExportTask exportTask) {
-        return File.separator + DefaultRepositoryDir.getExportDir(TenantContext.requireTenantId()) + File.separator + exportTask.getFileId();
+        String module = ExportFileModuleMapper.toModule(exportTask.getResourceType());
+        return File.separator + DefaultRepositoryDir.getExportDir(TenantContext.requireTenantId(), module)
+                + File.separator + exportTask.getFileId();
     }
 
     public void clean() {

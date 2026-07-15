@@ -34,6 +34,20 @@ export const SSE_EVENT_SHADOW_PRE_NOTICE = 'SHADOW_PRE_NOTICE';
 /** 备用库切换完成 SSE（租户侧） */
 export const SSE_EVENT_SHADOW_SWITCH_COMPLETE = 'SHADOW_SWITCH_COMPLETE';
 
+/** 与后端 {@code NumberCubeConstants.SSE_TASK_UPDATED} 一致 */
+export const SSE_EVENT_NUMBER_CUBE_TASK_UPDATED = 'NUMBER_CUBE_TASK_UPDATED';
+
+/** 号码魔方任务状态变更 SSE 到达后，通知任务列表刷新 */
+export const NUMBER_CUBE_TASK_UPDATED_DOM_EVENT = 'number-cube-task-updated-sse';
+
+export interface NumberCubeTaskUpdatedSseDetail {
+  taskId: string;
+  status?: string;
+  processed?: number;
+  total?: number;
+  errorMessage?: string;
+}
+
 export type PoolBatchByConditionSseOperation = 'PICK' | 'ASSIGN' | 'TRANSFER';
 
 export interface PoolBatchByConditionSseDetail {

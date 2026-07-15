@@ -8,8 +8,17 @@
     @click.stop="handleClick"
     @keydown.enter.prevent="handleClick"
   >
-    <span class="iconfont-reach reach-icon__glyph" :class="iconClass"
-          :style="{ color, width: props.iconSize, height: props.iconSize, fontSize: props.iconSize, lineHeight: props.iconSize }" />
+    <span
+      class="iconfont-reach reach-icon__glyph"
+      :class="iconClass"
+      :style="{
+        color,
+        width: props.iconSize,
+        height: props.iconSize,
+        fontSize: props.iconSize,
+        lineHeight: props.iconSize,
+      }"
+    />
   </span>
 </template>
 

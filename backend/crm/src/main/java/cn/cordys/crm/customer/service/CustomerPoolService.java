@@ -10,6 +10,8 @@ import cn.cordys.common.constants.FormKey;
 import cn.cordys.common.dto.BasePageRequest;
 import cn.cordys.common.dto.condition.CombineSearch;
 import cn.cordys.common.exception.GenericException;
+import cn.cordys.common.pager.PageUtils;
+import cn.cordys.common.pager.Pager;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.JSON;
@@ -33,6 +35,8 @@ import cn.cordys.crm.system.service.ModuleFormCacheService;
 import cn.cordys.crm.system.service.UserExtendService;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -74,10 +78,11 @@ public class CustomerPoolService {
      *
      * @return 公海池列表
      */
-    public List<CustomerPoolDTO> page(BasePageRequest request, String organizationId) {
+    public Pager<List<CustomerPoolDTO>> page(BasePageRequest request, String organizationId) {
+        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         List<CustomerPoolDTO> pools = extCustomerPoolMapper.list(request, organizationId);
         if (CollectionUtils.isEmpty(pools)) {
-            return new ArrayList<>();
+            return PageUtils.setPageInfo(page, new ArrayList<>());
         }
 
         List<String> userIds = pools.stream().flatMap(pool -> Stream.of(pool.getCreateUser(), pool.getUpdateUser())).toList();
@@ -137,7 +142,7 @@ public class CustomerPoolService {
             pool.setFieldConfigs(getFieldConfigs(fields, hiddenFieldIds));
         });
 
-        return pools;
+        return PageUtils.setPageInfo(page, pools);
     }
 
     public List<CustomerPoolDTO> listByEnable(String organizationId) {

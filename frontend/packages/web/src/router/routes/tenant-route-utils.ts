@@ -31,22 +31,22 @@ export const LEGACY_TENANT_ROUTE_ROOTS = [
 
 /** 旧 URL 仅访问模块根路径时的默认子路径（与原 redirect 一致，去掉 leading `/`） */
 export const LEGACY_ROUTE_DEFAULT_SUFFIX: Record<string, string> = {
-  workbench: 'workbench/index',
-  account: 'account/index',
-  lead: 'lead/index',
-  contract: 'contract/index',
-  order: 'order/index',
-  task: 'task/index',
-  product: 'product/pro',
-  opportunity: 'opportunity/opt',
-  dashboard: 'dashboard/index',
-  agent: 'agent/index',
-  tender: 'tender/index',
-  report: 'report/employee/follow-up-analysis',
-  system: 'system/role',
-  fullPage: 'fullPage/fullPageDashboard',
+  'workbench': 'workbench/index',
+  'account': 'account/index',
+  'lead': 'lead/index',
+  'contract': 'contract/index',
+  'order': 'order/index',
+  'task': 'task/index',
+  'product': 'product/pro',
+  'opportunity': 'opportunity/opt',
+  'dashboard': 'dashboard/index',
+  'agent': 'agent/index',
+  'tender': 'tender/index',
+  'report': 'report/employee/follow-up-analysis',
+  'system': 'system/role',
+  'fullPage': 'fullPage/fullPageDashboard',
   'mmba-audit': 'mmba-audit/mgmt-sso',
-  noResource: 'noResource/index',
+  'noResource': 'noResource/index',
 };
 
 function stripLeadingSlash(path: string): string {

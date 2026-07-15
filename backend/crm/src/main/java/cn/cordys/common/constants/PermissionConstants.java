@@ -276,5 +276,12 @@ public class PermissionConstants {
     public static final String MMBA_DEVICE_UPDATE = "MMBA_DEVICE:UPDATE";
     public static final String MMBA_DEVICE_IMPORT = "MMBA_DEVICE:IMPORT";
     /*------ end: MMBA_DEVICE ------*/
+
+    /*------ start: NUMBER_CUBE (号码魔方) ------*/
+    public static final String NUMBER_CUBE_READ = "NUMBER_CUBE:READ";
+    public static final String NUMBER_CUBE_ADD = "NUMBER_CUBE:ADD";
+    public static final String NUMBER_CUBE_DOWNLOAD = "NUMBER_CUBE:DOWNLOAD";
+    public static final String NUMBER_CUBE_DELETE = "NUMBER_CUBE:DELETE";
+    /*------ end: NUMBER_CUBE ------*/
 }
 

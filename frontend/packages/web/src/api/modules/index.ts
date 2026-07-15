@@ -20,6 +20,7 @@ import useMessageApi from '@lib/shared/api/modules/system/message';
 import useModuleApi from '@lib/shared/api/modules/system/module';
 import useOrgApi from '@lib/shared/api/modules/system/org';
 import useRoleApi from '@lib/shared/api/modules/system/role';
+import useNumberCubeApi from '@lib/shared/api/modules/tools/numberCube';
 
 import useDiscreteApi from '@/hooks/useDiscreteApi';
 
@@ -52,6 +53,7 @@ const contractApi = useContractApi(CDR);
 const orderApi = useOrderApi(CDR);
 const mmbaDeviceApi = useMmbaDeviceApi(CDR);
 const mmbaMgmtSsoApi = useMmbaMgmtSsoApi(CDR);
+const numberCubeApi = useNumberCubeApi(CDR);
 const employeeFollowAnalysisApi = useEmployeeFollowAnalysisApi(CDR);
 
 export const {
@@ -653,6 +655,23 @@ export const {
 } = mmbaDeviceApi;
 
 export const { getMmbaMgmtSsoRedirectUrl } = mmbaMgmtSsoApi;
+
+export const {
+  getNumberCubeTaskPage,
+  addNumberCubeTask,
+  getNumberCubeTaskDetail,
+  getNumberCubeTaskDetailSegments,
+  deleteNumberCubeTask,
+  getNumberCubeRegions,
+  getNumberCubeSegmentGroups,
+  getNumberCubeSegments,
+  getNumberCubeTaskProgress,
+  getNumberCubeTaskProgressBatch,
+  startNumberCubeDownload,
+  getNumberCubeDownloadProgress,
+  downloadNumberCubeFile,
+  downloadNumberCubeCachedFile,
+} = numberCubeApi;
 
 export const {
   getEmployeeFollowAnalysisSummary,

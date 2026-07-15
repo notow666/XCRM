@@ -14,8 +14,9 @@ import cn.cordys.common.domain.BaseResourceSubField;
 import cn.cordys.common.dto.*;
 import cn.cordys.common.dto.chart.ChartResult;
 import cn.cordys.common.exception.GenericException;
-import cn.cordys.common.pager.PageUtils;
+import cn.cordys.common.pager.Pager;
 import cn.cordys.common.pager.PagerWithOption;
+import cn.cordys.common.pager.PageUtils;
 import cn.cordys.common.permission.PermissionCache;
 import cn.cordys.common.permission.PermissionUtils;
 import cn.cordys.common.response.result.CrmHttpResultCode;
@@ -74,6 +75,7 @@ import cn.cordys.excel.domain.ExcelErrData;
 import cn.cordys.excel.utils.EasyExcelExporter;
 import cn.cordys.context.TenantContext;
 import cn.cordys.file.engine.DefaultRepositoryDir;
+import cn.cordys.file.engine.FileSourceModule;
 import cn.cordys.mmba.dto.CustomerWxSendRouteDTO;
 import cn.cordys.mmba.mapper.ExtMmbaAuditMapper;
 import cn.cordys.mmba.service.MmbaDeviceService;
@@ -1272,6 +1274,12 @@ public class CustomerService {
         return batchToPool(batchRequest, currentUser, orgId);
     }
 
+    public Pager<List<OptionDTO>> getCustomerOptions(BasePageRequest request, String organizationId) {
+        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
+        List<OptionDTO> options = extCustomerMapper.getCustomerOptions(request.getKeyword(), organizationId);
+        return PageUtils.setPageInfo(page, options);
+    }
+
     public List<OptionDTO> getCustomerOptions(String keyword, String organizationId) {
         return extCustomerMapper.getCustomerOptions(keyword, organizationId);
     }
@@ -1565,7 +1573,8 @@ public class CustomerService {
 
     private void writeCustomerImportErrorExcel(MultipartFile file, List<ExcelErrData> errList, String fileId) throws IOException {
         String exportDirPath = DefaultRepositoryDir.getDefaultDir() + File.separator
-                + DefaultRepositoryDir.getExportDir(TenantContext.requireTenantId()) + File.separator + fileId;
+                + DefaultRepositoryDir.getExportDir(TenantContext.requireTenantId(), FileSourceModule.CUSTOMER)
+                + File.separator + fileId;
         File dir = new File(exportDirPath);
         if (!dir.exists() && !dir.mkdirs()) {
             throw new RuntimeException("cannot create export dir: " + dir.getAbsolutePath());
@@ -1597,7 +1606,8 @@ public class CustomerService {
 
     public void downloadImportErrorFile(String fileId, HttpServletResponse response) {
         String exportDirPath = DefaultRepositoryDir.getDefaultDir() + File.separator
-                + DefaultRepositoryDir.getExportDir(TenantContext.requireTenantId()) + File.separator + fileId;
+                + DefaultRepositoryDir.getExportDir(TenantContext.requireTenantId(), FileSourceModule.CUSTOMER)
+                + File.separator + fileId;
         File dir = new File(exportDirPath);
         if (!dir.exists() || !dir.isDirectory()) {
             throw new GenericException(Translator.get("file_cannot_be_null"));

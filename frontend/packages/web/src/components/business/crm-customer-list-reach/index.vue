@@ -84,9 +84,7 @@
   const { t } = useI18n();
   const message = useMessage();
 
-  const iconSize = computed(() =>
-    props.direction === 'row' ? '30px' : '22px'
-  );
+  const iconSize = computed(() => (props.direction === 'row' ? '30px' : '22px'));
 
   const callIconColor = computed(() => (props.callStatus === 2 ? CALL_COLOR_ACTIVE : CALL_COLOR_INACTIVE));
 

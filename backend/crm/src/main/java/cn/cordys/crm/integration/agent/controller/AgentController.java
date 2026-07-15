@@ -5,7 +5,6 @@ import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.constants.ThirdConfigTypeConstants;
 import cn.cordys.common.dto.BasePageRequest;
 import cn.cordys.common.dto.OptionDTO;
-import cn.cordys.common.pager.PageUtils;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.crm.integration.agent.domain.Agent;
@@ -18,8 +17,6 @@ import cn.cordys.crm.integration.agent.service.AgentBaseService;
 import cn.cordys.crm.integration.common.dto.ThirdConfigBaseDTO;
 import cn.cordys.crm.system.service.IntegrationConfigService;
 import cn.cordys.security.SessionUtils;
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -106,8 +103,7 @@ public class AgentController {
     @RequiresPermissions(PermissionConstants.AGENT_READ)
     @Operation(summary = "智能体收藏列表")
     public Pager<List<AgentPageResponse>> collectPage(@Validated @RequestBody BasePageRequest request) {
-        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
-        return PageUtils.setPageInfo(page, agentBaseService.collectList(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId()));
+        return agentBaseService.collectList(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
 

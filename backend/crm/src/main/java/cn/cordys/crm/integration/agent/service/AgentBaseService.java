@@ -381,10 +381,11 @@ public class AgentBaseService extends DashboardSortService {
      * @param orgId
      * @return
      */
-    public List<AgentPageResponse> collectList(BasePageRequest request, String userId, String orgId) {
+    public Pager<List<AgentPageResponse>> collectList(BasePageRequest request, String userId, String orgId) {
+        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         List<AgentPageResponse> agentList = extAgentCollectionMapper.collectList(request, userId, orgId);
         handleData(agentList, userId);
-        return agentList;
+        return PageUtils.setPageInfo(page, agentList);
     }
 
 

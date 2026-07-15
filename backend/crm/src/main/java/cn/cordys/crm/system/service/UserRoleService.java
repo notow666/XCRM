@@ -7,6 +7,8 @@ import cn.cordys.common.dto.BaseTreeNode;
 import cn.cordys.common.dto.DeptUserTreeNode;
 import cn.cordys.common.dto.RoleUserTreeNode;
 import cn.cordys.common.permission.PermissionCache;
+import cn.cordys.common.pager.PageUtils;
+import cn.cordys.common.pager.Pager;
 import cn.cordys.common.service.BaseService;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.util.SubListUtils;
@@ -25,6 +27,8 @@ import cn.cordys.crm.system.mapper.ExtDepartmentMapper;
 import cn.cordys.crm.system.mapper.ExtUserMapper;
 import cn.cordys.crm.system.mapper.ExtUserRoleMapper;
 import cn.cordys.mybatis.BaseMapper;
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import jakarta.annotation.Resource;
 import jodd.util.StringUtil;
 import org.apache.commons.collections4.CollectionUtils;
@@ -73,7 +77,8 @@ public class UserRoleService {
         userRoleMapper.deleteByPrimaryKey(id);
     }
 
-    public List<RoleUserListResponse> listUserByRoleId(RoleUserPageRequest request, String orgId) {
+    public Pager<List<RoleUserListResponse>> listUserByRoleId(RoleUserPageRequest request, String orgId) {
+        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         List<RoleUserListResponse> users = extUserRoleMapper.list(request, orgId);
         Map<String, List<UserRoleConvert>> userRoleMap = getUserRoleMap(orgId, users);
 
@@ -85,7 +90,7 @@ public class UserRoleService {
             user.setDepartmentName(deptNameMap.get(user.getDepartmentId()));
             user.setAvatar(userAvatarMap.get(user.getUserId()));
         }
-        return users;
+        return PageUtils.setPageInfo(page, users);
     }
 
     private Map<String, String> getUserAvatarMap(List<RoleUserListResponse> users) {

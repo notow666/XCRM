@@ -23,7 +23,7 @@ import java.util.List;
 public class FileCommonService {
 
     /**
-     * 清除临时文件资源
+     * 清除临时文件资源（递归删除 tmp 根下内容）
      *
      * @param request 文件请求参数
      */
@@ -32,7 +32,24 @@ public class FileCommonService {
         if (CollectionUtils.isEmpty(folderFiles)) {
             return;
         }
-        folderFiles.forEach(File::deleteOnExit);
+        folderFiles.forEach(this::deleteRecursively);
+    }
+
+    private void deleteRecursively(File file) {
+        if (file == null || !file.exists()) {
+            return;
+        }
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    deleteRecursively(child);
+                }
+            }
+        }
+        if (!file.delete()) {
+            file.deleteOnExit();
+        }
     }
 
     /**

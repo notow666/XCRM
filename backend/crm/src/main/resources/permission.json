@@ -741,5 +741,30 @@
         ]
       }
     ]
+  },
+  {
+    "id": "TOOLS_MANAGEMENT",
+    "name": "permission.tools_management.name",
+    "license": false,
+    "children": [
+      {
+        "id": "NUMBER_CUBE",
+        "name": "permission.number_cube.name",
+        "permissions": [
+          {
+            "id": "NUMBER_CUBE:READ"
+          },
+          {
+            "id": "NUMBER_CUBE:ADD"
+          },
+          {
+            "id": "NUMBER_CUBE:DOWNLOAD"
+          },
+          {
+            "id": "NUMBER_CUBE:DELETE"
+          }
+        ]
+      }
+    ]
   }
 ]

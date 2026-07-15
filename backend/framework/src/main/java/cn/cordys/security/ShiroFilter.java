@@ -112,6 +112,7 @@ public final class ShiroFilter {
         FILTER_CHAIN_DEFINITION_MAP.put("/anonymous/**", "anon");
         // 线索池推送
         FILTER_CHAIN_DEFINITION_MAP.put("/lead/push", "anon");
+        FILTER_CHAIN_DEFINITION_MAP.put("/internal/number-cube/**", "anon");
     }
 
     /**
@@ -135,6 +136,7 @@ public final class ShiroFilter {
                         uri.contains("/anonymous/mmba/callback") ||
                         uri.contains("/anonymous/mmba/mgmt-sso/check") ||
                         uri.contains("/lead/push") ||
+                        uri.contains("/internal/number-cube/") ||
                         (!isTenant || uri.contains("/platform/"))
                 );
     }

@@ -145,6 +145,7 @@ export default {
   'module.task': '任务',
   'module.report': '报表',
   'module.mmbaAudit': '审计',
+  'module.tools': '工具',
   'module.order.stateFlow': '订单状态流',
   'module.order.state': '订单状态',
   'module.order.stateType': '状态类型',

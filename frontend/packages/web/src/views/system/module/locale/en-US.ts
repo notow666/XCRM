@@ -135,6 +135,7 @@ export default {
   'module.task': 'Tasks',
   'module.report': 'Reports',
   'module.mmbaAudit': 'MMBA Audit',
+  'module.tools': 'Tools',
   'module.order.stateFlow': 'Order Status Flow',
   'module.order.state': 'Order Status',
   'module.order.stateType': 'Status Type',

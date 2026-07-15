@@ -111,9 +111,7 @@
     try {
       const { dictList, enable } = await getReasonConfig(ReasonTypeEnum.CUSTOMER_POOL_RS);
       enableReason.value = enable;
-      reasonList.value = (dictList ?? [])
-        .filter((e) => e.id !== 'system')
-        .map((e) => ({ label: e.name, value: e.id }));
+      reasonList.value = (dictList ?? []).filter((e) => e.id !== 'system').map((e) => ({ label: e.name, value: e.id }));
     } catch (_error) {
       // ignore
     }

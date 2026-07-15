@@ -585,6 +585,13 @@
       groupList: [],
       enable: true,
     },
+    {
+      label: t('module.tools'),
+      key: ModuleConfigEnum.TOOLS,
+      icon: 'iconicon_set_up',
+      groupList: [],
+      enable: true,
+    },
   ];
 
   const moduleConfigList = computed<ModuleConfigItem[]>(() => {

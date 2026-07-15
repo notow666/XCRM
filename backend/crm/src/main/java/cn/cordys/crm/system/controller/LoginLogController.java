@@ -1,14 +1,11 @@
 package cn.cordys.crm.system.controller;
 
 import cn.cordys.common.constants.PermissionConstants;
-import cn.cordys.common.pager.PageUtils;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.crm.system.dto.request.LoginLogRequest;
 import cn.cordys.crm.system.dto.response.LoginLogListResponse;
 import cn.cordys.crm.system.service.SysLoginLogService;
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -33,7 +30,6 @@ public class LoginLogController {
     @Operation(summary = "系统管理-登录日志-列表查询")
     @RequiresPermissions(PermissionConstants.OPERATION_LOG_READ)
     public Pager<List<LoginLogListResponse>> loginList(@Validated @RequestBody LoginLogRequest request) {
-        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
-        return PageUtils.setPageInfo(page, sysLoginLogService.list(request, OrganizationContext.getOrganizationId()));
+        return sysLoginLogService.list(request, OrganizationContext.getOrganizationId());
     }
 }

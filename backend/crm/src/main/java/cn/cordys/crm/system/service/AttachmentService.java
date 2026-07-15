@@ -9,11 +9,13 @@ import cn.cordys.crm.system.dto.request.UploadTransferRequest;
 import cn.cordys.file.engine.DefaultRepositoryDir;
 import cn.cordys.file.engine.FileCopyRequest;
 import cn.cordys.file.engine.FileRequest;
+import cn.cordys.file.engine.FileSourceModule;
 import cn.cordys.file.engine.StorageType;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -79,10 +81,13 @@ public class AttachmentService {
         String tenantId = TenantContext.requireTenantId();
         if (attachment == null) {
             // 删除临时文件目录
-            fileCommonService.deleteFolder(new FileRequest(DefaultRepositoryDir.getTempFileDir(tenantId, attachmentId), StorageType.LOCAL.name(), null), true);
+            fileCommonService.deleteFolder(new FileRequest(
+                    DefaultRepositoryDir.getTempFileDir(tenantId, attachmentId),
+                    StorageType.LOCAL.name(), null), true);
         } else {
             // 删除正式文件
-            fileCommonService.deleteFolder(new FileRequest(DefaultRepositoryDir.getTransferFileDir(tenantId, attachment.getResourceId(), attachment.getId()),
+            fileCommonService.deleteFolder(new FileRequest(
+                    DefaultRepositoryDir.getTransferFileDir(tenantId, resolveModule(attachment), attachment.getResourceId(), attachment.getId()),
                     StorageType.LOCAL.name(), attachment.getName()), false);
         }
     }
@@ -103,7 +108,9 @@ public class AttachmentService {
             InputStream fileStream;
             if (attachment == null) {
                 // get pic from temp dir
-                request = new FileRequest(DefaultRepositoryDir.getTempFileDir(tenantId, attachmentId), StorageType.LOCAL.name(), null);
+                request = new FileRequest(
+                        DefaultRepositoryDir.getTempFileDir(tenantId, attachmentId),
+                        StorageType.LOCAL.name(), null);
                 List<File> folderFiles = fileCommonService.getFolderFiles(request);
                 if (CollectionUtils.isEmpty(folderFiles)) {
                     return null;
@@ -115,7 +122,9 @@ public class AttachmentService {
                         .contentType(isSvg(file.getName()) ? MediaType.parseMediaType("image/svg+xml") : MediaType.parseMediaType("application/octet-stream"));
             } else {
                 // get attachment from transferred dir
-                request = new FileRequest(DefaultRepositoryDir.getTransferFileDir(tenantId, attachment.getResourceId(), attachment.getId()), StorageType.LOCAL.name(), attachment.getName());
+                request = new FileRequest(
+                        DefaultRepositoryDir.getTransferFileDir(tenantId, resolveModule(attachment), attachment.getResourceId(), attachment.getId()),
+                        StorageType.LOCAL.name(), attachment.getName());
                 fileStream = fileCommonService.getFileInputStream(request);
                 if (fileStream == null) {
                     throw new GenericException("The file does not exist or has been deleted");
@@ -150,6 +159,7 @@ public class AttachmentService {
      * @param transferRequest 转存参数
      */
     public void processTemp(UploadTransferRequest transferRequest) {
+        String sourceModule = requireModule(transferRequest.getModule());
         List<Attachment> attachments = new ArrayList<>();
         LambdaQueryWrapper<Attachment> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Attachment::getResourceId, transferRequest.getResourceId());
@@ -159,12 +169,15 @@ public class AttachmentService {
         // insert new attachment
         transferRequest.getTempFileIds().stream().filter(tempFileId -> !transferredIds.contains(tempFileId)).forEach(tempFileId -> {
             // transfer new pic
-            FileRequest request = new FileRequest(DefaultRepositoryDir.getTmpDir(tenantId) + "/" + tempFileId, StorageType.LOCAL.name(), null);
+            FileRequest request = new FileRequest(
+                    DefaultRepositoryDir.getTempFileDir(tenantId, tempFileId),
+                    StorageType.LOCAL.name(), null);
             List<File> folderTempFiles = fileCommonService.getFolderFiles(request);
             if (!CollectionUtils.isEmpty(folderTempFiles)) {
                 File tempFile = folderTempFiles.getFirst();
-                FileCopyRequest copyRequest = new FileCopyRequest(DefaultRepositoryDir.getTempFileDir(tenantId, tempFileId),
-                        DefaultRepositoryDir.getTransferFileDir(tenantId, transferRequest.getResourceId(), tempFileId),
+                FileCopyRequest copyRequest = new FileCopyRequest(
+                        DefaultRepositoryDir.getTempFileDir(tenantId, tempFileId),
+                        DefaultRepositoryDir.getTransferFileDir(tenantId, sourceModule, transferRequest.getResourceId(), tempFileId),
                         tempFile.getName());
                 fileCommonService.copyFile(copyRequest, StorageType.LOCAL.name());
                 Attachment attachment = new Attachment();
@@ -180,6 +193,7 @@ public class AttachmentService {
                 attachment.setStorage(StorageType.LOCAL.name());
                 attachment.setOrganizationId(transferRequest.getOrganizationId());
                 attachment.setResourceId(transferRequest.getResourceId());
+                attachment.setModule(sourceModule);
                 attachment.setCreateTime(System.currentTimeMillis());
                 attachment.setCreateUser(transferRequest.getOperatorUserId());
                 attachment.setUpdateTime(System.currentTimeMillis());
@@ -191,11 +205,17 @@ public class AttachmentService {
         // remove deleted
         List<String> removedIds = transferredIds.stream().filter(aId -> !transferRequest.getTempFileIds().contains(aId)).toList();
         if (!CollectionUtils.isEmpty(removedIds)) {
+            Map<String, Attachment> transferredMap = transferredAttachments.stream()
+                    .collect(Collectors.toMap(Attachment::getId, Function.identity()));
             LambdaQueryWrapper<Attachment> duplicateQueryWrapper = new LambdaQueryWrapper<>();
             duplicateQueryWrapper.in(Attachment::getId, removedIds);
             attachmentMapper.deleteByLambda(duplicateQueryWrapper);
             removedIds.forEach(removeId -> {
-                FileRequest request = new FileRequest(DefaultRepositoryDir.getTransferFileDir(tenantId, transferRequest.getResourceId(), removeId), StorageType.LOCAL.name(), null);
+                Attachment removed = transferredMap.get(removeId);
+                String removeModule = removed == null ? sourceModule : resolveModule(removed);
+                FileRequest request = new FileRequest(
+                        DefaultRepositoryDir.getTransferFileDir(tenantId, removeModule, transferRequest.getResourceId(), removeId),
+                        StorageType.LOCAL.name(), null);
                 fileCommonService.deleteFolder(request, true);
             });
         }
@@ -220,15 +240,17 @@ public class AttachmentService {
                 return;
             }
             Attachment oldAttachment = attachmentMap.get(oId);
+            String sourceModule = resolveModule(oldAttachment);
             // 复制文件
             FileCopyRequest copyRequest = new FileCopyRequest(
-                    DefaultRepositoryDir.getTransferFileDir(tenantId, oldAttachment.getResourceId(), oId),
-                    DefaultRepositoryDir.getTransferFileDir(tenantId, targetId, nId),
+                    DefaultRepositoryDir.getTransferFileDir(tenantId, sourceModule, oldAttachment.getResourceId(), oId),
+                    DefaultRepositoryDir.getTransferFileDir(tenantId, sourceModule, targetId, nId),
                     oldAttachment.getName());
             AsyncUtils.runAsync(() -> fileCommonService.copyFile(copyRequest, StorageType.LOCAL.name()), executor);
             // 复制附件记录
             oldAttachment.setId(nId);
             oldAttachment.setResourceId(targetId);
+            oldAttachment.setModule(sourceModule);
             oldAttachment.setCreateTime(System.currentTimeMillis());
             oldAttachment.setCreateUser(currentUser);
             oldAttachment.setUpdateTime(System.currentTimeMillis());
@@ -248,5 +270,17 @@ public class AttachmentService {
     private String encodeName(String fileName) {
         return URLEncoder.encode(fileName, StandardCharsets.UTF_8)
                 .replaceAll("\\+", "%20");
+    }
+
+    private String resolveModule(Attachment attachment) {
+        return StringUtils.isNotBlank(attachment.getModule()) ? attachment.getModule() : FileSourceModule.SYSTEM;
+    }
+
+    private String requireModule(String module) {
+        String m = StringUtils.trimToNull(module);
+        if (m == null) {
+            throw new IllegalArgumentException("module must not be null or blank");
+        }
+        return m;
     }
 }

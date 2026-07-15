@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cordys.crm.tools.mapper.ExtNumberCubeTaskSegmentMapper">
+
+    <insert id="batchInsert">
+        insert into number_cube_task_segment (task_id, segment, prefix)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.taskId}, #{item.segment}, #{item.prefix})
+        </foreach>
+    </insert>
+
+    <delete id="deleteByTaskId">
+        delete from number_cube_task_segment where task_id = #{taskId}
+    </delete>
+
+    <select id="listSegmentsByTaskId" resultType="java.lang.String">
+        select segment
+        from number_cube_task_segment
+        where task_id = #{taskId}
+        order by segment
+    </select>
+
+    <select id="listSegmentsByTaskIdAndPrefix" resultType="java.lang.String">
+        select segment
+        from number_cube_task_segment
+        where task_id = #{taskId}
+          and prefix = #{prefix}
+        order by segment
+    </select>
+
+    <select id="listPrefixGroupsByTaskId" resultType="cn.cordys.platform.dto.response.PlatformPhoneSegmentGroupResponse">
+        select prefix, count(1) as count
+        from number_cube_task_segment
+        where task_id = #{taskId}
+        group by prefix
+        order by prefix
+    </select>
+</mapper>

@@ -2,7 +2,6 @@ package cn.cordys.crm.opportunity.controller;
 
 import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.dto.BasePageRequest;
-import cn.cordys.common.pager.PageUtils;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.crm.opportunity.dto.OpportunityRuleDTO;
@@ -10,8 +9,6 @@ import cn.cordys.crm.opportunity.dto.request.OpportunityRuleAddRequest;
 import cn.cordys.crm.opportunity.dto.request.OpportunityRuleUpdateRequest;
 import cn.cordys.crm.opportunity.service.OpportunityRuleService;
 import cn.cordys.security.SessionUtils;
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -33,8 +30,7 @@ public class OpportunityRuleController {
     @Operation(summary = "分页获取商机规则")
     @RequiresPermissions(value = {PermissionConstants.MODULE_SETTING_UPDATE})
     public Pager<List<OpportunityRuleDTO>> page(@Validated @RequestBody BasePageRequest request) {
-        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
-        return PageUtils.setPageInfo(page, opportunityRuleService.page(request, OrganizationContext.getOrganizationId()));
+        return opportunityRuleService.page(request, OrganizationContext.getOrganizationId());
     }
 
     @PostMapping("/add")

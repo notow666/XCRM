@@ -1,15 +1,12 @@
 package cn.cordys.crm.system.controller;
 
 import cn.cordys.common.constants.PermissionConstants;
-import cn.cordys.common.pager.PageUtils;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.crm.system.dto.request.AnnouncementPageRequest;
 import cn.cordys.crm.system.dto.request.AnnouncementRequest;
 import cn.cordys.crm.system.dto.response.AnnouncementDTO;
 import cn.cordys.crm.system.service.AnnouncementService;
 import cn.cordys.security.SessionUtils;
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -38,8 +35,7 @@ public class AnnouncementController {
     @Operation(summary = "公告列表分页查询")
     @RequiresPermissions(PermissionConstants.SYSTEM_NOTICE_READ)
     public Pager<List<AnnouncementDTO>> getAnnouncementPage(@Validated @RequestBody AnnouncementPageRequest request) {
-        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
-        return PageUtils.setPageInfo(page, announcementService.page(request));
+        return announcementService.page(request);
     }
 
 

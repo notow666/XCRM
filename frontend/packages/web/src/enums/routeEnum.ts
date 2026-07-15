@@ -115,6 +115,12 @@ export enum ManagementCenterRouteEnum {
   MANAGEMENT_CENTER_AUDIT = 'managementCenterAudit',
   MANAGEMENT_CENTER_DATA_SPECIALIST = 'managementCenterDataSpecialist',
   MANAGEMENT_CENTER_SYSTEM_MAINTENANCE = 'managementCenterSystemMaintenance',
+  MANAGEMENT_CENTER_PHONE_SEGMENT = 'managementCenterPhoneSegment',
+}
+
+export enum ToolsRouteEnum {
+  TOOLS = 'tools',
+  TOOLS_NUMBER_CUBE = 'toolsNumberCube',
 }
 
 export enum FullPageEnum {
@@ -140,5 +146,6 @@ export const AppRouteEnum = {
   ...TaskRouteEnum,
   ...ReportRouteEnum,
   ...MMBAAuditRouteEnum,
+  ...ToolsRouteEnum,
   ...ManagementCenterRouteEnum,
 };

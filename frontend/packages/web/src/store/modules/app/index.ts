@@ -5,10 +5,12 @@ import { SubscribeMessageUrl } from '@lib/shared/api/requrls/system/message';
 import {
   CUSTOMER_BATCH_BY_CONDITION_DOM_EVENT,
   MMBA_DEVICE_SYNC_DOM_EVENT,
+  NUMBER_CUBE_TASK_UPDATED_DOM_EVENT,
   PLATFORM_FORCE_LOGOUT_DONE_DOM_EVENT,
   POOL_BATCH_BY_CONDITION_DOM_EVENT,
   SSE_EVENT_CUSTOMER_BATCH_BY_CONDITION_DONE,
   SSE_EVENT_MMBA_DEVICE_SYNC,
+  SSE_EVENT_NUMBER_CUBE_TASK_UPDATED,
   SSE_EVENT_PLATFORM_FORCE_LOGOUT,
   SSE_EVENT_PLATFORM_FORCE_LOGOUT_DONE,
   SSE_EVENT_PLATFORM_SYSTEM_ANNOUNCEMENT,
@@ -397,6 +399,21 @@ const useAppStore = defineStore('app', {
               return;
             }
 
+            if (data.type === SSE_EVENT_NUMBER_CUBE_TASK_UPDATED) {
+              window.dispatchEvent(
+                new CustomEvent(NUMBER_CUBE_TASK_UPDATED_DOM_EVENT, {
+                  detail: {
+                    taskId: String(data.taskId ?? ''),
+                    status: data.status,
+                    processed: data.processed != null ? Number(data.processed) : undefined,
+                    total: data.total != null ? Number(data.total) : undefined,
+                    errorMessage: data.errorMessage,
+                  },
+                })
+              );
+              return;
+            }
+
             if (data.type === SSE_EVENT_PLATFORM_SYSTEM_ANNOUNCEMENT) {
               if (userStore.userInfo.source !== 'PLATFORM') {
                 userStore.showPlatformSystemAnnouncement({
@@ -438,19 +455,16 @@ const useAppStore = defineStore('app', {
 
             if (data.type === SSE_EVENT_SHADOW_PRE_NOTICE) {
               if (userStore.userInfo.source !== 'PLATFORM' && userStore.userInfo.source !== 'DATA_SPECIALIST') {
-                message.warning(
-                  typeof data.message === 'string' ? data.message : t('shadowSwitch.preNotice')
-                );
+                message.warning(typeof data.message === 'string' ? data.message : t('shadowSwitch.preNotice'));
               }
               return;
             }
 
             if (data.type === SSE_EVENT_SHADOW_SWITCH_COMPLETE) {
               if (userStore.userInfo.source !== 'PLATFORM' && userStore.userInfo.source !== 'DATA_SPECIALIST') {
-                message.info(
-                  typeof data.message === 'string' ? data.message : t('shadowSwitch.complete'),
-                  { duration: 8000 }
-                );
+                message.info(typeof data.message === 'string' ? data.message : t('shadowSwitch.complete'), {
+                  duration: 8000,
+                });
                 window.setTimeout(() => {
                   window.location.reload();
                 }, 1500);

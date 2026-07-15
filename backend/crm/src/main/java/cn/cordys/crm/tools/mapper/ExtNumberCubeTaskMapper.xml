@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cordys.crm.tools.mapper.ExtNumberCubeTaskMapper">
+
+    <select id="page" resultType="cn.cordys.crm.tools.domain.NumberCubeTask">
+        select *
+        from number_cube_task
+        where organization_id = #{organizationId}
+        <if test="request.province != null and request.province != ''">
+            and province = #{request.province}
+        </if>
+        <if test="request.city != null and request.city != ''">
+            and city = #{request.city}
+        </if>
+        <if test="request.createTimeStart != null">
+            and create_time &gt;= #{request.createTimeStart}
+        </if>
+        <if test="request.createTimeEnd != null">
+            and create_time &lt;= #{request.createTimeEnd}
+        </if>
+        order by
+            case status
+                when 'RUNNING' then 1
+                when 'PENDING' then 2
+                when 'FAILED' then 3
+                when 'SUCCESS' then 4
+                else 5
+            end,
+            create_time desc
+    </select>
+</mapper>

@@ -3,7 +3,6 @@ package cn.cordys.crm.system.controller;
 import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.dto.DeptUserTreeNode;
 import cn.cordys.common.dto.OptionDTO;
-import cn.cordys.common.pager.PageUtils;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.common.utils.ConditionFilterUtils;
 import cn.cordys.context.OrganizationContext;
@@ -16,8 +15,6 @@ import cn.cordys.crm.system.service.OrganizationConfigService;
 import cn.cordys.crm.system.service.OrganizationUserService;
 import cn.cordys.crm.system.service.RoleService;
 import cn.cordys.security.SessionUtils;
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -47,8 +44,7 @@ public class OrganizationUserController {
     @RequiresPermissions(PermissionConstants.SYS_ORGANIZATION_READ)
     public Pager<List<UserPageResponse>> list(@Validated @RequestBody UserPageRequest request) {
         ConditionFilterUtils.parseCondition(request);
-        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
-        return PageUtils.setPageInfo(page, organizationUserService.list(request));
+        return organizationUserService.list(request);
     }
 
 

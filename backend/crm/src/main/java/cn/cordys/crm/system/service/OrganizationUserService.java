@@ -13,6 +13,8 @@ import cn.cordys.common.dto.DeptDataPermissionDTO;
 import cn.cordys.common.dto.DeptUserTreeNode;
 import cn.cordys.common.dto.OptionDTO;
 import cn.cordys.common.exception.GenericException;
+import cn.cordys.common.pager.PageUtils;
+import cn.cordys.common.pager.Pager;
 import cn.cordys.common.permission.PermissionCache;
 import cn.cordys.common.service.DataScopeService;
 import cn.cordys.common.uid.IDGenerator;
@@ -39,6 +41,8 @@ import cn.cordys.crm.system.excel.listener.UserImportEventListener;
 import cn.cordys.crm.system.mapper.*;
 import cn.cordys.excel.utils.EasyExcelExporter;
 import cn.cordys.mybatis.BaseMapper;
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import cn.cordys.security.SessionUtils;
 import cn.idev.excel.FastExcelFactory;
 import jakarta.annotation.Resource;
@@ -124,12 +128,13 @@ public class OrganizationUserService {
      *
      * @return
      */
-    public List<UserPageResponse> list(UserPageRequest request) {
+    public Pager<List<UserPageResponse>> list(UserPageRequest request) {
         String orderByClause = buildOrderByFieldClause(request.getDepartmentIds());
         request.setDepartmentIds(request.getDepartmentIds().stream().filter(id -> id.chars().allMatch(Character::isDigit)).toList());
+        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         List<UserPageResponse> list = extOrganizationUserMapper.list(request, orderByClause);
         handleData(list, request.getDepartmentIds().getFirst());
-        return list;
+        return PageUtils.setPageInfo(page, list);
     }
 
     private String buildOrderByFieldClause(List<String> departmentIds) {

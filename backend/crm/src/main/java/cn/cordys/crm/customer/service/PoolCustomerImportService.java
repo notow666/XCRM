@@ -29,6 +29,7 @@ import cn.cordys.common.constants.SsePrincipalKind;
 import cn.cordys.crm.system.notice.sse.SseService;
 import cn.cordys.dataspecialist.DataSpecialistConstants;
 import cn.cordys.file.engine.DefaultRepositoryDir;
+import cn.cordys.file.engine.FileSourceModule;
 import cn.cordys.mybatis.BaseMapper;
 import cn.idev.excel.EasyExcel;
 import cn.idev.excel.context.AnalysisContext;
@@ -519,7 +520,8 @@ public class PoolCustomerImportService {
     private void writeErrorExcelStreaming(MultipartFile file, ErrorCheckResult result,
                                           String fileId, String orgId) throws IOException {
         String exportDirPath = DefaultRepositoryDir.getDefaultDir() + File.separator
-                + DefaultRepositoryDir.getExportDir(TenantContext.requireTenantId()) + File.separator + fileId;
+                + DefaultRepositoryDir.getExportDir(TenantContext.requireTenantId(), FileSourceModule.CUSTOMER)
+                + File.separator + fileId;
         File dir = new File(exportDirPath);
         if (!dir.exists() && !dir.mkdirs()) {
             throw new RuntimeException("cannot create export dir: " + dir.getAbsolutePath());
@@ -688,7 +690,8 @@ public class PoolCustomerImportService {
      */
     public void downloadErrorFile(String fileId, String orgId, HttpServletResponse response) {
         String exportDirPath = DefaultRepositoryDir.getDefaultDir() + File.separator
-                + DefaultRepositoryDir.getExportDir(TenantContext.requireTenantId()) + File.separator + fileId;
+                + DefaultRepositoryDir.getExportDir(TenantContext.requireTenantId(), FileSourceModule.CUSTOMER)
+                + File.separator + fileId;
         File dir = new File(exportDirPath);
         if (!dir.exists() || !dir.isDirectory()) {
             throw new GenericException(Translator.get("file_cannot_be_null"));
