@@ -578,7 +578,7 @@
         <if test="${conditions} != null and ${conditions}.size() > 0">
             <foreach collection="${conditions}" item="condition" index="i">
                 <if test="condition.name not in
-                {'name', 'owner', 'createTime', 'updateTime', 'follower', 'followTime', 'createUser', 'updateUser', 'departmentId', 'mobile', 'stage', 'stageStatus', 'callStatus', 'wechatFriendStatus', 'followRecordContent'}">
+                {'name', 'owner', 'createTime', 'updateTime', 'follower', 'followTime', 'collectionTime', 'createUser', 'updateUser', 'departmentId', 'mobile', 'stage', 'stageStatus', 'callStatus', 'wechatFriendStatus', 'followRecordContent'}">
                     <if test="condition.multipleValue">
                         left join customer_field_blob ${tablePrefix}_${i}
                         on c.id = ${tablePrefix}_${i}.resource_id and ${tablePrefix}_${i}.field_id = #{condition.name}
@@ -688,6 +688,12 @@
                 <include refid="cn.cordys.common.mapper.CommonMapper.condition">
                     <property name="condition" value="condition"/>
                     <property name="column" value="c.follow_time"/>
+                </include>
+            </when>
+            <when test="condition.name == 'collectionTime'">
+                <include refid="cn.cordys.common.mapper.CommonMapper.condition">
+                    <property name="condition" value="condition"/>
+                    <property name="column" value="c.collection_time"/>
                 </include>
             </when>
             <when test="condition.name == 'createTime'">

@@ -810,7 +810,8 @@
     },
     {
       key: 'operation',
-      width: currentLocale.value === 'en-US' ? 210 : 170,
+      // 新增“清除通话记录”后需为“编辑、重置密码、清除通话记录、更多”预留完整展示空间。
+      width: currentLocale.value === 'en-US' ? 340 : 280,
       fixed: 'right',
       render: (row: MemberItem) =>
         h(CrmOperationButton, {
