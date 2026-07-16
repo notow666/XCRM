@@ -520,7 +520,7 @@ public class PoolCustomerImportService {
     private void writeErrorExcelStreaming(MultipartFile file, ErrorCheckResult result,
                                           String fileId, String orgId) throws IOException {
         String exportDirPath = DefaultRepositoryDir.getDefaultDir() + File.separator
-                + DefaultRepositoryDir.getExportDir(TenantContext.requireTenantId(), FileSourceModule.CUSTOMER)
+                + DefaultRepositoryDir.getTempFileDir(TenantContext.requireTenantId(), FileSourceModule.CUSTOMER)
                 + File.separator + fileId;
         File dir = new File(exportDirPath);
         if (!dir.exists() && !dir.mkdirs()) {
@@ -690,7 +690,7 @@ public class PoolCustomerImportService {
      */
     public void downloadErrorFile(String fileId, String orgId, HttpServletResponse response) {
         String exportDirPath = DefaultRepositoryDir.getDefaultDir() + File.separator
-                + DefaultRepositoryDir.getExportDir(TenantContext.requireTenantId(), FileSourceModule.CUSTOMER)
+                + DefaultRepositoryDir.getTempFileDir(TenantContext.requireTenantId(), FileSourceModule.CUSTOMER)
                 + File.separator + fileId;
         File dir = new File(exportDirPath);
         if (!dir.exists() || !dir.isDirectory()) {

@@ -93,7 +93,7 @@
         </div>
         <div class="mb-[8px] flex flex-wrap gap-[8px] text-[var(--text-n2)]">
           <span>{{ t('numberCube.segmentLabel') }}</span>
-          <NButton text type="primary" class="text-[14px]" :disabled="!totalSegmentCount" @click="handleToggleSelectAll">
+          <NButton text type="primary" size="small" class="text-[14px]" :disabled="!totalSegmentCount" @click="handleToggleSelectAll">
             {{ isAllSegmentsSelected ? t('numberCube.deselectAll') : t('numberCube.selectAll') }}
           </NButton>
         </div>
