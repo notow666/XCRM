@@ -9,6 +9,18 @@
         </foreach>
     </delete>
 
+    <select id="selectDefaultCallCardSlotNum" resultType="java.lang.Integer">
+        SELECT default_call_card_slot_num
+        FROM sys_user_extend
+        WHERE id = #{userId}
+    </select>
+
+    <insert id="upsertDefaultCallCardSlotNum">
+        INSERT INTO sys_user_extend (id, default_call_card_slot_num)
+        VALUES (#{userId}, #{defaultCallCardSlotNum,jdbcType=TINYINT})
+        ON DUPLICATE KEY UPDATE default_call_card_slot_num = VALUES(default_call_card_slot_num)
+    </insert>
+
     <select id="groupByScopeIds" resultType="cn.cordys.crm.system.dto.ScopeNameDTO">
         select id, name, 'DEPARTMENT' as scope from sys_department where id in
         <foreach collection="ids" item="id" open="(" separator="," close=")">

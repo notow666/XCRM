@@ -20,6 +20,8 @@
           :call-status="readCallStatus(reachRow)"
           :wechat-friend-status="readWechatFriendStatus(reachRow)"
           :can-operate="true"
+          :default-card-slot-num="defaultCallCardSlotNum"
+          :preference-loaded="dialPreferenceLoaded"
           @dial="(slot) => handleDialCustomer(reachRow, slot)"
           @sms="(slot) => handleSmsCustomer(reachRow, slot)"
           @wechat="() => handleWechatCustomer(reachRow)"
@@ -289,6 +291,8 @@
     showReachModal,
     reachModal,
     activeWechatOptions,
+    defaultCallCardSlotNum,
+    dialPreferenceLoaded,
     readCallStatus,
     readWechatFriendStatus,
     isReachOwner,

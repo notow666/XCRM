@@ -90,6 +90,8 @@ export enum ReportRouteEnum {
   REPORT_EMPLOYEE = 'reportEmployee',
   /** 报表-员工跟进分析 */
   REPORT_EMPLOYEE_FOLLOW_UP = 'reportEmployeeFollowUp',
+  /** 报表-客户录音 */
+  REPORT_CUSTOMER_RECORDING = 'reportCustomerRecording',
   /** 报表-合同分析 */
   REPORT_CONTRACT = 'reportContract',
 }

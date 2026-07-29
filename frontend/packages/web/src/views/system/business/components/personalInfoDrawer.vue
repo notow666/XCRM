@@ -111,6 +111,7 @@
           <n-empty v-else :description="wechatEmptyText" class="py-[64px]" />
         </n-spin>
       </CrmCard>
+      <DialPreference v-if="activeTab === PersonalEnum.DIAL_SETTING" />
       <apiKey v-if="activeTab === PersonalEnum.API_KEY" />
     </n-scrollbar>
   </CrmDrawer>
@@ -135,6 +136,7 @@
   import CrmAvatar from '@/components/business/crm-avatar/index.vue';
   import FollowDetail from '@/components/business/crm-follow-detail/index.vue';
   import apiKey from './apiKey.vue';
+  import DialPreference from './dialPreference.vue';
   import EditPasswordModal from '@/views/system/business/components/editPasswordModal.vue';
 
   import { getPersonalInfo, getPersonalWechat } from '@/api/modules';
@@ -187,6 +189,10 @@
       {
         name: PersonalEnum.MY_WECHAT,
         tab: myWechatTabLabel,
+      },
+      {
+        name: PersonalEnum.DIAL_SETTING,
+        tab: t('system.personal.dialSetting'),
       },
       ...(hasAnyPermission(['PERSONAL_API_KEY:READ'])
         ? [

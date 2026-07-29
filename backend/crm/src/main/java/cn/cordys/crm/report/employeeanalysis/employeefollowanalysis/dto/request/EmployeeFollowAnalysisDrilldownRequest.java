@@ -2,6 +2,7 @@ package cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.request
 
 import cn.cordys.common.dto.BasePageRequest;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -32,6 +33,10 @@ public class EmployeeFollowAnalysisDrilldownRequest extends BasePageRequest {
     private String departmentId;
 
     @NotBlank
-    @Schema(description = "指标类型 inboundCustomer/contactedCustomer/newWechatFriends/dialCount/connectedCount/callOver1Min/callOver3Min")
+    @Schema(description = "指标类型 inboundCustomer/contactedCustomer/newWechatFriends/dialCount/connectedCount/callOver1Min/callOver3Min/customDurationCall")
     private String metricType;
+
+    @Min(value = 1, message = "自定义通话时长不能小于1秒")
+    @Schema(description = "今日自定义通话时长秒数")
+    private Integer customCallDurationSec;
 }

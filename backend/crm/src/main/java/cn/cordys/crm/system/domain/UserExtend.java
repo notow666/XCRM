@@ -20,4 +20,6 @@ public class UserExtend implements Serializable {
     private String avatar;
     @Schema(description = "其他平台对接信息")
     private byte[] platformInfo;
+    @Schema(description = "默认拨号卡槽：1-卡槽1，2-卡槽2")
+    private Integer defaultCallCardSlotNum;
 }

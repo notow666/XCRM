@@ -15,6 +15,7 @@ public class EmployeeFollowAnalysisSummaryItemResponse {
     private Integer connectedCount;
     private Integer callOver1MinCount;
     private Integer callOver3MinCount;
+    private Integer customDurationCallCount;
     private Long callDurationSec;
     private Long avgCallDurationSec;
 }

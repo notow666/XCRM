@@ -397,7 +397,11 @@ export default function useProductApi(CDR: CordysAxios) {
     return CDR.post<CommonList<CustomerListItem>>({ url: GetCustomerListUrl, data });
   }
 
-  function dialCustomerPhone(data: { toPhone: string; cardSlotNum: number; bizExtInfo: { customerId: string } }) {
+  function dialCustomerPhone(data: {
+    toPhone: string;
+    cardSlotNum?: number;
+    bizExtInfo: { customerId: string };
+  }) {
     return CDR.post({ url: MmbaPhoneDialUrl, data });
   }
 

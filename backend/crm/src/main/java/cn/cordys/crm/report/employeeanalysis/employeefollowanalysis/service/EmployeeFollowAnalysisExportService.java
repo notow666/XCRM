@@ -24,8 +24,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class EmployeeFollowAnalysisExportService {
@@ -33,6 +34,7 @@ public class EmployeeFollowAnalysisExportService {
     private static final DateTimeFormatter FILE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final String SHEET_NAME = "导出数据";
+    private static final String DURATION_FORMAT_MINUTES = "minutes";
 
     @Resource
     private EmployeeFollowAnalysisService employeeFollowAnalysisService;
@@ -43,12 +45,16 @@ public class EmployeeFollowAnalysisExportService {
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         try (ExcelWriter writer = EasyExcel.write(outputStream)
-                .head(buildHeadList(request.getDimensionType()))
+                .head(buildHeadList(request.getDimensionType(), request.getCustomCallDurationSec()))
                 .excelType(ExcelTypeEnum.XLSX)
                 .registerWriteHandler(new CustomHeadColWidthStyleStrategy())
                 .build()) {
             WriteSheet sheet = EasyExcel.writerSheet(SHEET_NAME).build();
-            writer.write(buildDataRows(summaryRows), sheet);
+            writer.write(buildDataRows(
+                    summaryRows,
+                    request.getDurationFormat(),
+                    request.getCustomCallDurationSec()
+            ), sheet);
         } catch (Exception e) {
             throw new RuntimeException("员工跟进分析报表导出失败", e);
         }
@@ -62,38 +68,52 @@ public class EmployeeFollowAnalysisExportService {
                 .body(new ByteArrayResource(bytes));
     }
 
-    private List<List<Object>> buildDataRows(List<EmployeeFollowAnalysisSummaryItemResponse> summaryRows) {
+    private List<List<Object>> buildDataRows(List<EmployeeFollowAnalysisSummaryItemResponse> summaryRows,
+                                             String durationFormat,
+                                             Integer customCallDurationSec) {
         return summaryRows.stream()
-                .map(row -> Arrays.<Object>asList(
-                        row.getDimensionLabel(),
-                        row.getInboundCustomerCount(),
-                        row.getContactedCustomerCount(),
-                        row.getNewWechatFriendCount(),
-                        row.getVisitCustomerCount(),
-                        row.getDialCount(),
-                        row.getConnectedCount(),
-                        row.getCallOver1MinCount(),
-                        row.getCallOver3MinCount(),
-                        formatDuration(row.getCallDurationSec()),
-                        formatDuration(row.getAvgCallDurationSec())
-                ))
+                .map(row -> buildDataRow(row, durationFormat, customCallDurationSec))
                 .toList();
     }
 
-    private List<List<String>> buildHeadList(String dimensionTypeValue) {
-        return List.of(
-                List.of(buildDimensionHeadText(dimensionTypeValue)),
-                List.of("入库客户数"),
-                List.of("联系客户数"),
-                List.of("新增微信好友数"),
-                List.of("上门客户数"),
-                List.of("拨打电话数"),
-                List.of("拨打接通数"),
-                List.of("一分钟以上通话数"),
-                List.of("三分钟以上通话数"),
-                List.of("通话时长"),
-                List.of("平均通话时长")
-        );
+    private List<Object> buildDataRow(EmployeeFollowAnalysisSummaryItemResponse row,
+                                      String durationFormat,
+                                      Integer customCallDurationSec) {
+        List<Object> dataRow = new ArrayList<>();
+        dataRow.add(row.getDimensionLabel());
+        dataRow.add(row.getInboundCustomerCount());
+        dataRow.add(row.getContactedCustomerCount());
+        dataRow.add(row.getNewWechatFriendCount());
+        dataRow.add(row.getVisitCustomerCount());
+        dataRow.add(row.getDialCount());
+        dataRow.add(row.getConnectedCount());
+        dataRow.add(row.getCallOver1MinCount());
+        dataRow.add(row.getCallOver3MinCount());
+        if (customCallDurationSec != null) {
+            dataRow.add(row.getCustomDurationCallCount());
+        }
+        dataRow.add(formatDuration(row.getCallDurationSec(), durationFormat));
+        dataRow.add(formatDuration(row.getAvgCallDurationSec(), durationFormat));
+        return dataRow;
+    }
+
+    private List<List<String>> buildHeadList(String dimensionTypeValue, Integer customCallDurationSec) {
+        List<List<String>> headList = new ArrayList<>();
+        headList.add(List.of(buildDimensionHeadText(dimensionTypeValue)));
+        headList.add(List.of("入库客户数"));
+        headList.add(List.of("联系客户数"));
+        headList.add(List.of("新增微信好友数"));
+        headList.add(List.of("上门客户数"));
+        headList.add(List.of("拨打电话数"));
+        headList.add(List.of("拨打接通数"));
+        headList.add(List.of("一分钟以上通话数"));
+        headList.add(List.of("三分钟以上通话数"));
+        if (customCallDurationSec != null) {
+            headList.add(List.of(customCallDurationSec + "秒以上通话数"));
+        }
+        headList.add(List.of("通话时长"));
+        headList.add(List.of("平均通话时长"));
+        return headList;
     }
 
     private String buildFileName(EmployeeFollowAnalysisSummaryRequest request) {
@@ -144,8 +164,11 @@ public class EmployeeFollowAnalysisExportService {
         return Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDate();
     }
 
-    private String formatDuration(Long seconds) {
+    private String formatDuration(Long seconds, String durationFormat) {
         long value = seconds == null ? 0L : Math.max(0L, seconds);
+        if (DURATION_FORMAT_MINUTES.equals(durationFormat)) {
+            return String.format(Locale.ROOT, "%.1f分钟", value / 60D);
+        }
         long hours = value / 3600L;
         long minutes = value % 3600L / 60L;
         long remainSeconds = value % 60L;

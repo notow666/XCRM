@@ -1,6 +1,7 @@
 package cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
@@ -26,4 +27,11 @@ public class EmployeeFollowAnalysisSummaryRequest {
 
     @Schema(description = "显示无数据项")
     private Boolean showEmptyItems = true;
+
+    @Min(value = 1, message = "自定义通话时长不能小于1秒")
+    @Schema(description = "今日自定义通话时长秒数")
+    private Integer customCallDurationSec;
+
+    @Schema(description = "导出时长格式 hms/minutes")
+    private String durationFormat = "hms";
 }

@@ -34,6 +34,14 @@ const report: AppRouteRecordRaw = {
       ],
     },
     {
+      path: 'customer-recording',
+      name: ReportRouteEnum.REPORT_CUSTOMER_RECORDING,
+      component: () => import('@/views/report/customer-recording/index.vue'),
+      meta: {
+        locale: 'menu.report.customerRecording',
+      },
+    },
+    {
       path: 'contract',
       name: ReportRouteEnum.REPORT_CONTRACT,
       component: () => import('@/views/report/contract-analysis/index.vue'),

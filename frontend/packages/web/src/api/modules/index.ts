@@ -8,9 +8,11 @@ import useFollowApi from '@lib/shared/api/modules/follow';
 import useHomeApi from '@lib/shared/api/modules/home';
 import useMmbaDeviceApi from '@lib/shared/api/modules/mmba/device';
 import useMmbaMgmtSsoApi from '@lib/shared/api/modules/mmba/mgmtSso';
+import useMmbaPhoneApi from '@lib/shared/api/modules/mmba/phone';
 import useOpportunityApi from '@lib/shared/api/modules/opportunity';
 import useOrderApi from '@lib/shared/api/modules/order';
 import useProductApi from '@lib/shared/api/modules/product';
+import useCustomerRecordingApi from '@lib/shared/api/modules/report/customerRecording';
 import useEmployeeFollowAnalysisApi from '@lib/shared/api/modules/report/employeeFollowAnalysis';
 import useSysApi from '@lib/shared/api/modules/sys';
 import useLicenseApi from '@lib/shared/api/modules/system/authorizedManagement';
@@ -53,7 +55,9 @@ const contractApi = useContractApi(CDR);
 const orderApi = useOrderApi(CDR);
 const mmbaDeviceApi = useMmbaDeviceApi(CDR);
 const mmbaMgmtSsoApi = useMmbaMgmtSsoApi(CDR);
+const mmbaPhoneApi = useMmbaPhoneApi(CDR);
 const numberCubeApi = useNumberCubeApi(CDR);
+const customerRecordingApi = useCustomerRecordingApi(CDR);
 const employeeFollowAnalysisApi = useEmployeeFollowAnalysisApi(CDR);
 
 export const {
@@ -656,6 +660,8 @@ export const {
 
 export const { getMmbaMgmtSsoRedirectUrl } = mmbaMgmtSsoApi;
 
+export const { getMmbaPhonePreference, updateMmbaPhonePreference } = mmbaPhoneApi;
+
 export const {
   getNumberCubeTaskPage,
   addNumberCubeTask,
@@ -672,6 +678,9 @@ export const {
   downloadNumberCubeFile,
   downloadNumberCubeCachedFile,
 } = numberCubeApi;
+
+export const { getCustomerRecordingPage, getCustomerRecordingEmployeeOptions, previewCustomerRecordingAudio } =
+  customerRecordingApi;
 
 export const {
   getEmployeeFollowAnalysisSummary,

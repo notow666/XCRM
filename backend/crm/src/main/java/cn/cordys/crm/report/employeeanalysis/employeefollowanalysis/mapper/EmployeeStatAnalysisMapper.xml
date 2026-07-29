@@ -451,6 +451,10 @@
               and ifnull(cra.is_connected, 0) = 1
               and ifnull(cra.duration, 0) &gt;= 180
           </if>
+          <if test="request.metricType == 'customDurationCall'">
+              and ifnull(cra.is_connected, 0) = 1
+              and ifnull(cra.duration, 0) &gt;= #{request.customCallDurationSec}
+          </if>
           <if test="request.dimensionType == 'employeeName'">
               and su.id = #{request.dimensionKey}
           </if>

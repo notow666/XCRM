@@ -9,6 +9,7 @@ export enum PersonalEnum {
   INFO = 'INFO',
   MY_PLAN = 'MY_PLAN',
   MY_WECHAT = 'MY_WECHAT',
+  DIAL_SETTING = 'DIAL_SETTING',
   API_KEY = 'API_KEY',
 }
 

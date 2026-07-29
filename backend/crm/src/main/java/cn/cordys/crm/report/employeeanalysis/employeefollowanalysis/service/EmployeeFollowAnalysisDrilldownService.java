@@ -57,6 +57,8 @@ public class EmployeeFollowAnalysisDrilldownService {
 
     public Pager<List<EmployeeFollowAnalysisDrilldownItemResponse>> drilldown(EmployeeFollowAnalysisDrilldownRequest request, String orgId, String userId) {
         // 下钻不查日报汇总表，直接按当前口径回查原始业务/MMBA 明细，避免汇总和明细脱节。
+        EmployeeFollowAnalysisMetricType metricType = EmployeeFollowAnalysisMetricType.fromValue(request.getMetricType());
+        validateCustomCallDuration(request, metricType);
         fillTimeRange(request);
         // 下钻和汇总复用同一数据权限锚点，保证“谁能看汇总，谁就只能看同范围的明细”。
         DeptDataPermissionDTO permission = dataScopeService.getDeptDataPermission(userId, orgId, PermissionConstants.CUSTOMER_MANAGEMENT_READ);
@@ -65,7 +67,6 @@ public class EmployeeFollowAnalysisDrilldownService {
             Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
             return PageUtils.setPageInfo(page, List.of());
         }
-        EmployeeFollowAnalysisMetricType metricType = EmployeeFollowAnalysisMetricType.fromValue(request.getMetricType());
         if (isCallMetric(metricType) && StringUtils.equals(request.getDimensionType(), "customerSource")) {
             return drilldownCallByCustomerSource(request, orgId, visibleOperatorUserIds);
         }
@@ -95,7 +96,7 @@ public class EmployeeFollowAnalysisDrilldownService {
                             + ", dimensionKey=" + request.getDimensionKey(),
                     () -> employeeStatAnalysisMapper.listVisitCustomerDrilldown(request, orgId, visibleOperatorUserIds)
             );
-            case DIAL_COUNT, CONNECTED_COUNT, CALL_OVER_1MIN, CALL_OVER_3MIN ->
+            case DIAL_COUNT, CONNECTED_COUNT, CALL_OVER_1MIN, CALL_OVER_3MIN, CUSTOM_DURATION_CALL ->
                     logSqlQuery(
                             "listCallDrilldown",
                             "orgId=" + orgId + ", metricType=" + request.getMetricType() + ", dimensionType=" + request.getDimensionType()
@@ -339,7 +340,25 @@ public class EmployeeFollowAnalysisDrilldownService {
         return metricType == EmployeeFollowAnalysisMetricType.DIAL_COUNT
                 || metricType == EmployeeFollowAnalysisMetricType.CONNECTED_COUNT
                 || metricType == EmployeeFollowAnalysisMetricType.CALL_OVER_1MIN
-                || metricType == EmployeeFollowAnalysisMetricType.CALL_OVER_3MIN;
+                || metricType == EmployeeFollowAnalysisMetricType.CALL_OVER_3MIN
+                || metricType == EmployeeFollowAnalysisMetricType.CUSTOM_DURATION_CALL;
+    }
+
+    private void validateCustomCallDuration(EmployeeFollowAnalysisDrilldownRequest request,
+                                            EmployeeFollowAnalysisMetricType metricType) {
+        if (metricType != EmployeeFollowAnalysisMetricType.CUSTOM_DURATION_CALL) {
+            return;
+        }
+        if (request.getCustomCallDurationSec() == null) {
+            throw new IllegalArgumentException("customCallDurationSec is required");
+        }
+        EmployeeFollowAnalysisTimePreset timePreset = EmployeeFollowAnalysisTimePreset.fromValue(request.getTimePreset());
+        if (timePreset != EmployeeFollowAnalysisTimePreset.TODAY) {
+            throw new IllegalArgumentException("customCallDurationSec only supports today");
+        }
+        if (StringUtils.equals(request.getDimensionType(), "statMonth")) {
+            throw new IllegalArgumentException("customCallDurationSec does not support statMonth");
+        }
     }
 
     private JsonNode parseBizExtInfo(String bizExtInfo) {

@@ -24,6 +24,7 @@ import cn.cordys.mmba.dto.request.MmbaCommandResultPageRequest;
 import cn.cordys.mmba.dto.request.MmbaDeviceInfoAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaDevicePageRequest;
 import cn.cordys.mmba.dto.request.MmbaDeviceSaveRequest;
+import cn.cordys.mmba.dto.request.MmbaPhonePreferenceUpdateRequest;
 import cn.cordys.mmba.dto.request.MmbaSmsRecordAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxAccountAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxChatAuditPageRequest;
@@ -32,11 +33,13 @@ import cn.cordys.mmba.dto.request.MmbaWxFriendExportRequest;
 import cn.cordys.mmba.dto.request.MmbaWxFriendListAuditPageRequest;
 import cn.cordys.mmba.dto.request.MmbaWxLoginAuditPageRequest;
 import cn.cordys.mmba.dto.response.MmbaDeviceImportResponse;
+import cn.cordys.mmba.dto.response.MmbaPhonePreferenceResponse;
 import cn.cordys.mmba.dto.response.MmbaWxFriendExportResponse;
 import cn.cordys.mmba.service.MmbaDeviceImportService;
 import cn.cordys.mmba.service.MmbaDeviceService;
 import cn.cordys.mmba.service.MmbaFacadeService;
 import cn.cordys.mmba.service.MmbaMgmtSsoService;
+import cn.cordys.mmba.service.MmbaPhonePreferenceService;
 import cn.cordys.mmba.service.MmbaQueryService;
 import cn.cordys.mmba.service.MmbaWxFriendExportService;
 import cn.cordys.security.SessionUtils;
@@ -52,6 +55,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -82,6 +86,8 @@ public class MmbaController {
     private MmbaMgmtSsoService mmbaMgmtSsoService;
     @Resource
     private MmbaWxFriendExportService mmbaWxFriendExportService;
+    @Resource
+    private MmbaPhonePreferenceService mmbaPhonePreferenceService;
 
     /**
      * 指掌易管理平台第三方 SSO：返回需整页打开的跳转 URL（含 ticket）。
@@ -100,6 +106,19 @@ public class MmbaController {
     @Operation(summary = "拨打电话")
     public JsonNode dial(@RequestBody JsonNode request) {
         return mmbaFacadeService.dial(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
+    @GetMapping("/phone/preference")
+    @Operation(summary = "查询当前用户默认拨号卡")
+    public MmbaPhonePreferenceResponse getPhonePreference() {
+        return mmbaPhonePreferenceService.getPreference(SessionUtils.getUserId());
+    }
+
+    @PutMapping("/phone/preference")
+    @Operation(summary = "设置当前用户默认拨号卡")
+    public MmbaPhonePreferenceResponse updatePhonePreference(
+            @Valid @RequestBody MmbaPhonePreferenceUpdateRequest request) {
+        return mmbaPhonePreferenceService.updatePreference(request, SessionUtils.getUserId());
     }
 
     /**

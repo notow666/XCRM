@@ -1,17 +1,17 @@
 <template>
   <n-scrollbar x-scrollable :content-style="{ 'min-width': '1000px', 'width': '100%', 'height': '100%' }">
     <CrmCard hide-footer auto-height class="form-card mb-[16px] min-w-[1000px]">
-      <div class="flex flex-wrap items-end justify-between gap-[16px]">
+      <div class="flex flex-wrap items-start justify-between gap-[16px]">
         <n-form
           label-placement="left"
           label-width="auto"
           :model="form"
-          class="grid flex-1 grid-cols-1 gap-x-[24px] gap-y-[8px] md:grid-cols-2 xl:grid-cols-4"
+          class="grid min-w-0 flex-1 grid-cols-1 gap-x-[24px] gap-y-[8px] md:grid-cols-2 xl:grid-cols-[repeat(4,minmax(210px,1fr))_auto]"
         >
           <n-form-item :label="t('report.filter.statTime')" path="timePreset">
             <n-select
               v-model:value="form.timePreset"
-              class="w-full min-w-[200px]"
+              class="w-full min-w-[200px] xl:min-w-0"
               :options="timePresetOptions"
               @update:value="onTimePresetChange"
             />
@@ -21,10 +21,19 @@
             :label="t('report.filter.customRange')"
             path="customRange"
           >
-            <n-date-picker v-model:value="form.customRange" type="daterange" clearable class="w-full min-w-[280px]" />
+            <n-date-picker
+              v-model:value="form.customRange"
+              type="daterange"
+              clearable
+              class="w-full min-w-[280px] xl:min-w-0"
+            />
           </n-form-item>
           <n-form-item :label="t('report.filter.dimension')" path="dimension">
-            <n-select v-model:value="form.dimension" class="w-full min-w-[200px]" :options="dimensionOptions" />
+            <n-select
+              v-model:value="form.dimension"
+              class="w-full min-w-[200px] xl:min-w-0"
+              :options="dimensionOptions"
+            />
           </n-form-item>
           <n-form-item :label="t('report.filter.department')" path="departmentId">
             <n-tree-select
@@ -35,8 +44,25 @@
               children-field="children"
               filterable
               clearable
-              class="w-full min-w-[200px]"
+              class="w-full min-w-[200px] xl:min-w-0"
             />
+          </n-form-item>
+          <n-form-item
+            v-if="form.timePreset === TimePreset.TODAY"
+            :label="t('report.filter.customCallDuration')"
+            path="customCallDurationSec"
+          >
+            <n-input-number
+              v-model:value="form.customCallDurationSec"
+              :min="1"
+              :precision="0"
+              :show-button="false"
+              clearable
+              class="w-full min-w-[200px] xl:min-w-0"
+              @update:value="handleCustomCallDurationChange"
+            >
+              <template #suffix>{{ t('report.filter.second') }}</template>
+            </n-input-number>
           </n-form-item>
           <n-form-item :show-label="false">
             <n-button ghost class="mr-[12px]" type="primary" :loading="loading" @click="handleQuery">
@@ -47,7 +73,13 @@
             </n-button>
           </n-form-item>
         </n-form>
-        <div class="flex shrink-0 flex-wrap items-center gap-[16px] pb-[2px]">
+        <div class="flex shrink-0 flex-wrap items-center gap-[16px]">
+          <div class="flex items-center gap-[8px]">
+            <span class="whitespace-nowrap text-[14px] leading-none text-[var(--text-n1)]">
+              {{ t('report.toolbar.durationFormat') }}
+            </span>
+            <n-select v-model:value="durationFormat" class="w-[120px]" :options="durationFormatOptions" />
+          </div>
           <div class="flex items-center gap-[8px]">
             <span class="whitespace-nowrap text-[14px] leading-none text-[var(--text-n1)]">
               {{ t('report.toolbar.showEmptyItems') }}
@@ -103,6 +135,7 @@
     NDatePicker,
     NForm,
     NFormItem,
+    NInputNumber,
     NScrollbar,
     NSelect,
     NSwitch,
@@ -164,17 +197,26 @@
     CONNECTED_COUNT: 'connectedCount',
     CALL_OVER_1MIN: 'callOver1Min',
     CALL_OVER_3MIN: 'callOver3Min',
+    CUSTOM_DURATION_CALL: 'customDurationCall',
   } as const;
 
   const EMPTY_CUSTOMER_SOURCE_DIMENSION_KEY = '__EMPTY__';
 
   type MetricTypeValue = (typeof MetricType)[keyof typeof MetricType];
 
+  const DurationFormat = {
+    HMS: 'hms',
+    MINUTES: 'minutes',
+  } as const;
+
+  type DurationFormatValue = (typeof DurationFormat)[keyof typeof DurationFormat];
+
   type FollowUpRow = EmployeeFollowAnalysisSummaryItem;
 
   const loading = ref(false);
   const exportLoading = ref(false);
   const showEmptyItems = ref(true);
+  const durationFormat = ref<DurationFormatValue>(DurationFormat.HMS);
   const tableData = ref<FollowUpRow[]>([]);
   const lastQueryParams = ref<EmployeeFollowAnalysisSummaryParams | null>(null);
   const departmentOptions = ref<CrmTreeNodeData[]>([]);
@@ -184,6 +226,7 @@
     customRange: null as [number, number] | null,
     dimension: Dimension.EMPLOYEE_NAME as DimensionValue,
     departmentId: null as string | null,
+    customCallDurationSec: null as number | null,
   });
 
   const drilldownState = reactive({
@@ -207,19 +250,37 @@
     { label: t('report.filter.statTime.custom'), value: TimePreset.CUSTOM },
   ]);
 
+  function handleCustomCallDurationChange(value: number | null) {
+    if (value !== null && form.dimension === Dimension.STAT_MONTH) {
+      form.dimension = Dimension.EMPLOYEE_NAME;
+    }
+  }
+
   const dimensionOptions = computed<SelectOption[]>(() => [
     { label: t('report.dimension.employeeName'), value: Dimension.EMPLOYEE_NAME },
     { label: t('report.dimension.employeeDept'), value: Dimension.EMPLOYEE_DEPT },
     { label: t('report.dimension.customerSource'), value: Dimension.CUSTOMER_SOURCE },
     { label: t('report.dimension.statDay'), value: Dimension.STAT_DAY },
-    { label: t('report.dimension.statMonth'), value: Dimension.STAT_MONTH },
+    {
+      label: t('report.dimension.statMonth'),
+      value: Dimension.STAT_MONTH,
+      disabled: form.customCallDurationSec !== null,
+    },
+  ]);
+
+  const durationFormatOptions = computed<SelectOption[]>(() => [
+    { label: t('report.toolbar.durationFormat.hms'), value: DurationFormat.HMS },
+    { label: t('report.toolbar.durationFormat.minutes'), value: DurationFormat.MINUTES },
   ]);
 
   // 给表格设置视口内最大高度，让数据区域内部滚动，表头保持固定可见。
   const tableMaxHeight = 'calc(100vh - 320px)';
 
-  function formatDuration(sec: number) {
+  function formatDuration(sec: number, format: DurationFormatValue = DurationFormat.HMS) {
     const value = Math.max(0, Math.floor(sec));
+    if (format === DurationFormat.MINUTES) {
+      return t('report.followUp.duration.minutes', { value: (value / 60).toFixed(1) });
+    }
     const hours = Math.floor(value / 3600);
     const minutes = Math.floor((value % 3600) / 60);
     const seconds = value % 60;
@@ -239,7 +300,8 @@
       metricType === MetricType.DIAL_COUNT ||
       metricType === MetricType.CONNECTED_COUNT ||
       metricType === MetricType.CALL_OVER_1MIN ||
-      metricType === MetricType.CALL_OVER_3MIN
+      metricType === MetricType.CALL_OVER_3MIN ||
+      metricType === MetricType.CUSTOM_DURATION_CALL
     );
   }
 
@@ -248,18 +310,34 @@
       message.warning(t('common.notNull', { value: t('report.filter.customRange') }));
       return false;
     }
+    if (
+      form.customCallDurationSec !== null &&
+      (!Number.isInteger(form.customCallDurationSec) || form.customCallDurationSec < 1)
+    ) {
+      message.warning(t('report.message.customCallDurationInvalid'));
+      return false;
+    }
+    if (form.customCallDurationSec !== null && form.dimension === Dimension.STAT_MONTH) {
+      message.warning(t('report.message.customCallDurationStatMonthUnsupported'));
+      return false;
+    }
     return true;
   }
 
   function buildDrilldownParams(): EmployeeFollowAnalysisDrilldownParams {
+    const queryParams = lastQueryParams.value;
     return {
-      timePreset: form.timePreset,
-      startTime: form.customRange?.[0],
-      endTime: form.customRange?.[1],
-      dimensionType: form.dimension,
+      timePreset: queryParams?.timePreset ?? form.timePreset,
+      startTime: queryParams?.startTime ?? form.customRange?.[0],
+      endTime: queryParams?.endTime ?? form.customRange?.[1],
+      dimensionType: queryParams?.dimensionType ?? form.dimension,
       dimensionKey: drilldownState.dimensionKey,
-      departmentId: form.departmentId || undefined,
+      departmentId: queryParams?.departmentId ?? (form.departmentId || undefined),
       metricType: drilldownState.metricType,
+      customCallDurationSec:
+        drilldownState.metricType === MetricType.CUSTOM_DURATION_CALL
+          ? queryParams?.customCallDurationSec
+          : undefined,
       current: drilldownState.current,
       pageSize: drilldownState.pageSize,
     };
@@ -275,6 +353,9 @@
       [MetricType.CONNECTED_COUNT]: t('report.drilldown.connectedCount'),
       [MetricType.CALL_OVER_1MIN]: t('report.drilldown.callOver1Min'),
       [MetricType.CALL_OVER_3MIN]: t('report.drilldown.callOver3Min'),
+      [MetricType.CUSTOM_DURATION_CALL]: t('report.drilldown.customDurationCall', {
+        value: lastQueryParams.value?.customCallDurationSec ?? 0,
+      }),
     };
     return titleMap[metricType];
   }
@@ -297,7 +378,7 @@
     drilldownState.metricType = metricType;
     // 客户来源汇总里显示为 "-" 的行，真实维度键是空串；下钻时改传约定值，避免被后端 @NotBlank 拦截。
     drilldownState.dimensionKey =
-      form.dimension === Dimension.CUSTOMER_SOURCE && !row.dimensionKey
+      lastQueryParams.value?.dimensionType === Dimension.CUSTOMER_SOURCE && !row.dimensionKey
         ? EMPTY_CUSTOMER_SOURCE_DIMENSION_KEY
         : row.dimensionKey;
     drilldownState.title = resolveDrilldownTitle(metricType);
@@ -348,42 +429,58 @@
     return titleMap[form.dimension];
   });
 
-  const tableScrollX = 1620;
+  const tableScrollX = computed(() => (lastQueryParams.value?.customCallDurationSec === undefined ? 1620 : 1760));
   const drilldownTitle = computed(() => drilldownState.title);
 
-  const columns = computed<DataTableColumns<FollowUpRow>>(() => [
-    {
-      title: dimensionColumnTitle.value,
-      key: 'dimensionLabel',
-      width: 180,
-      fixed: 'left',
-      ellipsis: { tooltip: true },
-    },
-    buildMetricColumn(t('report.followUp.col.inboundCustomer'), 'inboundCustomerCount', MetricType.INBOUND_CUSTOMER),
-    buildMetricColumn(
-      t('report.followUp.col.contactedCustomer'),
-      'contactedCustomerCount',
-      MetricType.CONTACTED_CUSTOMER
-    ),
-    buildMetricColumn(t('report.followUp.col.newWechatFriends'), 'newWechatFriendCount', MetricType.NEW_WECHAT_FRIENDS),
-    buildMetricColumn(t('report.followUp.col.visitCustomer'), 'visitCustomerCount', MetricType.VISIT_CUSTOMER),
-    buildMetricColumn(t('report.followUp.col.dialCount'), 'dialCount', MetricType.DIAL_COUNT),
-    buildMetricColumn(t('report.followUp.col.connectedCount'), 'connectedCount', MetricType.CONNECTED_COUNT),
-    buildMetricColumn(t('report.followUp.col.callOver1Min'), 'callOver1MinCount', MetricType.CALL_OVER_1MIN),
-    buildMetricColumn(t('report.followUp.col.callOver3Min'), 'callOver3MinCount', MetricType.CALL_OVER_3MIN),
-    {
-      title: t('report.followUp.col.callDuration'),
-      key: 'callDurationSec',
-      width: 140,
-      render: (row) => formatDuration(row.callDurationSec),
-    },
-    {
-      title: t('report.followUp.col.avgCallDuration'),
-      key: 'avgCallDurationSec',
-      width: 140,
-      render: (row) => formatDuration(row.avgCallDurationSec),
-    },
-  ]);
+  const columns = computed<DataTableColumns<FollowUpRow>>(() => {
+    const activeDurationFormat = durationFormat.value;
+    const tableColumns: DataTableColumns<FollowUpRow> = [
+      {
+        title: dimensionColumnTitle.value,
+        key: 'dimensionLabel',
+        width: 180,
+        fixed: 'left',
+        ellipsis: { tooltip: true },
+      },
+      buildMetricColumn(t('report.followUp.col.inboundCustomer'), 'inboundCustomerCount', MetricType.INBOUND_CUSTOMER),
+      buildMetricColumn(
+        t('report.followUp.col.contactedCustomer'),
+        'contactedCustomerCount',
+        MetricType.CONTACTED_CUSTOMER
+      ),
+      buildMetricColumn(t('report.followUp.col.newWechatFriends'), 'newWechatFriendCount', MetricType.NEW_WECHAT_FRIENDS),
+      buildMetricColumn(t('report.followUp.col.visitCustomer'), 'visitCustomerCount', MetricType.VISIT_CUSTOMER),
+      buildMetricColumn(t('report.followUp.col.dialCount'), 'dialCount', MetricType.DIAL_COUNT),
+      buildMetricColumn(t('report.followUp.col.connectedCount'), 'connectedCount', MetricType.CONNECTED_COUNT),
+      buildMetricColumn(t('report.followUp.col.callOver1Min'), 'callOver1MinCount', MetricType.CALL_OVER_1MIN),
+      buildMetricColumn(t('report.followUp.col.callOver3Min'), 'callOver3MinCount', MetricType.CALL_OVER_3MIN),
+    ];
+    const customCallDurationSec = lastQueryParams.value?.customCallDurationSec;
+    if (customCallDurationSec !== undefined) {
+      tableColumns.push(
+        buildMetricColumn(
+          t('report.followUp.col.customDurationCall', { value: customCallDurationSec }),
+          'customDurationCallCount',
+          MetricType.CUSTOM_DURATION_CALL
+        )
+      );
+    }
+    tableColumns.push(
+      {
+        title: t('report.followUp.col.callDuration'),
+        key: 'callDurationSec',
+        width: 140,
+        render: (row) => formatDuration(row.callDurationSec, activeDurationFormat),
+      },
+      {
+        title: t('report.followUp.col.avgCallDuration'),
+        key: 'avgCallDurationSec',
+        width: 140,
+        render: (row) => formatDuration(row.avgCallDurationSec, activeDurationFormat),
+      },
+    );
+    return tableColumns;
+  });
 
   const drilldownColumns = computed<DataTableColumns<EmployeeFollowAnalysisDrilldownItem>>(() => {
     // 下钻弹窗按指标类型切三套列：客户类、微信好友审计类、通话审计类。
@@ -458,6 +555,8 @@
       dimensionType: form.dimension,
       departmentId: form.departmentId || undefined,
       showEmptyItems: showEmptyItems.value,
+      customCallDurationSec:
+        form.timePreset === TimePreset.TODAY ? form.customCallDurationSec ?? undefined : undefined,
     };
   }
 
@@ -480,6 +579,9 @@
     if (val !== TimePreset.CUSTOM) {
       form.customRange = null;
     }
+    if (val !== TimePreset.TODAY) {
+      form.customCallDurationSec = null;
+    }
   }
 
   function defaultForm() {
@@ -487,7 +589,9 @@
     form.customRange = null;
     form.dimension = Dimension.EMPLOYEE_NAME;
     form.departmentId = null;
+    form.customCallDurationSec = null;
     showEmptyItems.value = true;
+    durationFormat.value = DurationFormat.HMS;
   }
 
   async function initDepartmentOptions() {
@@ -526,7 +630,10 @@
     }
     exportLoading.value = true;
     try {
-      const response = await exportEmployeeFollowAnalysisSummary(lastQueryParams.value);
+      const response = await exportEmployeeFollowAnalysisSummary({
+        ...lastQueryParams.value,
+        durationFormat: durationFormat.value,
+      });
       const fileName = parseDownloadFileName(response.headers?.['content-disposition']);
       if (!fileName) {
         message.error(t('common.exportFailed'));

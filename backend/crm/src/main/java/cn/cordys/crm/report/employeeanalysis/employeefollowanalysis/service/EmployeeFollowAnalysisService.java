@@ -58,6 +58,7 @@ public class EmployeeFollowAnalysisService {
     public List<EmployeeFollowAnalysisSummaryItemResponse> summary(EmployeeFollowAnalysisSummaryRequest request, String orgId, String userId) {
         QueryRange range = buildQueryRange(request.getTimePreset(), request.getStartTime(), request.getEndTime());
         EmployeeFollowAnalysisDimensionType dimensionType = EmployeeFollowAnalysisDimensionType.fromValue(request.getDimensionType());
+        validateCustomCallDuration(request, dimensionType);
         AggregationContext context = buildAggregationContext(orgId, userId, request.getDepartmentId());
         if (context.getEmployeeMap().isEmpty()) {
             return List.of();
@@ -94,7 +95,12 @@ public class EmployeeFollowAnalysisService {
 
         if (metricStartTime != null && metricEndTime != null) {
             List<EmployeeFollowAnalysisMetricRow> metricRows = loadMetricRows(metricStartTime, metricEndTime, orgId, visibleOwnerUserIds);
-            mergeAccumulatorMaps(accumulatorMap, aggregateRows(metricRows, dimensionType, context));
+            mergeAccumulatorMaps(accumulatorMap, aggregateRows(
+                    metricRows,
+                    dimensionType,
+                    context,
+                    request.getCustomCallDurationSec()
+            ));
         }
 
         if (Boolean.TRUE.equals(request.getShowEmptyItems())) {
@@ -318,7 +324,8 @@ public class EmployeeFollowAnalysisService {
 
     private Map<String, SummaryAccumulator> aggregateRows(List<EmployeeFollowAnalysisMetricRow> metricRows,
                                                           EmployeeFollowAnalysisDimensionType dimensionType,
-                                                          AggregationContext context) {
+                                                          AggregationContext context,
+                                                          Integer customCallDurationSec) {
         Map<String, SummaryAccumulator> result = new LinkedHashMap<>();
         for (EmployeeFollowAnalysisMetricRow row : metricRows) {
             DimensionValue dimension = resolveDimensionValue(row, dimensionType, context);
@@ -332,6 +339,11 @@ public class EmployeeFollowAnalysisService {
             accumulator.setConnectedCount(accumulator.getConnectedCount() + defaultInt(row.getConnectedCount()));
             accumulator.setCallOver1MinCount(accumulator.getCallOver1MinCount() + defaultInt(row.getCallOver1minCount()));
             accumulator.setCallOver3MinCount(accumulator.getCallOver3MinCount() + defaultInt(row.getCallOver3minCount()));
+            if (customCallDurationSec != null
+                    && defaultInt(row.getConnectedCount()) > 0
+                    && defaultLong(row.getCallDurationSec()) >= customCallDurationSec) {
+                accumulator.setCustomDurationCallCount(accumulator.getCustomDurationCallCount() + 1);
+            }
             accumulator.setCallDurationSec(accumulator.getCallDurationSec() + defaultLong(row.getCallDurationSec()));
         }
         return result;
@@ -354,6 +366,7 @@ public class EmployeeFollowAnalysisService {
             targetItem.setConnectedCount(targetItem.getConnectedCount() + sourceItem.getConnectedCount());
             targetItem.setCallOver1MinCount(targetItem.getCallOver1MinCount() + sourceItem.getCallOver1MinCount());
             targetItem.setCallOver3MinCount(targetItem.getCallOver3MinCount() + sourceItem.getCallOver3MinCount());
+            targetItem.setCustomDurationCallCount(targetItem.getCustomDurationCallCount() + sourceItem.getCustomDurationCallCount());
             targetItem.setCallDurationSec(targetItem.getCallDurationSec() + sourceItem.getCallDurationSec());
         }
     }
@@ -414,11 +427,26 @@ public class EmployeeFollowAnalysisService {
             item.setConnectedCount(accumulator.getConnectedCount());
             item.setCallOver1MinCount(accumulator.getCallOver1MinCount());
             item.setCallOver3MinCount(accumulator.getCallOver3MinCount());
+            item.setCustomDurationCallCount(accumulator.getCustomDurationCallCount());
             item.setCallDurationSec(accumulator.getCallDurationSec());
             item.setAvgCallDurationSec(accumulator.getConnectedCount() > 0 ? accumulator.getCallDurationSec() / accumulator.getConnectedCount() : 0L);
             result.add(item);
         }
         return result;
+    }
+
+    private void validateCustomCallDuration(EmployeeFollowAnalysisSummaryRequest request,
+                                            EmployeeFollowAnalysisDimensionType dimensionType) {
+        if (request.getCustomCallDurationSec() == null) {
+            return;
+        }
+        EmployeeFollowAnalysisTimePreset timePreset = EmployeeFollowAnalysisTimePreset.fromValue(request.getTimePreset());
+        if (timePreset != EmployeeFollowAnalysisTimePreset.TODAY) {
+            throw new IllegalArgumentException("customCallDurationSec only supports today");
+        }
+        if (dimensionType == EmployeeFollowAnalysisDimensionType.STAT_MONTH) {
+            throw new IllegalArgumentException("customCallDurationSec does not support statMonth");
+        }
     }
 
     private void sortSummaryResponses(List<EmployeeFollowAnalysisSummaryItemResponse> responses,
@@ -622,6 +650,7 @@ public class EmployeeFollowAnalysisService {
         private int connectedCount;
         private int callOver1MinCount;
         private int callOver3MinCount;
+        private int customDurationCallCount;
         private long callDurationSec;
     }
 

@@ -9,6 +9,11 @@ import java.util.List;
 public interface ExtUserExtendMapper {
     void deleteUser(@Param("ids") List<String> ids);
 
+    Integer selectDefaultCallCardSlotNum(@Param("userId") String userId);
+
+    void upsertDefaultCallCardSlotNum(@Param("userId") String userId,
+                                     @Param("defaultCallCardSlotNum") Integer defaultCallCardSlotNum);
+
     /**
      * 根据范围ID分组
      *

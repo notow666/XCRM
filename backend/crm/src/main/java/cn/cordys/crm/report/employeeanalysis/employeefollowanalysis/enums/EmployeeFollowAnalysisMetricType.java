@@ -10,7 +10,8 @@ public enum EmployeeFollowAnalysisMetricType {
     DIAL_COUNT("dialCount"),
     CONNECTED_COUNT("connectedCount"),
     CALL_OVER_1MIN("callOver1Min"),
-    CALL_OVER_3MIN("callOver3Min");
+    CALL_OVER_3MIN("callOver3Min"),
+    CUSTOM_DURATION_CALL("customDurationCall");
 
     private final String value;
 

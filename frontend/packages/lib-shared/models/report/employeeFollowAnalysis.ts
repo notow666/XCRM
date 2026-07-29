@@ -7,6 +7,8 @@ export interface EmployeeFollowAnalysisSummaryParams {
   dimensionType: string;
   departmentId?: string;
   showEmptyItems?: boolean;
+  customCallDurationSec?: number;
+  durationFormat?: 'hms' | 'minutes';
 }
 
 export interface EmployeeFollowAnalysisSummaryItem {
@@ -20,6 +22,7 @@ export interface EmployeeFollowAnalysisSummaryItem {
   connectedCount: number;
   callOver1MinCount: number;
   callOver3MinCount: number;
+  customDurationCallCount: number;
   callDurationSec: number;
   avgCallDurationSec: number;
 }
@@ -32,6 +35,7 @@ export interface EmployeeFollowAnalysisDrilldownParams extends TableQueryParams 
   dimensionKey: string;
   departmentId?: string;
   metricType: string;
+  customCallDurationSec?: number;
 }
 
 export interface EmployeeFollowAnalysisDrilldownItem {

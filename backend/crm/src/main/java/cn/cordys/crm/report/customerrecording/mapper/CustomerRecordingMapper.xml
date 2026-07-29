@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.cordys.crm.report.customerrecording.mapper.CustomerRecordingMapper">
+
+    <select id="listCurrentEmployees"
+            resultType="cn.cordys.crm.report.customerrecording.dto.response.CustomerRecordingEmployeeOptionResponse">
+        select sou.user_id as id,
+               su.name,
+               sou.department_id as departmentId,
+               sd.name as departmentName
+        from sys_organization_user sou
+        join sys_user su on su.id = sou.user_id
+        left join sys_department sd on sd.id = sou.department_id
+        where ifnull(sou.enable, true) = true
+        order by ifnull(sd.pos, 0) asc, su.name asc
+    </select>
+
+    <select id="page"
+            resultType="cn.cordys.crm.report.customerrecording.dto.response.CustomerRecordingListResponse">
+        select cra.es_id as auditId,
+               employee.operatorUserId,
+               employee.employeeName,
+               employee.departmentId,
+               employee.departmentName,
+               cra.customer_id as customerId,
+               c.name as customerName,
+               cra.customer_tel as customerTel,
+               cra.begin_time as beginTime,
+               cra.answer_time as answerTime,
+               cra.end_time as endTime,
+               cra.duration
+        from customer c
+        straight_join mmba_call_record_audit cra
+        force index (idx_mmba_call_customer_begin_ts)
+             on cra.customer_id = c.id
+            and cra.begin_timestamp between #{request.startTime} and #{request.endTime}
+        straight_join (
+            select distinct su.id as operatorUserId,
+                            su.um,
+                            su.name as employeeName,
+                            sou.department_id as departmentId,
+                            sd.name as departmentName
+            from sys_organization_user sou
+            join sys_user su on su.id = sou.user_id
+            left join sys_department sd on sd.id = sou.department_id
+            where sou.enable = true
+              and su.um is not null
+              and su.um != ''
+        ) employee on employee.um = cra.um
+        where cra.direction = 0
+          and cra.call_type = 1
+          and cra.is_connected = 1
+          and cra.record is not null
+          and trim(cra.record) != ''
+          and trim(cra.record) != '[]'
+          <if test="request.customerName != null and request.customerName != ''">
+              and c.name like concat('%', #{request.customerName}, '%')
+          </if>
+          <if test="request.customerTel != null and request.customerTel != ''">
+              and cra.customer_tel like concat('%', #{request.customerTel}, '%')
+          </if>
+          <if test="request.minDuration != null">
+              and ifnull(cra.duration, 0) &gt;= #{request.minDuration}
+          </if>
+          <if test="request.maxDuration != null">
+              and ifnull(cra.duration, 0) &lt;= #{request.maxDuration}
+          </if>
+          <if test="operatorUserIds != null">
+              and employee.operatorUserId in
+              <foreach collection="operatorUserIds" item="operatorUserId" open="(" separator="," close=")">
+                  #{operatorUserId}
+              </foreach>
+          </if>
+        order by cra.begin_timestamp desc, cra.es_id desc
+    </select>
+</mapper>

@@ -72,6 +72,8 @@ public class MmbaFacadeService {
     @Resource
     private MmbaDeviceService mmbaDeviceService;
     @Resource
+    private MmbaPhonePreferenceService mmbaPhonePreferenceService;
+    @Resource
     private BaseMapper<User> userBaseMapper;
     @Resource
     private BaseMapper<Customer> customerMapper;
@@ -433,10 +435,16 @@ public class MmbaFacadeService {
             um = requireCurrentUserUm(userId, "无法拨打电话");
             payload.put("um", um);
         }
-        Integer cardSlotNum = readCardSlotNum(payload, "拨打电话");
-        if (cardSlotNum != null) {
-            ensureCardSlotAvailable(um, cardSlotNum, userId, organizationId, "拨打电话");
+        Integer defaultCardSlotNum = mmbaPhonePreferenceService.getDefaultCardSlotNum(userId);
+        Integer cardSlotNum = defaultCardSlotNum == null
+                ? readCardSlotNum(payload, "拨打电话")
+                : defaultCardSlotNum;
+        if (cardSlotNum == null) {
+            throw new GenericException("请先选择拨号卡或前往个人中心设置默认拨号卡");
         }
+        payload.put("cardSlotNum", cardSlotNum);
+        ensureCardSlotAvailable(
+                um, cardSlotNum, userId, organizationId, "拨打电话", defaultCardSlotNum != null);
         String customerId = payload.path("bizExtInfo").path("customerId").asText(null);
         if (StringUtils.isNotBlank(customerId)) {
             Customer customer = customerMapper.selectByPrimaryKey(customerId);
@@ -462,7 +470,7 @@ public class MmbaFacadeService {
         }
         Integer cardSlotNum = readCardSlotNum(payload, "发送短信");
         if (cardSlotNum != null) {
-            ensureCardSlotAvailable(um, cardSlotNum, userId, organizationId, "发送短信");
+            ensureCardSlotAvailable(um, cardSlotNum, userId, organizationId, "发送短信", false);
         }
         String customerId = payload.path("bizExtInfo").path("customerId").asText(null);
         if (StringUtils.isNotBlank(customerId)) {
@@ -517,21 +525,19 @@ public class MmbaFacadeService {
         return StringUtils.trimToNull(payload.path("bizExtInfo").path("customerId").asText(null));
     }
 
-    private void ensureCardSlotAvailable(String um, int cardSlotNum, String userId, String organizationId, String actionText) {
+    private void ensureCardSlotAvailable(String um, int cardSlotNum, String userId, String organizationId,
+                                         String actionText, boolean defaultCardSlot) {
         MmbaDevice device = mmbaDeviceService.getDevice(um);
         if (!hasCardSlot(device, cardSlotNum)) {
+            if ("拨打电话".equals(actionText) && defaultCardSlot) {
+                throw new GenericException("默认拨号卡不可用，请前往个人中心重新设置");
+            }
             throw new GenericException("当前登录人下未配置卡槽" + cardSlotNum + "，" + actionText);
         }
     }
 
     private boolean hasCardSlot(MmbaDevice device, int cardSlotNum) {
-        if (device == null) {
-            return false;
-        }
-        if (cardSlotNum == 1) {
-            return StringUtils.isNotBlank(device.getPhone()) || StringUtils.isNotBlank(device.getIccid());
-        }
-        return StringUtils.isNotBlank(device.getPhone2()) || StringUtils.isNotBlank(device.getIccid2());
+        return mmbaPhonePreferenceService.isCardSlotAvailable(device, cardSlotNum);
     }
 
     private ObjectNode enrichAddWxFriendRequest(JsonNode request, String userId, String organizationId) {

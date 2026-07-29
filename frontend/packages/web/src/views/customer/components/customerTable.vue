@@ -244,6 +244,8 @@
                     :call-status="readCallStatus(item)"
                     :wechat-friend-status="readWechatFriendStatus(item)"
                     :can-operate="isReachOwner(item)"
+                    :default-card-slot-num="defaultCallCardSlotNum"
+                    :preference-loaded="dialPreferenceLoaded"
                     @dial="(slot) => handleDialCustomer(item, slot)"
                     @sms="(slot) => handleSmsCustomer(item, slot)"
                     @wechat="() => handleWechatCustomer(item)"
@@ -780,6 +782,8 @@
     showReachModal,
     reachModal,
     activeWechatOptions,
+    defaultCallCardSlotNum,
+    dialPreferenceLoaded,
     isReachOwner,
     handleDialCustomer,
     handleSmsCustomer,
@@ -1559,7 +1563,34 @@
       columnSelectorDisabled: true,
       render: (row: any) => {
         const canOperate = isReachOwner(row);
+        const canDial = canOperate && dialPreferenceLoaded.value;
         const wxStatus = readWechatFriendStatus(row);
+        const dialAction = defaultCallCardSlotNum.value
+          ? buildReachActionButton({
+              title: t('customer.reach.call'),
+              iconType: 'iconicon_call',
+              disabled: !canDial,
+              onClick: () => handleDialCustomer(row),
+            })
+          : h(
+              NDropdown,
+              {
+                trigger: 'click',
+                options: dialCardSlotOptions,
+                placement: 'bottom-start',
+                disabled: !canDial,
+                onSelect: (key: string | number) => handleDialCustomer(row, Number(key)),
+              },
+              {
+                default: () =>
+                  buildReachActionButton({
+                    title: t('customer.reach.call'),
+                    iconType: 'iconicon_call',
+                    disabled: !canDial,
+                    onClick: () => undefined,
+                  }),
+              }
+            );
         return h(
           'div',
           {
@@ -1571,25 +1602,7 @@
             },
           },
           [
-            h(
-              NDropdown,
-              {
-                trigger: 'click',
-                options: dialCardSlotOptions,
-                placement: 'bottom-start',
-                disabled: !canOperate,
-                onSelect: (key: string | number) => handleDialCustomer(row, Number(key)),
-              },
-              {
-                default: () =>
-                  buildReachActionButton({
-                    title: t('customer.reach.call'),
-                    iconType: 'iconicon_call',
-                    disabled: !canOperate,
-                    onClick: () => undefined,
-                  }),
-              }
-            ),
+            dialAction,
             h(
               NDropdown,
               {

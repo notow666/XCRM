@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useMessage } from 'naive-ui';
 
 import { useI18n } from '@lib/shared/hooks/useI18n';
@@ -11,6 +12,7 @@ import {
   sendCustomerSms,
   sendCustomerWechat,
 } from '@/api/modules';
+import useMmbaPhoneStore from '@/store/modules/mmbaPhone';
 import useUserStore from '@/store/modules/user';
 
 export interface CustomerReachRow {
@@ -37,6 +39,10 @@ export function useCustomerReach(options?: { onStatusUpdated?: () => void }) {
   const { t } = useI18n();
   const Message = useMessage();
   const userStore = useUserStore();
+  const mmbaPhoneStore = useMmbaPhoneStore();
+  const { preference: dialPreference, loaded: dialPreferenceLoaded } = storeToRefs(mmbaPhoneStore);
+  const defaultCallCardSlotNum = computed(() => dialPreference.value.defaultCardSlotNum || null);
+  const dialingCustomerIds = new Set<string>();
 
   const showReachModal = ref(false);
   const reachModal = ref<{
@@ -112,14 +118,20 @@ export function useCustomerReach(options?: { onStatusUpdated?: () => void }) {
     }
   }
 
-  async function handleDialCustomer(row: CustomerReachRow, cardSlotNum: number) {
+  mmbaPhoneStore.loadPreference().catch(logReachActionError);
+
+  async function handleDialCustomer(row: CustomerReachRow, cardSlotNum?: number) {
     if (!ensureReachOwner(row)) {
       return;
     }
+    if (dialingCustomerIds.has(row.id)) {
+      return;
+    }
+    dialingCustomerIds.add(row.id);
     try {
       const response = await dialCustomerPhone({
         toPhone: '',
-        cardSlotNum,
+        ...(cardSlotNum ? { cardSlotNum } : {}),
         bizExtInfo: {
           customerId: row.id,
         },
@@ -129,6 +141,8 @@ export function useCustomerReach(options?: { onStatusUpdated?: () => void }) {
       Message.success(t('customer.reach.dialSending'));
     } catch (error) {
       logReachActionError(error);
+    } finally {
+      dialingCustomerIds.delete(row.id);
     }
   }
 
@@ -259,6 +273,8 @@ export function useCustomerReach(options?: { onStatusUpdated?: () => void }) {
     showReachModal,
     reachModal,
     activeWechatOptions,
+    defaultCallCardSlotNum,
+    dialPreferenceLoaded,
     readCallStatus,
     readWechatFriendStatus,
     isReachOwner,
