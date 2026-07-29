@@ -90,6 +90,7 @@
         :scroll-x="1520"
         @page-change="handlePageChange"
         @page-size-change="handlePageSizeChange"
+        @sorter-change="propsEvent.sorterChange"
         @refresh="handleQuery"
       />
     </CrmCard>
