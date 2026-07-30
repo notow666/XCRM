@@ -21,7 +21,7 @@
           OperationTypeEnum.MERGE,
           OperationTypeEnum.APPROVAL,
           OperationTypeEnum.CLEAN,
-        ].includes(props.detail?.type as OperationTypeEnum)"
+        ].includes(props.detail?.type as OperationTypeEnum) && props.detail?.diffs?.length"
         class="flex flex-col gap-[8px]"
       >
         <div

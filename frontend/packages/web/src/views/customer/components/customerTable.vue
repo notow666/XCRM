@@ -42,6 +42,19 @@
         <n-button
           v-if="
             activeTab !== CustomerSearchTypeEnum.CUSTOMER_COLLABORATION &&
+            hasAnyPermission(['CUSTOMER_MANAGEMENT:UPDATE']) &&
+            !props.readonly
+          "
+          type="primary"
+          ghost
+          class="n-btn-outline-primary"
+          @click="handleConvertCreateSource"
+        >
+          {{ t('customer.convertCreateSource') }}
+        </n-button>
+        <n-button
+          v-if="
+            activeTab !== CustomerSearchTypeEnum.CUSTOMER_COLLABORATION &&
             hasAnyPermission(['CUSTOMER_MANAGEMENT:TRANSFER']) &&
             !props.readonly
           "
@@ -433,6 +446,7 @@
     batchDeleteCustomerByCondition,
     batchTransferCustomer,
     batchUpdateAccount,
+    convertCustomerCreateSourceToPrivate,
     deleteCustomer,
     getCustomerNextStage,
     getCustomerStageConfig,
@@ -555,6 +569,24 @@
 
   const tableRefreshId = ref(0);
   const tableRemoveRefreshId = ref('');
+
+  function handleConvertCreateSource() {
+    openModal({
+      type: 'default',
+      title: t('customer.convertCreateSourceConfirmTitle'),
+      content: t('customer.convertCreateSourceConfirmContent'),
+      positiveText: t('common.confirm'),
+      negativeText: t('common.cancel'),
+      onPositiveClick: async () => {
+        const data = await convertCustomerCreateSourceToPrivate();
+        if (!data?.accepted) {
+          Message.warning(data?.message || t('common.operationFailed'));
+          return;
+        }
+        Message.success(data.message || t('customer.convertCreateSourceSubmitted'));
+      },
+    });
+  }
 
   function handleDeleteByCondition() {
     // eslint-disable-next-line no-use-before-define
@@ -1474,6 +1506,29 @@
     } as any;
   }
 
+  const createSourceOptions = computed(() => [
+    { label: t('customer.createSourceManual'), value: 'MANUAL_CREATE' },
+    { label: t('customer.createSourcePrivateImport'), value: 'PRIVATE_IMPORT' },
+    { label: t('customer.createSourcePoolImport'), value: 'POOL_IMPORT' },
+    { label: t('customer.createSourceClue'), value: 'CLUE_CREATE' },
+  ]);
+
+  function getCreateSourceName(createSource?: string) {
+    return createSourceOptions.value.find((item) => item.value === createSource)?.label || createSource || '-';
+  }
+
+  function buildCreateSourceColumn() {
+    return {
+      title: t('customer.createSource'),
+      key: 'createSource',
+      width: 120,
+      align: 'center',
+      showInTable: true,
+      columnSelectorDisabled: true,
+      render: (row: any) => getCreateSourceName(row.createSource),
+    } as any;
+  }
+
   function buildReachActionButton(options: {
     title: string;
     iconType?: string;
@@ -1653,7 +1708,7 @@
   const showStatusColumns = computed(() => true);
 
   const tableColumns = computed(() => {
-    const removedColumnKeys = new Set(['recyclePoolName', 'reasonId', 'reservedDays']);
+    const removedColumnKeys = new Set(['recyclePoolName', 'reasonId', 'reservedDays', 'createSource']);
     const baseColumns = propsRes.value.columns.filter(
       (item: any) =>
         !removedColumnKeys.has(String(item.key)) &&
@@ -1685,7 +1740,10 @@
       const callStatusColumn = buildCallStatusColumn();
       const wxFriendStatusColumn = buildWxFriendStatusColumn();
       baseColumns.splice(insertIndex, 0, callStatusColumn, wxFriendStatusColumn);
+      insertIndex += 2;
     }
+
+    baseColumns.splice(insertIndex, 0, buildCreateSourceColumn());
 
     if (activeTab.value === CustomerSearchTypeEnum.CUSTOMER_COLLABORATION) {
       return baseColumns
@@ -1859,6 +1917,14 @@
       title: t('customer.followRecordContent'),
       dataIndex: 'followRecordContent',
       type: FieldTypeEnum.TEXTAREA,
+    },
+    {
+      title: t('customer.createSource'),
+      dataIndex: 'createSource',
+      type: FieldTypeEnum.SELECT_MULTIPLE,
+      selectProps: {
+        options: createSourceOptions.value,
+      },
     },
     ...baseFilterConfigList,
   ]);

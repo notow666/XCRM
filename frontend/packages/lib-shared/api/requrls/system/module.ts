@@ -11,8 +11,11 @@ export const GetAdvancedSwitchUrl = '/module/advanced-search/settings'; // 高�
 export const SetDisplayAdvancedUrl = '/module/advanced-search/switch'; // 设置高级筛选开关
 export const GetGlobalPhoneMaskSwitchUrl = '/module/global-phone-mask/settings'; // 全局手机号脱敏开关
 export const SetGlobalPhoneMaskSwitchUrl = '/module/global-phone-mask/edit'; // 设置全局手机号脱敏开关
-export const GetCustomerRepeatRuleConfigUrl = '/module/customer-repeat-rule/settings'; // 客户重复规则配置
-export const SetCustomerRepeatRuleConfigUrl = '/module/customer-repeat-rule/edit'; // 设置客户重复规则配置
+// 客户重复规则已下线，历史接口地址不再导出。
+// export const GetCustomerRepeatRuleConfigUrl = '/module/customer-repeat-rule/settings';
+// export const SetCustomerRepeatRuleConfigUrl = '/module/customer-repeat-rule/edit';
+export const GetCustomerContractDeletePolicyUrl = '/module/customer-contract-delete-policy/settings';
+export const SetCustomerContractDeletePolicyUrl = '/module/customer-contract-delete-policy/edit';
 
 // 模块--商机
 export const getOpportunityListUrl = '/opportunity-rule/page'; // 模块-商机-商机规则列表

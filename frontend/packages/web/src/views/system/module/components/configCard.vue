@@ -87,6 +87,8 @@
   />
   <CustomerDataCleanupDrawer v-model:visible="customerDataCleanupVisible" />
   <CustomerAutoDeleteDrawer v-model:visible="customerAutoDeleteVisible" />
+  <CustomerPrivateAutoDeleteDrawer v-model:visible="customerPrivateAutoDeleteVisible" />
+  <CustomerContractDeletePolicyDrawer v-model:visible="customerContractDeletePolicyVisible" />
   <CallLogCleanConfigDrawer v-model:visible="callLogCleanConfigVisible" />
   <stateFlowDrawer v-model:visible="orderStateFlowVisible" :type="FormDesignKeyEnum.ORDER" />
   <ContractFormFormDrawer v-model:visible="contractFormVisible" />
@@ -109,6 +111,8 @@
 
   import { getReasonConfig, toggleModuleNavStatus, updateReasonEnable } from '@/api/modules';
   import CustomerAutoDeleteDrawer from '@/components/business/crm-customer-auto-delete-drawer/index.vue';
+  import CustomerPrivateAutoDeleteDrawer from '@/components/business/crm-customer-private-auto-delete-drawer/index.vue';
+  import CustomerContractDeletePolicyDrawer from '@/components/business/crm-customer-contract-delete-policy-drawer/index.vue';
   import CallLogCleanConfigDrawer from '@/components/business/crm-call-log-clean-config-drawer/index.vue';
   import CustomerConfigDrawer from '@/components/business/crm-customer-config-drawer/index.vue';
   import CustomerDataCleanupDrawer from '@/components/business/crm-customer-data-cleanup-drawer/index.vue';
@@ -436,6 +440,10 @@
           key: 'customerAutoDelete',
         },
         {
+          label: t('module.customerPrivateAutoDelete'),
+          key: 'customerPrivateAutoDelete',
+        },
+        {
           label: t('common.more'),
           slotName: 'more',
         },
@@ -459,6 +467,10 @@
         {
           label: t('module.paymentRecordFormSetting'),
           key: 'newContractPaymentRecordForm',
+        },
+        {
+          label: t('module.customerContractDeletePolicy'),
+          key: 'customerContractDeletePolicy',
         },
         {
           label: t('common.more'),
@@ -675,6 +687,7 @@
   const customerFailReasonConfigVisible = ref(false);
   const customerDataCleanupVisible = ref(false);
   const customerAutoDeleteVisible = ref(false);
+  const customerPrivateAutoDeleteVisible = ref(false);
   const callLogCleanConfigVisible = ref(false);
   const orderFormVisible = ref(false);
   const orderStateFlowVisible = ref(false);
@@ -686,6 +699,7 @@
   const contractPaymentPlanFormVisible = ref(false);
   const contractPaymentRecordFormVisible = ref(false);
   const contractInvoiceFormVisible = ref(false);
+  const customerContractDeletePolicyVisible = ref(false);
 
   function handleSelect(key: string, item: ModuleConfigItem) {
     selectKey.value = item.key;
@@ -709,6 +723,8 @@
           customerDataCleanupVisible.value = true;
         } else if (key === 'customerAutoDelete') {
           customerAutoDeleteVisible.value = true;
+        } else if (key === 'customerPrivateAutoDelete') {
+          customerPrivateAutoDeleteVisible.value = true;
         }
         break;
       case ModuleConfigEnum.CONTRACT:
@@ -718,6 +734,8 @@
           contractPaymentPlanFormVisible.value = true;
         } else if (key === 'newContractPaymentRecordForm') {
           contractPaymentRecordFormVisible.value = true;
+        } else if (key === 'customerContractDeletePolicy') {
+          customerContractDeletePolicyVisible.value = true;
         }
         break;
       case ModuleConfigEnum.CLUE_MANAGEMENT:

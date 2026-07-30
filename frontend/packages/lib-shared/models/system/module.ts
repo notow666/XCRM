@@ -284,9 +284,18 @@ export interface GlobalPhoneMaskConfig {
   enabled: boolean;
 }
 
+// 客户重复规则已下线，历史模型不再参与运行时接口。
+/*
 export interface CustomerRepeatRuleConfig {
   enabled: boolean;
   repeatAfterDays: number;
+}
+*/
+
+export type CustomerContractDeletePolicy = 'CASCADE' | 'KEEP_CONTRACT';
+
+export interface CustomerContractDeletePolicyConfig {
+  policy: CustomerContractDeletePolicy;
 }
 
 export interface CheckRepeatParams {

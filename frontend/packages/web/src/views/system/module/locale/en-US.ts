@@ -158,6 +158,16 @@ export default {
   'module.customerAutoDeleteDaysRequired': 'Please enter deletion days',
   'module.customerAutoDeleteTip':
     'The system automatically cleans up pool-imported customers by customer create time every day at 22:30. Example: if a pool customer is imported on Jan 1 and the deletion threshold is set to 1 day, the data will be automatically deleted at 22:30 on Jan 1.',
+  'module.customerPrivateAutoDelete': 'Private customer scheduled deletion',
+  'module.customerPrivateAutoDeleteTip':
+    'At 22:30 every day, the system checks private customers created manually or imported, using the latest create, update, or follow-up date.',
+  'module.customerContractDeletePolicy': 'Customer contract deletion policy',
+  'module.customerContractDeleteCascade': 'Delete contracts, loans and payments with the customer',
+  'module.customerContractDeleteCascadeTip': 'Policy: CASCADE',
+  'module.customerContractDeleteKeep': 'Delete only the customer and keep contracts',
+  'module.customerContractDeleteKeepTip': 'Policy: KEEP_CONTRACT',
+  'module.customerContractDeletePolicyPendingTip':
+    'This release stores the policy only. Contract handling will be implemented by the redesigned contract module later.',
   'module.dataCleanupDays': 'Cleanup days',
   'module.dataCleanupFields': 'Cleanup fields',
   'module.dataCleanupDaysRequired': 'Please enter cleanup days',

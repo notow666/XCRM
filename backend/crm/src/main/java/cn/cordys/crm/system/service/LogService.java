@@ -39,7 +39,6 @@ import java.util.stream.Collectors;
  * 提供单条和批量操作日志的存储方法。
  */
 @Service
-@Transactional(rollbackFor = Exception.class)
 public class LogService implements OperationLogHandler {
 
     @Resource
@@ -111,6 +110,7 @@ public class LogService implements OperationLogHandler {
      * @param log 日志数据传输对象
      */
     @Async(ExecutorBeanNames.MAIN_ASYNC)
+    @Transactional(rollbackFor = Exception.class)
     public void add(LogDTO log) {
         log.setTraceId(MDC.get(MdcConstants.TRACE_ID_KEY));
         log.setPath(MDC.get(MdcConstants.REQUEST_URI_KEY));
@@ -161,7 +161,39 @@ public class LogService implements OperationLogHandler {
      * @param logs 日志数据传输对象列表
      */
     @Async(ExecutorBeanNames.MAIN_ASYNC)
+    @Transactional(rollbackFor = Exception.class)
     public void batchAdd(List<LogDTO> logs) {
+        batchAddInternal(logs);
+    }
+
+    /**
+     * 在调用方事务中同步写入批量日志。
+     * 用于业务数据与逐资源日志必须保持原子性的场景。
+     *
+     * @param logs 日志数据传输对象列表
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void batchAddSync(List<LogDTO> logs) {
+        if (CollectionUtils.isEmpty(logs)) {
+            return;
+        }
+        String traceId = MDC.get(MdcConstants.TRACE_ID_KEY);
+        String requestUri = MDC.get(MdcConstants.REQUEST_URI_KEY);
+        long currentTimeMillis = System.currentTimeMillis();
+        for (LogDTO log : logs) {
+            log.setTraceId(traceId);
+            log.setPath(requestUri);
+            log.setId(IDGenerator.nextStr());
+            log.setResourceName(subStrResourceName(log.getResourceName()));
+            log.setDetail(subStrContent(log.getDetail()));
+            log.setCreateTime(currentTimeMillis);
+            log.setMethod(StringUtils.defaultIfBlank(log.getMethod(), "GET"));
+            OperationLog operationLog = BeanUtils.copyBean(new OperationLog(), log);
+            insertByMapper(operationLog, getBlob(log));
+        }
+    }
+
+    private void batchAddInternal(List<LogDTO> logs) {
         // 如果日志列表为空，直接返回
         if (CollectionUtils.isEmpty(logs)) {
             return;
@@ -193,6 +225,7 @@ public class LogService implements OperationLogHandler {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void handleLog(LogDTO operationLog) {
         add(operationLog);
     }

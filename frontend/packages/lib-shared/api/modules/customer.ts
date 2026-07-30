@@ -32,6 +32,7 @@ import {
   CancelCustomerFollowPlanUrl,
   CheckOpportunityContactUrl,
   ContactListUnderCustomerUrl,
+  ConvertCustomerCreateSourceToPrivateUrl,
   DeleteAccountPoolViewUrl,
   DeleteContactViewUrl,
   DeleteCustomerCollaborationUrl,
@@ -166,8 +167,11 @@ import {
   SaveCustomerDataCleanupUrl,
   DeleteCustomerDataCleanupUrl,
   GetCustomerAutoDeleteUrl,
+  GetCustomerPrivateAutoDeleteUrl,
   SaveCustomerAutoDeleteUrl,
+  SaveCustomerPrivateAutoDeleteUrl,
   DeleteCustomerAutoDeleteUrl,
+  DeleteCustomerPrivateAutoDeleteUrl,
   TransferPoolCustomerUrl,
   BatchTransferPoolCustomerUrl,
 } from '@lib/shared/api/requrls/customer';
@@ -382,6 +386,23 @@ export default function useProductApi(CDR: CordysAxios) {
     return CDR.delete({ url: DeleteCustomerAutoDeleteUrl });
   }
 
+  function getCustomerPrivateAutoDelete(): Promise<{ days: number } | null> {
+    return CDR.get<any>({ url: GetCustomerPrivateAutoDeleteUrl }).then((res) => {
+      if (!res) return null;
+      return {
+        days: res.days,
+      };
+    });
+  }
+
+  function saveCustomerPrivateAutoDelete(data: { days: number }) {
+    return CDR.post({ url: SaveCustomerPrivateAutoDeleteUrl, data });
+  }
+
+  function deleteCustomerPrivateAutoDelete() {
+    return CDR.delete({ url: DeleteCustomerPrivateAutoDeleteUrl });
+  }
+
   // 添加客户
   function addCustomer(data: SaveCustomerParams) {
     return CDR.post({ url: AddCustomerUrl, data });
@@ -451,6 +472,10 @@ export default function useProductApi(CDR: CordysAxios) {
   // 按筛选条件批量删除客户
   function batchDeleteCustomerByCondition(data: CustomerTableParams) {
     return CDR.post<BatchCustomerByConditionSubmitResult>({ url: BatchDeleteCustomerByConditionUrl, data });
+  }
+
+  function convertCustomerCreateSourceToPrivate() {
+    return CDR.post<BatchCustomerByConditionSubmitResult>({ url: ConvertCustomerCreateSourceToPrivateUrl });
   }
 
   // 批量转移客户
@@ -1176,6 +1201,7 @@ export default function useProductApi(CDR: CordysAxios) {
     getGlobalModuleCount,
     batchDeleteCustomer,
     batchDeleteCustomerByCondition,
+    convertCustomerCreateSourceToPrivate,
     batchTransferCustomer,
     batchTransferCustomerByCondition,
     batchMoveCustomer,
@@ -1322,6 +1348,9 @@ export default function useProductApi(CDR: CordysAxios) {
     getCustomerAutoDelete,
     saveCustomerAutoDelete,
     deleteCustomerAutoDelete,
+    getCustomerPrivateAutoDelete,
+    saveCustomerPrivateAutoDelete,
+    deleteCustomerPrivateAutoDelete,
     preCheckImportPoolCustomer,
     importPoolCustomer,
     downloadPoolCustomerTemplate,

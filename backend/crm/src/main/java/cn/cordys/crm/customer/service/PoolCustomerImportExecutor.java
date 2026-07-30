@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -57,12 +58,13 @@ public class PoolCustomerImportExecutor {
     private static final String OWNER_FIELD_KEY = "customerOwner";
     private static final int BATCH_SIZE = 500;
 
-    @Transactional(rollbackFor = Exception.class)
+    // Excel 解析和多批落库不能被单个外层事务包裹，避免导入期间长期占用连接。
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public String executeImport(MultipartFile file, String poolId, String userId, String orgId) {
         return executeImport(file, poolId, userId, orgId, Collections.emptySet());
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public String executeImport(MultipartFile file, String poolId, String userId, String orgId, Set<Integer> skipRows) {
         try (InputStream inputStream = file.getInputStream()) {
             List<BaseField> fields = moduleFormService.getAllCustomImportFields(FormKey.CUSTOMER.getKey(), orgId);
@@ -266,7 +268,8 @@ public class PoolCustomerImportExecutor {
         private PoolCustomerImportEventListener(List<BaseField> fields, String orgId, String userId,
                                                 CustomImportAfterDoConsumer<Customer, BaseResourceSubField> afterDo,
                                                 Set<Integer> skipRows) {
-            super(fields, Customer.class, orgId, userId, "customer_field", afterDo, 2000, null, null);
+            // 控制单批落库规模，避免导入高峰时单批长期占用数据库连接。
+            super(fields, Customer.class, orgId, userId, "customer_field", afterDo, 200, null, null);
             this.skipRows = skipRows == null ? Collections.emptySet() : skipRows;
         }
 

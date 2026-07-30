@@ -578,7 +578,7 @@
         <if test="${conditions} != null and ${conditions}.size() > 0">
             <foreach collection="${conditions}" item="condition" index="i">
                 <if test="condition.name not in
-                {'name', 'owner', 'createTime', 'updateTime', 'follower', 'followTime', 'collectionTime', 'createUser', 'updateUser', 'departmentId', 'mobile', 'stage', 'stageStatus', 'callStatus', 'wechatFriendStatus', 'followRecordContent'}">
+                {'name', 'owner', 'createTime', 'updateTime', 'follower', 'followTime', 'collectionTime', 'createUser', 'updateUser', 'departmentId', 'mobile', 'stage', 'stageStatus', 'callStatus', 'wechatFriendStatus', 'followRecordContent', 'createSource'}">
                     <if test="condition.multipleValue">
                         left join customer_field_blob ${tablePrefix}_${i}
                         on c.id = ${tablePrefix}_${i}.resource_id and ${tablePrefix}_${i}.field_id = #{condition.name}
@@ -760,6 +760,12 @@
                 <include refid="cn.cordys.common.mapper.CommonMapper.condition">
                     <property name="condition" value="condition"/>
                     <property name="column" value="c.wechat_friend_status"/>
+                </include>
+            </when>
+            <when test="condition.name == 'createSource'">
+                <include refid="cn.cordys.common.mapper.CommonMapper.condition">
+                    <property name="condition" value="condition"/>
+                    <property name="column" value="c.create_source"/>
                 </include>
             </when>
             <when test="condition.name == 'followRecordContent'">
@@ -1271,4 +1277,73 @@
             #{mobile}
         </foreach>
     </select>
+    <select id="listPrivateAutoDeleteCandidates" resultType="cn.cordys.crm.customer.domain.Customer">
+        SELECT c.*
+        FROM customer c
+        WHERE c.organization_id = #{orgId}
+          AND c.in_shared_pool = false
+          AND c.create_source IN ('MANUAL_CREATE', 'PRIVATE_IMPORT')
+          <if test="ids != null and ids.size() > 0">
+              AND c.id IN
+              <foreach collection="ids" item="id" open="(" separator="," close=")">
+                  #{id}
+              </foreach>
+          </if>
+          AND GREATEST(
+                COALESCE(c.update_time, 0),
+                COALESCE(c.follow_time, 0),
+                COALESCE(c.create_time, 0)
+              ) &lt; #{cutoffTime}
+        ORDER BY GREATEST(
+                   COALESCE(c.update_time, 0),
+                   COALESCE(c.follow_time, 0),
+                   COALESCE(c.create_time, 0)
+                 ) ASC,
+                 c.id ASC
+        <if test="limit != null and limit > 0">
+            LIMIT #{limit}
+        </if>
+    </select>
+
+    <select id="countConvertibleCreateSourceCustomers" resultType="int">
+        SELECT COUNT(1)
+        FROM customer c
+        WHERE c.owner = #{ownerId}
+          AND c.organization_id = #{orgId}
+          AND c.in_shared_pool = false
+          AND c.create_source IN ('POOL_IMPORT', 'CLUE_CREATE')
+    </select>
+
+    <select id="listConvertibleCreateSourceCustomers"
+            resultType="cn.cordys.crm.customer.domain.Customer">
+        SELECT c.*
+        FROM customer c
+        WHERE c.owner = #{ownerId}
+          AND c.organization_id = #{orgId}
+          AND c.in_shared_pool = false
+          AND c.create_source IN ('POOL_IMPORT', 'CLUE_CREATE')
+        ORDER BY c.id
+        LIMIT #{limit}
+        FOR UPDATE
+    </select>
+
+    <update id="batchConvertCreateSourceToPrivate">
+        UPDATE customer
+        SET create_source = CASE
+                WHEN create_source = 'POOL_IMPORT' THEN 'PRIVATE_IMPORT'
+                WHEN create_source = 'CLUE_CREATE' THEN 'MANUAL_CREATE'
+                ELSE create_source
+            END,
+            update_user = #{updateUser},
+            update_time = #{updateTime}
+        WHERE owner = #{ownerId}
+          AND organization_id = #{orgId}
+          AND in_shared_pool = false
+          AND create_source IN ('POOL_IMPORT', 'CLUE_CREATE')
+          AND id IN
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </update>
+
 </mapper>

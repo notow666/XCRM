@@ -218,7 +218,12 @@
 
   async function getLogDetail(id: string) {
     try {
-      activeLogDetail.value = await operationLogDetail(id);
+      const listDetail = activeLogDetail.value?.detail;
+      const detail = await operationLogDetail(id);
+      activeLogDetail.value = {
+        ...detail,
+        detail: detail.detail ?? listDetail,
+      };
       const locationIds = ['workCity'];
       const industryIds: string[] = [];
       // 处理地址字段的值

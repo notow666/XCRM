@@ -59,13 +59,15 @@ public class CustomerBatchByConditionService {
     private static final int BATCH_TO_POOL_BY_CONDITION_MAX_SIZE = 2000;
     private static final int BATCH_UPDATE_BY_CONDITION_MAX_SIZE = 2000;
     private static final int CHUNK_SIZE = 200;
+    private static final int SOURCE_CONVERSION_BATCH_SIZE = 200;
     private static final String BATCH_CUSTOMER_OPERATION_LOCK_PREFIX = "crm:customer:batch-op:";
 
     private enum Op {
         DELETE("DELETE", "批量删除"),
         TRANSFER("TRANSFER", "批量转移"),
         TO_POOL("TO_POOL", "批量移入公海"),
-        UPDATE("UPDATE", "批量编辑");
+        UPDATE("UPDATE", "批量编辑"),
+        CONVERT_SOURCE("CONVERT_SOURCE", "创建来源转换");
 
         final String code;
         final String label;
@@ -99,6 +101,8 @@ public class CustomerBatchByConditionService {
     private TenantTransactionExecutor tenantTransactionExecutor;
     @Resource
     private Redisson redisson;
+    @Resource
+    private CustomerSourceConversionBatchService sourceConversionBatchService;
 
     public Map<String, Object> batchDeleteByCondition(CustomerPageRequest request, String userId, String orgId,
                                                       DeptDataPermissionDTO deptDataPermission) {
@@ -150,6 +154,54 @@ public class CustomerBatchByConditionService {
         return submit(orgId, userId, Op.UPDATE, "批量编辑任务已提交",
                 (taskId, tenantId) ->
                         doBatchUpdateByConditionAsync(taskId, tenantId, asyncRequest, field, userId, orgId, deptDataPermission));
+    }
+
+    public Map<String, Object> convertCreateSourceToPrivate(String userId, String orgId) {
+        return submit(orgId, userId, Op.CONVERT_SOURCE, "创建来源转换任务已提交",
+                (taskId, tenantId) ->
+                        doConvertCreateSourceToPrivateAsync(taskId, tenantId, userId, orgId));
+    }
+
+    private void doConvertCreateSourceToPrivateAsync(String taskId, String tenantId,
+                                                     String userId, String orgId) {
+        tenantTransactionExecutor.runWithTenant(tenantId, () ->
+                executeConvertCreateSourceToPrivate(taskId, tenantId, userId, orgId));
+    }
+
+    private void executeConvertCreateSourceToPrivate(String taskId, String tenantId,
+                                                     String userId, String orgId) {
+        Op op = Op.CONVERT_SOURCE;
+        int submittedCount = 0;
+        int successCount = 0;
+        try {
+            submittedCount = extCustomerMapper.countConvertibleCreateSourceCustomers(userId, orgId);
+            if (submittedCount == 0) {
+                sendOperatorNotice(taskId, tenantId, orgId, userId, op, "", 0, 0, 0,
+                        "未查询到可转换客户");
+                return;
+            }
+
+            while (successCount < submittedCount) {
+                int currentBatchSize = Math.min(
+                        SOURCE_CONVERSION_BATCH_SIZE, submittedCount - successCount);
+                int converted = tenantTransactionExecutor.executeInNewTransaction(tenantId,
+                        () -> sourceConversionBatchService.convertNextBatch(
+                                userId, orgId, userId, currentBatchSize));
+                if (converted == 0) {
+                    break;
+                }
+                successCount += converted;
+            }
+            int failCount = Math.max(0, submittedCount - successCount);
+            sendOperatorNotice(taskId, tenantId, orgId, userId, op, "",
+                    submittedCount, successCount, failCount, null);
+        } catch (Exception ex) {
+            int failCount = Math.max(0, submittedCount - successCount);
+            log.error("[CUSTOMER_BATCH_CONVERT_SOURCE_FAILED] taskId={}, operator={}, submittedCount={}, successCount={}",
+                    taskId, userId, submittedCount, successCount, ex);
+            sendOperatorNotice(taskId, tenantId, orgId, userId, op, "",
+                    submittedCount, successCount, failCount, ex.getMessage());
+        }
     }
 
     private void doBatchDeleteByConditionAsync(String taskId, String tenantId, CustomerPageRequest request,

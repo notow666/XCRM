@@ -175,6 +175,14 @@ public class CustomerController {
         customerService.batchUpdate(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
+    @PostMapping("/create-source/convert-to-private")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE)
+    @Operation(summary = "将本人名下公海组客户的创建来源批量转换为私海组")
+    public Map<String, Object> convertCreateSourceToPrivate() {
+        return customerBatchByConditionService.convertCreateSourceToPrivate(
+                SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
     @GetMapping("/delete/{id}")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_DELETE)
     @Operation(summary = "删除客户")

@@ -13,6 +13,7 @@ public final class CustomerCreateSource {
      * 共享公海来源手机号校验的来源类型。定时删除只能按 POOL_IMPORT 判断，不能复用该集合。
      */
     private static final List<String> POOL_SOURCE_TYPES = List.of(POOL_IMPORT, CLUE_CREATE);
+    private static final List<String> PRIVATE_SOURCE_TYPES = List.of(MANUAL_CREATE, PRIVATE_IMPORT);
 
     public static boolean isPoolSource(String createSource) {
         return POOL_SOURCE_TYPES.contains(createSource);
@@ -20,6 +21,14 @@ public final class CustomerCreateSource {
 
     public static List<String> poolSourceTypes() {
         return POOL_SOURCE_TYPES;
+    }
+
+    public static boolean isPrivateSource(String createSource) {
+        return PRIVATE_SOURCE_TYPES.contains(createSource);
+    }
+
+    public static List<String> privateSourceTypes() {
+        return PRIVATE_SOURCE_TYPES;
     }
 
     private CustomerCreateSource() {

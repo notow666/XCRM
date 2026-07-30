@@ -10,9 +10,10 @@ import cn.cordys.crm.system.dto.request.GlobalPhoneMaskConfigRequest;
 import cn.cordys.crm.system.dto.request.ModuleRequest;
 import cn.cordys.crm.system.dto.request.ModuleSortRequest;
 import cn.cordys.crm.system.dto.response.GlobalPhoneMaskConfigResponse;
-import cn.cordys.crm.customer.dto.request.CustomerRepeatRuleConfigRequest;
-import cn.cordys.crm.customer.dto.response.CustomerRepeatRuleConfigResponse;
-import cn.cordys.crm.customer.service.CustomerRepeatRuleConfigService;
+import cn.cordys.crm.customer.dto.request.CustomerContractDeletePolicyRequest;
+import cn.cordys.crm.customer.dto.response.CustomerContractDeletePolicyResponse;
+import cn.cordys.crm.customer.service.CustomerContractDeletePolicyService;
+// 客户重复规则相关DTO和Service已停止注入，历史实现保留在对应类中。
 import cn.cordys.crm.system.service.GlobalPhoneMaskConfigService;
 import cn.cordys.crm.system.service.ModuleService;
 import cn.cordys.security.SessionUtils;
@@ -35,7 +36,12 @@ public class ModuleController {
     @Resource
     private GlobalPhoneMaskConfigService globalPhoneMaskConfigService;
     @Resource
+    private CustomerContractDeletePolicyService customerContractDeletePolicyService;
+    // 客户重复规则已下线，保留原实现注释便于追溯历史配置。
+    /*
+    @Resource
     private CustomerRepeatRuleConfigService customerRepeatRuleConfigService;
+    */
 
     @PostMapping("/list")
     @Operation(summary = "获取模块设置列表")
@@ -104,6 +110,7 @@ public class ModuleController {
         globalPhoneMaskConfigService.save(request.getEnabled(), OrganizationContext.getOrganizationId(), SessionUtils.getUserId());
     }
 
+    /*
     @GetMapping("/customer-repeat-rule/settings")
     @Operation(summary = "获取客户重复规则配置")
     @RequiresPermissions(PermissionConstants.MODULE_SETTING_READ)
@@ -116,5 +123,22 @@ public class ModuleController {
     @RequiresPermissions(PermissionConstants.MODULE_SETTING_UPDATE)
     public void editCustomerRepeatRuleConfig(@Validated @RequestBody CustomerRepeatRuleConfigRequest request) {
         customerRepeatRuleConfigService.save(request.getEnabled(), request.getRepeatAfterDays(), SessionUtils.getUserId());
+    }
+    */
+
+    @GetMapping("/customer-contract-delete-policy/settings")
+    @Operation(summary = "获取客户合同删除策略配置")
+    @RequiresPermissions(PermissionConstants.MODULE_SETTING_READ)
+    public CustomerContractDeletePolicyResponse getCustomerContractDeletePolicy() {
+        return customerContractDeletePolicyService.getConfig(OrganizationContext.getOrganizationId());
+    }
+
+    @PostMapping("/customer-contract-delete-policy/edit")
+    @Operation(summary = "编辑客户合同删除策略配置")
+    @RequiresPermissions(PermissionConstants.MODULE_SETTING_UPDATE)
+    public void editCustomerContractDeletePolicy(@Validated @RequestBody CustomerContractDeletePolicyRequest request) {
+        customerContractDeletePolicyService.saveConfig(
+                request.getPolicy(), OrganizationContext.getOrganizationId(), SessionUtils.getUserId()
+        );
     }
 }

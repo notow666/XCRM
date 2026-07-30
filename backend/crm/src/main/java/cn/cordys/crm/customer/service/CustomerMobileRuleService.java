@@ -140,14 +140,10 @@ public class CustomerMobileRuleService {
     }
 
     /**
-     * 加载负责人名下、公海导入来源的手机号集合。
-     *
-     * @param ownerId 负责人ID
-     * @param orgId 组织ID
-     * @return 手机号集合
+     * 加载负责人名下全部来源客户的手机号集合。
      */
     public Set<String> loadOwnerPoolMobiles(String ownerId, String orgId) {
-        return customerMobileConflictQueryService.listOwnerPoolMobiles(ownerId, orgId);
+        return customerMobileConflictQueryService.listOwnerOwnedMobiles(ownerId, orgId);
     }
 
     /**
@@ -164,32 +160,7 @@ public class CustomerMobileRuleService {
     }
 
     /**
-     * 批量查询与私海来源客户冲突的手机号集合。
-     *
-     * @param mobiles 待校验手机号列表
-     * @return 冲突手机号集合
-     */
-    public Set<String> findConflictMobilesForPrivateSources(List<String> mobiles) {
-        List<String> validMobiles = getValidMobiles(mobiles);
-        if (validMobiles.isEmpty()) {
-            return Set.of();
-        }
-        LambdaQueryWrapper<Customer> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.in(Customer::getMobile, validMobiles)
-                .in(Customer::getCreateSource, customerMobileRuleEngine.getPrivateRepeatSources());
-        Long cutoffTime = customerMobileRuleEngine.getRepeatRuleCutoffTime();
-        if (cutoffTime != null) {
-            queryWrapper.gt(Customer::getCreateTime, cutoffTime);
-        }
-        return customerMapper.selectListByLambda(queryWrapper).stream()
-                .map(Customer::getMobile)
-                .filter(StringUtils::isNotBlank)
-                .collect(Collectors.toSet());
-    }
-
-    /**
-     * 批量查询负责人名下、会阻断“接收公海导入客户”的手工创建手机号集合。
-     * 该场景要求负责人名下不能同时存在同手机号的手工创建与公海导入客户，因此这里不受重复规则时间窗影响。
+     * 批量查询负责人名下全部来源的已占用手机号集合。
      *
      * @param mobiles 待校验手机号列表
      * @param ownerId 负责人ID
@@ -205,8 +176,7 @@ public class CustomerMobileRuleService {
         queryWrapper.in(Customer::getMobile, validMobiles)
                 .eq(Customer::getOwner, ownerId)
                 .eq(Customer::getOrganizationId, orgId)
-                .eq(Customer::getInSharedPool, false)
-                .in(Customer::getCreateSource, customerMobileRuleEngine.getPrivateRepeatSources());
+                .eq(Customer::getInSharedPool, false);
         return customerMapper.selectListByLambda(queryWrapper).stream()
                 .map(Customer::getMobile)
                 .filter(StringUtils::isNotBlank)
@@ -214,7 +184,7 @@ public class CustomerMobileRuleService {
     }
 
     /**
-     * 批量查询负责人名下、公海导入来源冲突的手机号集合。
+     * 批量查询负责人名下全部来源冲突的手机号集合。
      *
      * @param mobiles 待校验手机号列表
      * @param ownerId 负责人ID
@@ -230,8 +200,7 @@ public class CustomerMobileRuleService {
         queryWrapper.in(Customer::getMobile, validMobiles)
                 .eq(Customer::getOwner, ownerId)
                 .eq(Customer::getOrganizationId, orgId)
-                .eq(Customer::getInSharedPool, false)
-                .in(Customer::getCreateSource, CustomerCreateSource.poolSourceTypes());
+                .eq(Customer::getInSharedPool, false);
         return customerMapper.selectListByLambda(queryWrapper).stream()
                 .map(Customer::getMobile)
                 .filter(StringUtils::isNotBlank)

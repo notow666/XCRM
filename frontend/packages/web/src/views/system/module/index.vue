@@ -77,6 +77,8 @@
           <div class="module-config-header">
             <div class="font-medium text-[var(--text-n1)]">{{ t('menu.settings.moduleSetting') }}</div>
             <div class="module-config-header-action flex-col items-end gap-y-[8px]">
+              <!-- 客户重复规则已按本期需求下线，历史界面不再展示。 -->
+              <!--
               <div class="flex flex-col items-end gap-y-[8px]">
                 <div class="flex items-center gap-[12px]">
                   <span class="text-[var(--text-n3)]">{{ t('module.customerRepeatRule') }}</span>
@@ -102,6 +104,7 @@
                   {{ t('module.customerRepeatRuleTip') }}
                 </div>
               </div>
+              -->
               <div class="flex items-center gap-[8px]">
                 <span class="text-[var(--text-n3)]">{{ t('module.globalPhoneMask') }}</span>
                 <n-switch
@@ -126,7 +129,7 @@
 </template>
 
 <script setup lang="ts">
-  import { NButton, NDivider, NInputNumber, NScrollbar, NSwitch, useMessage } from 'naive-ui';
+  import { NButton, NDivider, NScrollbar, NSwitch, useMessage } from 'naive-ui';
   import { LanguageOutline } from '@vicons/ionicons5';
   import axios from 'axios';
   import { VueDraggable } from 'vue-draggable-plus';
@@ -145,10 +148,8 @@
   import desensitizationModal from './components/desensitizationModal.vue';
 
   import {
-    editCustomerRepeatRuleConfig,
     editGlobalPhoneMaskConfig,
     getAdvancedSwitch,
-    getCustomerRepeatRuleConfig,
     getGlobalPhoneMaskConfig,
     moduleNavListSort,
     setDisplayAdvanced,
@@ -340,8 +341,11 @@
   }
 
   const globalPhoneMaskEnabled = ref(false);
+  // 客户重复规则已按本期需求下线，以下历史状态与交互逻辑停止使用。
+  /*
   const customerRepeatRuleEnabled = ref(false);
   const customerRepeatRuleDays = ref(5);
+  */
   function isRequestCanceled(error: unknown) {
     return (
       axios.isCancel(error) ||
@@ -373,6 +377,7 @@
     }
   }
 
+  /*
   async function initCustomerRepeatRuleConfig() {
     try {
       const res = await getCustomerRepeatRuleConfig();
@@ -414,6 +419,7 @@
       console.log(error);
     }
   }
+  */
 
   const searchMoreOptions = computed<ActionsItem[]>(() => [
     {
@@ -488,7 +494,6 @@
     // orgId 已有值时由下方 watch(immediate) 拉取，避免与 Axios 重复请求取消逻辑冲突触发 CanceledError
     if (!appStore.orgId) {
       initGlobalPhoneMaskConfig();
-      initCustomerRepeatRuleConfig();
     }
   });
 
@@ -499,7 +504,6 @@
         initModuleNavList();
         initNavTopList();
         initGlobalPhoneMaskConfig();
-        initCustomerRepeatRuleConfig();
       }
     },
     {

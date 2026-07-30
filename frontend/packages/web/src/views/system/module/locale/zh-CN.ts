@@ -115,8 +115,7 @@ export default {
   'module.callLogCleanEnable': '开启定时清除',
   'module.callLogCleanEmployees': '需要清除通话记录的员工',
   'module.callLogCleanEmployeesRequired': '请选择需要清除通话记录的员工',
-  'module.callLogCleanTip':
-    '系统每日固定01:00进行清理，清理操作会将选中用户设备的所有通话记录进行清理，操作不可逆',
+  'module.callLogCleanTip': '系统每日固定01:00进行清理，清理操作会将选中用户设备的所有通话记录进行清理，操作不可逆',
   'module.dataCleanupDays': '清理天数',
   'module.dataCleanupDaysPlaceholder': '输入天数（1-365）',
   'module.dataCleanupFields': '清理字段',
@@ -129,6 +128,16 @@ export default {
   'module.customerAutoDeleteDaysRequired': '请输入删除天数',
   'module.customerAutoDeleteTip':
     '系统每日固定 22:30 会依据客户创建时间来执行自动清理公海导入客户。举例：1 月 1 日导入的公海客户，若删除阈值设置为 1 天，该数据将于 1 月 1 日 22:30 自动删除。',
+  'module.customerPrivateAutoDelete': '私海客户定时删除',
+  'module.customerPrivateAutoDeleteTip':
+    '系统每日固定 22:30 检查“自主创建、客户导入”来源的私海客户，以创建、更新、最后跟进中的最新日期计算。达到配置自然日且当日没有更新或跟进的客户将被自动删除。',
+  'module.customerContractDeletePolicy': '客户合同删除策略',
+  'module.customerContractDeleteCascade': '删除客户时一并删除合同、放款和回款',
+  'module.customerContractDeleteCascadeTip': '策略值：CASCADE',
+  'module.customerContractDeleteKeep': '仅删除客户，保留合同',
+  'module.customerContractDeleteKeepTip': '策略值：KEEP_CONTRACT',
+  'module.customerContractDeletePolicyPendingTip':
+    '本期仅保存策略配置，不接入客户删除流程。合同功能开发完成后，再由合同模块统一实现对应的数据处理。',
   'module.approvalSwitch': '{name}审批',
   'module.invoiceApproval': '发票',
   'module.configReasonTooltip': '配置后可开启',

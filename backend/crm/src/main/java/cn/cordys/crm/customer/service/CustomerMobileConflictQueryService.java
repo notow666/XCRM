@@ -47,6 +47,41 @@ public class CustomerMobileConflictQueryService {
     }
 
     /**
+     * 查询负责人名下全部来源客户的手机号冲突。
+     */
+    public Customer findOwnerOwnedConflict(String excludeId, String mobile, String ownerId, String orgId) {
+        if (StringUtils.isBlank(ownerId) || StringUtils.isBlank(orgId)) {
+            return null;
+        }
+        LambdaQueryWrapper<Customer> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Customer::getMobile, mobile)
+                .eq(Customer::getOwner, ownerId)
+                .eq(Customer::getOrganizationId, orgId)
+                .eq(Customer::getInSharedPool, false);
+        if (StringUtils.isNotBlank(excludeId)) {
+            queryWrapper.nq(Customer::getId, excludeId);
+        }
+        return customerMapper.selectListByLambda(queryWrapper).stream().findFirst().orElse(null);
+    }
+
+    /**
+     * 查询公海组来源客户的组织级手机号冲突。
+     */
+    public Customer findPoolSourceConflict(String excludeId, String mobile, String orgId) {
+        if (StringUtils.isBlank(orgId)) {
+            return null;
+        }
+        LambdaQueryWrapper<Customer> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Customer::getOrganizationId, orgId)
+                .eq(Customer::getMobile, mobile)
+                .in(Customer::getCreateSource, CustomerCreateSource.poolSourceTypes());
+        if (StringUtils.isNotBlank(excludeId)) {
+            queryWrapper.nq(Customer::getId, excludeId);
+        }
+        return customerMapper.selectListByLambda(queryWrapper).stream().findFirst().orElse(null);
+    }
+
+    /**
      * 查询私海来源客户的手机号冲突。
      *
      * @param excludeId 需要排除的客户ID
@@ -158,6 +193,24 @@ public class CustomerMobileConflictQueryService {
                 .eq(Customer::getOrganizationId, orgId)
                 .eq(Customer::getInSharedPool, false)
                 .in(Customer::getCreateSource, CustomerCreateSource.poolSourceTypes());
+        return customerMapper.selectListByLambda(queryWrapper).stream()
+                .map(Customer::getMobile)
+                .map(StringUtils::trimToNull)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toCollection(HashSet::new));
+    }
+
+    /**
+     * 查询负责人名下全部来源客户的已占用手机号集合。
+     */
+    public Set<String> listOwnerOwnedMobiles(String ownerId, String orgId) {
+        if (StringUtils.isBlank(ownerId) || StringUtils.isBlank(orgId)) {
+            return new HashSet<>();
+        }
+        LambdaQueryWrapper<Customer> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Customer::getOwner, ownerId)
+                .eq(Customer::getOrganizationId, orgId)
+                .eq(Customer::getInSharedPool, false);
         return customerMapper.selectListByLambda(queryWrapper).stream()
                 .map(Customer::getMobile)
                 .map(StringUtils::trimToNull)

@@ -158,4 +158,22 @@ public interface ExtCustomerMapper {
                             @Param("stage") String stage,
                             @Param("stageStatus") String stageStatus);
 
+    List<Customer> listPrivateAutoDeleteCandidates(@Param("orgId") String orgId,
+                                                   @Param("cutoffTime") long cutoffTime,
+                                                   @Param("limit") int limit,
+                                                   @Param("ids") List<String> ids);
+
+    int countConvertibleCreateSourceCustomers(@Param("ownerId") String ownerId,
+                                              @Param("orgId") String orgId);
+
+    List<Customer> listConvertibleCreateSourceCustomers(@Param("ownerId") String ownerId,
+                                                        @Param("orgId") String orgId,
+                                                        @Param("limit") int limit);
+
+    int batchConvertCreateSourceToPrivate(@Param("ids") List<String> ids,
+                                          @Param("ownerId") String ownerId,
+                                          @Param("orgId") String orgId,
+                                          @Param("updateUser") String updateUser,
+                                          @Param("updateTime") long updateTime);
+
 }

@@ -77,8 +77,11 @@ import {
   GetAdvancedSwitchUrl,
   GetGlobalPhoneMaskSwitchUrl,
   SetGlobalPhoneMaskSwitchUrl,
-  GetCustomerRepeatRuleConfigUrl,
-  SetCustomerRepeatRuleConfigUrl,
+  // 客户重复规则接口已下线。
+  // GetCustomerRepeatRuleConfigUrl,
+  // SetCustomerRepeatRuleConfigUrl,
+  GetCustomerContractDeletePolicyUrl,
+  SetCustomerContractDeletePolicyUrl,
   GetFieldRefDetailListUrl,
   GetFieldOrderListUrl,
   callLogCleanConfigUrl,
@@ -100,7 +103,9 @@ import type {
   FormDesignConfigDetailParams,
   FormDesignDataSourceTableQueryParams,
   GlobalPhoneMaskConfig,
-  CustomerRepeatRuleConfig,
+  // CustomerRepeatRuleConfig,
+  CustomerContractDeletePolicy,
+  CustomerContractDeletePolicyConfig,
   GetRefDataSourceFieldParams,
   ModuleNavBaseInfoItem,
   ModuleNavTopItem,
@@ -466,12 +471,23 @@ export default function useProductApi(CDR: CordysAxios) {
     return CDR.post({ url: SetGlobalPhoneMaskSwitchUrl, data: { enabled } });
   }
 
+  // 客户重复规则已下线，历史请求函数停止导出。
+  /*
   function getCustomerRepeatRuleConfig() {
     return CDR.get<CustomerRepeatRuleConfig>({ url: GetCustomerRepeatRuleConfigUrl });
   }
 
   function editCustomerRepeatRuleConfig(enabled: boolean, repeatAfterDays: number) {
     return CDR.post({ url: SetCustomerRepeatRuleConfigUrl, data: { enabled, repeatAfterDays } });
+  }
+  */
+
+  function getCustomerContractDeletePolicy() {
+    return CDR.get<CustomerContractDeletePolicyConfig>({ url: GetCustomerContractDeletePolicyUrl });
+  }
+
+  function editCustomerContractDeletePolicy(policy: CustomerContractDeletePolicy) {
+    return CDR.post({ url: SetCustomerContractDeletePolicyUrl, data: { policy } });
   }
 
   return {
@@ -541,8 +557,10 @@ export default function useProductApi(CDR: CordysAxios) {
     getAdvancedSwitch,
     getGlobalPhoneMaskConfig,
     editGlobalPhoneMaskConfig,
-    getCustomerRepeatRuleConfig,
-    editCustomerRepeatRuleConfig,
+    // getCustomerRepeatRuleConfig,
+    // editCustomerRepeatRuleConfig,
+    getCustomerContractDeletePolicy,
+    editCustomerContractDeletePolicy,
     uploadTempAttachment,
     previewAttachment,
     deleteAttachment,

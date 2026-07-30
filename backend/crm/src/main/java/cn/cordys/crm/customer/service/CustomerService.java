@@ -109,6 +109,7 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.service.EmployeeStatEventRecordService;
@@ -1378,6 +1379,7 @@ public class CustomerService {
      *
      * @return 导入返回信息
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public ImportResponse realImport(MultipartFile file, String currentOrg, String currentUser) {
         try {
             CustomerImportCheckContext checkContext = checkCustomerImportRows(file, currentOrg, currentUser);
@@ -1504,9 +1506,6 @@ public class CustomerService {
                 .filter(entry -> entry.getValue().size() > 1)
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
-        Set<String> conflictMobiles = customerMobileRuleService.findConflictMobilesForPrivateSources(
-                mobileRowMap.keySet().stream().filter(mobile -> !duplicateMobiles.contains(mobile)).toList()
-        );
         Set<String> ownerConflictMobiles = customerMobileRuleService.findConflictMobilesForOwner(
                 mobileRowMap.keySet().stream().filter(mobile -> !duplicateMobiles.contains(mobile)).toList(),
                 currentUser,
@@ -1514,9 +1513,8 @@ public class CustomerService {
         );
         for (Map.Entry<String, List<Integer>> entry : mobileRowMap.entrySet()) {
             boolean duplicateInExcel = duplicateMobiles.contains(entry.getKey());
-            boolean duplicateInDb = conflictMobiles.contains(entry.getKey());
             boolean duplicateInOwner = ownerConflictMobiles.contains(entry.getKey());
-            if (!duplicateInExcel && !duplicateInDb && !duplicateInOwner) {
+            if (!duplicateInExcel && !duplicateInOwner) {
                 continue;
             }
             String message = duplicateInExcel
@@ -1544,15 +1542,12 @@ public class CustomerService {
         if (duplicateMap.values().stream().anyMatch(count -> count > 1)) {
             throw new GenericException(Translator.getWithArgs("common.field_value.repeat", "手机号"));
         }
-        Set<String> conflictMobiles = customerMobileRuleService.findConflictMobilesForPrivateSources(
-                customers.stream().map(Customer::getMobile).toList()
-        );
         Set<String> ownerConflictMobiles = customerMobileRuleService.findConflictMobilesForOwner(
                 customers.stream().map(Customer::getMobile).toList(),
                 currentUser,
                 currentOrg
         );
-        if (!conflictMobiles.isEmpty() || !ownerConflictMobiles.isEmpty()) {
+        if (!ownerConflictMobiles.isEmpty()) {
             throw new GenericException(Translator.getWithArgs("common.field_value.repeat", "手机号"));
         }
     }
@@ -1650,7 +1645,8 @@ public class CustomerService {
         public CustomerImportEventListener(List<BaseField> fields, String currentOrg, String operator,
                                            CustomImportAfterDoConsumer<Customer, BaseResourceSubField> consumer,
                                            Set<Integer> skipRows) {
-            super(fields, Customer.class, currentOrg, operator, "customer_field", consumer, 2000, null, null);
+            // 控制单批落库规模，避免导入高峰时单批长期占用数据库连接。
+            super(fields, Customer.class, currentOrg, operator, "customer_field", consumer, 200, null, null);
             this.skipRows = skipRows == null ? Collections.emptySet() : skipRows;
             for (BaseField field : fields) {
                 if (BusinessModuleField.CUSTOMER_MOBILE.getKey().equals(field.getInternalKey())) {
