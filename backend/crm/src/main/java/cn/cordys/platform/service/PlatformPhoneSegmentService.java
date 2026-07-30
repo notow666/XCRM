@@ -8,6 +8,7 @@ import cn.cordys.platform.dto.response.PlatformPhoneSegmentResponse;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +21,8 @@ import java.util.Set;
 
 @Service
 public class PlatformPhoneSegmentService {
+
+    private static final String CACHE_PHONE_SEGMENT_REGIONS = "phone_segment_regions";
 
     @Resource
     @Qualifier("masterJdbcTemplate")
@@ -45,6 +48,7 @@ public class PlatformPhoneSegmentService {
         return new Pager<>(list, total == null ? 0L : total, pageSize, current);
     }
 
+    @Cacheable(cacheNames = CACHE_PHONE_SEGMENT_REGIONS, key = "'all'", unless = "#result == null")
     public List<PhoneSegmentRegionNodeResponse> listRegions() {
         List<Map<String, Object>> rows = masterJdbcTemplate.queryForList(
                 "SELECT DISTINCT province, city FROM platform_phone_segment ORDER BY province, city");
