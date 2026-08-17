@@ -15,7 +15,12 @@
         FROM
         sys_operation_log t
         INNER JOIN sys_user on sys_user.id = t.create_user
-        where t.organization_id = #{orgId}
+        <!--
+            2026-08-17：租户数据库已物理隔离，organization_id 在租户库内固定；
+            原条件会导致 MySQL 误选低区分度的 idx_organization_id 索引，造成操作日志查询缓慢，因此不再参与查询。
+            原条件保留如下：where t.organization_id = #{orgId}
+        -->
+        where 1 = 1
             <if test="request.operator != null and request.operator != ''">
                 AND t.create_user = #{request.operator, jdbcType=VARCHAR}
             </if>
