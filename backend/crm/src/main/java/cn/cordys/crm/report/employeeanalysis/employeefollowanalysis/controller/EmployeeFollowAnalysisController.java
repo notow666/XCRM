@@ -1,8 +1,7 @@
 package cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.controller;
 
-import cn.cordys.common.exception.GenericException;
+import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.pager.Pager;
-import cn.cordys.common.response.result.CrmHttpResultCode;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.security.SessionUtils;
 import cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.dto.request.EmployeeFollowAnalysisDrilldownRequest;
@@ -19,7 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -47,11 +46,12 @@ public class EmployeeFollowAnalysisController {
     private EmployeeStatDayBuildService employeeStatDayBuildService;
 
     @PostMapping("/summary")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_READ)
     @Operation(summary = "员工跟进分析汇总")
     public List<EmployeeFollowAnalysisSummaryItemResponse> summary(@Valid @RequestBody EmployeeFollowAnalysisSummaryRequest request) {
         long start = System.currentTimeMillis();
         String orgId = OrganizationContext.getOrganizationId();
-        String userId = requireCurrentUserId();
+        String userId = SessionUtils.getUserId();
         log.info("员工跟进分析请求开始, api=summary, orgId={}, userId={}, request={}", orgId, userId, request);
         List<EmployeeFollowAnalysisSummaryItemResponse> result = employeeFollowAnalysisService.summary(request, orgId, userId);
         log.info("员工跟进分析请求结束, api=summary, orgId={}, costMs={}, resultSize={}", orgId, System.currentTimeMillis() - start, result == null ? 0 : result.size());
@@ -59,11 +59,12 @@ public class EmployeeFollowAnalysisController {
     }
 
     @PostMapping("/export")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_READ)
     @Operation(summary = "员工跟进分析汇总导出")
     public ResponseEntity<ByteArrayResource> export(@Valid @RequestBody EmployeeFollowAnalysisSummaryRequest request) {
         long start = System.currentTimeMillis();
         String orgId = OrganizationContext.getOrganizationId();
-        String userId = requireCurrentUserId();
+        String userId = SessionUtils.getUserId();
         log.info("员工跟进分析请求开始, api=export, orgId={}, userId={}, request={}", orgId, userId, request);
         ResponseEntity<ByteArrayResource> response = employeeFollowAnalysisExportService.export(request, orgId, userId);
         log.info("员工跟进分析请求结束, api=export, orgId={}, userId={}, costMs={}", orgId, userId, System.currentTimeMillis() - start);
@@ -71,11 +72,12 @@ public class EmployeeFollowAnalysisController {
     }
 
     @PostMapping("/drilldown")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_READ)
     @Operation(summary = "员工跟进分析下钻明细")
     public Pager<List<EmployeeFollowAnalysisDrilldownItemResponse>> drilldown(@Valid @RequestBody EmployeeFollowAnalysisDrilldownRequest request) {
         long start = System.currentTimeMillis();
         String orgId = OrganizationContext.getOrganizationId();
-        String userId = requireCurrentUserId();
+        String userId = SessionUtils.getUserId();
         log.info("员工跟进分析请求开始, api=drilldown, orgId={}, userId={}, request={}", orgId, userId, request);
         Pager<List<EmployeeFollowAnalysisDrilldownItemResponse>> result = employeeFollowAnalysisDrilldownService.drilldown(request, orgId, userId);
         int resultSize = result == null || result.getList() == null ? 0 : result.getList().size();
@@ -84,21 +86,15 @@ public class EmployeeFollowAnalysisController {
     }
 
     @PostMapping("/rebuild")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_READ)
     @Operation(summary = "员工跟进分析日报重算")
     public void rebuild(@Valid @RequestBody EmployeeFollowAnalysisRebuildRequest request) {
         long start = System.currentTimeMillis();
         String orgId = OrganizationContext.getOrganizationId();
-        String userId = requireCurrentUserId();
+        String userId = SessionUtils.getUserId();
         log.info("员工跟进分析请求开始, api=rebuild, orgId={}, operatorUserId={}, request={}", orgId, userId, request);
         employeeStatDayBuildService.rebuildRange(request, userId);
         log.info("员工跟进分析请求结束, api=rebuild, orgId={}, operatorUserId={}, costMs={}", orgId, userId, System.currentTimeMillis() - start);
     }
 
-    private String requireCurrentUserId() {
-        String userId = SessionUtils.getUserId();
-        if (StringUtils.isBlank(userId)) {
-            throw new GenericException(CrmHttpResultCode.UNAUTHORIZED, "未登录");
-        }
-        return userId;
-    }
 }
