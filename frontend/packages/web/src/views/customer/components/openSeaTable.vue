@@ -96,8 +96,9 @@
         v-if="!props.hiddenAdvanceFilter"
         ref="tableAdvanceFilterRef"
         v-model:keyword="keyword"
-        :custom-fields-config-list="customFieldsFilterConfig"
+        :custom-fields-config-list="openSeaAdvancedFilterConfig"
         :filter-config-list="filterConfigList"
+        :auth-user-option-fields="['createUser', 'updateUser']"
         @adv-search="handleAdvSearch"
         @keyword-search="searchData"
       />
@@ -107,7 +108,7 @@
         v-if="!props.hiddenAdvanceFilter"
         v-model:active-tab="activeTab"
         :type="FormDesignKeyEnum.CUSTOMER_OPEN_SEA"
-        :custom-fields-config-list="customFieldsFilterConfig"
+        :custom-fields-config-list="openSeaAdvancedFilterConfig"
         :filter-config-list="filterConfigList"
         :advanced-original-form="advancedOriginalForm"
         :pool-id="openSea"
@@ -796,6 +797,9 @@
     },
     ...baseFilterConfigList,
   ]);
+  const openSeaAdvancedFilterConfig = computed<FilterFormItem[]>(() =>
+    (customFieldsFilterConfig.value as FilterFormItem[]).filter((item) => item.dataIndex !== 'owner')
+  );
 
   const exportColumns = computed<ExportTableColumnItem[]>(() =>
     getExportColumns(propsRes.value.columns, customFieldsFilterConfig.value as FilterFormItem[])
@@ -849,7 +853,7 @@
   onMounted(() => {
     emit('init', {
       filterConfigList: filterConfigList.value,
-      customFieldsFilterConfig: customFieldsFilterConfig.value as FilterFormItem[],
+      customFieldsFilterConfig: openSeaAdvancedFilterConfig.value,
     });
 
     if (route.query.id) {

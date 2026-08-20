@@ -38,6 +38,7 @@
           v-model:keyword="keyword"
           :custom-fields-config-list="customFieldsFilterConfig"
           :filter-config-list="filterConfigList"
+          :auth-user-option-fields="['createUser', 'updateUser']"
           @adv-search="handleAdvSearch"
           @keyword-search="searchData"
         />
@@ -1007,11 +1008,12 @@
       dataIndex: 'email',
       type: FieldTypeEnum.INPUT,
     },
-    {
-      title: t('org.directSuperior'),
-      dataIndex: 'supervisorId',
-      type: FieldTypeEnum.USER_SELECT,
-    },
+    // 组织架构列表的直属上级筛选无法按当前用户权限限制候选范围，暂时隐藏。
+    // {
+    //   title: t('org.directSuperior'),
+    //   dataIndex: 'supervisorId',
+    //   type: FieldTypeEnum.USER_SELECT,
+    // },
     {
       title: t('org.employeeNumber'),
       dataIndex: 'employeeId',

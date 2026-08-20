@@ -158,7 +158,11 @@
               multiple
               :disabled="isValueDisabled(item)"
               :drawer-title="t('crmFormDesign.selectDataSource')"
-              :api-type-key="MemberApiTypeEnum.FORM_FIELD"
+              :api-type-key="
+                isCurrentDeptMemberField(item)
+                  ? MemberApiTypeEnum.FORM_FIELD_CURRENT_DEPT
+                  : MemberApiTypeEnum.FORM_FIELD
+              "
               :member-types="
                 [FieldTypeEnum.MEMBER, FieldTypeEnum.MEMBER_MULTIPLE].includes(item.type)
                   ? [
@@ -197,7 +201,7 @@
               label-field="name"
               :disabled="isValueDisabled(item)"
               multiple
-              :options="userOptionsList"
+              :options="isAuthUserOptionField(item) ? authUserOptionsList : userOptionsList"
               max-tag-count="responsive"
               @update:value="valueChange"
             />
@@ -276,7 +280,7 @@
   import CrmUserSelect from '@/components/business/crm-user-select/index.vue';
   import CrmUserTagSelector from '@/components/business/crm-user-tag-selector/index.vue';
 
-  import { getUserOptions } from '@/api/modules';
+  import { getAuthUserOptions, getUserOptions } from '@/api/modules';
 
   import { operatorOptionsMap, scopeOptions } from '../index';
   import type { FilterForm, FilterFormItem } from '../type';
@@ -288,6 +292,8 @@
   const props = defineProps<{
     configList: FilterFormItem[];
     customList?: FilterFormItem[];
+    authUserOptionFields?: string[];
+    currentDeptMemberFields?: string[];
     keepOneLine?: boolean; // 至少保留一行
     readonly?: boolean;
     noFilterOption?: boolean; // 第一列取消过滤
@@ -353,9 +359,24 @@
   };
 
   const userOptionsList = ref<SelectMixedOption[]>([]);
+  const authUserOptionsList = ref<SelectMixedOption[]>([]);
+  const isAuthUserOptionField = (item: FilterFormItem) =>
+    Boolean(item.dataIndex && props.authUserOptionFields?.includes(item.dataIndex));
+  const isCurrentDeptMemberField = (item: FilterFormItem) =>
+    Boolean(item.dataIndex && props.currentDeptMemberFields?.includes(item.dataIndex));
+
   async function getUserOption() {
     try {
       userOptionsList.value = await getUserOptions();
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+    }
+  }
+
+  async function getAuthUserOption() {
+    try {
+      authUserOptionsList.value = await getAuthUserOptions();
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);
@@ -377,7 +398,11 @@
         formModel.value.list[index] = currentListItem;
       }
     });
-    getUserOption();
+    if (props.authUserOptionFields?.length) {
+      getAuthUserOption();
+    } else {
+      getUserOption();
+    }
   });
 
   // 改变第一列值
@@ -397,6 +422,10 @@
     const currentFormList = formModel.value.list as FilterFormItem[];
 
     currentFormList[index] = currentListItem;
+
+    if (listItem.type === FieldTypeEnum.USER_SELECT && !isAuthUserOptionField(listItem)) {
+      getUserOption();
+    }
 
     // 如果当前操作符没有值，自动赋默认
     const hasNoOperator = !currentFormList[index].operator?.length;

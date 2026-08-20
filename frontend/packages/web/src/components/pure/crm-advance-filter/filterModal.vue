@@ -7,6 +7,8 @@
         no-filter-option
         :config-list="props.configList"
         :custom-list="props.customList"
+        :auth-user-option-fields="props.authUserOptionFields"
+        :current-dept-member-fields="props.currentDeptMemberFields"
       />
     </n-scrollbar>
     <template #footer>
@@ -42,6 +44,8 @@
   const props = defineProps<{
     configList: FilterFormItem[];
     customList?: FilterFormItem[];
+    authUserOptionFields?: string[];
+    currentDeptMemberFields?: string[];
   }>();
 
   const emit = defineEmits<{
