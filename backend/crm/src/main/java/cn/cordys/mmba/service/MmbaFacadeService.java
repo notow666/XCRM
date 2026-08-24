@@ -94,7 +94,7 @@ public class MmbaFacadeService {
      * 拨打电话。
      */
     // 2026-07-14：
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    //@Transactional(propagation = Propagation.NOT_SUPPORTED)
     public JsonNode dial(JsonNode request, String userId, String organizationId) {
         ObjectNode payload = enrichDialRequest(request, userId, organizationId);
         JsonNode response = executeJson(

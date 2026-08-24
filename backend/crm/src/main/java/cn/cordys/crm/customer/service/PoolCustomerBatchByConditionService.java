@@ -344,6 +344,9 @@ public class PoolCustomerBatchByConditionService {
                 List<AssignChunkTask> chunkTasks = buildAssignChunkTasks(plan, CHUNK_SIZE);
                 AtomicInteger assignedSuccess = new AtomicInteger(0);
                 AtomicInteger assignedFail = new AtomicInteger(0);
+                // 2026-08-12：原实现会将所有分配分片同时提交到共享线程池，每个分片开启独立事务，
+                // 在多个批量分配任务并发时可能快速占满租户数据库连接池，因此保留原代码并注释。
+                /*
                 List<CompletableFuture<Void>> futures = new ArrayList<>();
                 for (AssignChunkTask chunkTask : chunkTasks) {
                     futures.add(CompletableFuture.runAsync(() -> {
@@ -360,6 +363,22 @@ public class PoolCustomerBatchByConditionService {
                     }, batchExecutor));
                 }
                 CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+                */
+
+                // 2026-08-12：分片改为串行执行；每个分片仍使用独立新事务，提交后释放连接，
+                // 避免一次批量分配同时占用多个租户数据库连接，不限制分配总量。
+                for (AssignChunkTask chunkTask : chunkTasks) {
+                    try {
+                        tenantTransactionExecutor.executeInNewTransaction(tenantId, () ->
+                                batchSupport.executeBatchAssignPlanChunk(taskId, assignPool, chunkTask.ownerId(), chunkTask.customers(),
+                                        chunkTask.recentOwnerMap(), currentOrgId, currentUser, assignDefaultStage, assignDefaultStageStatus));
+                        assignedSuccess.addAndGet(chunkTask.customers().size());
+                    } catch (Exception ex) {
+                        assignedFail.addAndGet(chunkTask.customers().size());
+                        log.warn("[POOL_BATCH_ASSIGN_CHUNK_FAILED] taskId={}, poolId={}, ownerId={}, chunkSize={}",
+                                taskId, assignPool.getId(), chunkTask.ownerId(), chunkTask.customers().size(), ex);
+                    }
+                }
                 successCount = assignedSuccess.get();
                 failCount += assignedFail.get();
                 batchSupport.sendBatchAssignSummaryNotice(taskId, pool, plan, currentOrgId, currentUser);

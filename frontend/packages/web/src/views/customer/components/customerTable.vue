@@ -130,6 +130,8 @@
         v-model:keyword="keyword"
         :custom-fields-config-list="customerAdvancedFilterConfig"
         :filter-config-list="filterConfigList"
+        :auth-user-option-fields="['createUser', 'updateUser', 'follower']"
+        :current-dept-member-fields="['owner']"
         @adv-search="handleAdvSearch"
         @keyword-search="searchData"
       />
@@ -1880,7 +1882,7 @@
         keyField: 'id',
         multiple: true,
         clearFilterAfterSelect: false,
-        type: 'department',
+        type: 'currentDepartment',
         checkable: true,
         showContainChildModule: true,
         containChildIds: [],

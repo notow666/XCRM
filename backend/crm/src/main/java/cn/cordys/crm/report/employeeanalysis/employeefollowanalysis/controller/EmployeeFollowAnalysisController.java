@@ -1,5 +1,6 @@
 package cn.cordys.crm.report.employeeanalysis.employeefollowanalysis.controller;
 
+import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.pager.Pager;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.security.SessionUtils;
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -44,6 +46,7 @@ public class EmployeeFollowAnalysisController {
     private EmployeeStatDayBuildService employeeStatDayBuildService;
 
     @PostMapping("/summary")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_READ)
     @Operation(summary = "员工跟进分析汇总")
     public List<EmployeeFollowAnalysisSummaryItemResponse> summary(@Valid @RequestBody EmployeeFollowAnalysisSummaryRequest request) {
         long start = System.currentTimeMillis();
@@ -56,6 +59,7 @@ public class EmployeeFollowAnalysisController {
     }
 
     @PostMapping("/export")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_READ)
     @Operation(summary = "员工跟进分析汇总导出")
     public ResponseEntity<ByteArrayResource> export(@Valid @RequestBody EmployeeFollowAnalysisSummaryRequest request) {
         long start = System.currentTimeMillis();
@@ -68,6 +72,7 @@ public class EmployeeFollowAnalysisController {
     }
 
     @PostMapping("/drilldown")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_READ)
     @Operation(summary = "员工跟进分析下钻明细")
     public Pager<List<EmployeeFollowAnalysisDrilldownItemResponse>> drilldown(@Valid @RequestBody EmployeeFollowAnalysisDrilldownRequest request) {
         long start = System.currentTimeMillis();
@@ -81,6 +86,7 @@ public class EmployeeFollowAnalysisController {
     }
 
     @PostMapping("/rebuild")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_READ)
     @Operation(summary = "员工跟进分析日报重算")
     public void rebuild(@Valid @RequestBody EmployeeFollowAnalysisRebuildRequest request) {
         long start = System.currentTimeMillis();
@@ -90,4 +96,5 @@ public class EmployeeFollowAnalysisController {
         employeeStatDayBuildService.rebuildRange(request, userId);
         log.info("员工跟进分析请求结束, api=rebuild, orgId={}, operatorUserId={}, costMs={}", orgId, userId, System.currentTimeMillis() - start);
     }
+
 }

@@ -25,6 +25,8 @@
     v-model:visible="visible"
     :config-list="props.filterConfigList"
     :custom-list="props.customFieldsConfigList"
+    :auth-user-option-fields="props.authUserOptionFields"
+    :current-dept-member-fields="props.currentDeptMemberFields"
     @handle-filter="handleFilter"
     @reset="() => clearFilter()"
   />
@@ -47,6 +49,8 @@
     customFieldsConfigList?: FilterFormItem[]; // 自定义字段
     notShowInputSearch?: boolean;
     searchPlaceholder?: string;
+    authUserOptionFields?: string[]; // 按客户权限范围获取候选人的字段
+    currentDeptMemberFields?: string[]; // 仅展示当前部门及下级成员的字段
   }>();
 
   const emit = defineEmits<{

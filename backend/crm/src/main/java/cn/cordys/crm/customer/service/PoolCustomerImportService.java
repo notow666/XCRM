@@ -1,5 +1,8 @@
 package cn.cordys.crm.customer.service;
 
+import cn.cordys.aspectj.constants.LogModule;
+import cn.cordys.aspectj.constants.LogType;
+import cn.cordys.aspectj.dto.LogDTO;
 import cn.cordys.common.constants.BusinessModuleField;
 import cn.cordys.common.constants.ExecutorBeanNames;
 import cn.cordys.common.constants.FormKey;
@@ -27,6 +30,7 @@ import cn.cordys.excel.utils.EasyExcelExporter;
 import cn.cordys.context.TenantContext;
 import cn.cordys.common.constants.SsePrincipalKind;
 import cn.cordys.crm.system.notice.sse.SseService;
+import cn.cordys.crm.system.service.LogService;
 import cn.cordys.dataspecialist.DataSpecialistConstants;
 import cn.cordys.file.engine.DefaultRepositoryDir;
 import cn.cordys.file.engine.FileSourceModule;
@@ -88,6 +92,8 @@ public class PoolCustomerImportService {
     private Executor executor;
     @Resource
     private SseService sseService;
+    @Resource
+    private LogService logService;
 
     private static final String OWNER_FIELD_KEY = "customerOwner";
 
@@ -732,6 +738,9 @@ public class PoolCustomerImportService {
                 ImportCheckContext checkContext = checkImportRows(file, orgId, poolId);
                 Set<Integer> skipRows = new HashSet<>(checkContext.result.getRowErrorTypeMap().keySet());
                 String success = poolCustomerImportExecutor.executeImport(file, poolId, userId, orgId, skipRows);
+                int failCount = checkContext.result.getRowErrorCount();
+                int successCount = checkContext.totalRows - failCount;
+                recordImportLog(userId, orgId, pool, successCount, failCount);
                 sendImportNotice(userId, orgId, pool,true, success);
             } catch (Exception e) {
                 log.error("pool customer import error", e);
@@ -746,6 +755,14 @@ public class PoolCustomerImportService {
         }, executor);
 
         return Translator.get("pool.import.accepted");
+    }
+
+    private void recordImportLog(String userId, String orgId, CustomerPool pool, int successCount, int failCount) {
+        LogDTO logDTO = new LogDTO(orgId, pool.getId(), userId, LogType.IMPORT,
+                LogModule.CUSTOMER_POOL, pool.getName());
+        logDTO.setMethod("POST");
+        logDTO.setDetail("公海导入完成，成功 " + successCount + " 条，失败 " + failCount + " 条");
+        logService.add(logDTO);
     }
 
     private static Locale resolveUserLocale(User operator) {

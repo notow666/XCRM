@@ -85,6 +85,7 @@
 
     <CrmCard no-content-bottom-padding hide-footer class="min-w-[1180px]">
       <CrmTable
+        :key="tableRenderKey"
         v-bind="propsRes"
         class="customer-recording-table"
         :scroll-x="1520"
@@ -297,8 +298,38 @@
     },
   ]);
 
+  const tableRenderKey = ref(0);
+  let queryVersion = 0;
+  let getLoadedAuditIds = () => new Set<string>();
+
+  async function loadCustomerRecordingPage(params?: CustomerRecordingPageParams) {
+    const requestVersion = queryVersion;
+    const response = await getCustomerRecordingPage(params as CustomerRecordingPageParams);
+    if (requestVersion !== queryVersion) {
+      return {
+        ...response,
+        list: [],
+        total: 0,
+        current: 1,
+      };
+    }
+
+    const loadedAuditIds = (params?.current ?? 1) > 1 ? getLoadedAuditIds() : new Set<string>();
+    const uniqueList = (response.list ?? []).filter((item) => {
+      if (loadedAuditIds.has(item.auditId)) {
+        return false;
+      }
+      loadedAuditIds.add(item.auditId);
+      return true;
+    });
+    return {
+      ...response,
+      list: uniqueList,
+    };
+  }
+
   const { propsRes, propsEvent, loadList, setLoadListParams } = useTable<CustomerRecordingListItem>(
-    (params?: CustomerRecordingPageParams) => getCustomerRecordingPage(params as CustomerRecordingPageParams),
+    loadCustomerRecordingPage,
     {
       showSetting: false,
       columns: columns.value,
@@ -306,6 +337,7 @@
       containerClass: '.customer-recording-table',
     }
   );
+  getLoadedAuditIds = () => new Set(propsRes.value.data.map((item) => item.auditId));
 
   function validateForm() {
     if (!form.dateRange || form.dateRange.length !== 2) {
@@ -336,7 +368,10 @@
     if (!validateForm()) {
       return;
     }
+    queryVersion += 1;
     resetAudioCache();
+    propsRes.value.data = [];
+    tableRenderKey.value += 1;
     setLoadListParams(buildQueryParams());
     await loadList();
   }

@@ -19,6 +19,10 @@ public final class LogType {
      */
     public static final String CLEAN = "CLEAN";
     /**
+     * 导入操作
+     */
+    public static final String IMPORT = "IMPORT";
+    /**
      * 更新操作
      */
     public static final String UPDATE = "UPDATE";

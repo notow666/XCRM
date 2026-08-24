@@ -105,7 +105,10 @@ cordys:
   tenant:
     datasource:
       hikari:
-        maximum-pool-size: 30
+        # 2026-08-12：原租户业务连接池上限为 30，批量分配并发时连接容量不足，原配置保留如下。
+        # maximum-pool-size: 30
+        # 2026-08-12：上限调整为 50，作为批量分配并发收敛后的容量缓冲。
+        maximum-pool-size: 50
         minimum-idle: 2
         connection-timeout: 60000
         idle-timeout: 300000

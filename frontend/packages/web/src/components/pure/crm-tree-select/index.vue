@@ -28,13 +28,14 @@
   import { NButton, NCheckbox, NTooltip, NTreeSelect, TreeOption, TreeSelectOption, TreeSelectProps } from 'naive-ui';
   import { cloneDeep, isEqual } from 'lodash-es';
 
+  import { DeptNodeTypeEnum } from '@lib/shared/enums/systemEnum';
   import { useI18n } from '@lib/shared/hooks/useI18n';
-  import { findNodeByKey, mapTree } from '@lib/shared/method';
+  import { filterTree, findNodeByKey, mapTree } from '@lib/shared/method';
 
   import CrmIcon from '@/components/pure/crm-icon-font/index.vue';
   import CrmMoreAction from '@/components/pure/crm-more-action/index.vue';
 
-  import { getFieldDeptTree } from '@/api/modules';
+  import { getFieldCurrentDeptUserTree, getFieldDeptTree } from '@/api/modules';
 
   import useTreeSelection, { CheckedNodes } from './useTreeSelection';
 
@@ -42,7 +43,7 @@
     showContainChildModule?: boolean;
     options?: TreeSelectOption[];
     disabled?: boolean;
-    type?: 'department' | 'custom';
+    type?: 'department' | 'currentDepartment' | 'custom';
     limitSelectCount?: number;
     limitSelectTooltip?: string;
   }>();
@@ -100,8 +101,13 @@
 
   async function initDepartList() {
     try {
-      const tree = await getFieldDeptTree();
-      treeData.value = mapTree(tree, (node) => {
+      const tree =
+        props.type === 'currentDepartment' ? await getFieldCurrentDeptUserTree() : await getFieldDeptTree();
+      const departmentTree =
+        props.type === 'currentDepartment'
+          ? filterTree(tree, (node) => node.nodeType !== DeptNodeTypeEnum.USER)
+          : tree;
+      treeData.value = mapTree(departmentTree, (node) => {
         const isContainChild = !!containChildIds.value?.includes(node.id as string);
         updateChildNodesState(node, isContainChild);
         if (isContainChild) {
@@ -401,7 +407,7 @@
   }
 
   onMounted(() => {
-    if (props.type === 'department') {
+    if (['department', 'currentDepartment'].includes(props.type || '')) {
       initDepartList();
     }
     document.addEventListener('mousedown', handleClickOutside);
