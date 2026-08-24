@@ -52,6 +52,8 @@ import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.util.ReflectionUtils;
@@ -87,6 +89,57 @@ public class ModuleFormService {
     private static final String OPTION_DEFAULT_SOURCE = "custom";
     private static final String UPGRADE_EXT_FIELD = "ext_ver";
     private static final String UNDERLINE = "_";
+    private static final Set<String> CONTRACT_LOCKED_FIELD_KEYS = Set.of(
+            "contractBasicInfo", "contractName", "contractCustomer", "contractSigner", "contractNo",
+            "contractProducts", "contractProductLoanAmount",
+            "contractProductPointRate", "contractProductExpectedRepaymentAmount", "contractTotalAmount",
+            "contractExpectedRepaymentAmount", "contractStartTime", "contractEndTime", "contractRemark"
+    );
+    private static final Set<String> CONTRACT_LEGACY_FIELD_KEYS = Set.of(
+            "contractProduct", "contractProductAmount", "contractProductNumber", "contractProductSumAmount"
+    );
+    private static final Set<String> PAYMENT_PROTECTED_FIELD_KEYS = Set.of(
+            "contractPaymentRecordBasicInfo", "contractPaymentRecordName", "contractPaymentRecordNo",
+            "contractPaymentRecordContract", "contractPaymentRecordProducts", "paymentProductLoanTime",
+            "paymentProductLoanAmount", "paymentProductRepaymentTime", "paymentProductRepaymentAmount",
+            "paymentProductCostAmount", "paymentProductMiscFeeAmount", "paymentProductCommissionAmount",
+            "paymentProductRevenueFormula", "paymentProductRevenueAmount", "contractPaymentRecordTotalLoanAmount",
+            "contractPaymentRecordTotalRepaymentAmount", "contractPaymentRecordTotalCostAmount",
+            "contractPaymentRecordTotalMiscFeeAmount", "contractPaymentRecordTotalCommissionAmount",
+            "contractPaymentRecordTotalRevenueAmount", "contractPaymentRecordDealPerson",
+            "contractPaymentRecordRemark"
+    );
+    private static final Set<String> PAYMENT_LEGACY_FIELD_KEYS = Set.of(
+            "contractPaymentRecordPlan", "contractPaymentRecordOwner", "contractPaymentRecordInfo",
+            "contractPaymentRecordEndTime", "contractPaymentRecordAmount", "contractPaymentRecordBank",
+            "contractPaymentRecordBankNo"
+    );
+    private static final Map<String, List<String>> DEFAULT_SUM_FORMULA_FIELDS = Map.of(
+            "contractTotalAmount", List.of("contractProducts", "contractProductLoanAmount"),
+            "contractExpectedRepaymentAmount",
+            List.of("contractProducts", "contractProductExpectedRepaymentAmount"),
+            "contractPaymentRecordTotalLoanAmount",
+            List.of("contractPaymentRecordProducts", "paymentProductLoanAmount"),
+            "contractPaymentRecordTotalRepaymentAmount",
+            List.of("contractPaymentRecordProducts", "paymentProductRepaymentAmount"),
+            "contractPaymentRecordTotalCostAmount",
+            List.of("contractPaymentRecordProducts", "paymentProductCostAmount"),
+            "contractPaymentRecordTotalMiscFeeAmount",
+            List.of("contractPaymentRecordProducts", "paymentProductMiscFeeAmount"),
+            "contractPaymentRecordTotalCommissionAmount",
+            List.of("contractPaymentRecordProducts", "paymentProductCommissionAmount"),
+            "contractPaymentRecordTotalRevenueAmount",
+            List.of("contractPaymentRecordProducts", "paymentProductRevenueAmount")
+    );
+    private static final Set<String> CONTRACT_UI_DISABLED_PROPS = Set.of(
+            "name", "showLabel", "description", "placeholder", "numberFormat", "decimalPlaces",
+            "showThousandsSeparator", "precision", "dateType", "dataSourceType", "dataSource",
+            "multiple", "options", "showControlRules", "linkProp", "linkFields", "dividerClass",
+            "dividerColor", "titleColor", "direction", "pictureShowType", "locationType",
+            "serialNumberRules", "linkSource", "openMode", "format", "hasCurrentUser",
+            "hasCurrentUserDept", "defaultValue", "onlyOne", "accept", "limitSize",
+            "readable", "editable", "mobile", "fieldWidth", "rules.required"
+    );
 
     static {
         TYPE_SOURCE_MAP = Map.ofEntries(
@@ -165,7 +218,27 @@ public class ModuleFormService {
         formConfig.setFormProp(JSON.parseObject(formBlob.getProp(), FormProp.class));
         // set fields
         formConfig.setFields(getAllFields(form.getId()));
+        if (Strings.CS.equals(formKey, FormKey.CONTRACT.getKey())) {
+            lockContractFieldsForUi(formConfig.getFields());
+        }
         return formConfig;
+    }
+
+    private void lockContractFieldsForUi(List<BaseField> fields) {
+        for (BaseField field : fields) {
+            if (CONTRACT_LOCKED_FIELD_KEYS.contains(field.getInternalKey())) {
+                field.setDeletable(false);
+                field.setDisabledProps(CONTRACT_UI_DISABLED_PROPS);
+            }
+            if (field instanceof SubField subField && CollectionUtils.isNotEmpty(subField.getSubFields())) {
+                for (BaseField child : subField.getSubFields()) {
+                    if (CONTRACT_LOCKED_FIELD_KEYS.contains(child.getInternalKey())) {
+                        child.setDeletable(false);
+                        child.setDisabledProps(CONTRACT_UI_DISABLED_PROPS);
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -225,7 +298,7 @@ public class ModuleFormService {
         if (CollectionUtils.isEmpty(forms)) {
             throw new GenericException(Translator.get("module.form.not_exist"));
         }
-        preCheckForFieldSave(saveParam);
+        preCheckForFieldSave(saveParam, currentOrgId);
 
         if(Strings.CS.equals(FormKey.CUSTOMER.getKey(), saveParam.getFormKey())) {
             copyFieldOfCustomer2Clue(saveParam, currentUserId, currentOrgId);
@@ -1187,6 +1260,173 @@ public class ModuleFormService {
     }
 
     /**
+     * 升级合同和回款记录默认表单。
+     * 仅替换系统内置字段，租户自行新增的字段保留并移动到内置字段之后。
+     */
+    @Caching(evict = {
+            @CacheEvict(value = "form_cache", key = "T(cn.cordys.context.TenantContext).getTenantId() + ':100001:contract'"),
+            @CacheEvict(value = "form_cache", key = "T(cn.cordys.context.TenantContext).getTenantId() + ':100001:contractPaymentRecord'")
+    })
+    public void upgradeContractPaymentForms() {
+        upgradeBusinessFormFields(FormKey.CONTRACT.getKey(), CONTRACT_LOCKED_FIELD_KEYS, CONTRACT_LEGACY_FIELD_KEYS);
+        upgradeBusinessFormFields(FormKey.CONTRACT_PAYMENT_RECORD.getKey(), PAYMENT_PROTECTED_FIELD_KEYS, PAYMENT_LEGACY_FIELD_KEYS);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void upgradeBusinessFormFields(String formKey, Set<String> currentSystemKeys, Set<String> legacySystemKeys) {
+        ModuleForm example = new ModuleForm();
+        example.setFormKey(formKey);
+        example.setOrganizationId(DEFAULT_ORGANIZATION_ID);
+        ModuleForm form = moduleFormMapper.selectOne(example);
+        if (form == null) {
+            throw new GenericException("未找到表单，无法升级：" + formKey);
+        }
+
+        List<BaseField> oldFields = getAllFields(form.getId());
+        Set<String> removeKeys = new HashSet<>(currentSystemKeys);
+        removeKeys.addAll(legacySystemKeys);
+        List<BaseField> customFields = oldFields.stream()
+                .filter(field -> StringUtils.isBlank(field.getInternalKey()) || !removeKeys.contains(field.getInternalKey()))
+                .toList();
+
+        Map<String, List<Map<String, Object>>> fieldMap;
+        try {
+            fieldMap = JSON.parseObject(fieldResource.getInputStream(), Map.class);
+        } catch (IOException e) {
+            throw new GenericException("读取默认表单字段失败", e);
+        }
+        List<Map<String, Object>> fieldDefinitions = fieldMap.get(formKey);
+        if (CollectionUtils.isEmpty(fieldDefinitions)) {
+            throw new GenericException("未找到默认表单字段：" + formKey);
+        }
+        List<BaseField> defaultFields = JSON.parseArray(JSON.toJSONString(fieldDefinitions), BaseField.class);
+        prepareDefaultBusinessFields(defaultFields);
+
+        LambdaQueryWrapper<ModuleField> fieldWrapper = new LambdaQueryWrapper<>();
+        fieldWrapper.eq(ModuleField::getFormId, form.getId());
+        List<ModuleField> persistedFields = moduleFieldMapper.selectListByLambda(fieldWrapper);
+        if (CollectionUtils.isNotEmpty(persistedFields)) {
+            List<String> fieldIds = persistedFields.stream().map(ModuleField::getId).toList();
+            extModuleFieldMapper.deleteByIds(fieldIds);
+            extModuleFieldMapper.deletePropByIds(fieldIds);
+        }
+
+        List<BaseField> upgradedFields = new ArrayList<>(defaultFields.size() + customFields.size());
+        upgradedFields.addAll(defaultFields);
+        upgradedFields.addAll(customFields);
+        saveFields(upgradedFields, form.getId(), InternalUser.ADMIN.getValue());
+    }
+
+    private void prepareDefaultBusinessFields(List<BaseField> fields) {
+        Map<String, String> fieldIds = new HashMap<>(fields.size());
+        Map<String, BaseField> fieldsByInternalKey = new HashMap<>(fields.size());
+        Set<String> unresolvedShowFields = new HashSet<>();
+        for (BaseField field : fields) {
+            field.setId(IDGenerator.nextStr());
+            field.setDeletable(false);
+            fieldIds.put(field.getInternalKey(), field.getId());
+            fieldsByInternalKey.put(field.getInternalKey(), field);
+            collectUnresolvedShowFields(field, fieldIds, unresolvedShowFields);
+            if (!(field instanceof SubField subField) || CollectionUtils.isEmpty(subField.getSubFields())) {
+                continue;
+            }
+            for (BaseField child : subField.getSubFields()) {
+                child.setId(IDGenerator.nextStr());
+                child.setDeletable(false);
+                fieldIds.put(child.getInternalKey(), child.getId());
+                fieldsByInternalKey.put(child.getInternalKey(), child);
+                collectUnresolvedShowFields(child, fieldIds, unresolvedShowFields);
+            }
+        }
+        unresolvedShowFields.removeAll(fieldIds.keySet());
+        if (CollectionUtils.isNotEmpty(unresolvedShowFields)) {
+            moduleFieldService.selectFieldsByInternalKeys(new ArrayList<>(unresolvedShowFields))
+                    .forEach(field -> fieldIds.put(field.getInternalKey(), field.getId()));
+        }
+        for (BaseField field : fields) {
+            mapDefaultShowFields(field, fieldIds);
+            if (!(field instanceof SubField subField) || CollectionUtils.isEmpty(subField.getSubFields())) {
+                continue;
+            }
+            for (BaseField child : subField.getSubFields()) {
+                mapDefaultShowFields(child, fieldIds);
+            }
+            if (CollectionUtils.isNotEmpty(subField.getSumColumns())) {
+                subField.setSumColumns(subField.getSumColumns().stream()
+                        .map(column -> fieldIds.getOrDefault(column, column))
+                        .toList());
+            }
+        }
+        applyDefaultSumFormulas(fields, fieldsByInternalKey);
+    }
+
+    private void applyDefaultSumFormulas(List<BaseField> fields, Map<String, BaseField> fieldsByInternalKey) {
+        for (BaseField field : fields) {
+            if (!(field instanceof FormulaField formulaField)) {
+                continue;
+            }
+            List<String> sourceKeys = DEFAULT_SUM_FORMULA_FIELDS.get(field.getInternalKey());
+            if (CollectionUtils.isEmpty(sourceKeys) || sourceKeys.size() != 2) {
+                continue;
+            }
+            BaseField tableField = fieldsByInternalKey.get(sourceKeys.get(0));
+            BaseField columnField = fieldsByInternalKey.get(sourceKeys.get(1));
+            if (tableField == null || columnField == null) {
+                continue;
+            }
+            BusinessModuleField businessColumn = BusinessModuleField.ofKey(columnField.getInternalKey());
+            String columnKey = businessColumn == null ? columnField.getId() : businessColumn.getBusinessKey();
+            String sourcePath = tableField.getId() + "." + columnKey;
+            String displayPath = tableField.getName() + "." + columnField.getName();
+
+            Map<String, Object> fieldReference = new LinkedHashMap<>();
+            fieldReference.put("fieldId", sourcePath);
+            fieldReference.put("fieldType", columnField.getType());
+            fieldReference.put("numberType", "number");
+
+            Map<String, Object> irField = new LinkedHashMap<>();
+            irField.put("type", "field");
+            irField.put("fieldId", sourcePath);
+            irField.put("name", displayPath);
+            irField.put("fieldType", columnField.getType());
+            irField.put("numberType", "number");
+            irField.put("startTokenIndex", 2);
+            irField.put("endTokenIndex", 2);
+
+            Map<String, Object> ir = new LinkedHashMap<>();
+            ir.put("type", "function");
+            ir.put("name", "SUM");
+            ir.put("args", List.of(irField));
+
+            Map<String, Object> formula = new LinkedHashMap<>();
+            formula.put("source", "SUM(${" + sourcePath + "})");
+            formula.put("display", "SUM(" + displayPath + ")");
+            formula.put("fields", List.of(fieldReference));
+            formula.put("ir", ir);
+            formulaField.setFormula(JSON.toJSONString(formula));
+        }
+    }
+
+    private void collectUnresolvedShowFields(BaseField field, Map<String, String> fieldIds,
+                                             Set<String> unresolvedShowFields) {
+        if (!(field instanceof DatasourceField sourceField) || CollectionUtils.isEmpty(sourceField.getShowFields())) {
+            return;
+        }
+        sourceField.getShowFields().stream()
+                .filter(showField -> !fieldIds.containsKey(showField))
+                .forEach(unresolvedShowFields::add);
+    }
+
+    private void mapDefaultShowFields(BaseField field, Map<String, String> fieldIds) {
+        if (!(field instanceof DatasourceField sourceField) || CollectionUtils.isEmpty(sourceField.getShowFields())) {
+            return;
+        }
+        sourceField.setShowFields(sourceField.getShowFields().stream()
+                .map(showField -> fieldIds.getOrDefault(showField, showField))
+                .toList());
+    }
+
+    /**
      * 表单及字段初始化 (升级)
      *
      * @param initKeys 初始化Key集合
@@ -1482,6 +1722,7 @@ public class ModuleFormService {
             }
             BaseField field = fieldConfigMap.get(exportHead.getTitle());
             if (field instanceof SubField subField && CollectionUtils.isNotEmpty(subField.getSubFields())) {
+                boolean contractProductField = isContractProductExportField(formKey, field);
                 Map<String, String> subFieldMap = subField.getSubFields()
                         .stream()
                         .collect(Collectors.toMap(f ->
@@ -1492,7 +1733,7 @@ public class ModuleFormService {
                         .filter(BaseField::canExport)
                         .forEach(f -> {
                             List<String> head = new ArrayList<>();
-                            head.add(field.getName());
+                            head.add(contractProductField ? "产品信息" : field.getName());
                             head.add(f.getName());
                             heads.add(head);
                         });
@@ -1502,7 +1743,10 @@ public class ModuleFormService {
                         if (!subFieldMap.containsKey(sumColumn)) {
                             return;
                         }
-                        heads.add(new ArrayList<>(Collections.singletonList(Translator.get("sum") + "-" + subFieldMap.get(sumColumn))));
+                        String summaryName = contractProductField
+                                ? "合计" + subFieldMap.get(sumColumn)
+                                : Translator.get("sum") + "-" + subFieldMap.get(sumColumn);
+                        heads.add(new ArrayList<>(Collections.singletonList(summaryName)));
                     });
                 }
             } else {
@@ -1510,6 +1754,11 @@ public class ModuleFormService {
             }
         });
         return heads;
+    }
+
+    private boolean isContractProductExportField(String formKey, BaseField field) {
+        return Strings.CS.equals(field.getBusinessKey(), "products")
+                && Strings.CS.equalsAny(formKey, FormKey.CONTRACT.getKey(), FormKey.CONTRACT_PAYMENT_RECORD.getKey());
     }
 
     /**
@@ -1633,11 +1882,12 @@ public class ModuleFormService {
      *
      * @param saveParam 保存参数
      */
-    private void preCheckForFieldSave(ModuleFormSaveRequest saveParam) {
+    private void preCheckForFieldSave(ModuleFormSaveRequest saveParam, String currentOrgId) {
 //        boolean businessDeleted = BusinessModuleField.isBusinessDeleted(saveParam.getFormKey(), saveParam.getFields());
 //        if (businessDeleted) {
 //            throw new GenericException(Translator.get("module.form.business_field.deleted"));
 //        }
+        checkProtectedBusinessFields(saveParam, currentOrgId);
         boolean hasRepeatName = BusinessModuleField.hasRepeatName(saveParam.getFields());
         if (hasRepeatName) {
             throw new GenericException(Translator.get("module.form.fields.repeat"));
@@ -1654,6 +1904,119 @@ public class ModuleFormService {
             BaseField field = repeatOptional.get();
             throw new GenericException(Translator.getWithArgs("module.form.fields.option.repeat", field.getName()));
         }
+    }
+
+    private void checkProtectedBusinessFields(ModuleFormSaveRequest saveParam, String currentOrgId) {
+        if (Strings.CS.equals(FormKey.CONTRACT.getKey(), saveParam.getFormKey())) {
+            checkContractLockedFields(saveParam.getFields(), currentOrgId);
+            return;
+        }
+        if (Strings.CS.equals(FormKey.CONTRACT_PAYMENT_RECORD.getKey(), saveParam.getFormKey())) {
+            checkPaymentProtectedFields(saveParam.getFields(), currentOrgId);
+        }
+    }
+
+    private void checkContractLockedFields(List<BaseField> submittedFields, String currentOrgId) {
+        List<BaseField> persistedFields = getPersistedFormFields(FormKey.CONTRACT.getKey(), currentOrgId);
+        Map<String, ProtectedField> persisted = getProtectedFieldMap(persistedFields, CONTRACT_LOCKED_FIELD_KEYS);
+        Map<String, ProtectedField> submitted = getProtectedFieldMap(submittedFields, CONTRACT_LOCKED_FIELD_KEYS);
+        if (!persisted.keySet().equals(CONTRACT_LOCKED_FIELD_KEYS)
+                || !submitted.keySet().equals(CONTRACT_LOCKED_FIELD_KEYS)) {
+            throw new GenericException("合同内置字段不允许删除或重复");
+        }
+        for (String key : CONTRACT_LOCKED_FIELD_KEYS) {
+            if (!lockedFieldSignature(persisted.get(key)).equals(lockedFieldSignature(submitted.get(key)))) {
+                throw new GenericException("合同内置字段不允许修改：" + persisted.get(key).field().getName());
+            }
+        }
+    }
+
+    private void checkPaymentProtectedFields(List<BaseField> submittedFields, String currentOrgId) {
+        List<BaseField> persistedFields = getPersistedFormFields(FormKey.CONTRACT_PAYMENT_RECORD.getKey(), currentOrgId);
+        Map<String, ProtectedField> persisted = getProtectedFieldMap(persistedFields, PAYMENT_PROTECTED_FIELD_KEYS);
+        Map<String, ProtectedField> submitted = getProtectedFieldMap(submittedFields, PAYMENT_PROTECTED_FIELD_KEYS);
+        if (!persisted.keySet().equals(PAYMENT_PROTECTED_FIELD_KEYS)
+                || !submitted.keySet().equals(PAYMENT_PROTECTED_FIELD_KEYS)) {
+            throw new GenericException("回款记录核心字段不允许删除或重复");
+        }
+        for (String key : PAYMENT_PROTECTED_FIELD_KEYS) {
+            BaseField oldField = persisted.get(key).field();
+            BaseField newField = submitted.get(key).field();
+            if (!Strings.CS.equals(oldField.getType(), newField.getType())) {
+                throw new GenericException("回款记录核心字段不允许修改类型：" + oldField.getName());
+            }
+            if (oldField.needRequireCheck() && !newField.needRequireCheck()) {
+                throw new GenericException("回款记录核心字段不允许取消必填：" + oldField.getName());
+            }
+            if (Boolean.FALSE.equals(oldField.getEditable()) && !Boolean.FALSE.equals(newField.getEditable())) {
+                throw new GenericException("回款记录计算字段不允许改为可编辑：" + oldField.getName());
+            }
+            if (oldField instanceof DatasourceField oldSource && newField instanceof DatasourceField newSource
+                    && !Strings.CS.equals(oldSource.getDataSourceType(), newSource.getDataSourceType())) {
+                throw new GenericException("回款记录核心字段不允许修改数据源：" + oldField.getName());
+            }
+            if (oldField instanceof SubField oldSub && newField instanceof SubField newSub
+                    && (!Objects.equals(oldSub.getMinRows(), newSub.getMinRows())
+                    || !Objects.equals(oldSub.getMaxRows(), newSub.getMaxRows())
+                    || !Objects.equals(oldSub.getInitialRows(), newSub.getInitialRows()))) {
+                throw new GenericException("回款产品明细行数规则不允许修改");
+            }
+        }
+    }
+
+    private List<BaseField> getPersistedFormFields(String formKey, String currentOrgId) {
+        ModuleForm example = new ModuleForm();
+        example.setFormKey(formKey);
+        example.setOrganizationId(currentOrgId);
+        ModuleForm form = moduleFormMapper.selectOne(example);
+        if (form == null) {
+            throw new GenericException(Translator.get("module.form.not_exist"));
+        }
+        return getAllFields(form.getId());
+    }
+
+    private Map<String, ProtectedField> getProtectedFieldMap(List<BaseField> fields, Set<String> protectedKeys) {
+        Map<String, ProtectedField> result = new HashMap<>(protectedKeys.size());
+        if (CollectionUtils.isEmpty(fields)) {
+            return result;
+        }
+        for (int topIndex = 0; topIndex < fields.size(); topIndex++) {
+            BaseField field = fields.get(topIndex);
+            putProtectedField(result, protectedKeys, field, topIndex, null);
+            if (!(field instanceof SubField subField) || CollectionUtils.isEmpty(subField.getSubFields())) {
+                continue;
+            }
+            for (int subIndex = 0; subIndex < subField.getSubFields().size(); subIndex++) {
+                putProtectedField(result, protectedKeys, subField.getSubFields().get(subIndex), topIndex, subIndex);
+            }
+        }
+        return result;
+    }
+
+    private void putProtectedField(Map<String, ProtectedField> result, Set<String> protectedKeys,
+                                   BaseField field, int topIndex, Integer subIndex) {
+        if (!protectedKeys.contains(field.getInternalKey())) {
+            return;
+        }
+        if (result.put(field.getInternalKey(), new ProtectedField(field, topIndex, subIndex)) != null) {
+            throw new GenericException("内置字段 internalKey 不允许重复：" + field.getInternalKey());
+        }
+    }
+
+    private String lockedFieldSignature(ProtectedField protectedField) {
+        Map<String, Object> normalized = JSON.parseMap(JSON.toJSONString(protectedField.field()));
+        normalized.remove("id");
+        normalized.remove("pos");
+        normalized.remove("businessKey");
+        normalized.remove("resourceFieldId");
+        normalized.remove("subTableFieldId");
+        normalized.remove("initialOptions");
+        normalized.remove("refFields");
+        normalized.remove(SUB_FIELDS);
+        return protectedField.topIndex() + ":" + protectedField.subIndex() + ":" + JSON.toJSONString(normalized);
+    }
+
+    private record ProtectedField(BaseField field, int topIndex, Integer subIndex) {
     }
 
     /**

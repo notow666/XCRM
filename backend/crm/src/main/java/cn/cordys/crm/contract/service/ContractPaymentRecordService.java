@@ -7,6 +7,7 @@ import cn.cordys.aspectj.context.OperationLogContext;
 import cn.cordys.aspectj.dto.LogDTO;
 import cn.cordys.common.constants.BusinessModuleField;
 import cn.cordys.common.constants.FormKey;
+import cn.cordys.common.constants.InternalUser;
 import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.domain.BaseModuleFieldValue;
 import cn.cordys.common.domain.BaseResourceSubField;
@@ -22,9 +23,13 @@ import cn.cordys.common.service.DataScopeService;
 import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.uid.SerialNumGenerator;
 import cn.cordys.common.util.BeanUtils;
+import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.Translator;
 import cn.cordys.crm.contract.domain.*;
+import cn.cordys.crm.contract.constants.ContractPaymentRecordApprovalStatus;
+import cn.cordys.crm.contract.dto.ContractPaymentRecordVersionSnapshot;
 import cn.cordys.crm.contract.dto.request.ContractPaymentRecordAddRequest;
+import cn.cordys.crm.contract.dto.request.ContractPaymentRecordApprovalRequest;
 import cn.cordys.crm.contract.dto.request.ContractPaymentRecordPageRequest;
 import cn.cordys.crm.contract.dto.request.ContractPaymentRecordUpdateRequest;
 import cn.cordys.crm.contract.dto.response.*;
@@ -56,7 +61,6 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
@@ -68,7 +72,6 @@ import java.util.stream.Stream;
  * @author song-cc-rock
  */
 @Service
-@Transactional(rollbackFor = Exception.class)
 @Slf4j
 public class ContractPaymentRecordService {
 
@@ -102,6 +105,12 @@ public class ContractPaymentRecordService {
     private ExtContractPaymentRecordMapper extContractPaymentRecordMapper;
     @Resource
     private ContractPaymentRecordFieldService contractPaymentRecordFieldService;
+    @Resource
+    private ContractPaymentRecordTransactionService transactionService;
+    @Resource
+    private BaseMapper<ContractPaymentRecordVersion> paymentVersionMapper;
+    @Resource
+    private BaseMapper<ContractPaymentRecordProduct> paymentProductMapper;
 
     /**
      * 获取回款记录列表
@@ -124,56 +133,39 @@ public class ContractPaymentRecordService {
 
     @OperationLog(module = LogModule.CONTRACT_PAYMENT_RECORD, type = LogType.ADD, resourceName = "{#request.name}", operator = "{#currentUser}")
     public ContractPaymentRecord add(ContractPaymentRecordAddRequest request, String currentUser, String currentOrg) {
-        checkContractPaymentAmount(request.getContractId(), request.getRecordAmount(), null);
-        ContractPaymentRecord paymentRecord = BeanUtils.copyBean(new ContractPaymentRecord(), request);
-        paymentRecord.setId(IDGenerator.nextStr());
-        if (StringUtils.isEmpty(paymentRecord.getOwner())) {
-            paymentRecord.setOwner(currentUser);
-        }
         List<String> rules = moduleFieldExtService.getSerialFieldRulesByKey(FormKey.CONTRACT_PAYMENT_RECORD.getKey(), currentOrg, BusinessModuleField.CONTRACT_PAYMENT_RECORD_NO.getKey(), request.getNo());
+        String recordNo = request.getNo();
         if (CollectionUtils.isNotEmpty(rules)) {
-            paymentRecord.setNo(serialNumGenerator.generateByRules(rules, currentOrg, FormKey.CONTRACT_PAYMENT_RECORD.getKey()));
+            recordNo = serialNumGenerator.generateByRules(rules, currentOrg, FormKey.CONTRACT_PAYMENT_RECORD.getKey());
         }
-        paymentRecord.setCreateUser(currentUser);
-        paymentRecord.setCreateTime(System.currentTimeMillis());
-        paymentRecord.setUpdateUser(currentUser);
-        paymentRecord.setUpdateTime(System.currentTimeMillis());
-        paymentRecord.setOrganizationId(currentOrg);
-        // 保存自定义字段值&回款记录
-        contractPaymentRecordFieldService.saveModuleField(paymentRecord, currentOrg, currentUser, request.getModuleFields(), false);
-        contractPaymentRecordMapper.insert(paymentRecord);
-        // 日志
-        baseService.handleAddLog(paymentRecord, request.getModuleFields());
-        return paymentRecord;
+        ModuleFormConfigDTO formConfig = moduleFormCacheService.getBusinessFormConfig(
+                FormKey.CONTRACT_PAYMENT_RECORD.getKey(), currentOrg);
+        return transactionService.add(request, formConfig, recordNo, currentUser, currentOrg);
     }
 
     @OperationLog(module = LogModule.CONTRACT_PAYMENT_RECORD, type = LogType.UPDATE, operator = "{#currentUser}")
     public ContractPaymentRecord update(ContractPaymentRecordUpdateRequest request, String currentUser, String currentOrg) {
-        ContractPaymentRecord oldRecord = contractPaymentRecordMapper.selectByPrimaryKey(request.getId());
-        if (oldRecord == null) {
-            throw new GenericException(Translator.get("record.not.exist"));
-        }
-        checkContractPaymentAmount(request.getContractId(), request.getRecordAmount(), oldRecord.getId());
-        ContractPaymentRecord contractPaymentRecord = BeanUtils.copyBean(new ContractPaymentRecord(), request);
-        contractPaymentRecord.setNo(oldRecord.getNo());
-        contractPaymentRecord.setUpdateTime(System.currentTimeMillis());
-        contractPaymentRecord.setUpdateUser(currentUser);
-        contractPaymentRecordMapper.update(contractPaymentRecord);
-        List<BaseModuleFieldValue> oldFvs = contractPaymentRecordFieldService.getModuleFieldValuesByResourceId(request.getId());
-        updateModuleField(contractPaymentRecord, request.getModuleFields(), currentOrg, currentUser);
-        baseService.handleUpdateLog(oldRecord, contractPaymentRecord, oldFvs, request.getModuleFields(), oldRecord.getId(), oldRecord.getName());
-        return contractPaymentRecord;
+        ModuleFormConfigDTO formConfig = moduleFormCacheService.getBusinessFormConfig(
+                FormKey.CONTRACT_PAYMENT_RECORD.getKey(), currentOrg);
+        return transactionService.update(request, formConfig, currentUser, currentOrg);
     }
 
     @OperationLog(module = LogModule.CONTRACT_PAYMENT_RECORD, type = LogType.DELETE, resourceId = "{#id}")
-    public void delete(String id) {
-        ContractPaymentRecord oldRecord = contractPaymentRecordMapper.selectByPrimaryKey(id);
-        if (oldRecord == null) {
+    public void delete(String id, String currentUser, String currentOrg) {
+        ContractPaymentRecord oldRecord = transactionService.delete(id, currentUser, currentOrg);
+        OperationLogContext.setResourceName(oldRecord.getName());
+    }
+
+    @OperationLog(module = LogModule.CONTRACT_PAYMENT_RECORD, type = LogType.APPROVAL, resourceId = "{#request.id}")
+    public void approval(ContractPaymentRecordApprovalRequest request, String currentUser, String currentOrg) {
+        ContractPaymentRecord record = contractPaymentRecordMapper.selectByPrimaryKey(request.getId());
+        if (record == null || StringUtils.isBlank(record.getPendingVersionId())) {
             throw new GenericException(Translator.get("record.not.exist"));
         }
-        contractPaymentRecordMapper.deleteByPrimaryKey(id);
-        contractPaymentRecordFieldService.deleteByResourceId(id);
-        OperationLogContext.setResourceName(oldRecord.getName());
+        ContractPaymentRecordVersion version = paymentVersionMapper.selectByPrimaryKey(record.getPendingVersionId());
+        checkApprovalScope(version, currentUser, currentOrg);
+        ContractPaymentRecord result = transactionService.approve(request, currentUser, currentOrg);
+        OperationLogContext.setResourceName(result.getName());
     }
 
     public ContractPaymentRecordGetResponse getWithDataPermissionCheck(String id, String currentUser, String currentOrg) {
@@ -188,14 +180,21 @@ public class ContractPaymentRecordService {
             throw new GenericException(Translator.get("record.not.exist"));
         }
         ContractPaymentRecordGetResponse recordDetail = BeanUtils.copyBean(new ContractPaymentRecordGetResponse(), paymentRecord);
+        List<ContractPaymentRecordVersion> versions = getVersionHistory(id);
+        ContractPaymentRecordVersion approvalVersion = getApprovalDisplayVersion(paymentRecord, versions);
+        ContractPaymentRecordVersionSnapshot displaySnapshot = getDisplaySnapshot(paymentRecord, approvalVersion);
+        applyDisplaySnapshot(recordDetail, displaySnapshot);
         recordDetail = baseService.setCreateUpdateOwnerUserName(recordDetail);
         Contract contract = contractMapper.selectByPrimaryKey(recordDetail.getContractId());
-        ContractPaymentPlan contractPaymentPlan = contractPaymentPlanMapper.selectByPrimaryKey(recordDetail.getPaymentPlanId());
         // 自定义字段值 & 选项值
-        List<BaseModuleFieldValue> fvs = contractPaymentRecordFieldService.getModuleFieldValuesByResourceId(id);
+        List<BaseModuleFieldValue> fvs = displaySnapshot == null
+                ? contractPaymentRecordFieldService.getModuleFieldValuesByResourceId(id)
+                : displaySnapshot.getModuleFields();
         fvs = contractPaymentRecordFieldService.setBusinessRefFieldValue(List.of(recordDetail),
                 moduleFormService.getFlattenFormFields(FormKey.CONTRACT_PAYMENT_RECORD.getKey(), paymentRecord.getOrganizationId()), new HashMap<>(Map.of(id, fvs))).get(id);
-        ModuleFormConfigDTO recordFormConf = moduleFormCacheService.getBusinessFormConfig(FormKey.CONTRACT_PAYMENT_RECORD.getKey(), paymentRecord.getOrganizationId());
+        ModuleFormConfigDTO recordFormConf = displaySnapshot != null && StringUtils.isNotBlank(approvalVersion.getFormSnapshot())
+                ? JSON.parseObject(approvalVersion.getFormSnapshot(), ModuleFormConfigDTO.class)
+                : moduleFormCacheService.getBusinessFormConfig(FormKey.CONTRACT_PAYMENT_RECORD.getKey(), paymentRecord.getOrganizationId());
         Map<String, List<OptionDTO>> optionMap = moduleFormService.getOptionMap(recordFormConf, fvs);
         optionMap.put(BusinessModuleField.CONTRACT_PAYMENT_RECORD_OWNER.getBusinessKey(), moduleFormService.getBusinessFieldOption(List.of(recordDetail),
                 ContractPaymentRecordGetResponse::getOwner, ContractPaymentRecordGetResponse::getOwnerName));
@@ -203,11 +202,6 @@ public class ContractPaymentRecordService {
             recordDetail.setContractName(contract.getName());
             optionMap.put(BusinessModuleField.CONTRACT_PAYMENT_RECORD_CONTRACT.getBusinessKey(), moduleFormService.getBusinessFieldOption(List.of(recordDetail),
                     ContractPaymentRecordGetResponse::getContractId, ContractPaymentRecordGetResponse::getContractName));
-        }
-        if (contractPaymentPlan != null) {
-            recordDetail.setPaymentPlanName(contractPaymentPlan.getName());
-            optionMap.put(BusinessModuleField.CONTRACT_PAYMENT_RECORD_PLAN.getBusinessKey(), moduleFormService.getBusinessFieldOption(List.of(recordDetail),
-                    ContractPaymentRecordGetResponse::getPaymentPlanId, ContractPaymentRecordGetResponse::getPaymentPlanName));
         }
         recordDetail.setModuleFields(fvs);
         recordDetail.setOptionMap(optionMap);
@@ -220,7 +214,112 @@ public class ContractPaymentRecordService {
                 recordDetail.setDepartmentName(userDeptDTO.getDeptName());
             }
         }
+        List<ContractPaymentRecordProduct> products;
+        if (displaySnapshot == null) {
+            products = paymentProductMapper.selectListByLambda(
+                    new LambdaQueryWrapper<ContractPaymentRecordProduct>()
+                            .eq(ContractPaymentRecordProduct::getPaymentRecordId, id));
+            products.sort(Comparator.comparing(ContractPaymentRecordProduct::getSortNo));
+        } else {
+            products = JSON.parseArray(JSON.toJSONString(displaySnapshot.getProducts()), ContractPaymentRecordProduct.class);
+        }
+        recordDetail.setProducts(products);
+        recordDetail.setVersionHistory(versions);
+        recordDetail.setVersionUserNameMap(getVersionUserNameMap(versions));
+        recordDetail.setApprovalVersion(approvalVersion);
         return recordDetail;
+    }
+
+    private ContractPaymentRecordVersionSnapshot getDisplaySnapshot(
+            ContractPaymentRecord record, ContractPaymentRecordVersion approvalVersion) {
+        if (approvalVersion == null || StringUtils.isBlank(approvalVersion.getValueSnapshot())) {
+            return null;
+        }
+        boolean isPendingVersion = StringUtils.isNotBlank(record.getPendingVersionId())
+                && Strings.CS.equals(record.getPendingVersionId(), approvalVersion.getId());
+        if (!isPendingVersion && StringUtils.isNotBlank(record.getEffectiveVersionId())) {
+            return null;
+        }
+        return JSON.parseObject(approvalVersion.getValueSnapshot(), ContractPaymentRecordVersionSnapshot.class);
+    }
+
+    private void applyDisplaySnapshot(ContractPaymentRecord record,
+                                      ContractPaymentRecordVersionSnapshot snapshot) {
+        if (snapshot == null) {
+            return;
+        }
+        record.setName(snapshot.getName());
+        record.setNo(snapshot.getNo());
+        record.setContractId(snapshot.getContractId());
+        record.setOwner(snapshot.getOwner());
+        record.setRecordAmount(snapshot.getRecordAmount());
+        record.setTotalLoanAmount(snapshot.getTotalLoanAmount());
+        record.setTotalCostAmount(snapshot.getTotalCostAmount());
+        record.setTotalMiscFeeAmount(snapshot.getTotalMiscFeeAmount());
+        record.setTotalCommissionAmount(snapshot.getTotalCommissionAmount());
+        record.setTotalRevenueAmount(snapshot.getTotalRevenueAmount());
+        record.setRecordEndTime(snapshot.getFirstRepaymentTime());
+        record.setFirstLoanTime(snapshot.getFirstLoanTime());
+        record.setLastLoanTime(snapshot.getLastLoanTime());
+        record.setFirstRepaymentTime(snapshot.getFirstRepaymentTime());
+        record.setLastRepaymentTime(snapshot.getLastRepaymentTime());
+    }
+
+    private void checkApprovalScope(ContractPaymentRecordVersion version, String userId, String orgId) {
+        if (version == null) {
+            throw new GenericException("回款记录不存在待审批版本");
+        }
+        if (Strings.CS.equals(userId, InternalUser.ADMIN.getValue())) {
+            return;
+        }
+        DeptDataPermissionDTO permission = dataScopeService.getDeptDataPermission(
+                userId, orgId, PermissionConstants.CONTRACT_PAYMENT_RECORD_APPROVAL);
+        if (Boolean.TRUE.equals(permission.getAll())
+                || (Boolean.TRUE.equals(permission.getSelf())
+                && Strings.CS.equals(version.getSignerIdSnapshot(), userId))
+                || permission.getDeptIds().contains(version.getApprovalDeptId())) {
+            return;
+        }
+        throw new GenericException("无权审批该签约人部门的回款记录");
+    }
+
+    private List<ContractPaymentRecordVersion> getVersionHistory(String recordId) {
+        List<ContractPaymentRecordVersion> versions = paymentVersionMapper.selectListByLambda(
+                new LambdaQueryWrapper<ContractPaymentRecordVersion>()
+                        .eq(ContractPaymentRecordVersion::getPaymentRecordId, recordId));
+        versions.sort(Comparator.comparing(ContractPaymentRecordVersion::getVersionNo,
+                Comparator.nullsLast(Comparator.reverseOrder())));
+        return versions;
+    }
+
+    private Map<String, String> getVersionUserNameMap(List<ContractPaymentRecordVersion> versions) {
+        Set<String> userIds = new HashSet<>();
+        for (ContractPaymentRecordVersion version : versions) {
+            if (StringUtils.isNotBlank(version.getSubmitUser())) {
+                userIds.add(version.getSubmitUser());
+            }
+            if (StringUtils.isNotBlank(version.getApprovalUser())) {
+                userIds.add(version.getApprovalUser());
+            }
+        }
+        return baseService.getUserNameMap(userIds);
+    }
+
+    private ContractPaymentRecordVersion getApprovalDisplayVersion(
+            ContractPaymentRecord record, List<ContractPaymentRecordVersion> versions) {
+        if (StringUtils.isNotBlank(record.getPendingVersionId())) {
+            ContractPaymentRecordVersion pending = paymentVersionMapper.selectByPrimaryKey(record.getPendingVersionId());
+            if (pending != null) {
+                return pending;
+            }
+        }
+        if (StringUtils.isNotBlank(record.getEffectiveVersionId())) {
+            ContractPaymentRecordVersion effective = paymentVersionMapper.selectByPrimaryKey(record.getEffectiveVersionId());
+            if (effective != null) {
+                return effective;
+            }
+        }
+        return CollectionUtils.isEmpty(versions) ? null : versions.getFirst();
     }
 
     public ResourceTabEnableDTO getTabEnableConfig(String userId, String orgId) {
@@ -358,7 +457,10 @@ public class ContractPaymentRecordService {
         List<String> refPlanIds = distinctNonBlank(list.stream().map(ContractPaymentRecordResponse::getPaymentPlanId).collect(Collectors.toList()));
         List<ContractPaymentPlan> contractPaymentPlans = CollectionUtils.isEmpty(refPlanIds) ? Collections.emptyList() : contractPaymentPlanMapper.selectByIds(refPlanIds);
         Map<String, String> paymentPlanMap = contractPaymentPlans.stream().collect(Collectors.toMap(ContractPaymentPlan::getId, ContractPaymentPlan::getName));
-        Map<String, List<BaseModuleFieldValue>> resourceFieldMap = CollectionUtils.isEmpty(recordIds) ? Collections.emptyMap() : contractPaymentRecordFieldService.getResourceFieldMap(recordIds, true);
+        Map<String, List<BaseModuleFieldValue>> resourceFieldMap = CollectionUtils.isEmpty(recordIds)
+                ? new HashMap<>()
+                : new HashMap<>(contractPaymentRecordFieldService.getResourceFieldMap(recordIds, true));
+        mergeDisplayVersionSnapshots(list, resourceFieldMap);
         Map<String, List<BaseModuleFieldValue>> resolvefieldValueMap = contractPaymentRecordFieldService.setBusinessRefFieldValue(list,
                 moduleFormService.getFlattenFormFields(FormKey.CONTRACT_PAYMENT_RECORD.getKey(), currentOrg), resourceFieldMap);
 
@@ -382,6 +484,59 @@ public class ContractPaymentRecordService {
             }
         });
         return list;
+    }
+
+    /**
+     * 待审批期间展示待审批版本；首次审批不通过且尚无生效版本时展示最新提交版本。
+     * 已有生效版本的修改审批不通过后，待审批版本被清除，列表自然回退到生效投影。
+     */
+    private void mergeDisplayVersionSnapshots(List<ContractPaymentRecordResponse> list,
+                                              Map<String, List<BaseModuleFieldValue>> resourceFieldMap) {
+        List<String> displayRecordIds = list.stream()
+                .filter(item -> StringUtils.isNotBlank(item.getPendingVersionId())
+                        || StringUtils.isBlank(item.getEffectiveVersionId()))
+                .map(ContractPaymentRecordResponse::getId)
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .toList();
+        if (CollectionUtils.isEmpty(displayRecordIds)) {
+            return;
+        }
+        Map<String, List<ContractPaymentRecordVersion>> versionMap = paymentVersionMapper.selectListByLambda(
+                        new LambdaQueryWrapper<ContractPaymentRecordVersion>()
+                                .in(ContractPaymentRecordVersion::getPaymentRecordId, displayRecordIds)).stream()
+                .collect(Collectors.groupingBy(ContractPaymentRecordVersion::getPaymentRecordId));
+        list.forEach(item -> {
+            if (StringUtils.isBlank(item.getPendingVersionId())
+                    && StringUtils.isNotBlank(item.getEffectiveVersionId())) {
+                return;
+            }
+            List<ContractPaymentRecordVersion> versions = versionMap.getOrDefault(item.getId(), Collections.emptyList());
+            ContractPaymentRecordVersion version;
+            if (StringUtils.isNotBlank(item.getPendingVersionId())) {
+                version = versions.stream()
+                        .filter(current -> Strings.CS.equals(current.getId(), item.getPendingVersionId()))
+                        .findFirst()
+                        .orElse(null);
+            } else {
+                version = versions.stream()
+                        .max(Comparator.comparing(ContractPaymentRecordVersion::getVersionNo,
+                                Comparator.nullsFirst(Comparator.naturalOrder())))
+                        .orElse(null);
+            }
+            if (version == null || StringUtils.isBlank(version.getValueSnapshot())) {
+                return;
+            }
+            ContractPaymentRecordVersionSnapshot snapshot = JSON.parseObject(
+                    version.getValueSnapshot(), ContractPaymentRecordVersionSnapshot.class);
+            if (snapshot == null) {
+                return;
+            }
+            applyDisplaySnapshot(item, snapshot);
+            if (snapshot.getModuleFields() != null) {
+                resourceFieldMap.put(item.getId(), snapshot.getModuleFields());
+            }
+        });
     }
 
     /**

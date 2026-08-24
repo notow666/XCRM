@@ -31,8 +31,8 @@
       :link-form-info="props.linkFormInfo"
       :link-form-key="props.linkFormKey"
       :link-scenario="props.linkScenario"
+      :cancel-handler="handleBack"
       class="!pt-[16px]"
-      @cancel="handleBack"
       @saved="handleSaved"
       @init="handleFormInit"
     />
@@ -62,9 +62,12 @@
     linkFormInfo?: Record<string, any>; // 关联表单信息
     linkFormKey?: FormDesignKeyEnum;
     linkScenario?: FormLinkScenarioEnum; // 关联表单场景
+    drawerWidth?: string;
+    closeWithoutConfirm?: boolean;
   }>();
   const emit = defineEmits<{
     (e: 'saved', res: any): void;
+    (e: 'cancel'): void;
   }>();
 
   const { t } = useI18n();
@@ -79,6 +82,9 @@
   const unsaved = ref(false);
 
   const drawerWidth = computed(() => {
+    if (props.drawerWidth) {
+      return props.drawerWidth;
+    }
     switch (formViewSize.value) {
       case 'small':
         return '50%';
@@ -90,6 +96,11 @@
     }
   });
 
+  function closeDrawer() {
+    visible.value = false;
+    emit('cancel');
+  }
+
   function showUnsavedLeaveTip() {
     openModal({
       type: 'warning',
@@ -98,7 +109,7 @@
       positiveText: t('common.confirm'),
       negativeText: t('common.cancel'),
       onPositiveClick: async () => {
-        visible.value = false;
+        closeDrawer();
       },
     });
   }
@@ -109,11 +120,15 @@
   }
 
   function handleBack() {
+    if (props.closeWithoutConfirm) {
+      closeDrawer();
+      return;
+    }
     if (!loading.value) {
       if (unsaved.value) {
         showUnsavedLeaveTip();
       } else {
-        visible.value = false;
+        closeDrawer();
       }
     }
   }

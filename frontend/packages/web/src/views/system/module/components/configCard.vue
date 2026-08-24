@@ -333,25 +333,13 @@
   ]);
 
   const contractMoreOptions = computed<ActionsItem[]>(() => [
-    {
-      label: t('module.contract.businessNameValidateConfig'),
-      key: 'businessNameValidateConfig',
-      render: renderValidateConfig.value,
-    },
-    {
-      label: t('module.contract.invoiceFormSetting'),
-      key: 'invoiceFormSetting',
-    },
+    // 工商抬头和发票本期仅隐藏前端配置入口，原配置与数据继续保留。
     {
       label: t('module.approvalSwitch'),
       key: 'approval',
       render: renderContractApprovalConfig.value,
     },
-    {
-      label: t('module.approvalSwitch'),
-      key: 'approval',
-      render: renderInvoiceApprovalConfig.value,
-    },
+    // 发票审批本期仅隐藏前端配置入口。
   ]);
 
   function getMoreList(key: ModuleConfigEnum) {
@@ -460,10 +448,7 @@
           label: `${t('module.contract')}${t('module.formSettings')}`,
           key: 'newForm',
         },
-        {
-          label: `${t('module.paymentPlan')}${t('module.formSettings')}`,
-          key: 'newContractPaymentPlanForm',
-        },
+        // 回款计划本期仅隐藏前端配置入口，原配置与数据继续保留。
         {
           label: t('module.paymentRecordFormSetting'),
           key: 'newContractPaymentRecordForm',

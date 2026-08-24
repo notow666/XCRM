@@ -95,7 +95,7 @@ public class ContractController {
     @RequiresPermissions(PermissionConstants.CONTRACT_DELETE)
     @Operation(summary = "删除")
     public void delete(@PathVariable("id") String id) {
-        contractService.delete(id);
+        contractService.delete(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
     @GetMapping("/get/snapshot/{id}")

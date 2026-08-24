@@ -66,20 +66,12 @@ export const contractStatusOptions = [
     label: t('contract.signed'),
   },
   {
-    value: ContractStatusEnum.CHANGE,
-    label: t('contract.change'),
-  },
-  {
     value: ContractStatusEnum.IN_PROGRESS,
     label: t('contract.inProgress'),
   },
   {
     value: ContractStatusEnum.COMPLETED_PERFORMANCE,
     label: t('contract.completedPerformance'),
-  },
-  {
-    value: ContractStatusEnum.ARCHIVED,
-    label: t('contract.archive'),
   },
   {
     value: ContractStatusEnum.VOID,

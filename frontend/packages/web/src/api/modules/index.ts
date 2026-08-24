@@ -12,6 +12,8 @@ import useMmbaPhoneApi from '@lib/shared/api/modules/mmba/phone';
 import useOpportunityApi from '@lib/shared/api/modules/opportunity';
 import useOrderApi from '@lib/shared/api/modules/order';
 import useProductApi from '@lib/shared/api/modules/product';
+import useContractAnalysisApi from '@lib/shared/api/modules/report/contractAnalysis';
+import useCustomerConversionApi from '@lib/shared/api/modules/report/customerConversion';
 import useCustomerRecordingApi from '@lib/shared/api/modules/report/customerRecording';
 import useEmployeeFollowAnalysisApi from '@lib/shared/api/modules/report/employeeFollowAnalysis';
 import useSysApi from '@lib/shared/api/modules/sys';
@@ -58,6 +60,8 @@ const mmbaMgmtSsoApi = useMmbaMgmtSsoApi(CDR);
 const mmbaPhoneApi = useMmbaPhoneApi(CDR);
 const numberCubeApi = useNumberCubeApi(CDR);
 const customerRecordingApi = useCustomerRecordingApi(CDR);
+const contractAnalysisApi = useContractAnalysisApi(CDR);
+const customerConversionApi = useCustomerConversionApi(CDR);
 const employeeFollowAnalysisApi = useEmployeeFollowAnalysisApi(CDR);
 
 export const {
@@ -528,6 +532,7 @@ export const {
   getPaymentRecordDetail,
   getPaymentRecordList,
   deletePaymentRecord,
+  approvalPaymentRecord,
   getPaymentRecordTab,
   exportPaymentRecordAll,
   exportPaymentRecordSelected,
@@ -691,6 +696,20 @@ export const {
   getEmployeeFollowAnalysisDrilldown,
   exportEmployeeFollowAnalysisSummary,
 } = employeeFollowAnalysisApi;
+
+export const {
+  getContractAnalysisSummary,
+  getContractAnalysisDetail,
+  exportContractAnalysisDetail,
+  exportContractAnalysis,
+} = contractAnalysisApi;
+
+export const {
+  getCustomerConversionSummary,
+  getCustomerConversionDetail,
+  exportCustomerConversionDetail,
+  exportCustomerConversion,
+} = customerConversionApi;
 
 export const {
   addReason,

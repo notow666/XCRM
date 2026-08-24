@@ -31,6 +31,14 @@ const report: AppRouteRecordRaw = {
             locale: 'menu.report.employeeFollowUp',
           },
         },
+        {
+          path: 'customer-conversion',
+          name: ReportRouteEnum.REPORT_EMPLOYEE_CUSTOMER_CONVERSION,
+          component: () => import('@/views/report/customer-conversion/index.vue'),
+          meta: {
+            locale: 'menu.report.customerConversion',
+          },
+        },
       ],
     },
     {
@@ -47,6 +55,7 @@ const report: AppRouteRecordRaw = {
       component: () => import('@/views/report/contract-analysis/index.vue'),
       meta: {
         locale: 'menu.report.contract',
+        permissions: ['CONTRACT:READ'],
       },
     },
   ],

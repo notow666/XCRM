@@ -327,7 +327,10 @@ public abstract class BaseResourceFieldService<T extends BaseResourceField, V ex
                 collect(Collectors.toMap(BusinessModuleField::getKey, Function.identity()));
 
         allFields.forEach(field -> {
-            if (businessModuleFieldMap.containsKey(field.getInternalKey())) {
+            // 数据源展示字段仅用于回显关联资源信息，不属于当前资源表的业务字段。
+            // 例如合同中的客户手机号来源于客户表，不能按 Contract.mobile 反射并执行重复校验。
+            if (StringUtils.isEmpty(field.getResourceFieldId())
+                    && businessModuleFieldMap.containsKey(field.getInternalKey())) {
                 BusinessModuleField businessModuleField = businessModuleFieldMap.get(field.getInternalKey());
                 businessFieldRepeatCheck(orgId, resource, updateIds, field, businessModuleField.getBusinessKey());
             }
@@ -863,7 +866,8 @@ public abstract class BaseResourceFieldService<T extends BaseResourceField, V ex
             Map<String, BaseField> subFieldIdConfigMap = subFields.stream().collect(Collectors.toMap(BaseField::getId, f -> f, (f1, f2) -> f1));
 
             Map<String, ? extends List<? extends BaseResourceField>> subResourceMap = resourceFields.stream()
-                    .filter(r -> refSubSet.contains(((BaseResourceSubField) r).getRefSubId()))
+                    .filter(r -> r instanceof BaseResourceSubField subResource
+                            && refSubSet.contains(subResource.getRefSubId()))
                     .collect(Collectors.groupingBy(BaseResourceField::getResourceId));
             subResourceMap.forEach((resourceId, subResources) -> {
                 subResources.sort(Comparator.comparingInt(resource -> Integer.parseInt(((BaseResourceSubField) resource).getRowId()))
@@ -1030,7 +1034,11 @@ public abstract class BaseResourceFieldService<T extends BaseResourceField, V ex
             fieldValue.setFieldId(field.getId());
             String businessKey = field.getBusinessKey();
             if (StringUtils.isNotEmpty(businessKey)) {
-                fieldValue.setFieldValue(fieldValueMap.get(businessKey).getFieldValue());
+                BaseModuleFieldValue businessFieldValue = fieldValueMap.get(businessKey);
+                if (businessFieldValue == null) {
+                    return null;
+                }
+                fieldValue.setFieldValue(businessFieldValue.getFieldValue());
             } else {
                 fieldValue = fieldValueMap.get(field.getId());
             }

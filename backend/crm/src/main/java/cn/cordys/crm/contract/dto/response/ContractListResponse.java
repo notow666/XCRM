@@ -40,4 +40,7 @@ public class ContractListResponse extends Contract {
 
     @Schema(description = "自定义字段")
     private List<BaseModuleFieldValue> moduleFields;
+
+    @Schema(description = "页面展示阶段")
+    private String displayStage;
 }

@@ -642,6 +642,7 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);
+      Message.error(error instanceof Error ? error.message : String(error));
     } finally {
       loading.value = false;
     }
@@ -880,6 +881,7 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
       if (!asyncApi || !props.sourceId?.value) return;
       const res = await asyncApi(props.sourceId?.value);
       formDetail.value = {};
+      detail.value = res;
       if (needInitFormDescription) {
         await initFormDescription(res);
       }
@@ -958,6 +960,17 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
    * 处理业务表单的特殊字段在特定场景下的初始化默认值
    */
   function specialFormFieldInit(field: FormCreateField) {
+    if (
+      props.formKey.value === FormDesignKeyEnum.CONTRACT &&
+      !props.sourceId?.value &&
+      field.businessKey === 'startTime' &&
+      !field.defaultValue
+    ) {
+      return {
+        defaultValue: dayjs().startOf('day').valueOf(),
+        initialOptions: field.initialOptions,
+      };
+    }
     if (props.formKey.value === FormDesignKeyEnum.BUSINESS && props.sourceId?.value) {
       // 客户详情下创建商机，自动带入客户信息
       if (field.businessKey === 'customerId') {
@@ -1345,15 +1358,19 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
 
   function initForm(linkScenario?: FormLinkScenarioEnum) {
     fieldList.value.forEach((item) => {
-      // const initLine: Record<string, any> = {};
       if ([FieldTypeEnum.SUB_PRICE, FieldTypeEnum.SUB_PRODUCT].includes(item.type)) {
+        const initLine: Record<string, any> = {};
         item.subFields?.forEach((subField) => {
           subFieldInit(subField);
           replaceRule(subField, item.id);
-          // initLine[subField.businessKey || subField.id] = subField.defaultValue;
+          const key = subField.resourceFieldId ? subField.id : subField.businessKey || subField.id;
+          initLine[key] = cloneDeep(subField.defaultValue);
         });
-        if (!formDetail.value[item.id]) {
-          formDetail.value[item.id] = [];
+        const currentRows = formDetail.value[item.id];
+        if (!Array.isArray(currentRows) || (!props.needInitDetail?.value && currentRows.length === 0)) {
+          const initialRows = props.needInitDetail?.value ? 0 : Math.max(item.minRows || 0, item.initialRows || 0);
+          const targetRows = item.maxRows ? Math.min(initialRows, item.maxRows) : initialRows;
+          formDetail.value[item.id] = Array.from({ length: targetRows }, () => cloneDeep(initLine));
         }
         return;
       }
@@ -1489,6 +1506,12 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
       }
       let res;
       if (props.sourceId?.value && props.needInitDetail?.value) {
+        if (
+          [FormDesignKeyEnum.CONTRACT, FormDesignKeyEnum.CONTRACT_PAYMENT_RECORD].includes(props.formKey.value) &&
+          detail.value.lockVersion !== undefined
+        ) {
+          params.lockVersion = detail.value.lockVersion;
+        }
         res = await updateFormApi[props.formKey.value](params);
         Message.success(t('common.updateSuccess'));
       } else {

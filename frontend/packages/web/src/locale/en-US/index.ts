@@ -213,6 +213,7 @@ export default {
     'menu.report.employee': 'Employee analytics',
     'menu.report.contract': 'Contract analytics',
     'menu.report.employeeFollowUp': 'Employee follow-up analysis',
+    'menu.report.customerConversion': 'Customer conversion',
     'menu.report.customerRecording': 'Customer recordings',
     'customerRecording.filter.callTime': 'Call time',
     'customerRecording.filter.department': 'Department',

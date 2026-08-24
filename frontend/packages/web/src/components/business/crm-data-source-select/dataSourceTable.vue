@@ -63,7 +63,7 @@
       sourceType: FieldDataSourceTypeEnum;
       multiple?: boolean;
       disabledSelection?: (row: RowData) => boolean;
-      filterParams?: FilterResult;
+      filterParams?: FilterResult & { sourceFormKey?: FormDesignKeyEnum };
       fullscreenTargetRef?: HTMLElement | null;
       fieldConfig?: FormCreateField;
       isSubTableRender?: boolean;
@@ -261,7 +261,19 @@
     if (props.filterParams) {
       setAdvanceFilter(props.filterParams);
     }
-    setLoadListParams({ keyword: _keyword !== undefined ? _keyword : keyword.value });
+    const params: Record<string, unknown> = {
+      keyword: _keyword !== undefined ? _keyword : keyword.value,
+      sourceFormKey: props.filterParams?.sourceFormKey,
+    };
+    // 新建合同场景：客户选择器仅返回可签约客户（非公海 + 签约阶段 + 负责人/签约阶段计划处理人为当前用户），
+    // 避免用户选择无法创建合同的客户；其他表单的客户数据源不受影响。
+    if (
+      props.sourceType === FieldDataSourceTypeEnum.CUSTOMER &&
+      props.filterParams?.sourceFormKey === FormDesignKeyEnum.CONTRACT
+    ) {
+      params.signableOnly = true;
+    }
+    setLoadListParams(params);
     loadList();
     crmTableRef.value?.scrollTo({ top: 0 });
   }

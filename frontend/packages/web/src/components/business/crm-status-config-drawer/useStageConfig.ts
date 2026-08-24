@@ -10,6 +10,10 @@ import type { ActionsItem } from '@/components/pure/crm-more-action/type';
 import { useStatusApiConfig, useStatusStrategyConfig, useStatusTextConfig } from './config';
 import type { StatusBizType, StatusFormModel, StatusRowItem, UseStatusConfigReturn } from './types';
 
+const CUSTOMER_INSERTABLE_FIXED_STAGE_IDS = new Set(['stage_visit', 'stage_sign']);
+const CUSTOMER_FOLLOW_STAGE_ID = 'stage_follow';
+const CUSTOMER_PAYMENT_STAGE_ID = 'stage_payment';
+
 function buildRollbackParams(form: StatusFormModel) {
   return {
     afootRollBack: form.runningStageRollback,
@@ -47,8 +51,20 @@ export default function useStageConfig(type: StatusBizType): UseStatusConfigRetu
   }
 
   function getDropdownOptions(element: StatusRowItem): ActionsItem[] {
-    // 固定节点不显示任何操作
-    if (element.isFixed) return [];
+    // 上门、签约节点不可编辑、删除，但允许在节点前后插入普通客户节点
+    if (element.isFixed) {
+      if (
+        type === 'customer' &&
+        CUSTOMER_INSERTABLE_FIXED_STAGE_IDS.has(element.id as string) &&
+        form.value.list.length < 10
+      ) {
+        return [
+          { label: t('module.businessManage.insetBefore'), key: 'before' },
+          { label: t('module.businessManage.insetAfter'), key: 'after' },
+        ];
+      }
+      return [];
+    }
 
     if (element.type === 'END') return [];
 
@@ -187,14 +203,19 @@ export default function useStageConfig(type: StatusBizType): UseStatusConfigRetu
     // 固定节点不能移动
     if (draggedItem?.isFixed) return false;
 
-    // 找到所有固定节点的索引
     const fixedIndices = form.value.list
       .map((item, index) => (item.isFixed ? index : -1))
       .filter((index) => index !== -1);
 
-    // 第一个固定节点（跟进），第二个固定节点（回款）
-    const followIndex = fixedIndices[0];
-    const paymentIndex = fixedIndices[1];
+    // 客户阶段以系统节点 ID 确定边界；商机、订单继续沿用原有固定节点边界
+    const followIndex =
+      type === 'customer'
+        ? form.value.list.findIndex((item) => item.id === CUSTOMER_FOLLOW_STAGE_ID)
+        : fixedIndices[0];
+    const paymentIndex =
+      type === 'customer'
+        ? form.value.list.findIndex((item) => item.id === CUSTOMER_PAYMENT_STAGE_ID)
+        : fixedIndices[1];
 
     // 不能拖到跟进前面
     if (targetIndex <= followIndex) return false;

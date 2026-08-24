@@ -225,6 +225,12 @@ public class CustomerService {
     private CustomerWechatFriendStatusService customerWechatFriendStatusService;
     @Resource
     private CustomerMobileRuleService customerMobileRuleService;
+    @Resource
+    private CustomerDeleteOrchestrator customerDeleteOrchestrator;
+    @Resource
+    private CustomerResourceDeleteService customerResourceDeleteService;
+    @Resource
+    private CustomerToPoolEligibilityService customerToPoolEligibilityService;
 
     @Resource
     private EmployeeStatEventRecordService employeeStatEventRecordService;
@@ -851,11 +857,11 @@ public class CustomerService {
     }
 
     @OperationLog(module = LogModule.CUSTOMER_INDEX, type = LogType.DELETE, resourceId = "{#id}")
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void delete(String id, String userId, String orgId) {
         Customer originCustomer = customerMapper.selectByPrimaryKey(id);
         dataScopeService.checkDataPermission(userId, orgId, originCustomer.getOwner(), PermissionConstants.CUSTOMER_MANAGEMENT_DELETE);
-        checkResourceRef(List.of(id));
-        deleteCustomerResource(List.of(id));
+        customerDeleteOrchestrator.deleteOne(orgId, id, userId, LogModule.CUSTOMER_INDEX, "删除客户");
 
         // 设置操作对象
         OperationLogContext.setResourceName(originCustomer.getName());
@@ -1062,30 +1068,26 @@ public class CustomerService {
         ));
     }
 
-    public void batchDelete(List<String> ids, String userId, String orgId) {
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public int batchDelete(List<String> ids, String userId, String orgId) {
         List<Customer> customers = customerMapper.selectByIds(ids);
         List<String> owners = getOwners(customers);
         dataScopeService.checkDataPermission(userId, orgId, owners, PermissionConstants.CUSTOMER_MANAGEMENT_DELETE);
 
-        checkResourceRef(ids);
-
-        deleteCustomerResource(ids);
-
-        List<LogDTO> logs = customers.stream()
-                .map(customer ->
-                        new LogDTO(orgId, customer.getId(), userId, LogType.DELETE, LogModule.CUSTOMER_INDEX, customer.getName())
-                )
-                .toList();
-        logService.batchAdd(logs);
+        CustomerDeleteBatchResult result = customerDeleteOrchestrator.delete(
+                orgId, ids, userId, LogModule.CUSTOMER_INDEX, "批量删除客户",
+                CustomerDeleteScene.MANUAL, null);
 
         // 消息通知
-        customers.forEach(customer ->
+        result.deletedCustomers().forEach(customer ->
                 commonNoticeSendService.sendNotice(NotificationConstants.Module.CUSTOMER,
                         NotificationConstants.Event.CUSTOMER_DELETED, customer.getName(), userId,
                         orgId, List.of(customer.getOwner()), true)
         );
+        return result.successCount();
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public int batchDeleteByCondition(CustomerPageRequest request, String userId, String orgId, DeptDataPermissionDTO deptDataPermission) {
         int deletedCount = 0;
         while (true) {
@@ -1094,8 +1096,11 @@ public class CustomerService {
             if (CollectionUtils.isEmpty(deleteIds)) {
                 return deletedCount;
             }
-            batchDelete(deleteIds, userId, orgId);
-            deletedCount += deleteIds.size();
+            int currentDeletedCount = batchDelete(deleteIds, userId, orgId);
+            deletedCount += currentDeletedCount;
+            if (currentDeletedCount == 0) {
+                return deletedCount;
+            }
         }
     }
 
@@ -1131,28 +1136,15 @@ public class CustomerService {
     }
 
     public void deleteCustomerResource(List<String> ids) {
-        // 先删除联系人
-        customerContactService.deleteByCustomerIds(ids);
-        // 删除客户
-        customerMapper.deleteByIds(ids);
-        // 删除客户模块字段
-        customerFieldService.deleteByResourceIds(ids);
-        // 删除客户协作人
-        customerCollaborationService.deleteByCustomerIds(ids);
-        // 删除责任人历史
-        customerOwnerHistoryService.deleteByCustomerIds(ids);
-        // 删除客户关系
-        customerRelationService.deleteByCustomerIds(ids);
-        // 删除跟进记录
-        followUpRecordService.deleteByCustomerIds(ids);
-        // 删除跟进计划
-        followUpPlanService.deleteByCustomerIds(ids);
+        // 兼容非客户删除业务的历史调用；新客户删除入口统一走 CustomerDeleteOrchestrator。
+        for (String id : ids) {
+            customerResourceDeleteService.deleteOne(id);
+        }
     }
 
     public void checkResourceRef(List<String> ids) {
-        // 删除时会级联删除联系人，所以只检查商机引用
-        if (extCustomerMapper.hasRefOpportunity(ids)) {
-            throw new GenericException(CustomerResultCode.CUSTOMER_RESOURCE_REF);
+        for (String id : ids) {
+            customerResourceDeleteService.checkResourceRef(id);
         }
     }
 
@@ -1207,9 +1199,7 @@ public class CustomerService {
         List<LogDTO> logs = new ArrayList<>();
         List<String> customerIds = new ArrayList<>();
         for (Customer customer : customers) {
-            if (StringUtils.equalsAny(customer.getCreateSource(),
-                    CustomerCreateSource.MANUAL_CREATE,
-                    CustomerCreateSource.PRIVATE_IMPORT)) {
+            if (!customerToPoolEligibilityService.isEligible(customer, orgId)) {
                 continue;
             }
             CustomerPool customerPool = specifiedPool != null ? specifiedPool : ownersDefaultPoolMap.get(customer.getOwner());

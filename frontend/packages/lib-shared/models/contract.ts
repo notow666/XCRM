@@ -1,6 +1,7 @@
 import { AttachmentInfo } from '@cordys/web/src/components/business/crm-form-create/types';
-import { QuotationStatusEnum } from '@lib/shared/enums/opportunityEnum';
 import { ContractBusinessTitleStatusEnum, type ContractInvoiceStatusEnum } from '@lib/shared/enums/contractEnum';
+import { QuotationStatusEnum } from '@lib/shared/enums/opportunityEnum';
+
 import type { ModuleField, TableQueryParams } from './common';
 import type { FormDesignConfigDetailParams } from './system/module';
 
@@ -16,6 +17,15 @@ export interface ContractItem {
   stage: string;
   owner: string;
   ownerName: string;
+  signerId: string;
+  signerNameSnapshot: string;
+  expectedRepaymentAmount: number;
+  effectiveVersionId?: string;
+  pendingVersionId?: string;
+  lockVersion: number;
+  startTime: number;
+  endTime: number;
+  displayStage?: string;
   createUser: string;
   updateUser: string;
   createTime: number;
@@ -31,6 +41,24 @@ export interface ContractItem {
 export interface ContractDetail extends ContractItem {
   optionMap?: Record<string, any[]>;
   attachmentMap?: Record<string, AttachmentInfo[]>; // 附件信息映射
+  approvalVersion?: ContractVersionHistoryItem;
+  versionHistory?: ContractVersionHistoryItem[];
+  versionUserNameMap?: Record<string, string>;
+}
+
+export interface ContractVersionHistoryItem {
+  id: string;
+  versionNo: number;
+  submitType: 'CREATE' | 'UPDATE';
+  approvalStatus: string;
+  valueSnapshot?: string;
+  formSnapshot?: string;
+  changeSnapshot?: string;
+  submitUser?: string;
+  submitTime?: number;
+  approvalUser?: string;
+  approvalTime?: number;
+  approvalOpinion?: string;
 }
 
 // 添加合同参数
@@ -39,17 +67,29 @@ export interface SaveContractParams {
   customerId: string; // 客户id
   amount?: number; // 金额
   owner: string; // 负责人
+  signerId: string;
+  startTime: number;
+  endTime: number;
+  products: ContractProductItem[];
   moduleFields: ModuleField[]; // 自定义字段
 }
 
 // 更新合同参数
 export interface UpdateContractParams extends SaveContractParams {
   id: string;
+  lockVersion: number;
 }
 
 export interface ApprovalContractParams {
   id: string;
   approvalStatus: string;
+  opinion?: string;
+}
+
+export interface ContractProductItem {
+  loanAmount: number;
+  pointRate?: number;
+  expectedRepaymentAmount: number;
 }
 
 // 回款计划列表项
@@ -107,7 +147,7 @@ export interface PaymentRecordItem {
   invoiceType: string;
   taxRate: number;
   businessTitleId: string;
-  approvalStatus: string;
+  approvalStatus: QuotationStatusEnum;
   organizationId: string;
   contractName: string;
   ownerName: string;
@@ -118,28 +158,52 @@ export interface PaymentRecordItem {
   departmentId: string;
   departmentName: string;
   moduleFields: ModuleField[];
+  effectiveVersionId?: string;
+  pendingVersionId?: string;
+  lockVersion: number;
+  totalLoanAmount: number;
+  totalCostAmount: number;
+  totalMiscFeeAmount: number;
+  totalCommissionAmount: number;
+  totalRevenueAmount: number;
+  products: PaymentRecordProductItem[];
 }
 
 // 回款记录详情
 export interface PaymentRecordDetail extends PaymentRecordItem {
   optionMap?: Record<string, any[]>;
+  approvalVersion?: ContractVersionHistoryItem;
+  versionHistory?: ContractVersionHistoryItem[];
+  versionUserNameMap?: Record<string, string>;
 }
 
 // 添加回款记录参数
 export interface SavePaymentRecordParams {
   contractId: string;
-  owner: string;
+  owner?: string;
   name: string;
   paymentPlanId?: string;
-  recordAmount: number;
-  recordEndTime: number;
-  recordBank: string;
-  recordBankNo: string;
+  recordAmount?: number;
+  recordEndTime?: number;
+  products: PaymentRecordProductItem[];
 }
 
 // 更新回款记录参数
 export interface UpdatePaymentRecordParams extends SavePaymentRecordParams {
   id: string;
+  lockVersion: number;
+}
+
+export interface PaymentRecordProductItem {
+  loanTime: number;
+  loanAmount: number;
+  repaymentTime: number;
+  repaymentAmount: number;
+  costAmount: number;
+  miscFeeAmount: number;
+  commissionAmount: number;
+  revenueFormula: string;
+  revenueAmount?: number;
 }
 
 export interface BusinessTitleItem {
@@ -178,7 +242,7 @@ export interface SaveBusinessTitleParams {
   phoneNumber: string; // 注册电话
   registeredCapital: string; // 注册资本
   companySize: string; // 公司规模
-  registrationNumber: string; //工商注册号
+  registrationNumber: string; // 工商注册号
   type: string; // 来源类型
   area: string; // 所属地区
   scale: string; // 企业规模

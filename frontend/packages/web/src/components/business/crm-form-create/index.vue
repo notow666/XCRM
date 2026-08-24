@@ -25,6 +25,7 @@
               :path="item.id"
               :need-init-detail="needInitDetail"
               :form-config="formConfig"
+              :source-form-key="dataSourceTypes.includes(item.type) ? props.formKey : undefined"
               @change="(value: any, source: Record<string, any>[], dataSourceFormFields?: FormCreateField[]) => handleFieldChange(value, source, item, dataSourceFormFields)"
             />
           </div>
@@ -43,7 +44,7 @@
           {{ formConfig.optBtnContent[1].text }}
         </n-button>
       </template>
-      <n-button v-if="formConfig.optBtnContent[2].enable" secondary @click="emit('cancel')">
+      <n-button v-if="formConfig.optBtnContent[2].enable" secondary @click="handleCancel">
         {{ formConfig.optBtnContent[2].text }}
       </n-button>
     </div>
@@ -95,6 +96,7 @@
     linkFormInfo?: Record<string, any>; // 关联表单信息
     linkFormKey?: FormDesignKeyEnum;
     linkScenario?: FormLinkScenarioEnum; // 关联表单场景
+    cancelHandler?: () => void;
   }>();
   const emit = defineEmits<{
     (e: 'cancel'): void;
@@ -113,6 +115,15 @@
   });
 
   const formRef = ref<FormInst>();
+
+  function handleCancel() {
+    if (props.cancelHandler) {
+      props.cancelHandler();
+      return;
+    }
+    emit('cancel');
+  }
+
   const {
     needInitDetail,
     formKey,

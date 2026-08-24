@@ -22,4 +22,13 @@ public class SubField extends BaseField {
 
 	@Schema(description = "汇总列")
 	private List<String> sumColumns;
+
+	@Schema(description = "最少行数")
+	private Integer minRows;
+
+	@Schema(description = "最多行数")
+	private Integer maxRows;
+
+	@Schema(description = "初始化行数")
+	private Integer initialRows;
 }

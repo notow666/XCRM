@@ -8,7 +8,16 @@
     :summary="props.sumColumns?.length ? summary : undefined"
     class="crm-sub-table"
   />
-  <n-button v-if="!props.readonly" type="primary" text class="mt-[8px]" @click="addLine">
+  <div v-if="hasRevenueFormulaField && !props.readonly" class="mt-[8px] text-[12px] text-[var(--error-red)]">
+    {{ t('crm.subTable.revenueFormulaExample') }}
+  </div>
+  <n-button
+    v-if="!props.readonly && (!props.maxRows || data.length < props.maxRows)"
+    type="primary"
+    text
+    class="mt-[8px]"
+    @click="addLine"
+  >
     <CrmIcon type="iconicon_add" class="mr-[8px]" />
     {{ t('crm.subTable.addLine') }}
   </n-button>
@@ -36,12 +45,14 @@
   import dataSource from '@/components/business/crm-form-create/components/advanced/dataSource.vue';
   import formula from '@/components/business/crm-form-create/components/advanced/formula.vue';
   import upload from '@/components/business/crm-form-create/components/advanced/upload.vue';
+  import dateTime from '@/components/business/crm-form-create/components/basic/dateTime.vue';
   import inputNumber from '@/components/business/crm-form-create/components/basic/inputNumber.vue';
   import select from '@/components/business/crm-form-create/components/basic/select.vue';
   import singleText from '@/components/business/crm-form-create/components/basic/singleText.vue';
 
   import { formKeyMap } from '../crm-data-source-select/config';
   import { FormCreateField } from '../crm-form-create/types';
+  import evaluateRevenueFormula, { normalizeRevenueFormula } from './revenueFormula';
   import { RowData, TableColumns } from 'naive-ui/es/data-table/src/interface';
 
   const props = defineProps<{
@@ -54,6 +65,9 @@
     readonly?: boolean;
     optionMap?: Record<string, any[]>;
     disabled?: boolean;
+    minRows?: number;
+    maxRows?: number;
+    initialRows?: number;
   }>();
   const emit = defineEmits<{
     (e: 'change', value: Record<string, any>[]): void;
@@ -66,6 +80,67 @@
     required: true,
     default: () => [],
   });
+
+  const PAYMENT_REVENUE_FORMULA_KEY = 'paymentProductRevenueFormula';
+  const PAYMENT_REVENUE_AMOUNT_KEY = 'paymentProductRevenueAmount';
+  const PAYMENT_AMOUNT_VARIABLES: Record<string, string> = {
+    paymentProductLoanAmount: '放款金额',
+    paymentProductRepaymentAmount: '回款金额',
+    paymentProductCostAmount: '成本金额',
+    paymentProductMiscFeeAmount: '杂费金额',
+    paymentProductCommissionAmount: '返佣金额',
+  };
+
+  const hasRevenueFormulaField = computed(() =>
+    props.subFields.some((field) => field.internalKey === PAYMENT_REVENUE_FORMULA_KEY)
+  );
+
+  function getFieldKey(field: FormCreateField) {
+    return field.resourceFieldId ? field.id : field.businessKey || field.id;
+  }
+
+  function isPaymentProductField(field: FormCreateField) {
+    return field.internalKey?.startsWith('paymentProduct');
+  }
+
+  function updateRevenuePreview(row: Record<string, any>) {
+    const formulaField = props.subFields.find((field) => field.internalKey === PAYMENT_REVENUE_FORMULA_KEY);
+    const revenueField = props.subFields.find((field) => field.internalKey === PAYMENT_REVENUE_AMOUNT_KEY);
+    if (!formulaField || !revenueField) {
+      return;
+    }
+    const formulaText = row[getFieldKey(formulaField)];
+    const variables: Record<string, number> = {};
+    const hasMissingAmount = Object.entries(PAYMENT_AMOUNT_VARIABLES).some(([internalKey, variableName]) => {
+      const amountField = props.subFields.find((field) => field.internalKey === internalKey);
+      const rawValue = amountField ? row[getFieldKey(amountField)] : null;
+      const value = Number(String(rawValue ?? '').replaceAll(',', ''));
+      variables[variableName] = value;
+      return rawValue === null || rawValue === undefined || rawValue === '' || !Number.isFinite(value);
+    });
+    const revenueKey = getFieldKey(revenueField);
+    if (!formulaText || hasMissingAmount) {
+      row[revenueKey] = null;
+      return;
+    }
+    try {
+      row[revenueKey] = evaluateRevenueFormula(String(formulaText), variables);
+    } catch {
+      row[revenueKey] = null;
+    }
+  }
+
+  function handleEditableFieldChange(field: FormCreateField, row: Record<string, any>, value: any) {
+    const normalizedValue =
+      field.internalKey === PAYMENT_REVENUE_FORMULA_KEY && typeof value === 'string'
+        ? normalizeRevenueFormula(value)
+        : value;
+    row[getFieldKey(field)] = normalizedValue;
+    if (field.internalKey === PAYMENT_REVENUE_FORMULA_KEY || PAYMENT_AMOUNT_VARIABLES[field.internalKey || '']) {
+      updateRevenuePreview(row);
+    }
+    emit('change', data.value);
+  }
 
   function makeTitle(field: FormCreateField) {
     return h(
@@ -191,6 +266,8 @@
           field.resourceFieldId && isNotEmpty(field.defaultValue)
             ? formatNumberValue(field.defaultValue, field)
             : field.defaultValue ?? null;
+      } else if (field.type === FieldTypeEnum.DATE_TIME && isPaymentProductField(field)) {
+        newRow[key] = field.defaultValue === '' || field.defaultValue == null ? null : field.defaultValue;
       } else if (field.type === FieldTypeEnum.FORMULA) {
         newRow[key] = field.resourceFieldId ? null : field.defaultValue ?? null;
       } else if (
@@ -204,9 +281,23 @@
     return newRow;
   }
 
+  onBeforeMount(() => {
+    if (props.readonly || (Array.isArray(data.value) && data.value.length > 0)) {
+      return;
+    }
+    const initialRows = Math.max(props.minRows || 0, props.initialRows || 0);
+    const targetRows = props.maxRows ? Math.min(initialRows, props.maxRows) : initialRows;
+    data.value = Array.from({ length: targetRows }, () => makeNewRow());
+  });
+
   function addLine() {
+    if (props.maxRows && data.value.length >= props.maxRows) {
+      return false;
+    }
     const newRow = makeNewRow();
-    data.value.push(newRow);
+    data.value = [...(Array.isArray(data.value) ? data.value : []), newRow];
+    emit('change', data.value);
+    return true;
   }
 
   function applyDataSourceShowFields(
@@ -491,6 +582,32 @@
             fixed: props.fixedColumn && props.fixedColumn >= index + 1 ? 'left' : undefined,
           };
         }
+        if (field.type === FieldTypeEnum.DATE_TIME) {
+          return {
+            title,
+            width: isPaymentProductField(field) ? 150 : 200,
+            key,
+            ellipsis: {
+              tooltip: true,
+            },
+            fieldId: key,
+            render: (row: any, rowIndex: number) =>
+              h(dateTime, {
+                value: row[key],
+                fieldConfig: field,
+                path: `${props.parentId}[${rowIndex}].${key}`,
+                isSubTableRender: true,
+                disabled: props.disabled,
+                needInitDetail: props.needInitDetail,
+                onChange: (val: any) => {
+                  handleEditableFieldChange(field, row, val);
+                },
+              }),
+            fixed: props.fixedColumn && props.fixedColumn >= index + 1 ? 'left' : undefined,
+            filedType: field.type,
+            fieldConfig: field,
+          };
+        }
         if (field.type === FieldTypeEnum.FORMULA) {
           return {
             title,
@@ -520,7 +637,7 @@
         if (field.type === FieldTypeEnum.INPUT_NUMBER) {
           return {
             title,
-            width: 200,
+            width: isPaymentProductField(field) ? 140 : 200,
             key,
             ellipsis: {
               tooltip: true,
@@ -532,11 +649,10 @@
                 fieldConfig: field,
                 path: `${props.parentId}[${rowIndex}].${key}`,
                 isSubTableRender: true,
-                disabled: props.disabled,
+                disabled: props.disabled || field.editable === false,
                 needInitDetail: props.needInitDetail,
                 onChange: (val: any) => {
-                  row[key] = val;
-                  emit('change', data.value);
+                  handleEditableFieldChange(field, row, val);
                 },
               }),
             fixed: props.fixedColumn && props.fixedColumn >= index + 1 ? 'left' : undefined,
@@ -608,7 +724,7 @@
         }
         return {
           title,
-          width: 200,
+          width: field.internalKey === PAYMENT_REVENUE_FORMULA_KEY ? 420 : 200,
           key,
           ellipsis: {
             tooltip: true,
@@ -620,11 +736,11 @@
               fieldConfig: field,
               path: `${props.parentId}[${rowIndex}].${key}`,
               isSubTableRender: true,
+              fullWidth: field.internalKey === PAYMENT_REVENUE_FORMULA_KEY,
               disabled: props.disabled,
               needInitDetail: props.needInitDetail,
               onChange: (val: any) => {
-                row[key] = val;
-                emit('change', data.value);
+                handleEditableFieldChange(field, row, val);
               },
             }),
           fixed: props.fixedColumn && props.fixedColumn >= index + 1 ? 'left' : undefined,
@@ -657,8 +773,12 @@
             NButton,
             {
               ghost: true,
+              disabled: !!props.minRows && data.value.length <= props.minRows,
               class: 'p-[8px_9px]',
               onClick: () => {
+                if (props.minRows && data.value.length <= props.minRows) {
+                  return;
+                }
                 data.value.splice(rowIndex, 1);
                 emit('change', data.value);
               },
@@ -686,7 +806,10 @@
       },
     };
     renderColumns.value.forEach((col) => {
-      if (props.sumColumns?.includes(col.key as string)) {
+      const isSumColumn = props.sumColumns?.some(
+        (column) => column === col.key || column === col.fieldConfig?.id || column === col.fieldConfig?.businessKey
+      );
+      if (isSumColumn) {
         summaryRes[col.key || ''] = {
           value: h(
             'div',

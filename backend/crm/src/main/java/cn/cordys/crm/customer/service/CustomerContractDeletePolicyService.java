@@ -22,10 +22,12 @@ public class CustomerContractDeletePolicyService {
     private BaseMapper<CustomerContractDeletePolicy> customerContractDeletePolicyMapper;
 
     public CustomerContractDeletePolicyResponse getConfig(String orgId) {
+        return new CustomerContractDeletePolicyResponse(getPolicy(orgId));
+    }
+
+    public String getPolicy(String orgId) {
         CustomerContractDeletePolicy config = getRawConfig(orgId);
-        return new CustomerContractDeletePolicyResponse(
-                config == null ? CustomerContractDeletePolicyType.CASCADE : config.getPolicy()
-        );
+        return config == null ? CustomerContractDeletePolicyType.CASCADE : config.getPolicy();
     }
 
     @Transactional(rollbackFor = Exception.class)

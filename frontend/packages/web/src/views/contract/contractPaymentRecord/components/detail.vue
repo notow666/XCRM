@@ -2,6 +2,27 @@
   <CrmDrawer v-model:show="visible" resizable no-padding :width="800" :title="title" :footer="false">
     <template v-if="!props.readonly" #titleRight>
       <n-button
+        v-if="detailInfo?.approvalStatus === 'APPROVING'"
+        v-permission="['CONTRACT_PAYMENT_RECORD:APPROVAL']"
+        type="primary"
+        ghost
+        class="n-btn-outline-primary"
+        @click="handleApproval(true)"
+      >
+        {{ t('common.pass') }}
+      </n-button>
+      <n-button
+        v-if="detailInfo?.approvalStatus === 'APPROVING'"
+        v-permission="['CONTRACT_PAYMENT_RECORD:APPROVAL']"
+        type="error"
+        ghost
+        class="n-btn-outline-error ml-[12px]"
+        @click="handleApproval(false)"
+      >
+        {{ t('common.unPass') }}
+      </n-button>
+      <n-button
+        v-if="detailInfo?.approvalStatus !== 'APPROVING'"
         v-permission="['CONTRACT_PAYMENT_RECORD:UPDATE']"
         type="primary"
         ghost
@@ -20,9 +41,12 @@
         {{ t('common.delete') }}
       </n-button>
     </template>
-    <div class="h-full bg-[var(--text-n9)] px-[16px] pt-[16px]">
-      <CrmCard hide-footer>
-        <div class="flex-1">
+    <div class="h-full bg-[var(--text-n9)] p-[16px]">
+      <CrmCard no-content-padding hide-footer auto-height class="mb-[16px]">
+        <CrmTab v-model:active-tab="activeTab" no-content :tab-list="tabList" type="line" />
+      </CrmCard>
+      <CrmCard hide-footer :special-height="64" noContentBottomPadding>
+        <div v-show="activeTab === 'detail'" class="flex-1">
           <CrmFormDescription
             :form-key="FormDesignKeyEnum.CONTRACT_PAYMENT_RECORD"
             :source-id="props.sourceId"
@@ -35,6 +59,12 @@
             @open-contract-detail="emit('openContractDrawer', $event)"
           />
         </div>
+        <ContractVersionHistory
+          v-if="activeTab === 'history'"
+          mode="paymentRecord"
+          :versions="detailInfo?.versionHistory"
+          :user-name-map="detailInfo?.versionUserNameMap"
+        />
       </CrmCard>
     </div>
 
@@ -59,10 +89,12 @@
 
   import CrmCard from '@/components/pure/crm-card/index.vue';
   import CrmDrawer from '@/components/pure/crm-drawer/index.vue';
+  import CrmTab from '@/components/pure/crm-tab/index.vue';
   import CrmFormCreateDrawer from '@/components/business/crm-form-create-drawer/index.vue';
   import CrmFormDescription from '@/components/business/crm-form-description/index.vue';
+  import ContractVersionHistory from '@/views/contract/components/versionHistory.vue';
 
-  import { deletePaymentRecord } from '@/api/modules';
+  import { approvalPaymentRecord, deletePaymentRecord } from '@/api/modules';
   import useModal from '@/hooks/useModal';
 
   const props = defineProps<{
@@ -84,6 +116,11 @@
   const { t } = useI18n();
   const detailInfo = ref();
   const title = ref('');
+  const activeTab = ref('detail');
+  const tabList = [
+    { name: 'detail', tab: '基本信息' },
+    { name: 'history', tab: '历史记录' },
+  ];
 
   function handleInit(type?: CollaborationType, name?: string, detail?: Record<string, any>) {
     detailInfo.value = detail;
@@ -115,6 +152,15 @@
         }
       },
     });
+  }
+
+  async function handleApproval(approved: boolean) {
+    await approvalPaymentRecord({
+      id: props.sourceId,
+      approvalStatus: approved ? 'APPROVED' : 'UNAPPROVED',
+    });
+    Message.success(approved ? t('common.approvedSuccess') : t('common.unApprovedSuccess'));
+    handleSaved();
   }
 
   const formCreateDrawerVisible = ref(false);

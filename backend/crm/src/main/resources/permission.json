@@ -651,6 +651,9 @@
           },
           {
             "id": "CONTRACT_PAYMENT_RECORD:EXPORT"
+          },
+          {
+            "id": "CONTRACT_PAYMENT_RECORD:APPROVAL"
           }
         ]
       },

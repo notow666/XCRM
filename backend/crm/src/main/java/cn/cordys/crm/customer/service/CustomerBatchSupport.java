@@ -71,8 +71,8 @@ public class CustomerBatchSupport {
         return partitions;
     }
 
-    public void batchDelete(List<String> ids, String userId, String orgId) {
-        requireCustomerService().batchDelete(ids, userId, orgId);
+    public int batchDelete(List<String> ids, String userId, String orgId) {
+        return requireCustomerService().batchDelete(ids, userId, orgId);
     }
 
     public void batchUpdate(ResourceBatchEditRequest request, String userId, String orgId) {

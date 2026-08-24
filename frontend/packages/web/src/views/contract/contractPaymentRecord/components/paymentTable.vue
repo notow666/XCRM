@@ -25,12 +25,13 @@
         >
           {{ t('contract.paymentRecord.new') }}
         </n-button>
-        <CrmImportButton
+        <!-- 当前暂无回款记录导入需求，暂时隐藏前端入口，保留组件及接口供后续恢复。 -->
+        <!-- <CrmImportButton
           v-if="hasAnyPermission(['CONTRACT_PAYMENT_RECORD:IMPORT']) && !isContractTab"
           :api-type="FormDesignKeyEnum.CONTRACT_PAYMENT_RECORD"
           :title="t('module.paymentRecord')"
           @import-success="() => searchData()"
-        />
+        /> -->
         <n-button
           v-permission="['CONTRACT_PAYMENT_RECORD:EXPORT']"
           type="primary"
@@ -95,6 +96,9 @@
     :initial-source-name="initialSourceName"
     :link-form-key="FormDesignKeyEnum.CONTRACT"
     :link-form-info="linkFormInfo"
+    drawer-width="100%"
+    close-without-confirm
+    @cancel="handleCreateDrawerCancel"
     @saved="handleFormCreateSaved"
   />
   <CrmTableExportModal
@@ -135,11 +139,13 @@
   import { BatchActionConfig } from '@/components/pure/crm-table/type';
   import CrmTableButton from '@/components/pure/crm-table-button/index.vue';
   import CrmFormCreateDrawer from '@/components/business/crm-form-create-drawer/index.vue';
-  import CrmImportButton from '@/components/business/crm-import-button/index.vue';
+  // 当前暂无回款记录导入需求，暂时停用组件引用，后续恢复入口时一并解除注释。
+  // import CrmImportButton from '@/components/business/crm-import-button/index.vue';
   import CrmOperationButton from '@/components/business/crm-operation-button/index.vue';
   import CrmTableExportModal from '@/components/business/crm-table-export-modal/index.vue';
   import CrmViewSelect from '@/components/business/crm-view-select/index.vue';
   import DetailDrawer from './detail.vue';
+  import QuotationStatus from '@/views/opportunity/components/quotation/quotationStatus.vue';
 
   import { deletePaymentRecord, getPaymentRecordStatistic } from '@/api/modules';
   import { baseFilterConfigList } from '@/config/clue';
@@ -182,6 +188,10 @@
   const initialSourceName = ref('');
   const needInitDetail = ref(false);
   const activeFormKey = ref(FormDesignKeyEnum.CONTRACT_PAYMENT_RECORD);
+
+  function handleCreateDrawerCancel() {
+    formCreateDrawerVisible.value = false;
+  }
 
   const createLoading = ref(false);
   const linkFormKey = ref(FormDesignKeyEnum.CONTRACT);
@@ -350,7 +360,7 @@
     });
   }
 
-  const { useTableRes, customFieldsFilterConfig } = await useFormCreateTable({
+  const { useTableRes, customFieldsFilterConfig, fieldList } = await useFormCreateTable({
     formKey: props.formKey,
     excludeFieldIds: ['contractId', 'paymentPlanId'],
     operationColumn: {
@@ -413,6 +423,10 @@
               { default: () => row.paymentPlanName, trigger: () => row.paymentPlanName }
             );
       },
+      approvalStatus: (row: PaymentRecordItem) =>
+        h(QuotationStatus, {
+          status: row.approvalStatus,
+        }),
     },
     permission: ['CONTRACT_PAYMENT_RECORD:EXPORT'],
     containerClass: `.crm-contract-payment-table-${props.formKey}`,
@@ -429,7 +443,7 @@
   } = useTableRes;
 
   const exportColumns = computed<ExportTableColumnItem[]>(() =>
-    getExportColumns(propsRes.value.columns, customFieldsFilterConfig.value as FilterFormItem[])
+    getExportColumns(propsRes.value.columns, customFieldsFilterConfig.value as FilterFormItem[], fieldList.value)
   );
 
   const exportParams = computed(() => {

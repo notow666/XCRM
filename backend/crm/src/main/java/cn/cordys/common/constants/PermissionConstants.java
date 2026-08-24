@@ -252,6 +252,7 @@ public class PermissionConstants {
 	public static final String CONTRACT_PAYMENT_RECORD_DELETE = "CONTRACT_PAYMENT_RECORD:DELETE";
 	public static final String CONTRACT_PAYMENT_RECORD_IMPORT = "CONTRACT_PAYMENT_RECORD:IMPORT";
 	public static final String CONTRACT_PAYMENT_RECORD_EXPORT = "CONTRACT_PAYMENT_RECORD:EXPORT";
+	public static final String CONTRACT_PAYMENT_RECORD_APPROVAL = "CONTRACT_PAYMENT_RECORD:APPROVAL";
 
     /*------ start: ORDER_ROLE ------*/
     public static final String ORDER_READ = "ORDER:READ";

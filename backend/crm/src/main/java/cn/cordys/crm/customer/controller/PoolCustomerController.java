@@ -87,7 +87,7 @@ public class PoolCustomerController {
     @Operation(summary = "删除客户")
     @RequiresPermissions(value = {PermissionConstants.CUSTOMER_MANAGEMENT_POOL_DELETE})
     public void delete(@PathVariable("id") String id) {
-        poolCustomerService.delete(id);
+        poolCustomerService.delete(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
     @PostMapping("/transfer")

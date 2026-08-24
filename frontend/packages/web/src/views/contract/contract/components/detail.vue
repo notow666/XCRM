@@ -32,15 +32,13 @@
             @init="handleInit"
           />
         </div>
-        <template v-if="activeTab === 'payment'">
-          <PaymentTable
-            :form-key="FormDesignKeyEnum.CONTRACT_CONTRACT_PAYMENT"
-            :sourceId="props.sourceId"
-            :sourceName="title"
-            isContractTab
-            :readonly="getReadonlyPayment"
-          />
-        </template>
+        <ContractVersionHistory
+          v-if="activeTab === 'history'"
+          mode="contract"
+          :versions="detailInfo?.versionHistory"
+          :user-name-map="detailInfo?.versionUserNameMap"
+        />
+        <!-- 回款计划本期仅隐藏入口，原页面、组件和接口继续保留。 -->
         <template v-if="activeTab === 'paymentRecord'">
           <PaymentRecordTable
             :form-key="FormDesignKeyEnum.CONTRACT_PAYMENT_RECORD"
@@ -51,23 +49,7 @@
             @refresh="handleSaved()"
           />
         </template>
-        <InvoiceTable
-          v-if="activeTab === 'invoice'"
-          :sourceId="props.sourceId"
-          :sourceName="title"
-          is-contract-tab
-          :readonly="getReadonlyInvoice"
-          @open-business-title-drawer="showBusinessTitleDetail"
-        />
-        <OrderTable
-          v-if="activeTab === 'order'"
-          :formKey="FormDesignKeyEnum.CONTRACT_ORDER"
-          :sourceId="props.sourceId"
-          :sourceName="title"
-          is-contract-tab
-          :readonly="getReadonlyInvoice"
-          @open-customer-drawer="emit('showCustomerDrawer', $event)"
-        />
+        <!-- 发票、订单本期仅隐藏入口，原页面、组件和接口继续保留。 -->
       </CrmCard>
     </div>
     <CrmFormCreateDrawer
@@ -112,19 +94,20 @@
   import CrmTab from '@/components/pure/crm-tab/index.vue';
   import CrmFormCreateDrawer from '@/components/business/crm-form-create-drawer/index.vue';
   import CrmFormDescription from '@/components/business/crm-form-description/index.vue';
-  import PaymentTable from '@/views/contract/contractPaymentPlan/components/paymentTable.vue';
+  import ContractVersionHistory from '@/views/contract/components/versionHistory.vue';
+  // 回款计划、发票、订单本期只隐藏入口，保留原组件文件以便后续恢复。
+  // import PaymentTable from '@/views/contract/contractPaymentPlan/components/paymentTable.vue';
   import PaymentRecordTable from '@/views/contract/contractPaymentRecord/components/paymentTable.vue';
-  import InvoiceTable from '@/views/contract/invoice/components/invoiceTable.vue';
+  // import InvoiceTable from '@/views/contract/invoice/components/invoiceTable.vue';
   import OptOverviewDrawer from '@/views/opportunity/components/optOverviewDrawer.vue';
   import QuotationDetailDrawer from '@/views/opportunity/components/quotation/detail.vue';
-  import OrderTable from '@/views/order/order/components/orderTable.vue';
 
-  import { approvalContract, deleteContract, revokeContract } from '@/api/modules';
+  // import OrderTable from '@/views/order/order/components/orderTable.vue';
+  import { approvalContract, changeContractStatus, deleteContract } from '@/api/modules';
   import { contractStatusOptions } from '@/config/contract';
   import useApprovalConfig from '@/hooks/useApprovalConfig';
   import useFormCreateApi from '@/hooks/useFormCreateApi';
   import useModal from '@/hooks/useModal';
-  import { useUserStore } from '@/store';
   import { hasAnyPermission } from '@/utils/permission';
 
   const props = defineProps<{
@@ -142,7 +125,6 @@
     required: true,
   });
 
-  const useStore = useUserStore();
   const Message = useMessage();
   const { openModal } = useModal();
   const { t } = useI18n();
@@ -162,25 +144,16 @@
         tab: t('module.contract'),
         permission: ['CONTRACT:READ'],
       },
-      {
-        name: 'payment',
-        tab: t('module.paymentPlan'),
-        permission: ['CONTRACT_PAYMENT_PLAN:READ'],
-      },
+      // 回款计划、发票、订单本期仅隐藏合同详情入口。
       {
         name: 'paymentRecord',
         tab: t('module.paymentRecord'),
         permission: ['CONTRACT_PAYMENT_RECORD:READ'],
       },
       {
-        name: 'invoice',
-        tab: t('module.invoice'),
-        permission: ['CONTRACT_INVOICE:READ'],
-      },
-      {
-        name: 'order',
-        tab: t('module.order'),
-        permission: ['ORDER:READ'],
+        name: 'history',
+        tab: '历史记录',
+        permission: ['CONTRACT:READ'],
       },
     ].filter((item) => hasAnyPermission(item.permission))
   );
@@ -205,17 +178,7 @@
           class: 'n-btn-outline-primary',
           permission: ['CONTRACT:APPROVAL'],
         },
-        ...(detailInfo.value?.createUser === useStore.userInfo.id
-          ? [
-              {
-                label: t('common.revoke'),
-                key: 'revoke',
-                text: false,
-                ghost: true,
-                class: 'n-btn-outline-primary',
-              },
-            ]
-          : []),
+        // 新审批版本不提供撤销，审批不通过后通过编辑重新提审。
         {
           label: t('common.delete'),
           key: 'delete',
@@ -228,19 +191,44 @@
       ];
     }
     if (detailInfo.value?.approvalStatus === QuotationStatusEnum.APPROVED) {
+      const terminal = [ContractStatusEnum.COMPLETED_PERFORMANCE, ContractStatusEnum.VOID].includes(
+        detailInfo.value?.stage
+      );
       return [
-        ...(detailInfo.value?.stage !== ContractStatusEnum.VOID
+        ...(!terminal
           ? [
               {
-                label: t('contract.payment'),
-                key: 'paymentRecord',
-                permission: ['CONTRACT:PAYMENT'],
+                label: t('common.edit'),
+                key: 'edit',
+                permission: ['CONTRACT:UPDATE'],
                 text: false,
                 ghost: true,
                 class: 'n-btn-outline-primary',
-                disabled: !detailInfo.value?.amount || detailInfo.value?.alreadyPayAmount >= detailInfo.value?.amount,
-                tooltipContent:
-                  detailInfo.value?.alreadyPayAmount >= detailInfo.value?.amount ? t('contract.noPaymentRequired') : '',
+              },
+              {
+                label: t('contract.payment'),
+                key: 'paymentRecord',
+                permission: ['CONTRACT_PAYMENT_RECORD:ADD'],
+                text: false,
+                ghost: true,
+                class: 'n-btn-outline-primary',
+              },
+              {
+                label: t('contract.completedPerformance'),
+                key: 'complete',
+                permission: ['CONTRACT:STAGE'],
+                text: false,
+                ghost: true,
+                class: 'n-btn-outline-primary',
+              },
+              {
+                label: t('common.voided'),
+                key: 'void',
+                permission: ['CONTRACT:STAGE'],
+                text: false,
+                danger: true,
+                ghost: true,
+                class: 'n-btn-outline-primary',
               },
             ]
           : []),
@@ -359,17 +347,6 @@
     });
   }
 
-  async function handleRevoke() {
-    try {
-      await revokeContract(props.sourceId);
-      Message.success(t('common.revokeSuccess'));
-      handleSaved();
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(error);
-    }
-  }
-
   async function handleApproval(approval = false) {
     const approvalStatus = approval ? QuotationStatusEnum.APPROVED : QuotationStatusEnum.UNAPPROVED;
     try {
@@ -426,24 +403,30 @@
     };
   }
 
-  const getReadonlyInvoice = computed(() => {
-    const contractIsVoidOrArchived =
-      detailInfo.value?.stage === ContractStatusEnum.VOID || detailInfo.value?.stage === ContractStatusEnum.ARCHIVED;
-    if (dicApprovalEnable.value) {
-      return contractIsVoidOrArchived || detailInfo.value?.approvalStatus !== QuotationStatusEnum.APPROVED;
-    }
-    return contractIsVoidOrArchived;
-  });
-
   const getReadonlyPayment = computed(() => {
     if (dicApprovalEnable.value) {
       return (
-        detailInfo.value?.stage === ContractStatusEnum.VOID ||
+        [ContractStatusEnum.VOID, ContractStatusEnum.COMPLETED_PERFORMANCE].includes(detailInfo.value?.stage) ||
         detailInfo.value?.approvalStatus === QuotationStatusEnum.APPROVING
       );
     }
-    return detailInfo.value?.stage === ContractStatusEnum.VOID;
+    return [ContractStatusEnum.VOID, ContractStatusEnum.COMPLETED_PERFORMANCE].includes(detailInfo.value?.stage);
   });
+
+  function handleStageChange(stage: ContractStatusEnum) {
+    openModal({
+      type: 'warning',
+      title: stage === ContractStatusEnum.VOID ? t('common.voided') : t('contract.completedPerformance'),
+      content: t('common.confirm'),
+      positiveText: t('common.confirm'),
+      negativeText: t('common.cancel'),
+      onPositiveClick: async () => {
+        await changeContractStatus(props.sourceId, stage);
+        Message.success(t('common.updateSuccess'));
+        handleSaved();
+      },
+    });
+  }
 
   async function handleButtonClick(actionKey: string) {
     switch (actionKey) {
@@ -456,11 +439,14 @@
       case 'edit':
         handleEdit();
         break;
-      case 'revoke':
-        handleRevoke();
-        break;
       case 'paymentRecord':
         handlePaymentRecord(detailInfo.value);
+        break;
+      case 'complete':
+        handleStageChange(ContractStatusEnum.COMPLETED_PERFORMANCE);
+        break;
+      case 'void':
+        handleStageChange(ContractStatusEnum.VOID);
         break;
       case 'delete':
         handleDelete(detailInfo.value);
@@ -468,10 +454,6 @@
       default:
         break;
     }
-  }
-
-  function showBusinessTitleDetail(params: { id: string }) {
-    emit('openBusinessTitleDrawer', params);
   }
 
   watch(

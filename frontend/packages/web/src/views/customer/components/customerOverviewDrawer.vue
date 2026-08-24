@@ -146,11 +146,7 @@
           :form-key="FormDesignKeyEnum.CONTRACT"
           :source-id="props.sourceId"
         />
-        <ContractTimeline
-          v-else-if="activeTab === 'contractPayment'"
-          :form-key="FormDesignKeyEnum.CONTRACT_PAYMENT"
-          :source-id="props.sourceId"
-        />
+        <!-- 回款计划本期仅隐藏入口，原组件与接口继续保留。 -->
         <ContractTimeline
           v-else-if="activeTab === 'contractPaymentRecord'"
           :form-key="FormDesignKeyEnum.CONTRACT_PAYMENT_RECORD"
@@ -550,12 +546,7 @@
         enable: true,
         permission: ['CONTRACT:READ'],
       },
-      {
-        name: 'contractPayment',
-        tab: t('module.paymentPlan'),
-        enable: true,
-        permission: ['CONTRACT_PAYMENT_PLAN:READ'],
-      },
+      // 回款计划本期仅隐藏客户详情入口，原页面与数据继续保留。
       {
         name: 'contractPaymentRecord',
         tab: t('module.paymentRecord'),
@@ -618,6 +609,7 @@
     openModal({
       type: 'error',
       title: t('customer.deleteTitleTip'),
+      // 合同删除策略本期仅保存配置，客户删除暂不接入合同和回款处理。
       content: t('customer.batchDeleteContentTip'),
       positiveText: t('common.confirmDelete'),
       negativeText: t('common.cancel'),

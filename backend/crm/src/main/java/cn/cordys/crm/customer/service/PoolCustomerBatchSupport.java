@@ -83,19 +83,12 @@ public class PoolCustomerBatchSupport {
 
     @Resource
     private EmployeeStatEventRecordService employeeStatEventRecordService;
+    @Resource
+    private CustomerDeleteOrchestrator customerDeleteOrchestrator;
 
-    public void batchDelete(List<String> ids, String userId, String orgId) {
-        List<Customer> customers = customerMapper.selectByIds(ids);
-        CustomerService customerService = CommonBeanFactory.getBean(CustomerService.class);
-        Objects.requireNonNull(customerService).checkResourceRef(ids);
-        customerService.deleteCustomerResource(ids);
-
-        List<LogDTO> logs = customers.stream()
-                .map(customer ->
-                        new LogDTO(orgId, customer.getId(), userId, LogType.DELETE, LogModule.CUSTOMER_POOL, customer.getName())
-                )
-                .toList();
-        logService.batchAdd(logs);
+    public int batchDelete(List<String> ids, String userId, String orgId) {
+        return customerDeleteOrchestrator.delete(orgId, ids, userId, LogModule.CUSTOMER_POOL,
+                "批量删除公海客户", CustomerDeleteScene.MANUAL, null).successCount();
     }
 
     public void executePoolBatchUpdate(ResourceBatchEditRequest request, List<Customer> originCustomers, BaseField field,

@@ -1805,7 +1805,7 @@
       "titleColor": "#323535"
     },
     {
-      "name": "合同",
+      "name": "合同名称",
       "internalKey": "contractName",
       "type": "INPUT",
       "showLabel": true,
@@ -1836,7 +1836,26 @@
           "key": "required"
         }
       ],
-      "mobile": true
+      "mobile": true,
+      "showFields": [
+        "customerMobile",
+        "customerOwner"
+      ]
+    },
+    {
+      "name": "签约人",
+      "internalKey": "contractSigner",
+      "type": "MEMBER",
+      "showLabel": true,
+      "readable": true,
+      "editable": true,
+      "mobile": true,
+      "fieldWidth": 1,
+      "rules": [
+        {
+          "key": "required"
+        }
+      ]
     },
     {
       "name": "合同编号",
@@ -1855,12 +1874,12 @@
       "editable": false,
       "fieldWidth": 1,
       "mobile": true,
-      "disableProps": [
+      "disabledProps": [
         "serialNumberRules"
       ]
     },
     {
-      "name": "合同报价信息",
+      "name": "合同产品明细",
       "internalKey": "contractProducts",
       "type": "SUB_PRODUCT",
       "showLabel": true,
@@ -1869,29 +1888,17 @@
       "fieldWidth": 1,
       "mobile": true,
       "fixedColumn": 1,
+      "minRows": 1,
+      "maxRows": 10,
+      "initialRows": 1,
       "sumColumns": [
-        "amount"
+        "contractProductLoanAmount",
+        "contractProductExpectedRepaymentAmount"
       ],
       "subFields": [
         {
-          "name": "产品",
-          "internalKey": "contractProduct",
-          "type": "DATA_SOURCE",
-          "dataSourceType": "PRODUCT",
-          "showLabel": true,
-          "readable": true,
-          "editable": true,
-          "fieldWidth": 1,
-          "rules": [
-            {
-              "key": "required"
-            }
-          ],
-          "mobile": true
-        },
-        {
-          "name": "产品单价",
-          "internalKey": "contractProductAmount",
+          "name": "放款金额",
+          "internalKey": "contractProductLoanAmount",
           "type": "INPUT_NUMBER",
           "showLabel": true,
           "readable": true,
@@ -1901,52 +1908,69 @@
           "decimalPlaces": true,
           "precision": 2,
           "showThousandsSeparator": true,
-          "mobile": true,
           "rules": [
             {
               "key": "required"
             }
-          ]
+          ],
+          "mobile": true
         },
         {
-          "name": "数量",
-          "internalKey": "contractProductNumber",
+          "name": "点位",
+          "internalKey": "contractProductPointRate",
           "type": "INPUT_NUMBER",
           "showLabel": true,
           "readable": true,
           "editable": true,
           "fieldWidth": 1,
+          "numberFormat": "number",
+          "decimalPlaces": true,
+          "precision": 2,
           "mobile": true,
-          "numberFormat": "number"
+          "numberFormat": "percent"
         },
         {
-          "name": "金额",
-          "internalKey": "contractProductSumAmount",
-          "type": "FORMULA",
+          "name": "应回款金额",
+          "internalKey": "contractProductExpectedRepaymentAmount",
+          "type": "INPUT_NUMBER",
           "showLabel": true,
           "readable": true,
           "mobile": true,
-          "editable": false,
+          "editable": true,
           "fieldWidth": 1,
-          "showThousandsSeparator": true
+          "numberFormat": "number",
+          "decimalPlaces": true,
+          "precision": 2,
+          "showThousandsSeparator": true,
+          "rules": [
+            {
+              "key": "required"
+            }
+          ]
         }
       ]
     },
     {
-      "name": "负责人",
-      "internalKey": "contractOwner",
-      "type": "MEMBER",
-      "hasCurrentUser": true,
+      "name": "合计签约金额",
+      "internalKey": "contractTotalAmount",
+      "type": "FORMULA",
       "showLabel": true,
       "readable": true,
-      "editable": true,
+      "editable": false,
       "mobile": true,
       "fieldWidth": 1,
-      "rules": [
-        {
-          "key": "required"
-        }
-      ]
+      "showThousandsSeparator": true
+    },
+    {
+      "name": "合计应回款金额",
+      "internalKey": "contractExpectedRepaymentAmount",
+      "type": "FORMULA",
+      "showLabel": true,
+      "readable": true,
+      "editable": false,
+      "mobile": true,
+      "fieldWidth": 1,
+      "showThousandsSeparator": true
     },
     {
       "name": "合同开始时间",
@@ -1961,9 +1985,7 @@
         {
           "key": "required"
         }
-      ],
-      "mobile": true,
-      "ext_ver": "1.5.0"
+      ]
     },
     {
       "name": "合同结束时间",
@@ -1979,28 +2001,17 @@
           "key": "required"
         }
       ],
-      "mobile": true,
-      "ext_ver": "1.5.0"
+      "mobile": true
     },
     {
-      "name": "累计金额",
-      "internalKey": "contractTotalAmount",
-      "type": "FORMULA",
+      "name": "备注",
+      "internalKey": "contractRemark",
+      "type": "TEXTAREA",
       "showLabel": true,
       "readable": true,
-      "editable": false,
-      "fieldWidth": 1,
-      "rules": [
-        {
-          "key": "required"
-        },
-        {
-          "key": "unique"
-        }
-      ],
+      "editable": true,
       "mobile": true,
-      "showThousandsSeparator": true,
-      "ext_ver": "1.5.1"
+      "fieldWidth": 1
     }
   ],
   "invoice": [
@@ -2337,71 +2348,262 @@
       "mobile": true
     },
     {
-      "name": "回款计划",
-      "internalKey": "contractPaymentRecordPlan",
-      "type": "DATA_SOURCE",
-      "dataSourceType": "PAYMENT_PLAN",
+      "name": "回款产品明细",
+      "internalKey": "contractPaymentRecordProducts",
+      "type": "SUB_PRODUCT",
       "showLabel": true,
       "readable": true,
       "editable": true,
       "fieldWidth": 1,
-      "mobile": true
-    },
-    {
-      "name": "负责人",
-      "internalKey": "contractPaymentRecordOwner",
-      "type": "MEMBER",
-      "hasCurrentUser": true,
-      "showLabel": true,
-      "readable": true,
-      "editable": true,
-      "fieldWidth": 1,
-      "rules": [
+      "mobile": true,
+      "fixedColumn": 1,
+      "minRows": 1,
+      "maxRows": 10,
+      "initialRows": 1,
+      "sumColumns": [
+        "paymentProductLoanAmount",
+        "paymentProductRepaymentAmount",
+        "paymentProductCostAmount",
+        "paymentProductMiscFeeAmount",
+        "paymentProductCommissionAmount",
+        "paymentProductRevenueAmount"
+      ],
+      "subFields": [
         {
-          "key": "required"
+          "name": "放款时间",
+          "internalKey": "paymentProductLoanTime",
+          "type": "DATE_TIME",
+          "dateType": "date",
+          "showLabel": true,
+          "readable": true,
+          "editable": true,
+          "fieldWidth": 1,
+          "rules": [
+            {
+              "key": "required"
+            }
+          ],
+          "mobile": true
+        },
+        {
+          "name": "放款金额",
+          "internalKey": "paymentProductLoanAmount",
+          "type": "INPUT_NUMBER",
+          "showLabel": true,
+          "readable": true,
+          "editable": true,
+          "fieldWidth": 1,
+          "numberFormat": "number",
+          "decimalPlaces": true,
+          "precision": 2,
+          "showThousandsSeparator": true,
+          "rules": [
+            {
+              "key": "required"
+            }
+          ],
+          "mobile": true
+        },
+        {
+          "name": "回款时间",
+          "internalKey": "paymentProductRepaymentTime",
+          "type": "DATE_TIME",
+          "dateType": "date",
+          "showLabel": true,
+          "readable": true,
+          "editable": true,
+          "fieldWidth": 1,
+          "rules": [
+            {
+              "key": "required"
+            }
+          ],
+          "mobile": true
+        },
+        {
+          "name": "回款金额",
+          "internalKey": "paymentProductRepaymentAmount",
+          "type": "INPUT_NUMBER",
+          "showLabel": true,
+          "readable": true,
+          "editable": true,
+          "fieldWidth": 1,
+          "numberFormat": "number",
+          "decimalPlaces": true,
+          "precision": 2,
+          "showThousandsSeparator": true,
+          "rules": [
+            {
+              "key": "required"
+            }
+          ],
+          "mobile": true
+        },
+        {
+          "name": "成本金额",
+          "internalKey": "paymentProductCostAmount",
+          "type": "INPUT_NUMBER",
+          "showLabel": true,
+          "readable": true,
+          "editable": true,
+          "fieldWidth": 1,
+          "numberFormat": "number",
+          "decimalPlaces": true,
+          "precision": 2,
+          "showThousandsSeparator": true,
+          "rules": [
+            {
+              "key": "required"
+            }
+          ],
+          "mobile": true
+        },
+        {
+          "name": "杂费金额",
+          "internalKey": "paymentProductMiscFeeAmount",
+          "type": "INPUT_NUMBER",
+          "showLabel": true,
+          "readable": true,
+          "editable": true,
+          "fieldWidth": 1,
+          "numberFormat": "number",
+          "decimalPlaces": true,
+          "precision": 2,
+          "showThousandsSeparator": true,
+          "rules": [
+            {
+              "key": "required"
+            }
+          ],
+          "mobile": true
+        },
+        {
+          "name": "返佣金额",
+          "internalKey": "paymentProductCommissionAmount",
+          "type": "INPUT_NUMBER",
+          "showLabel": true,
+          "readable": true,
+          "editable": true,
+          "fieldWidth": 1,
+          "numberFormat": "number",
+          "decimalPlaces": true,
+          "precision": 2,
+          "showThousandsSeparator": true,
+          "rules": [
+            {
+              "key": "required"
+            }
+          ],
+          "mobile": true
+        },
+        {
+          "name": "创收公式",
+          "internalKey": "paymentProductRevenueFormula",
+          "type": "INPUT",
+          "placeholder": "例如：回款金额-成本金额-杂费金额-返佣金额",
+          "showLabel": true,
+          "readable": true,
+          "editable": true,
+          "fieldWidth": 1,
+          "rules": [
+            {
+              "key": "required"
+            }
+          ],
+          "mobile": true
+        },
+        {
+          "name": "创收金额",
+          "internalKey": "paymentProductRevenueAmount",
+          "type": "INPUT_NUMBER",
+          "showLabel": true,
+          "readable": true,
+          "editable": false,
+          "fieldWidth": 1,
+          "numberFormat": "number",
+          "decimalPlaces": true,
+          "precision": 2,
+          "showThousandsSeparator": true,
+          "mobile": true
         }
       ],
       "mobile": true
     },
     {
-      "name": "回款信息",
-      "internalKey": "contractPaymentRecordInfo",
-      "type": "DIVIDER",
+      "name": "合计放款金额",
+      "internalKey": "contractPaymentRecordTotalLoanAmount",
+      "type": "FORMULA",
       "showLabel": true,
       "readable": true,
+      "editable": false,
       "fieldWidth": 1,
-      "dividerClass": "divider--normal",
-      "dividerColor": "#edf0f1",
-      "titleColor": "#323535"
-    },
-    {
-      "name": "回款时间",
-      "internalKey": "contractPaymentRecordEndTime",
-      "type": "DATE_TIME",
-      "dateType": "date",
-      "showLabel": true,
-      "readable": true,
-      "editable": true,
-      "fieldWidth": 1,
-      "rules": [
-        {
-          "key": "required"
-        }
-      ],
-      "mobile": true
-    },
-    {
-      "name": "回款金额",
-      "internalKey": "contractPaymentRecordAmount",
-      "type": "INPUT_NUMBER",
-      "showLabel": true,
-      "readable": true,
-      "editable": true,
-      "fieldWidth": 1,
-      "numberFormat": "number",
-      "decimalPlaces": true,
-      "precision": 2,
       "showThousandsSeparator": true,
+      "mobile": true
+    },
+    {
+      "name": "合计回款金额",
+      "internalKey": "contractPaymentRecordTotalRepaymentAmount",
+      "type": "FORMULA",
+      "showLabel": true,
+      "readable": true,
+      "editable": false,
+      "fieldWidth": 1,
+      "showThousandsSeparator": true,
+      "mobile": true
+    },
+    {
+      "name": "合计成本金额",
+      "internalKey": "contractPaymentRecordTotalCostAmount",
+      "type": "FORMULA",
+      "showLabel": true,
+      "readable": true,
+      "editable": false,
+      "fieldWidth": 1,
+      "showThousandsSeparator": true,
+      "mobile": true
+    },
+    {
+      "name": "合计杂费金额",
+      "internalKey": "contractPaymentRecordTotalMiscFeeAmount",
+      "type": "FORMULA",
+      "showLabel": true,
+      "readable": true,
+      "editable": false,
+      "fieldWidth": 1,
+      "showThousandsSeparator": true,
+      "mobile": true
+    },
+    {
+      "name": "合计返佣金额",
+      "internalKey": "contractPaymentRecordTotalCommissionAmount",
+      "type": "FORMULA",
+      "showLabel": true,
+      "readable": true,
+      "editable": false,
+      "fieldWidth": 1,
+      "showThousandsSeparator": true,
+      "mobile": true
+    },
+    {
+      "name": "合计创收金额",
+      "internalKey": "contractPaymentRecordTotalRevenueAmount",
+      "type": "FORMULA",
+      "showLabel": true,
+      "readable": true,
+      "editable": false,
+      "fieldWidth": 1,
+      "showThousandsSeparator": true,
+      "mobile": true
+    },
+    {
+      "name": "做单人",
+      "internalKey": "contractPaymentRecordDealPerson",
+      "type": "MEMBER",
+      "placeholder": "请选择做单人",
+      "showLabel": true,
+      "readable": true,
+      "editable": true,
+      "fieldWidth": 1,
       "rules": [
         {
           "key": "required"
@@ -2410,65 +2612,13 @@
       "mobile": true
     },
     {
-      "name": "收款银行",
-      "internalKey": "contractPaymentRecordBank",
-      "type": "SELECT",
+      "name": "备注",
+      "internalKey": "contractPaymentRecordRemark",
+      "type": "TEXTAREA",
       "showLabel": true,
       "readable": true,
       "editable": true,
       "fieldWidth": 1,
-      "options": [
-        {
-          "label": "中国银行",
-          "value": "1"
-        },
-        {
-          "label": "中国农业银行",
-          "value": "2"
-        },
-        {
-          "label": "中国工商银行",
-          "value": "3"
-        },
-        {
-          "label": "中国建设银行",
-          "value": "4"
-        }
-      ],
-      "rules": [
-        {
-          "key": "required"
-        }
-      ],
-      "mobile": true
-    },
-    {
-      "name": "收款银行账号",
-      "internalKey": "contractPaymentRecordBankNo",
-      "type": "SELECT",
-      "showLabel": true,
-      "readable": true,
-      "editable": true,
-      "fieldWidth": 1,
-      "options": [
-        {
-          "label": "银行账号1",
-          "value": "1"
-        },
-        {
-          "label": "银行账号2",
-          "value": "2"
-        },
-        {
-          "label": "银行账号3",
-          "value": "3"
-        }
-      ],
-      "rules": [
-        {
-          "key": "required"
-        }
-      ],
       "mobile": true
     }
   ],

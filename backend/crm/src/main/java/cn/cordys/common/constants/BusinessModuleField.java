@@ -287,10 +287,16 @@ public enum BusinessModuleField {
 
     CONTRACT_CUSTOMER_NAME("contractCustomer", "customerId", Set.of("rules.required", "mobile", "readable", "dataSourceType"), FormKey.CONTRACT.getKey()),
     CONTRACT_OWNER("contractOwner", "owner", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT.getKey()),
+    CONTRACT_SIGNER("contractSigner", "signerId", Set.of("rules.required", "mobile", "readable", "dataSourceType"), FormKey.CONTRACT.getKey()),
     CONTRACT_NO("contractNo", "number", Set.of("rules.required"), FormKey.CONTRACT.getKey()),
+    CONTRACT_PRODUCTS("contractProducts", "products", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT.getKey()),
+    CONTRACT_PRODUCT_LOAN_AMOUNT("contractProductLoanAmount", "loanAmount", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT.getKey()),
+    CONTRACT_PRODUCT_POINT_RATE("contractProductPointRate", "pointRate", Set.of("mobile", "readable"), FormKey.CONTRACT.getKey()),
+    CONTRACT_PRODUCT_EXPECTED_REPAYMENT_AMOUNT("contractProductExpectedRepaymentAmount", "expectedRepaymentAmount", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT.getKey()),
     CONTRACT_START_TIME("contractStartTime", "startTime", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT.getKey()),
     CONTRACT_END_TIME("contractEndTime", "endTime", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT.getKey()),
     CONTRACT_TOTAL_AMOUNT("contractTotalAmount", "amount", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT.getKey()),
+    CONTRACT_EXPECTED_REPAYMENT_AMOUNT("contractExpectedRepaymentAmount", "expectedRepaymentAmount", Set.of("mobile", "readable"), FormKey.CONTRACT.getKey()),
 
     /*------ end: CONTRACT ------*/
 
@@ -314,8 +320,24 @@ public enum BusinessModuleField {
     CONTRACT_PAYMENT_RECORD_OWNER("contractPaymentRecordOwner", "owner", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
     CONTRACT_PAYMENT_RECORD_CONTRACT("contractPaymentRecordContract", "contractId", Set.of("rules.required", "dataSourceType", "mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
     CONTRACT_PAYMENT_RECORD_PLAN("contractPaymentRecordPlan", "paymentPlanId", Set.of("dataSourceType", "mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
+    CONTRACT_PAYMENT_RECORD_PRODUCTS("contractPaymentRecordProducts", "products", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
+    CONTRACT_PAYMENT_PRODUCT_LOAN_TIME("paymentProductLoanTime", "loanTime", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
+    CONTRACT_PAYMENT_PRODUCT_LOAN_AMOUNT("paymentProductLoanAmount", "loanAmount", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
+    CONTRACT_PAYMENT_PRODUCT_REPAYMENT_TIME("paymentProductRepaymentTime", "repaymentTime", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
+    CONTRACT_PAYMENT_PRODUCT_REPAYMENT_AMOUNT("paymentProductRepaymentAmount", "repaymentAmount", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
+    CONTRACT_PAYMENT_PRODUCT_COST_AMOUNT("paymentProductCostAmount", "costAmount", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
+    CONTRACT_PAYMENT_PRODUCT_MISC_FEE_AMOUNT("paymentProductMiscFeeAmount", "miscFeeAmount", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
+    CONTRACT_PAYMENT_PRODUCT_COMMISSION_AMOUNT("paymentProductCommissionAmount", "commissionAmount", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
+    CONTRACT_PAYMENT_PRODUCT_REVENUE_FORMULA("paymentProductRevenueFormula", "revenueFormula", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
+    CONTRACT_PAYMENT_PRODUCT_REVENUE_AMOUNT("paymentProductRevenueAmount", "revenueAmount", Set.of("mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
     CONTRACT_PAYMENT_RECORD_AMOUNT("contractPaymentRecordAmount", "recordAmount", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
     CONTRACT_PAYMENT_RECORD_END_TIME("contractPaymentRecordEndTime", "recordEndTime", Set.of("rules.required", "mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
+    CONTRACT_PAYMENT_RECORD_TOTAL_LOAN_AMOUNT("contractPaymentRecordTotalLoanAmount", "totalLoanAmount", Set.of("mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
+    CONTRACT_PAYMENT_RECORD_TOTAL_REPAYMENT_AMOUNT("contractPaymentRecordTotalRepaymentAmount", "recordAmount", Set.of("mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
+    CONTRACT_PAYMENT_RECORD_TOTAL_COST_AMOUNT("contractPaymentRecordTotalCostAmount", "totalCostAmount", Set.of("mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
+    CONTRACT_PAYMENT_RECORD_TOTAL_MISC_FEE_AMOUNT("contractPaymentRecordTotalMiscFeeAmount", "totalMiscFeeAmount", Set.of("mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
+    CONTRACT_PAYMENT_RECORD_TOTAL_COMMISSION_AMOUNT("contractPaymentRecordTotalCommissionAmount", "totalCommissionAmount", Set.of("mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
+    CONTRACT_PAYMENT_RECORD_TOTAL_REVENUE_AMOUNT("contractPaymentRecordTotalRevenueAmount", "totalRevenueAmount", Set.of("mobile", "readable"), FormKey.CONTRACT_PAYMENT_RECORD.getKey()),
     /*------ end: CONTRACT_PAYMENT_RECORD 合同回款记录  ------*/
 
     /*------ start: ORDER ------*/

@@ -63,6 +63,7 @@ export const PaymentRecordPageUrl = '/contract/payment-record/page'; // 回款�
 export const PaymentRecordAddUrl = '/contract/payment-record/add'; // 添加回款记录
 export const PaymentRecordUpdateUrl = '/contract/payment-record/update'; // 更新回款记录
 export const PaymentRecordDeleteUrl = '/contract/payment-record/delete'; // 删除回款记录
+export const PaymentRecordApprovalUrl = '/contract/payment-record/approval'; // 回款记录审批
 export const GetPaymentRecordDetailUrl = '/contract/payment-record/get'; // 获取回款记录详情
 export const GetPaymentRecordFormConfigUrl = '/contract/payment-record/module/form'; // 回款记录表单配置
 export const GetPaymentRecordTabUrl = '/contract/payment-record/tab'; // 回款记录tab显隐

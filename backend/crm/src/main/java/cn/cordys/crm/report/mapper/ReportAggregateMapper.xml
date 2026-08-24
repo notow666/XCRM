@@ -1,0 +1,441 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cordys.crm.report.mapper.ReportAggregateMapper">
+
+    <!-- 客户转化事件维度列（SELECT 带别名） -->
+    <sql id="conversionDimSelect">
+        <choose>
+            <when test="dimensionType == 'EMPLOYEE_DEPT'">signer_dept_id AS dim_key, signer_dept_name AS dim_label</when>
+            <when test="dimensionType == 'CUSTOMER_SOURCE'">customer_source AS dim_key, customer_source AS dim_label</when>
+            <when test="dimensionType == 'STAT_DAY'">DATE_FORMAT(FROM_UNIXTIME(event_time / 1000), '%Y-%m-%d') AS dim_key, DATE_FORMAT(FROM_UNIXTIME(event_time / 1000), '%Y-%m-%d') AS dim_label</when>
+            <when test="dimensionType == 'STAT_MONTH'">DATE_FORMAT(FROM_UNIXTIME(event_time / 1000), '%Y-%m') AS dim_key, DATE_FORMAT(FROM_UNIXTIME(event_time / 1000), '%Y-%m') AS dim_label</when>
+            <otherwise>signer_id AS dim_key, signer_name AS dim_label</otherwise>
+        </choose>
+    </sql>
+
+    <!-- 客户转化事件维度列（GROUP BY） -->
+    <sql id="conversionDimGroup">
+        <choose>
+            <when test="dimensionType == 'EMPLOYEE_DEPT'">signer_dept_id, signer_dept_name</when>
+            <when test="dimensionType == 'CUSTOMER_SOURCE'">customer_source</when>
+            <when test="dimensionType == 'STAT_DAY'">DATE_FORMAT(FROM_UNIXTIME(event_time / 1000), '%Y-%m-%d')</when>
+            <when test="dimensionType == 'STAT_MONTH'">DATE_FORMAT(FROM_UNIXTIME(event_time / 1000), '%Y-%m')</when>
+            <otherwise>signer_id, signer_name</otherwise>
+        </choose>
+    </sql>
+
+    <!-- 上门事件维度列（SELECT 带别名，列名前缀 owner_） -->
+    <sql id="visitDimSelect">
+        <choose>
+            <when test="dimensionType == 'EMPLOYEE_DEPT'">owner_dept_id AS dim_key, owner_dept_name AS dim_label</when>
+            <when test="dimensionType == 'CUSTOMER_SOURCE'">customer_source AS dim_key, customer_source AS dim_label</when>
+            <when test="dimensionType == 'STAT_DAY'">DATE_FORMAT(FROM_UNIXTIME(event_time / 1000), '%Y-%m-%d') AS dim_key, DATE_FORMAT(FROM_UNIXTIME(event_time / 1000), '%Y-%m-%d') AS dim_label</when>
+            <when test="dimensionType == 'STAT_MONTH'">DATE_FORMAT(FROM_UNIXTIME(event_time / 1000), '%Y-%m') AS dim_key, DATE_FORMAT(FROM_UNIXTIME(event_time / 1000), '%Y-%m') AS dim_label</when>
+            <otherwise>owner_user_id AS dim_key, owner_user_name AS dim_label</otherwise>
+        </choose>
+    </sql>
+
+    <sql id="visitDimGroup">
+        <choose>
+            <when test="dimensionType == 'EMPLOYEE_DEPT'">owner_dept_id, owner_dept_name</when>
+            <when test="dimensionType == 'CUSTOMER_SOURCE'">customer_source</when>
+            <when test="dimensionType == 'STAT_DAY'">DATE_FORMAT(FROM_UNIXTIME(event_time / 1000), '%Y-%m-%d')</when>
+            <when test="dimensionType == 'STAT_MONTH'">DATE_FORMAT(FROM_UNIXTIME(event_time / 1000), '%Y-%m')</when>
+            <otherwise>owner_user_id, owner_user_name</otherwise>
+        </choose>
+    </sql>
+
+    <!-- 可见员工 IN 条件 -->
+    <sql id="visibleEmployeesIn">
+        <if test="visibleEmployees != null and !visibleEmployees.isEmpty()">
+            AND signer_id IN
+            <foreach collection="visibleEmployees" item="empId" open="(" separator="," close=")">#{empId}</foreach>
+        </if>
+    </sql>
+    <sql id="visitVisibleEmployeesIn">
+        <if test="visibleEmployees != null and !visibleEmployees.isEmpty()">
+            AND owner_user_id IN
+            <foreach collection="visibleEmployees" item="empId" open="(" separator="," close=")">#{empId}</foreach>
+        </if>
+    </sql>
+
+    <!-- 明细维度过滤（conversion 事件表） -->
+    <sql id="conversionDimKeyCondition">
+        <if test="dimensionKey != null and dimensionKey != ''">
+            AND <choose>
+                <when test="dimensionType == 'EMPLOYEE_DEPT'">signer_dept_id = #{dimensionKey}</when>
+                <when test="dimensionType == 'CUSTOMER_SOURCE'">customer_source = #{dimensionKey}</when>
+                <when test="dimensionType == 'STAT_DAY'">DATE_FORMAT(FROM_UNIXTIME(event_time / 1000), '%Y-%m-%d') = #{dimensionKey}</when>
+                <when test="dimensionType == 'STAT_MONTH'">DATE_FORMAT(FROM_UNIXTIME(event_time / 1000), '%Y-%m') = #{dimensionKey}</when>
+                <otherwise>signer_id = #{dimensionKey}</otherwise>
+            </choose>
+        </if>
+    </sql>
+
+    <!-- 明细维度过滤（上门事件表，owner_ 前缀） -->
+    <sql id="visitDimKeyCondition">
+        <if test="dimensionKey != null and dimensionKey != ''">
+            AND <choose>
+                <when test="dimensionType == 'EMPLOYEE_DEPT'">owner_dept_id = #{dimensionKey}</when>
+                <when test="dimensionType == 'CUSTOMER_SOURCE'">customer_source = #{dimensionKey}</when>
+                <when test="dimensionType == 'STAT_DAY'">DATE_FORMAT(FROM_UNIXTIME(event_time / 1000), '%Y-%m-%d') = #{dimensionKey}</when>
+                <when test="dimensionType == 'STAT_MONTH'">DATE_FORMAT(FROM_UNIXTIME(event_time / 1000), '%Y-%m') = #{dimensionKey}</when>
+                <otherwise>owner_user_id = #{dimensionKey}</otherwise>
+            </choose>
+        </if>
+    </sql>
+
+    <!-- 明细维度过滤（contract 表） -->
+    <sql id="contractDimKeyCondition">
+        <if test="dimensionKey != null and dimensionKey != ''">
+            AND <choose>
+                <when test="dimensionType == 'EMPLOYEE_DEPT'">signer_dept_id_snapshot = #{dimensionKey}</when>
+                <when test="dimensionType == 'CUSTOMER_SOURCE'">customer_source_snapshot = #{dimensionKey}</when>
+                <when test="dimensionType == 'STAT_DAY'">DATE_FORMAT(FROM_UNIXTIME(start_time / 1000), '%Y-%m-%d') = #{dimensionKey}</when>
+                <when test="dimensionType == 'STAT_MONTH'">DATE_FORMAT(FROM_UNIXTIME(start_time / 1000), '%Y-%m') = #{dimensionKey}</when>
+                <otherwise>signer_id = #{dimensionKey}</otherwise>
+            </choose>
+        </if>
+    </sql>
+
+    <!-- 明细维度过滤（产品 join 合同，c. 前缀） -->
+    <sql id="productDimKeyCondition">
+        <if test="dimensionKey != null and dimensionKey != ''">
+            AND <choose>
+                <when test="dimensionType == 'EMPLOYEE_DEPT'">c.signer_dept_id_snapshot = #{dimensionKey}</when>
+                <when test="dimensionType == 'CUSTOMER_SOURCE'">c.customer_source_snapshot = #{dimensionKey}</when>
+                <when test="dimensionType == 'STAT_DAY'">DATE_FORMAT(FROM_UNIXTIME(p.loan_time / 1000), '%Y-%m-%d') = #{dimensionKey}</when>
+                <when test="dimensionType == 'STAT_MONTH'">DATE_FORMAT(FROM_UNIXTIME(p.loan_time / 1000), '%Y-%m') = #{dimensionKey}</when>
+                <otherwise>c.signer_id = #{dimensionKey}</otherwise>
+            </choose>
+        </if>
+    </sql>
+
+    <resultMap id="conversionAggregateMap" type="cn.cordys.crm.report.mapper.ReportAggregateMapper$ConversionAggregateRow">
+        <result property="dimKey" column="dim_key"/>
+        <result property="dimLabel" column="dim_label"/>
+        <result property="customerCount" column="customer_count"/>
+    </resultMap>
+
+    <resultMap id="contractAggregateMap" type="cn.cordys.crm.report.mapper.ReportAggregateMapper$ContractAggregateRow">
+        <result property="dimKey" column="dim_key"/>
+        <result property="dimLabel" column="dim_label"/>
+        <result property="contractCount" column="contract_count"/>
+        <result property="contractAmount" column="contract_amount"/>
+        <result property="loanAmount" column="loan_amount"/>
+        <result property="repaymentAmount" column="repayment_amount"/>
+        <result property="revenueAmount" column="revenue_amount"/>
+    </resultMap>
+
+    <select id="countVisitCustomers" resultMap="conversionAggregateMap">
+        SELECT <include refid="visitDimSelect"/>,
+               COUNT(DISTINCT customer_id) AS customer_count
+        FROM report_employee_stat_event
+        WHERE organization_id = #{orgId}
+          AND metric_type = 'VISIT_CUSTOMER'
+          AND valid_flag = 1
+          AND event_time BETWEEN #{startTime} AND #{endTime}
+        <include refid="visitVisibleEmployeesIn"/>
+        GROUP BY <include refid="visitDimGroup"/>
+    </select>
+
+    <select id="countConversionCustomers" resultMap="conversionAggregateMap">
+        SELECT <include refid="conversionDimSelect"/>,
+               COUNT(DISTINCT customer_id) AS customer_count
+        FROM report_customer_conversion_event
+        WHERE organization_id = #{orgId}
+          AND event_type = #{eventType}
+          AND event_time BETWEEN #{startTime} AND #{endTime}
+        <include refid="visibleEmployeesIn"/>
+        GROUP BY <include refid="conversionDimGroup"/>
+    </select>
+
+    <!-- 合同签约聚合：维度列来自合同表快照 -->
+    <sql id="contractDimSelect">
+        <choose>
+            <when test="dimensionType == 'EMPLOYEE_DEPT'">signer_dept_id_snapshot AS dim_key, signer_dept_name_snapshot AS dim_label</when>
+            <when test="dimensionType == 'CUSTOMER_SOURCE'">customer_source_snapshot AS dim_key, customer_source_snapshot AS dim_label</when>
+            <when test="dimensionType == 'STAT_DAY'">DATE_FORMAT(FROM_UNIXTIME(start_time / 1000), '%Y-%m-%d') AS dim_key, DATE_FORMAT(FROM_UNIXTIME(start_time / 1000), '%Y-%m-%d') AS dim_label</when>
+            <when test="dimensionType == 'STAT_MONTH'">DATE_FORMAT(FROM_UNIXTIME(start_time / 1000), '%Y-%m') AS dim_key, DATE_FORMAT(FROM_UNIXTIME(start_time / 1000), '%Y-%m') AS dim_label</when>
+            <otherwise>signer_id AS dim_key, signer_name_snapshot AS dim_label</otherwise>
+        </choose>
+    </sql>
+
+    <sql id="contractDimGroup">
+        <choose>
+            <when test="dimensionType == 'EMPLOYEE_DEPT'">signer_dept_id_snapshot, signer_dept_name_snapshot</when>
+            <when test="dimensionType == 'CUSTOMER_SOURCE'">customer_source_snapshot</when>
+            <when test="dimensionType == 'STAT_DAY'">DATE_FORMAT(FROM_UNIXTIME(start_time / 1000), '%Y-%m-%d')</when>
+            <when test="dimensionType == 'STAT_MONTH'">DATE_FORMAT(FROM_UNIXTIME(start_time / 1000), '%Y-%m')</when>
+            <otherwise>signer_id, signer_name_snapshot</otherwise>
+        </choose>
+    </sql>
+
+    <select id="aggregateContracts" resultMap="contractAggregateMap">
+        SELECT <include refid="contractDimSelect"/>,
+               COUNT(*) AS contract_count,
+               COALESCE(SUM(amount), 0) AS contract_amount
+        FROM contract
+        WHERE organization_id = #{orgId}
+          AND effective_version_id IS NOT NULL
+          AND start_time BETWEEN #{startTime} AND #{endTime}
+        <include refid="visibleEmployeesIn"/>
+        GROUP BY <include refid="contractDimGroup"/>
+    </select>
+
+    <!-- 回款产品聚合-放款维度列（loan_time 归档，产品表快照列，无 join） -->
+    <sql id="productDimSelect">
+        <choose>
+            <when test="dimensionType == 'EMPLOYEE_DEPT'">p.signer_dept_id_snapshot AS dim_key, p.signer_dept_name_snapshot AS dim_label</when>
+            <when test="dimensionType == 'CUSTOMER_SOURCE'">p.customer_source_snapshot AS dim_key, p.customer_source_snapshot AS dim_label</when>
+            <when test="dimensionType == 'STAT_DAY'">DATE_FORMAT(FROM_UNIXTIME(p.loan_time / 1000), '%Y-%m-%d') AS dim_key, DATE_FORMAT(FROM_UNIXTIME(p.loan_time / 1000), '%Y-%m-%d') AS dim_label</when>
+            <when test="dimensionType == 'STAT_MONTH'">DATE_FORMAT(FROM_UNIXTIME(p.loan_time / 1000), '%Y-%m') AS dim_key, DATE_FORMAT(FROM_UNIXTIME(p.loan_time / 1000), '%Y-%m') AS dim_label</when>
+            <otherwise>p.signer_id AS dim_key, p.signer_name_snapshot AS dim_label</otherwise>
+        </choose>
+    </sql>
+
+    <sql id="productDimGroup">
+        <choose>
+            <when test="dimensionType == 'EMPLOYEE_DEPT'">p.signer_dept_id_snapshot, p.signer_dept_name_snapshot</when>
+            <when test="dimensionType == 'CUSTOMER_SOURCE'">p.customer_source_snapshot</when>
+            <when test="dimensionType == 'STAT_DAY'">DATE_FORMAT(FROM_UNIXTIME(p.loan_time / 1000), '%Y-%m-%d')</when>
+            <when test="dimensionType == 'STAT_MONTH'">DATE_FORMAT(FROM_UNIXTIME(p.loan_time / 1000), '%Y-%m')</when>
+            <otherwise>p.signer_id, p.signer_name_snapshot</otherwise>
+        </choose>
+    </sql>
+
+    <!-- 回款产品聚合-回款/创收维度列（repayment_time 归档） -->
+    <sql id="productRepayDimSelect">
+        <choose>
+            <when test="dimensionType == 'EMPLOYEE_DEPT'">p.signer_dept_id_snapshot AS dim_key, p.signer_dept_name_snapshot AS dim_label</when>
+            <when test="dimensionType == 'CUSTOMER_SOURCE'">p.customer_source_snapshot AS dim_key, p.customer_source_snapshot AS dim_label</when>
+            <when test="dimensionType == 'STAT_DAY'">DATE_FORMAT(FROM_UNIXTIME(p.repayment_time / 1000), '%Y-%m-%d') AS dim_key, DATE_FORMAT(FROM_UNIXTIME(p.repayment_time / 1000), '%Y-%m-%d') AS dim_label</when>
+            <when test="dimensionType == 'STAT_MONTH'">DATE_FORMAT(FROM_UNIXTIME(p.repayment_time / 1000), '%Y-%m') AS dim_key, DATE_FORMAT(FROM_UNIXTIME(p.repayment_time / 1000), '%Y-%m') AS dim_label</when>
+            <otherwise>p.signer_id AS dim_key, p.signer_name_snapshot AS dim_label</otherwise>
+        </choose>
+    </sql>
+
+    <sql id="productRepayDimGroup">
+        <choose>
+            <when test="dimensionType == 'EMPLOYEE_DEPT'">p.signer_dept_id_snapshot, p.signer_dept_name_snapshot</when>
+            <when test="dimensionType == 'CUSTOMER_SOURCE'">p.customer_source_snapshot</when>
+            <when test="dimensionType == 'STAT_DAY'">DATE_FORMAT(FROM_UNIXTIME(p.repayment_time / 1000), '%Y-%m-%d')</when>
+            <when test="dimensionType == 'STAT_MONTH'">DATE_FORMAT(FROM_UNIXTIME(p.repayment_time / 1000), '%Y-%m')</when>
+            <otherwise>p.signer_id, p.signer_name_snapshot</otherwise>
+        </choose>
+    </sql>
+
+    <sql id="productContractSignerIn">
+        <if test="visibleEmployees != null and !visibleEmployees.isEmpty()">
+            AND p.signer_id IN
+            <foreach collection="visibleEmployees" item="empId" open="(" separator="," close=")">#{empId}</foreach>
+        </if>
+    </sql>
+
+    <!-- 回款产品聚合-放款（按 loan_time 范围，单表走索引，无 join） -->
+    <select id="aggregateProducts" resultMap="contractAggregateMap">
+        SELECT <include refid="productDimSelect"/>,
+               COALESCE(SUM(p.loan_amount), 0) AS loan_amount,
+               0 AS repayment_amount,
+               0 AS revenue_amount
+        FROM contract_payment_record_product p
+        WHERE p.organization_id = CAST(#{orgId} AS UNSIGNED)
+          AND p.loan_time BETWEEN #{startTime} AND #{endTime}
+        <include refid="productContractSignerIn"/>
+        GROUP BY <include refid="productDimGroup"/>
+    </select>
+
+    <!-- 回款产品聚合-回款/创收（按 repayment_time 范围，单表走索引，无 join） -->
+    <select id="aggregateProductsRepayment" resultMap="contractAggregateMap">
+        SELECT <include refid="productRepayDimSelect"/>,
+               0 AS loan_amount,
+               COALESCE(SUM(p.repayment_amount), 0) AS repayment_amount,
+               COALESCE(SUM(p.revenue_amount), 0) AS revenue_amount
+        FROM contract_payment_record_product p
+        WHERE p.organization_id = CAST(#{orgId} AS UNSIGNED)
+          AND p.repayment_time BETWEEN #{startTime} AND #{endTime}
+        <include refid="productContractSignerIn"/>
+        GROUP BY <include refid="productRepayDimGroup"/>
+    </select>
+
+    <!-- ================= 涉及员工（distinct，供可见性过滤） ================= -->
+    <select id="distinctConversionEmployees" resultType="java.lang.String">
+        SELECT DISTINCT signer_id FROM report_customer_conversion_event
+        WHERE organization_id = #{orgId} AND event_type = #{eventType}
+          AND event_time BETWEEN #{startTime} AND #{endTime}
+          AND signer_id IS NOT NULL
+    </select>
+
+    <select id="distinctVisitEmployees" resultType="java.lang.String">
+        SELECT DISTINCT owner_user_id FROM report_employee_stat_event
+        WHERE organization_id = #{orgId} AND metric_type = 'VISIT_CUSTOMER'
+          AND event_time BETWEEN #{startTime} AND #{endTime} AND valid_flag = 1
+          AND owner_user_id IS NOT NULL
+    </select>
+
+    <select id="distinctContractSigners" resultType="java.lang.String">
+        SELECT DISTINCT signer_id FROM contract
+        WHERE organization_id = #{orgId} AND effective_version_id IS NOT NULL
+          AND start_time BETWEEN #{startTime} AND #{endTime}
+          AND signer_id IS NOT NULL
+    </select>
+
+    <!-- ================= 客户转化明细（SQL 分页） ================= -->
+    <resultMap id="conversionDetailMap" type="cn.cordys.crm.report.mapper.ReportAggregateMapper$ConversionDetailRow">
+        <result property="eventType" column="event_type"/>
+        <result property="businessId" column="business_id"/>
+        <result property="customerId" column="customer_id"/>
+        <result property="customerName" column="customer_name"/>
+        <result property="customerMobile" column="customer_mobile"/>
+        <result property="employeeId" column="employee_id"/>
+        <result property="employeeName" column="employee_name"/>
+        <result property="departmentId" column="department_id"/>
+        <result property="departmentName" column="department_name"/>
+        <result property="eventTime" column="event_time"/>
+        <result property="statDate" column="stat_date"/>
+    </resultMap>
+
+    <select id="listConversionDetails" resultMap="conversionDetailMap">
+        SELECT event_type, business_id, customer_id, customer_name, customer_mobile,
+               signer_id AS employee_id, signer_name AS employee_name,
+               signer_dept_id AS department_id, signer_dept_name AS department_name,
+               event_time, stat_date
+        FROM report_customer_conversion_event
+        WHERE organization_id = #{orgId} AND event_type = #{eventType}
+          AND event_time BETWEEN #{startTime} AND #{endTime}
+        <include refid="visibleEmployeesIn"/>
+        <include refid="conversionDimKeyCondition"/>
+        ORDER BY event_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countConversionDetails" resultType="long">
+        SELECT COUNT(*) FROM report_customer_conversion_event
+        WHERE organization_id = #{orgId} AND event_type = #{eventType}
+          AND event_time BETWEEN #{startTime} AND #{endTime}
+        <include refid="visibleEmployeesIn"/>
+        <include refid="conversionDimKeyCondition"/>
+    </select>
+
+    <select id="listVisitDetails" resultMap="conversionDetailMap">
+        SELECT 'VISIT' AS event_type, id AS business_id, customer_id, customer_name, customer_mobile,
+               owner_user_id AS employee_id, owner_user_name AS employee_name,
+               owner_dept_id AS department_id, owner_dept_name AS department_name,
+               event_time, stat_date
+        FROM report_employee_stat_event
+        WHERE organization_id = #{orgId} AND metric_type = 'VISIT_CUSTOMER' AND valid_flag = 1
+          AND event_time BETWEEN #{startTime} AND #{endTime}
+        <include refid="visitVisibleEmployeesIn"/>
+        <include refid="visitDimKeyCondition"/>
+        ORDER BY event_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countVisitDetails" resultType="long">
+        SELECT COUNT(*) FROM report_employee_stat_event
+        WHERE organization_id = #{orgId} AND metric_type = 'VISIT_CUSTOMER' AND valid_flag = 1
+          AND event_time BETWEEN #{startTime} AND #{endTime}
+        <include refid="visitVisibleEmployeesIn"/>
+        <include refid="visitDimKeyCondition"/>
+    </select>
+
+    <!-- ================= 合同成交分析明细（SQL 分页） ================= -->
+    <resultMap id="contractDetailMap" type="cn.cordys.crm.report.mapper.ReportAggregateMapper$ContractDetailRow">
+        <result property="metricType" column="metric_type"/>
+        <result property="resourceId" column="resource_id"/>
+        <result property="paymentRecordId" column="payment_record_id"/>
+        <result property="contractId" column="contract_id"/>
+        <result property="contractName" column="contract_name"/>
+        <result property="customerId" column="customer_id"/>
+        <result property="customerName" column="customer_name"/>
+        <result property="customerMobile" column="customer_mobile"/>
+        <result property="customerSource" column="customer_source"/>
+        <result property="signerId" column="signer_id"/>
+        <result property="signerName" column="signer_name"/>
+        <result property="departmentId" column="department_id"/>
+        <result property="departmentName" column="department_name"/>
+        <result property="businessTime" column="business_time"/>
+        <result property="amount" column="amount"/>
+        <result property="revenueAmount" column="revenue_amount"/>
+    </resultMap>
+
+    <select id="listContractDetails" resultMap="contractDetailMap">
+        SELECT 'CONTRACT' AS metric_type, id AS resource_id, NULL AS payment_record_id,
+               id AS contract_id, name AS contract_name,
+               customer_id, customer_name_snapshot AS customer_name, customer_mobile_snapshot AS customer_mobile,
+               customer_source_snapshot AS customer_source,
+               signer_id, signer_name_snapshot AS signer_name,
+               signer_dept_id_snapshot AS department_id, signer_dept_name_snapshot AS department_name,
+               start_time AS business_time, amount
+        FROM contract
+        WHERE organization_id = #{orgId} AND effective_version_id IS NOT NULL
+          AND start_time BETWEEN #{startTime} AND #{endTime}
+        <include refid="visibleEmployeesIn"/>
+        <include refid="contractDimKeyCondition"/>
+        ORDER BY start_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countContractDetails" resultType="long">
+        SELECT COUNT(*) FROM contract
+        WHERE organization_id = #{orgId} AND effective_version_id IS NOT NULL
+          AND start_time BETWEEN #{startTime} AND #{endTime}
+        <include refid="visibleEmployeesIn"/>
+        <include refid="contractDimKeyCondition"/>
+    </select>
+
+    <select id="listProductDetails" resultMap="contractDetailMap">
+        SELECT 'LOAN' AS metric_type, p.id AS resource_id, p.payment_record_id, p.contract_id, c.name AS contract_name,
+               c.customer_id, c.customer_name_snapshot AS customer_name, c.customer_mobile_snapshot AS customer_mobile,
+               c.customer_source_snapshot AS customer_source,
+               c.signer_id, c.signer_name_snapshot AS signer_name,
+               c.signer_dept_id_snapshot AS department_id, c.signer_dept_name_snapshot AS department_name,
+               p.loan_time AS business_time, p.loan_amount AS amount
+        FROM contract_payment_record_product p
+        JOIN contract c ON c.id = p.contract_id
+        WHERE p.organization_id = CAST(#{orgId} AS UNSIGNED)
+          AND c.effective_version_id IS NOT NULL
+          AND p.loan_time BETWEEN #{startTime} AND #{endTime}
+        <include refid="productContractSignerIn"/>
+        <include refid="productDimKeyCondition"/>
+        ORDER BY p.loan_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countProductDetails" resultType="long">
+        SELECT COUNT(*) FROM contract_payment_record_product p
+        JOIN contract c ON c.id = p.contract_id
+        WHERE p.organization_id = CAST(#{orgId} AS UNSIGNED)
+          AND c.effective_version_id IS NOT NULL
+          AND p.loan_time BETWEEN #{startTime} AND #{endTime}
+        <include refid="productContractSignerIn"/>
+        <include refid="productDimKeyCondition"/>
+    </select>
+
+    <select id="listProductDetailsByRepayment" resultMap="contractDetailMap">
+        SELECT 'REPAYMENT' AS metric_type, p.id AS resource_id, p.payment_record_id, p.contract_id, c.name AS contract_name,
+               c.customer_id, c.customer_name_snapshot AS customer_name, c.customer_mobile_snapshot AS customer_mobile,
+               c.customer_source_snapshot AS customer_source,
+               c.signer_id, c.signer_name_snapshot AS signer_name,
+               c.signer_dept_id_snapshot AS department_id, c.signer_dept_name_snapshot AS department_name,
+               p.repayment_time AS business_time, p.repayment_amount AS amount,
+               p.revenue_amount AS revenue_amount
+        FROM contract_payment_record_product p
+        JOIN contract c ON c.id = p.contract_id
+        WHERE p.organization_id = CAST(#{orgId} AS UNSIGNED)
+          AND c.effective_version_id IS NOT NULL
+          AND p.repayment_time BETWEEN #{startTime} AND #{endTime}
+        <include refid="productContractSignerIn"/>
+        ORDER BY p.repayment_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countProductDetailsByRepayment" resultType="long">
+        SELECT COUNT(*) FROM contract_payment_record_product p
+        JOIN contract c ON c.id = p.contract_id
+        WHERE p.organization_id = CAST(#{orgId} AS UNSIGNED)
+          AND c.effective_version_id IS NOT NULL
+          AND p.repayment_time BETWEEN #{startTime} AND #{endTime}
+        <include refid="productContractSignerIn"/>
+    </select>
+</mapper>

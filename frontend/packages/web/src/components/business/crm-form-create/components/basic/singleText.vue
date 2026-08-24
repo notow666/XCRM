@@ -27,6 +27,7 @@
     <n-tooltip
       trigger="hover"
       placement="top"
+      :trigger-style="props.fullWidth ? { width: '100%' } : undefined"
       :disabled="props.fieldConfig.defaultValueType !== 'formula' || props.isSubTableRender"
     >
       <template #trigger>
@@ -40,6 +41,8 @@
             props.fieldConfig.defaultValueType === 'formula'
           "
           clearable
+          :class="props.fullWidth ? 'w-full' : undefined"
+          :style="props.fullWidth ? { minWidth: '400px' } : undefined"
           @update-value="($event) => emit('change', $event)"
         />
       </template>
@@ -69,6 +72,7 @@
     needInitDetail?: boolean; // 判断是否编辑情况
     isSubTableField?: boolean; // 是否是子表字段
     isSubTableRender?: boolean; // 是否是子表渲染
+    fullWidth?: boolean;
     formDetail?: Record<string, any>;
   }>();
   const emit = defineEmits<{

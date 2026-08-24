@@ -77,6 +77,7 @@ public class DataInitService {
                 initOneTime(moduleFormService::initOrderFormScenarioProp, "init.order.form.scenario");
                 initOneTime(moduleFieldExtService::modifyInternalSubSumColumn, "modify.internal.sum.column");
                 initOneTime(moduleFieldExtService::modifyInternalSubCalcFormula, "modify.internal.calc.formula");
+                initOneTime(moduleFormService::upgradeContractPaymentForms, "upgrade.contract.payment.form.v2.0.6.4");
             }
             else {
                 log.error("初始化租户数据库异常");

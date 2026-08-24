@@ -5,18 +5,29 @@
     <select id="list" resultType="cn.cordys.crm.contract.dto.response.ContractListResponse">
         SELECT
         ct.id,
-        ct.NAME,
+        ct.display_name AS NAME,
         ct.customer_id,
-        ct.number,
-        c.`name` AS customerName,
+        ct.display_number AS number,
+        ct.customer_name_snapshot,
+        ct.customer_mobile_snapshot,
+        ct.customer_source_snapshot,
+        ct.owner_name_snapshot,
+        ct.display_signer_id AS signer_id,
+        ct.display_signer_name AS signer_name_snapshot,
+        ct.display_signer_dept_id AS signer_dept_id_snapshot,
+        ct.display_signer_dept_name AS signer_dept_name_snapshot,
+        ct.display_expected_repayment_amount AS expected_repayment_amount,
+        ct.effective_version_id,
+        ct.pending_version_id,
+        ct.lock_version,
         c.in_shared_pool AS inCustomerPool,
         c.pool_id,
-        ct.amount,
+        ct.display_amount AS amount,
         ct.approval_status,
-        ct.stage,
+        ct.display_stage AS stage,
         ct.`owner`,
-        ct.start_time,
-        ct.end_time,
+        ct.display_start_time AS start_time,
+        ct.display_end_time AS end_time,
         ct.void_reason,
         ct.create_user,
         ct.create_time,
@@ -24,9 +35,33 @@
         ct.update_time,
         ct.alreadyPayAmount
         FROM (
-        SELECT ctt.*, IFNULL(SUM(cpr.record_amount), 0) AS alreadyPayAmount
+        SELECT ctt.*, IFNULL(SUM(cpr.record_amount), 0) AS alreadyPayAmount,
+        display_version.value_snapshot AS display_value_snapshot,
+        COALESCE(JSON_UNQUOTE(JSON_EXTRACT(display_version.value_snapshot, '$.name')), ctt.name) AS display_name,
+        COALESCE(JSON_UNQUOTE(JSON_EXTRACT(display_version.value_snapshot, '$.number')), ctt.number) AS display_number,
+        COALESCE(JSON_UNQUOTE(JSON_EXTRACT(display_version.value_snapshot, '$.signerId')), ctt.signer_id) AS display_signer_id,
+        COALESCE(JSON_UNQUOTE(JSON_EXTRACT(display_version.value_snapshot, '$.signerNameSnapshot')), ctt.signer_name_snapshot) AS display_signer_name,
+        COALESCE(JSON_UNQUOTE(JSON_EXTRACT(display_version.value_snapshot, '$.signerDeptIdSnapshot')), ctt.signer_dept_id_snapshot) AS display_signer_dept_id,
+        COALESCE(JSON_UNQUOTE(JSON_EXTRACT(display_version.value_snapshot, '$.signerDeptNameSnapshot')), ctt.signer_dept_name_snapshot) AS display_signer_dept_name,
+        COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.amount') + 0, ctt.amount) AS display_amount,
+        COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.expectedRepaymentAmount') + 0, ctt.expected_repayment_amount) AS display_expected_repayment_amount,
+        COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.startTime') + 0, ctt.start_time) AS display_start_time,
+        COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.endTime') + 0, ctt.end_time) AS display_end_time,
+        IF(display_version.id IS NOT NULL, 'PENDING_SIGNING', ctt.stage) AS display_stage
         FROM contract ctt
+        LEFT JOIN contract_version display_version ON display_version.id = COALESCE(
+            ctt.pending_version_id,
+            CASE WHEN ctt.effective_version_id IS NULL THEN (
+                SELECT latest_version.id
+                FROM contract_version latest_version
+                WHERE latest_version.contract_id = ctt.id
+                ORDER BY latest_version.version_no DESC
+                LIMIT 1
+            ) END
+        )
         LEFT JOIN contract_payment_record cpr on cpr.contract_id = ctt.id
+        AND cpr.approval_status = 'APPROVED'
+        AND cpr.effective_version_id IS NOT NULL
         GROUP BY ctt.id
         ) ct
         LEFT JOIN customer c ON ct.customer_id = c.id
@@ -64,18 +99,24 @@
             and ct.customer_id = #{request.customerId}
         </if>
 
-        <if test="dataPermission != null and dataPermission.self">
-            and ct.owner = #{userId}
-        </if>
+        <choose>
+            <!-- 回款记录只能由合同当前签约人创建，合同数据源必须使用相同口径。 -->
+            <when test="source and request.sourceFormKey == 'CONTRACT_PAYMENT_RECORD'">
+                and ct.signer_id = #{userId}
+            </when>
+            <when test="dataPermission != null and dataPermission.self">
+                and ct.owner = #{userId}
+            </when>
+        </choose>
 
         <if test="!source and request.keyword != null and request.keyword != ''">
             and (
-            ct.name like concat('%', #{request.keyword},'%')
+            ct.display_name like concat('%', #{request.keyword},'%')
             or c.name like concat('%', #{request.keyword},'%')
             )
         </if>
         <if test="source and request.keyword != null and request.keyword != ''">
-            and ct.name like concat('%', #{request.keyword},'%')
+            and ct.display_name like concat('%', #{request.keyword},'%')
         </if>
 
         <include refid="filters">
@@ -97,7 +138,18 @@
         ct.id,
         ct.NAME,
         ct.customer_id,
-        c.`name` AS customerName,
+        ct.customer_name_snapshot,
+        ct.customer_mobile_snapshot,
+        ct.customer_source_snapshot,
+        ct.owner_name_snapshot,
+        ct.signer_id,
+        ct.signer_name_snapshot,
+        ct.signer_dept_id_snapshot,
+        ct.signer_dept_name_snapshot,
+        ct.expected_repayment_amount,
+        ct.effective_version_id,
+        ct.pending_version_id,
+        ct.lock_version,
         c.in_shared_pool AS inCustomerPool,
         c.pool_id,
         ct.amount,
@@ -117,6 +169,8 @@
         SELECT ctt.*, IFNULL(SUM(cpr.record_amount), 0) AS alreadyPayAmount
         FROM contract ctt
         LEFT JOIN contract_payment_record cpr on cpr.contract_id = ctt.id
+        AND cpr.approval_status = 'APPROVED'
+        AND cpr.effective_version_id IS NOT NULL
         GROUP BY ctt.id
         ) ct
         LEFT JOIN customer c ON ct.customer_id = c.id
@@ -149,6 +203,14 @@
                 <if test="condition.name not in
                 {'name', 'owner', 'createTime', 'updateTime', 'customerId', 'createUser', 'updateUser',
                  'departmentId', 'number', 'stage', 'amount', 'approvalStatus', 'startTime', 'endTime', 'alreadyPayAmount'}">
+                    left join JSON_TABLE(
+                        COALESCE(JSON_EXTRACT(ct.display_value_snapshot, '$.moduleFields'), JSON_ARRAY()),
+                        '$[*]' COLUMNS(
+                            field_id VARCHAR(255) PATH '$.fieldId',
+                            field_value VARCHAR(4000) PATH '$.fieldValue' NULL ON EMPTY
+                        )
+                    ) ${tablePrefix}_version_${i}
+                    on ${tablePrefix}_version_${i}.field_id = #{condition.name}
                     <if test="condition.multipleValue">
                         left join contract_field_blob ${tablePrefix}_${i}
                         on ct.id = ${tablePrefix}_${i}.resource_id and ${tablePrefix}_${i}.field_id = #{condition.name}
@@ -173,7 +235,14 @@
             <bind name="sortName" value="${sort}.name"/>
             left join contract_field sort_table
             on ct.id = sort_table.resource_id and sort_table.field_id = #{sortName}
-            left join sys_module_field module_table on sort_table.field_id = module_table.id
+            left join JSON_TABLE(
+                COALESCE(JSON_EXTRACT(ct.display_value_snapshot, '$.moduleFields'), JSON_ARRAY()),
+                '$[*]' COLUMNS(
+                    field_id VARCHAR(255) PATH '$.fieldId',
+                    field_value VARCHAR(4000) PATH '$.fieldValue' NULL ON EMPTY
+                )
+            ) sort_version_table on sort_version_table.field_id = #{sortName}
+            left join sys_module_field module_table on module_table.id = #{sortName}
         </if>
         <if test="${sort} != null and ${sort}.valid() and ${sort}.name == 'department_id'">
             left join sys_organization_user souc_sort on souc_sort.user_id = ct.owner
@@ -187,6 +256,7 @@
                     <include refid="condition">
                         <property name="condition" value="condition"/>
                         <property name="fieldTable" value="filter_${i}.field_value"/>
+                        <property name="versionFieldTable" value="filter_version_${i}.field_value"/>
                     </include>
                 </foreach>
             </trim>
@@ -198,7 +268,7 @@
             <when test="condition.name == 'name'">
                 <include refid="cn.cordys.common.mapper.CommonMapper.condition">
                     <property name="condition" value="condition"/>
-                    <property name="column" value="ct.name"/>
+                    <property name="column" value="ct.display_name"/>
                 </include>
             </when>
             <when test="condition.name == 'customerId'">
@@ -210,7 +280,7 @@
             <when test="condition.name == 'amount'">
                 <include refid="cn.cordys.common.mapper.CommonMapper.condition">
                     <property name="condition" value="condition"/>
-                    <property name="column" value="ct.amount"/>
+                    <property name="column" value="ct.display_amount"/>
                 </include>
             </when>
             <when test="condition.name == 'alreadyPayAmount'">
@@ -228,13 +298,13 @@
             <when test="condition.name == 'stage'">
                 <include refid="cn.cordys.common.mapper.CommonMapper.condition">
                     <property name="condition" value="condition"/>
-                    <property name="column" value="ct.stage"/>
+                    <property name="column" value="ct.display_stage"/>
                 </include>
             </when>
             <when test="condition.name == 'number'">
                 <include refid="cn.cordys.common.mapper.CommonMapper.condition">
                     <property name="condition" value="condition"/>
-                    <property name="column" value="ct.number"/>
+                    <property name="column" value="ct.display_number"/>
                 </include>
             </when>
             <when test="condition.name == 'approvalStatus'">
@@ -246,19 +316,19 @@
             <when test="condition.name == 'startTime'">
                 <include refid="cn.cordys.common.mapper.CommonMapper.condition">
                     <property name="condition" value="condition"/>
-                    <property name="column" value="ct.start_time"/>
+                    <property name="column" value="ct.display_start_time"/>
                 </include>
             </when>
             <when test="condition.name == 'endTime'">
                 <include refid="cn.cordys.common.mapper.CommonMapper.condition">
                     <property name="condition" value="condition"/>
-                    <property name="column" value="ct.end_time"/>
+                    <property name="column" value="ct.display_end_time"/>
                 </include>
             </when>
             <when test="condition.name == 'departmentId'">
                 <include refid="cn.cordys.common.mapper.CommonMapper.condition">
                     <property name="condition" value="condition"/>
-                    <property name="column" value="${table}.department_id"/>
+                    <property name="column" value="ct.display_signer_dept_id"/>
                 </include>
             </when>
             <when test="condition.name == 'createTime'">
@@ -288,7 +358,7 @@
             <otherwise>
                 <include refid="cn.cordys.common.mapper.CommonMapper.moduleFieldCondition">
                     <property name="condition" value="condition"/>
-                    <property name="column" value="${fieldTable}"/>
+                    <property name="column" value="COALESCE(${versionFieldTable}, ${fieldTable})"/>
                 </include>
             </otherwise>
         </choose>
@@ -302,6 +372,7 @@
                         <include refid="condition">
                             <property name="condition" value="condition"/>
                             <property name="fieldTable" value="combine_${i}.field_value"/>
+                            <property name="versionFieldTable" value="combine_version_${i}.field_value"/>
                             <property name="table" value="combine_${i}"/>
                         </include>
                         <include refid="cn.cordys.common.mapper.CommonMapper.searchMode">
@@ -321,6 +392,7 @@
                         <include refid="condition">
                             <property name="condition" value="condition"/>
                             <property name="fieldTable" value="viewCombine_${i}.field_value"/>
+                            <property name="versionFieldTable" value="viewCombine_version_${i}.field_value"/>
                             <property name="table" value="viewCombine_${i}"/>
                         </include>
                         <include refid="cn.cordys.common.mapper.CommonMapper.searchMode">
@@ -339,7 +411,7 @@
                 order by
                 <choose>
                     <when test="${sort}.name == 'name'">
-                        ct.`name` ${sortType}, ct.id ASC
+                        ct.display_name ${sortType}, ct.id ASC
                     </when>
                     <when test="${sort}.name == 'customer_id'">
                         c.`name` ${sortType}, ct.id ASC
@@ -348,13 +420,13 @@
                         ct.`owner` ${sortType}, ct.id ASC
                     </when>
                     <when test="${sort}.name == 'amount'">
-                        ct.`amount` ${sortType}, ct.id ASC
+                        ct.display_amount ${sortType}, ct.id ASC
                     </when>
                     <when test="${sort}.name == 'already_pay_amount'">
                         ct.`alreadyPayAmount` ${sortType}, ct.id ASC
                     </when>
                     <when test="${sort}.name == 'stage'">
-                        ct.`stage` ${sortType}, ct.id ASC
+                        ct.display_stage ${sortType}, ct.id ASC
                     </when>
                     <when test="${sort}.name == 'create_time'">
                         ct.`create_time` ${sortType}, ct.id ASC
@@ -369,25 +441,25 @@
                         ct.`update_user` ${sortType}, ct.id ASC
                     </when>
                     <when test="${sort}.name == 'department_id'">
-                        souc_sort.`id` ${sortType}, ct.id ASC
+                        ct.display_signer_dept_id ${sortType}, ct.id ASC
                     </when>
                     <when test="${sort}.name == 'approval_status'">
                         ct.`approval_status` ${sortType}, ct.id ASC
                     </when>
                     <when test="${sort}.name == 'start_time'">
-                        ct.`start_time` ${sortType}, ct.id ASC
+                        ct.display_start_time ${sortType}, ct.id ASC
                     </when>
                     <when test="${sort}.name == 'end_time'">
-                        ct.`end_time` ${sortType}, ct.id ASC
+                        ct.display_end_time ${sortType}, ct.id ASC
                     </when>
 
 
                     <otherwise>
                         CASE
                         WHEN module_table.type = 'INPUT_NUMBER'
-                        THEN sort_table.field_value+0
+                        THEN COALESCE(sort_version_table.field_value, sort_table.field_value)+0
                         END ${sortType},
-                        sort_table.field_value ${sortType},
+                        COALESCE(sort_version_table.field_value, sort_table.field_value) ${sortType},
                         ct.id ${sortType}
                     </otherwise>
                 </choose>
@@ -473,13 +545,47 @@
         where id = #{id}
     </update>
 
+    <select id="selectForUpdate" resultType="cn.cordys.crm.contract.domain.Contract">
+        SELECT *
+        FROM contract
+        WHERE id = #{id}
+          AND organization_id = #{orgId}
+        FOR UPDATE
+    </select>
+
 
     <select id="searchStatistic" resultType="cn.cordys.crm.contract.dto.response.ContractStatisticResponse">
         SELECT
-        sum(ct.amount) as amount,
-        sum(ct.amount)  / count(*) as averageAmount
+        sum(ct.display_amount) as amount,
+        sum(ct.display_amount) / count(*) as averageAmount
         FROM
-        contract ct
+        (
+            SELECT ctt.*,
+                   display_version.value_snapshot AS display_value_snapshot,
+                   COALESCE(JSON_UNQUOTE(JSON_EXTRACT(display_version.value_snapshot, '$.name')), ctt.name) AS display_name,
+                   COALESCE(JSON_UNQUOTE(JSON_EXTRACT(display_version.value_snapshot, '$.number')), ctt.number) AS display_number,
+                   COALESCE(JSON_UNQUOTE(JSON_EXTRACT(display_version.value_snapshot, '$.signerId')), ctt.signer_id) AS display_signer_id,
+                   COALESCE(JSON_UNQUOTE(JSON_EXTRACT(display_version.value_snapshot, '$.signerDeptIdSnapshot')), ctt.signer_dept_id_snapshot) AS display_signer_dept_id,
+                   COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.amount') + 0, ctt.amount) AS display_amount,
+                   COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.startTime') + 0, ctt.start_time) AS display_start_time,
+                   COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.endTime') + 0, ctt.end_time) AS display_end_time,
+                    IF(display_version.id IS NOT NULL, 'PENDING_SIGNING', ctt.stage) AS display_stage,
+                    COALESCE(payment_amount.alreadyPayAmount, 0) AS alreadyPayAmount
+             FROM contract ctt
+            LEFT JOIN contract_version display_version ON display_version.id = COALESCE(
+                ctt.pending_version_id,
+                CASE WHEN ctt.effective_version_id IS NULL THEN (
+                    SELECT latest_version.id FROM contract_version latest_version
+                    WHERE latest_version.contract_id = ctt.id
+                    ORDER BY latest_version.version_no DESC LIMIT 1
+                ) END
+             )
+             LEFT JOIN (
+                 SELECT contract_id, SUM(record_amount) AS alreadyPayAmount
+                 FROM contract_payment_record
+                 GROUP BY contract_id
+             ) payment_amount ON payment_amount.contract_id = ctt.id
+         ) ct
         LEFT JOIN customer c ON ct.customer_id = c.id
         <include refid="fieldConditionJoin">
             <property name="conditions" value="request.filters"/>
@@ -514,8 +620,7 @@
 
         <if test="request.keyword != null and request.keyword != ''">
             and (
-            ct.name like concat('%', #{request.keyword},'%')
-            or ct.name like concat('%', #{request.keyword},'%')
+            ct.display_name like concat('%', #{request.keyword},'%')
             )
         </if>
 
@@ -531,4 +636,10 @@
         </include>
 
     </select>
+
+    <update id="clearPendingVersionId">
+        UPDATE contract
+        SET pending_version_id = NULL
+        WHERE id = #{id}
+    </update>
 </mapper>

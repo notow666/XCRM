@@ -176,4 +176,8 @@ public interface ExtCustomerMapper {
                                           @Param("updateUser") String updateUser,
                                           @Param("updateTime") long updateTime);
 
+    Customer selectForContractCreate(@Param("id") String id, @Param("orgId") String orgId);
+
+    Customer selectForDelete(@Param("id") String id, @Param("orgId") String orgId);
+
 }

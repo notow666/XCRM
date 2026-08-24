@@ -230,14 +230,9 @@ public class CustomerBatchByConditionService {
                 return;
             }
 
-            BatchChunkResult chunkResult = runParallelIdChunks(tenantId, taskId, op.code,
-                    batchSupport.partition(matchedIds, CHUNK_SIZE),
-                    chunkIds -> {
-                        batchSupport.batchDelete(chunkIds, userId, orgId);
-                        return chunkIds.size();
-                    });
-            successCount = chunkResult.successCount();
-            failCount = chunkResult.failCount();
+            // 删除必须在同一工作线程顺序执行，每个客户由删除单元开启独立短事务。
+            successCount = batchSupport.batchDelete(matchedIds, userId, orgId);
+            failCount = submittedCount - successCount;
 
             log.info("[CUSTOMER_BATCH_DELETE_FINISH] taskId={}, submittedCount={}, successCount={}, failCount={}, totalCostMs={}",
                     taskId, submittedCount, successCount, failCount, System.currentTimeMillis() - totalStart);

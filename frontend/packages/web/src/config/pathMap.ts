@@ -146,6 +146,11 @@ export const pathMap: PathMapItem[] = [
             route: AppRouteEnum.REPORT_EMPLOYEE_FOLLOW_UP,
             locale: 'menu.report.employeeFollowUp',
           },
+          {
+            key: 'REPORT_EMPLOYEE_CUSTOMER_CONVERSION',
+            route: AppRouteEnum.REPORT_EMPLOYEE_CUSTOMER_CONVERSION,
+            locale: 'menu.report.customerConversion',
+          },
         ],
       },
       {

@@ -107,12 +107,18 @@ public class CustomerAutoDeleteService {
             if (CollectionUtils.isEmpty(customers)) {
                 break;
             }
-            deletedCount += customerAutoDeleteBatchService.deletePoolBatch(
+            int currentDeletedCount = customerAutoDeleteBatchService.deletePoolBatch(
                     customers.stream().map(Customer::getId).toList(),
+                    config.getOrganizationId(),
                     cutoffTime,
                     SYSTEM_OPERATOR,
                     POOL_DELETE_REASON
             );
+            deletedCount += currentDeletedCount;
+            if (currentDeletedCount == 0) {
+                log.warn("公海导入客户定时删除本批次无成功记录，停止本次任务以避免重复查询");
+                break;
+            }
         }
         log.info("公海导入客户定时删除完成，days={}, cutoffTime={}, deletedCount={}",
                 config.getDays(), cutoffTime, deletedCount);
@@ -134,13 +140,18 @@ public class CustomerAutoDeleteService {
             if (CollectionUtils.isEmpty(customers)) {
                 break;
             }
-            deletedCount += customerAutoDeleteBatchService.deletePrivateBatch(
+            int currentDeletedCount = customerAutoDeleteBatchService.deletePrivateBatch(
                     customers.stream().map(Customer::getId).toList(),
                     config.getOrganizationId(),
                     cutoffTime,
                     SYSTEM_OPERATOR,
                     PRIVATE_DELETE_REASON
             );
+            deletedCount += currentDeletedCount;
+            if (currentDeletedCount == 0) {
+                log.warn("私海客户定时删除本批次无成功记录，停止本次任务以避免重复查询");
+                break;
+            }
         }
         log.info("私海客户定时删除完成，days={}, cutoffTime={}, deletedCount={}",
                 config.getDays(), cutoffTime, deletedCount);

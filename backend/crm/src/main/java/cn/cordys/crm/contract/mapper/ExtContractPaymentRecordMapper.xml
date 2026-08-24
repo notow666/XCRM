@@ -3,10 +3,52 @@
 
 <mapper namespace="cn.cordys.crm.contract.mapper.ExtContractPaymentRecordMapper">
     <select id="list" resultType="cn.cordys.crm.contract.dto.response.ContractPaymentRecordResponse">
-        select cpr.id, cpr.owner, cpr.no, cpr.name, cpr.contract_id, cpr.payment_plan_id,
-               cpr.record_amount, cpr.record_end_time, cpr.create_time, cpr.update_time,
-               cpr.create_user, cpr.update_user, cpr.organization_id, ifnull(c.name, '') as contractName
-        from contract_payment_record cpr left join contract c on c.id = cpr.contract_id
+        select cpr.id, cpr.display_owner AS owner, cpr.display_no AS no, cpr.display_name AS name,
+               cpr.display_contract_id AS contract_id, cpr.payment_plan_id,
+               cpr.approval_status, cpr.effective_version_id, cpr.pending_version_id,
+               cpr.display_record_amount AS record_amount,
+               cpr.display_total_loan_amount AS total_loan_amount,
+               cpr.display_total_cost_amount AS total_cost_amount,
+               cpr.display_total_misc_fee_amount AS total_misc_fee_amount,
+               cpr.display_total_commission_amount AS total_commission_amount,
+               cpr.display_total_revenue_amount AS total_revenue_amount,
+               cpr.display_record_end_time AS record_end_time,
+               cpr.display_first_loan_time AS first_loan_time,
+               cpr.display_last_loan_time AS last_loan_time,
+               cpr.display_first_repayment_time AS first_repayment_time,
+               cpr.display_last_repayment_time AS last_repayment_time, cpr.lock_version,
+               cpr.create_time, cpr.update_time, cpr.create_user, cpr.update_user,
+               cpr.organization_id, ifnull(c.name, '') as contractName
+        from (
+            select base_record.*,
+                   display_version.value_snapshot AS display_value_snapshot,
+                   COALESCE(JSON_UNQUOTE(JSON_EXTRACT(display_version.value_snapshot, '$.name')), base_record.name) AS display_name,
+                   COALESCE(JSON_UNQUOTE(JSON_EXTRACT(display_version.value_snapshot, '$.no')), base_record.no) AS display_no,
+                   COALESCE(JSON_UNQUOTE(JSON_EXTRACT(display_version.value_snapshot, '$.contractId')), base_record.contract_id) AS display_contract_id,
+                   COALESCE(JSON_UNQUOTE(JSON_EXTRACT(display_version.value_snapshot, '$.owner')), base_record.owner) AS display_owner,
+                   COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.recordAmount') + 0, base_record.record_amount) AS display_record_amount,
+                   COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.totalLoanAmount') + 0, base_record.total_loan_amount) AS display_total_loan_amount,
+                   COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.totalCostAmount') + 0, base_record.total_cost_amount) AS display_total_cost_amount,
+                   COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.totalMiscFeeAmount') + 0, base_record.total_misc_fee_amount) AS display_total_misc_fee_amount,
+                   COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.totalCommissionAmount') + 0, base_record.total_commission_amount) AS display_total_commission_amount,
+                   COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.totalRevenueAmount') + 0, base_record.total_revenue_amount) AS display_total_revenue_amount,
+                   COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.firstLoanTime') + 0, base_record.first_loan_time) AS display_first_loan_time,
+                   COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.lastLoanTime') + 0, base_record.last_loan_time) AS display_last_loan_time,
+                   COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.firstRepaymentTime') + 0, base_record.first_repayment_time) AS display_first_repayment_time,
+                   COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.lastRepaymentTime') + 0, base_record.last_repayment_time) AS display_last_repayment_time,
+                   COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.firstRepaymentTime') + 0, base_record.record_end_time) AS display_record_end_time
+            from contract_payment_record base_record
+            left join contract_payment_record_version display_version on display_version.id = COALESCE(
+                base_record.pending_version_id,
+                case when base_record.effective_version_id is null then (
+                    select latest_version.id
+                    from contract_payment_record_version latest_version
+                    where latest_version.payment_record_id = base_record.id
+                    order by latest_version.version_no desc
+                    limit 1
+                ) end
+            )
+        ) cpr left join contract c on c.id = cpr.display_contract_id
 
         <include refid="fieldConditionJoin">
             <property name="conditions" value="request.filters"/>
@@ -52,7 +94,7 @@
         </if>
 
         <if test="request.keyword != null and request.keyword != ''">
-            and cpr.name like concat('%', #{request.keyword},'%')
+            and cpr.display_name like concat('%', #{request.keyword},'%')
         </if>
 
         <include refid="filters">
@@ -73,8 +115,13 @@
 
     <select id="getListByIds" resultType="cn.cordys.crm.contract.dto.response.ContractPaymentRecordResponse">
         select cpr.id, cpr.owner, cpr.no, cpr.name, cpr.contract_id, cpr.payment_plan_id,
-            cpr.record_amount, cpr.record_end_time, cpr.create_time, cpr.update_time,
-            cpr.create_user, cpr.update_user, cpr.organization_id, c.name as contractName
+            cpr.approval_status, cpr.effective_version_id, cpr.pending_version_id,
+            cpr.record_amount, cpr.total_loan_amount, cpr.total_cost_amount,
+            cpr.total_misc_fee_amount, cpr.total_commission_amount, cpr.total_revenue_amount,
+            cpr.record_end_time, cpr.first_loan_time, cpr.last_loan_time,
+            cpr.first_repayment_time, cpr.last_repayment_time, cpr.lock_version,
+            cpr.create_time, cpr.update_time, cpr.create_user, cpr.update_user,
+            cpr.organization_id, c.name as contractName
         from contract_payment_record cpr
         join contract c on c.id = cpr.contract_id
 
@@ -136,7 +183,15 @@
                 <choose>
                     <when test="${sort}.name in
                         {'name', 'no', 'owner', 'payment_plan_id', 'contract_id', 'record_amount', 'record_end_time', 'create_time', 'update_time', 'create_user', 'update_user'}">
-                        cpr.${sortName} ${sortType}, cpr.id ASC
+                        <choose>
+                            <when test="${sort}.name == 'name'">cpr.display_name ${sortType}, cpr.id ASC</when>
+                            <when test="${sort}.name == 'no'">cpr.display_no ${sortType}, cpr.id ASC</when>
+                            <when test="${sort}.name == 'owner'">cpr.display_owner ${sortType}, cpr.id ASC</when>
+                            <when test="${sort}.name == 'contract_id'">cpr.display_contract_id ${sortType}, cpr.id ASC</when>
+                            <when test="${sort}.name == 'record_amount'">cpr.display_record_amount ${sortType}, cpr.id ASC</when>
+                            <when test="${sort}.name == 'record_end_time'">cpr.display_record_end_time ${sortType}, cpr.id ASC</when>
+                            <otherwise>cpr.${sortName} ${sortType}, cpr.id ASC</otherwise>
+                        </choose>
                     </when>
                     <when test="${sort}.name == 'department_id'">
                         sou_sort.${sortName} ${sortType}, cpr.id ASC
@@ -144,9 +199,9 @@
                     <otherwise>
                         CASE
                         WHEN module_table.type = 'INPUT_NUMBER'
-                        THEN sort_table.field_value + 0
+                        THEN COALESCE(sort_version_table.field_value, sort_table.field_value) + 0
                         END ${sortType},
-                        sort_table.field_value ${sortType},
+                        COALESCE(sort_version_table.field_value, sort_table.field_value) ${sortType},
                         cpr.id ${sortType}
                     </otherwise>
                 </choose>
@@ -162,6 +217,14 @@
             <foreach collection="${conditions}" item="condition" index="i">
                 <if test="condition.name not in
                 {'name', 'no', 'owner', 'paymentPlanId', 'contractId', 'createTime', 'updateTime', 'recordAmount', 'recordEndTime', 'createUser', 'updateUser', 'departmentId'}">
+                    left join JSON_TABLE(
+                        COALESCE(JSON_EXTRACT(cpr.display_value_snapshot, '$.moduleFields'), JSON_ARRAY()),
+                        '$[*]' COLUMNS(
+                            field_id VARCHAR(255) PATH '$.fieldId',
+                            field_value VARCHAR(4000) PATH '$.fieldValue' NULL ON EMPTY
+                        )
+                    ) ${tablePrefix}_version_${i}
+                    on ${tablePrefix}_version_${i}.field_id = #{condition.name}
                     <if test="condition.multipleValue">
                         left join contract_payment_record_field_blob ${tablePrefix}_${i}
                         on cpr.id = ${tablePrefix}_${i}.resource_id and ${tablePrefix}_${i}.field_id = #{condition.name}
@@ -190,7 +253,14 @@
                         {'name', 'no', 'owner', 'create_time', 'update_time', 'contract_id', 'payment_plan_id', 'create_user', 'update_user', 'record_amount', 'record_end_time'}">
                     left join contract_payment_record_field sort_table
                     on cpr.id = sort_table.resource_id and sort_table.field_id = #{sortName}
-                    left join sys_module_field module_table on sort_table.field_id = module_table.id
+                    left join JSON_TABLE(
+                        COALESCE(JSON_EXTRACT(cpr.display_value_snapshot, '$.moduleFields'), JSON_ARRAY()),
+                        '$[*]' COLUMNS(
+                            field_id VARCHAR(255) PATH '$.fieldId',
+                            field_value VARCHAR(4000) PATH '$.fieldValue' NULL ON EMPTY
+                        )
+                    ) sort_version_table on sort_version_table.field_id = #{sortName}
+                    left join sys_module_field module_table on module_table.id = #{sortName}
                 </when>
             </choose>
         </if>
@@ -203,6 +273,7 @@
                     <include refid="condition">
                         <property name="condition" value="condition"/>
                         <property name="fieldTable" value="filter_${i}.field_value"/>
+                        <property name="versionFieldTable" value="filter_version_${i}.field_value"/>
                     </include>
                 </foreach>
             </trim>
@@ -217,6 +288,7 @@
                         <include refid="condition">
                             <property name="condition" value="condition"/>
                             <property name="fieldTable" value="combine_${i}.field_value"/>
+                            <property name="versionFieldTable" value="combine_version_${i}.field_value"/>
                             <property name="table" value="combine_${i}"/>
                         </include>
                         <include refid="cn.cordys.common.mapper.CommonMapper.searchMode">
@@ -236,6 +308,7 @@
                         <include refid="condition">
                             <property name="condition" value="condition"/>
                             <property name="fieldTable" value="viewCombine_${i}.field_value"/>
+                            <property name="versionFieldTable" value="viewCombine_version_${i}.field_value"/>
                             <property name="table" value="viewCombine_${i}"/>
                         </include>
                         <include refid="cn.cordys.common.mapper.CommonMapper.searchMode">
@@ -252,25 +325,25 @@
             <when test="condition.name == 'name'">
                 <include refid="cn.cordys.common.mapper.CommonMapper.condition">
                     <property name="condition" value="condition"/>
-                    <property name="column" value="cpr.name"/>
+                    <property name="column" value="cpr.display_name"/>
                 </include>
             </when>
             <when test="condition.name == 'no'">
                 <include refid="cn.cordys.common.mapper.CommonMapper.condition">
                     <property name="condition" value="condition"/>
-                    <property name="column" value="cpr.no"/>
+                    <property name="column" value="cpr.display_no"/>
                 </include>
             </when>
             <when test="condition.name == 'owner'">
                 <include refid="cn.cordys.common.mapper.CommonMapper.condition">
                     <property name="condition" value="condition"/>
-                    <property name="column" value="cpr.owner"/>
+                    <property name="column" value="cpr.display_owner"/>
                 </include>
             </when>
             <when test="condition.name == 'contractId'">
                 <include refid="cn.cordys.common.mapper.CommonMapper.condition">
                     <property name="condition" value="condition"/>
-                    <property name="column" value="cpr.contract_id"/>
+                    <property name="column" value="cpr.display_contract_id"/>
                 </include>
             </when>
             <when test="condition.name == 'paymentPlanId'">
@@ -282,13 +355,13 @@
             <when test="condition.name == 'recordAmount'">
                 <include refid="cn.cordys.common.mapper.CommonMapper.condition">
                     <property name="condition" value="condition"/>
-                    <property name="column" value="cpr.record_amount"/>
+                    <property name="column" value="cpr.display_record_amount"/>
                 </include>
             </when>
             <when test="condition.name == 'recordEndTime'">
                 <include refid="cn.cordys.common.mapper.CommonMapper.condition">
                     <property name="condition" value="condition"/>
-                    <property name="column" value="cpr.record_end_time"/>
+                    <property name="column" value="cpr.display_record_end_time"/>
                 </include>
             </when>
             <when test="condition.name == 'createTime'">
@@ -324,7 +397,7 @@
             <otherwise>
                 <include refid="cn.cordys.common.mapper.CommonMapper.moduleFieldCondition">
                     <property name="condition" value="condition"/>
-                    <property name="column" value="${fieldTable}"/>
+                    <property name="column" value="COALESCE(${versionFieldTable}, ${fieldTable})"/>
                 </include>
             </otherwise>
         </choose>
@@ -333,11 +406,29 @@
 
     <select id="searchStatistic" resultType="cn.cordys.crm.contract.dto.response.ContractPaymentRecordStatisticResponse">
         SELECT
-        sum(cpr.record_amount) as amount,
-        sum(cpr.record_amount)  / count(*) as averageAmount
+        sum(cpr.display_record_amount) as amount,
+        sum(cpr.display_record_amount) / count(*) as averageAmount
         FROM
-        contract_payment_record cpr
-        LEFT JOIN contract c on c.id = cpr.contract_id
+        (
+            select base_record.*,
+                   display_version.value_snapshot AS display_value_snapshot,
+                   COALESCE(JSON_UNQUOTE(JSON_EXTRACT(display_version.value_snapshot, '$.name')), base_record.name) AS display_name,
+                   COALESCE(JSON_UNQUOTE(JSON_EXTRACT(display_version.value_snapshot, '$.no')), base_record.no) AS display_no,
+                   COALESCE(JSON_UNQUOTE(JSON_EXTRACT(display_version.value_snapshot, '$.contractId')), base_record.contract_id) AS display_contract_id,
+                   COALESCE(JSON_UNQUOTE(JSON_EXTRACT(display_version.value_snapshot, '$.owner')), base_record.owner) AS display_owner,
+                   COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.recordAmount') + 0, base_record.record_amount) AS display_record_amount,
+                   COALESCE(JSON_EXTRACT(display_version.value_snapshot, '$.firstRepaymentTime') + 0, base_record.record_end_time) AS display_record_end_time
+            from contract_payment_record base_record
+            left join contract_payment_record_version display_version on display_version.id = COALESCE(
+                base_record.pending_version_id,
+                case when base_record.effective_version_id is null then (
+                    select latest_version.id from contract_payment_record_version latest_version
+                    where latest_version.payment_record_id = base_record.id
+                    order by latest_version.version_no desc limit 1
+                ) end
+            )
+        ) cpr
+        LEFT JOIN contract c on c.id = cpr.display_contract_id
         <include refid="fieldConditionJoin">
             <property name="conditions" value="request.filters"/>
             <property name="tablePrefix" value="filter"/>
@@ -371,8 +462,7 @@
 
         <if test="request.keyword != null and request.keyword != ''">
             and (
-            cpr.name like concat('%', #{request.keyword},'%')
-            or cpr.name like concat('%', #{request.keyword},'%')
+            cpr.display_name like concat('%', #{request.keyword},'%')
             )
         </if>
 
@@ -388,5 +478,19 @@
         </include>
 
     </select>
+
+    <select id="selectForUpdate" resultType="cn.cordys.crm.contract.domain.ContractPaymentRecord">
+        SELECT *
+        FROM contract_payment_record
+        WHERE id = #{id}
+          AND organization_id = #{orgId}
+        FOR UPDATE
+    </select>
+
+    <update id="clearPendingVersionId">
+        UPDATE contract_payment_record
+        SET pending_version_id = NULL
+        WHERE id = #{id}
+    </update>
 
 </mapper>

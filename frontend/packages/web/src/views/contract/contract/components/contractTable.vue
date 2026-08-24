@@ -156,20 +156,13 @@
   import batchOperationResultModal from '@/views/opportunity/components/quotation/batchOperationResultModal.vue';
   import QuotationStatus from '@/views/opportunity/components/quotation/quotationStatus.vue';
 
-  import {
-    batchApproveContract,
-    changeContractStatus,
-    deleteContract,
-    getContractStatistic,
-    revokeContract,
-  } from '@/api/modules';
+  import { batchApproveContract, changeContractStatus, deleteContract, getContractStatistic } from '@/api/modules';
   import { baseFilterConfigList } from '@/config/clue';
   import { contractStatusOptions } from '@/config/contract';
   import { quotationStatusOptions } from '@/config/opportunity';
   import useFormCreateApi from '@/hooks/useFormCreateApi';
   import useFormCreateTable from '@/hooks/useFormCreateTable';
   import useModal from '@/hooks/useModal';
-  import { useUserStore } from '@/store';
   // import useViewChartParams, { STORAGE_VIEW_CHART_KEY, ViewChartResult } from '@/hooks/useViewChartParams';
   import { getExportColumns } from '@/utils/export';
   import { hasAnyPermission } from '@/utils/permission';
@@ -187,7 +180,6 @@
     ): void;
   }>();
 
-  const useStore = useUserStore();
   const { t } = useI18n();
   const Message = useMessage();
   const { currentLocale } = useLocale(Message.loading);
@@ -265,14 +257,7 @@
           key: 'approval',
           permission: ['CONTRACT:APPROVAL'],
         },
-        ...(row.createUser === useStore.userInfo.id
-          ? [
-              {
-                label: t('common.revoke'),
-                key: 'revoke',
-              },
-            ]
-          : []),
+        // 新审批版本不提供撤销，审批不通过后通过编辑重新提审。
         {
           label: t('common.delete'),
           key: 'delete',
@@ -281,15 +266,21 @@
       ];
     }
     if (row.approvalStatus === QuotationStatusEnum.APPROVED) {
+      const terminal = [ContractStatusEnum.COMPLETED_PERFORMANCE, ContractStatusEnum.VOID].includes(
+        row.stage as ContractStatusEnum
+      );
       return [
-        ...(row.stage !== ContractStatusEnum.VOID
+        ...(!terminal
           ? [
+              {
+                label: t('common.edit'),
+                key: 'edit',
+                permission: ['CONTRACT:UPDATE'],
+              },
               {
                 label: t('contract.payment'),
                 key: 'paymentRecord',
-                permission: ['CONTRACT:PAYMENT'],
-                disabled: !row.amount || row.alreadyPayAmount >= row.amount,
-                tooltipContent: row.alreadyPayAmount >= row.amount ? t('contract.noPaymentRequired') : undefined,
+                permission: ['CONTRACT_PAYMENT_RECORD:ADD'],
               },
             ]
           : []),
@@ -318,19 +309,19 @@
     return dicApprovalEnable
       ? getEnableApprovalGroupList(row)
       : [
-          {
-            label: t('common.edit'),
-            key: 'edit',
-            permission: ['CONTRACT:UPDATE'],
-          },
-          ...(row.stage !== ContractStatusEnum.VOID
+          ...(![ContractStatusEnum.COMPLETED_PERFORMANCE, ContractStatusEnum.VOID].includes(
+            row.stage as ContractStatusEnum
+          )
             ? [
+                {
+                  label: t('common.edit'),
+                  key: 'edit',
+                  permission: ['CONTRACT:UPDATE'],
+                },
                 {
                   label: t('contract.payment'),
                   key: 'paymentRecord',
-                  permission: ['CONTRACT:PAYMENT'],
-                  disabled: !row.amount || row.alreadyPayAmount >= row.amount,
-                  tooltipContent: row.alreadyPayAmount >= row.amount ? t('contract.noPaymentRequired') : undefined,
+                  permission: ['CONTRACT_PAYMENT_RECORD:ADD'],
                 },
               ]
             : []),
@@ -378,17 +369,6 @@
     showVoidReasonModal.value = true;
   }
 
-  async function handleRevoke(row: ContractItem) {
-    try {
-      await revokeContract(row.id);
-      Message.success(t('common.revokeSuccess'));
-      tableItemRefreshId.value = row.id;
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(error);
-    }
-  }
-
   // 回款
   const initialSourceName = ref('');
   const linkFormInfo = ref();
@@ -415,9 +395,6 @@
         break;
       case 'paymentRecord':
         handlePaymentRecord(row);
-        break;
-      case 'revoke':
-        handleRevoke(row);
         break;
       case 'edit':
         handleEdit(row.id);
@@ -502,7 +479,12 @@
             );
       },
       stage: (row: ContractItem) => {
-        const disabled = row.approvalStatus !== QuotationStatusEnum.APPROVED || !hasAnyPermission(['CONTRACT:STAGE']);
+        const disabled =
+          row.approvalStatus !== QuotationStatusEnum.APPROVED ||
+          [ContractStatusEnum.COMPLETED_PERFORMANCE, ContractStatusEnum.VOID].includes(
+            row.stage as ContractStatusEnum
+          ) ||
+          !hasAnyPermission(['CONTRACT:STAGE']);
         if (disabled && dicApprovalEnable.value) {
           return h(
             NTooltip,
@@ -513,7 +495,8 @@
                   'div',
                   { class: 'cursor-not-allowed' },
                   {
-                    default: () => contractStatusOptions.find((item) => item.value === row?.stage)?.label,
+                    default: () =>
+                      contractStatusOptions.find((item) => item.value === (row.displayStage || row.stage))?.label,
                   }
                 ),
               default: () => t('contract.changeStageTip'),
@@ -533,7 +516,11 @@
               if (res) row.stage = val;
             }
           },
-          'statusOptions': contractStatusOptions,
+          'statusOptions': contractStatusOptions.filter(
+            (item) =>
+              item.value === row.stage ||
+              [ContractStatusEnum.COMPLETED_PERFORMANCE, ContractStatusEnum.VOID].includes(item.value)
+          ),
         });
       },
       approvalStatus: (row: ContractItem) =>

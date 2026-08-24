@@ -173,7 +173,7 @@ public class ModuleFieldController {
     @PostMapping("/source/contract")
     @Operation(summary = "分页获取合同")
     public Pager<List<ContractListResponse>> sourceContractPage(@Valid @RequestBody ContractPageRequest request) {
-		request.setFilters(ListUtils.union(contractService.getDefaultSourceFilters(), request.getFilters()));
+		request.setFilters(ListUtils.union(contractService.getDefaultSourceFilters(request.getSourceFormKey()), request.getFilters()));
         request.setCombineSearch(request.getCombineSearch().convert());
         DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(SessionUtils.getUserId(), OrganizationContext.getOrganizationId(), InternalUserView.ALL.name(),
                 PermissionConstants.CONTRACT_READ);

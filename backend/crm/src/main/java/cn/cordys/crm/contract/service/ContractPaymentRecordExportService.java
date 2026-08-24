@@ -2,28 +2,38 @@ package cn.cordys.crm.contract.service;
 
 import cn.cordys.common.constants.BusinessModuleField;
 import cn.cordys.common.constants.FormKey;
+import cn.cordys.common.domain.BaseModuleFieldValue;
 import cn.cordys.common.dto.ExportDTO;
+import cn.cordys.common.dto.ExportFieldParam;
 import cn.cordys.common.dto.ExportHeadDTO;
 import cn.cordys.common.service.BaseExportService;
+import cn.cordys.common.util.JSON;
 import cn.cordys.common.util.TimeUtils;
+import cn.cordys.common.util.Translator;
+import cn.cordys.crm.contract.domain.ContractPaymentRecordProduct;
+import cn.cordys.crm.contract.domain.ContractPaymentRecordVersion;
+import cn.cordys.crm.contract.dto.ContractPaymentRecordVersionSnapshot;
 import cn.cordys.crm.contract.dto.request.ContractPaymentRecordPageRequest;
 import cn.cordys.crm.contract.dto.response.ContractPaymentRecordResponse;
 import cn.cordys.crm.contract.mapper.ExtContractPaymentRecordMapper;
+import cn.cordys.crm.system.excel.domain.MergeResult;
 import cn.cordys.crm.system.dto.field.base.BaseField;
 import cn.cordys.crm.system.dto.field.base.OptionProp;
 import cn.cordys.crm.system.service.ModuleFieldExtService;
+import cn.cordys.mybatis.BaseMapper;
+import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
 import cn.cordys.registry.ExportThreadRegistry;
 import com.github.pagehelper.PageHelper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author song-cc-rock
@@ -39,6 +49,106 @@ public class ContractPaymentRecordExportService extends BaseExportService {
 	private ContractPaymentRecordService contractPaymentRecordService;
 	@Resource
 	private ExtContractPaymentRecordMapper extContractPaymentRecordMapper;
+	@Resource
+	private BaseMapper<ContractPaymentRecordProduct> paymentRecordProductMapper;
+	@Resource
+	private BaseMapper<ContractPaymentRecordVersion> paymentRecordVersionMapper;
+
+	@Override
+	protected MergeResult getExportMergeData(String taskId, ExportDTO exportDTO) throws InterruptedException {
+		List<ContractPaymentRecordResponse> list;
+		if (CollectionUtils.isNotEmpty(exportDTO.getSelectIds())) {
+			list = extContractPaymentRecordMapper.getListByIds(exportDTO.getSelectIds(), exportDTO.getUserId(),
+					exportDTO.getOrgId(), exportDTO.getDeptDataPermission());
+		} else {
+			ContractPaymentRecordPageRequest request = (ContractPaymentRecordPageRequest) exportDTO.getPageRequest();
+			PageHelper.startPage(request.getCurrent(), request.getPageSize());
+			list = extContractPaymentRecordMapper.list(request, exportDTO.getUserId(), exportDTO.getOrgId(),
+					exportDTO.getDeptDataPermission());
+		}
+		if (CollectionUtils.isEmpty(list)) {
+			return MergeResult.builder().dataList(new ArrayList<>()).mergeRegions(new ArrayList<>()).build();
+		}
+
+		List<ContractPaymentRecordResponse> dataList = contractPaymentRecordService.buildListExtra(list, exportDTO.getOrgId());
+		Map<String, List<Object>> productMap = getDisplayProductMap(dataList);
+		List<List<Object>> rows = new ArrayList<>();
+		List<int[]> mergeRegions = new ArrayList<>();
+		int offset = 0;
+		for (ContractPaymentRecordResponse response : dataList) {
+			if (ExportThreadRegistry.isInterrupted(taskId)) {
+				throw new InterruptedException("线程已被中断，主动退出");
+			}
+			List<List<Object>> recordRows = buildMergeData(response,
+					productMap.getOrDefault(response.getId(), Collections.emptyList()), exportDTO);
+			if (recordRows.size() > 1) {
+				mergeRegions.add(new int[]{offset, offset + recordRows.size() - 1});
+			}
+			offset += recordRows.size();
+			rows.addAll(recordRows);
+		}
+		return MergeResult.builder().dataList(rows).mergeRegions(mergeRegions).build();
+	}
+
+	private List<List<Object>> buildMergeData(ContractPaymentRecordResponse data, List<?> products,
+											 ExportDTO exportDTO) {
+		ExportFieldParam exportFieldParam = exportDTO.getExportFieldParam();
+		List<BaseModuleFieldValue> moduleFields = ContractExportProductHelper.appendProducts(
+				data.getModuleFields(), exportFieldParam, products);
+		return buildDataWithSub(moduleFields, exportFieldParam, exportDTO.getExportMetas(), getSystemFieldMap(data));
+	}
+
+	private Map<String, List<Object>> getDisplayProductMap(List<ContractPaymentRecordResponse> list) {
+		List<String> recordIds = list.stream().map(ContractPaymentRecordResponse::getId)
+				.filter(StringUtils::isNotBlank).toList();
+		List<ContractPaymentRecordProduct> products = paymentRecordProductMapper.selectListByLambda(
+				new LambdaQueryWrapper<ContractPaymentRecordProduct>()
+						.in(ContractPaymentRecordProduct::getPaymentRecordId, recordIds));
+		products.sort(Comparator.comparing(ContractPaymentRecordProduct::getPaymentRecordId)
+				.thenComparing(ContractPaymentRecordProduct::getSortNo));
+		Map<String, List<Object>> result = products.stream().collect(Collectors.groupingBy(
+				ContractPaymentRecordProduct::getPaymentRecordId, LinkedHashMap::new,
+				Collectors.mapping(product -> (Object) product, Collectors.toList())));
+
+		List<String> versionRecordIds = list.stream()
+				.filter(item -> StringUtils.isNotBlank(item.getPendingVersionId())
+						|| StringUtils.isBlank(item.getEffectiveVersionId()))
+				.map(ContractPaymentRecordResponse::getId).filter(StringUtils::isNotBlank).distinct().toList();
+		if (CollectionUtils.isEmpty(versionRecordIds)) {
+			return result;
+		}
+		Map<String, List<ContractPaymentRecordVersion>> versionMap = paymentRecordVersionMapper.selectListByLambda(
+				new LambdaQueryWrapper<ContractPaymentRecordVersion>()
+						.in(ContractPaymentRecordVersion::getPaymentRecordId, versionRecordIds)).stream()
+				.collect(Collectors.groupingBy(ContractPaymentRecordVersion::getPaymentRecordId));
+		for (ContractPaymentRecordResponse item : list) {
+			ContractPaymentRecordVersion version = getDisplayVersion(item,
+					versionMap.getOrDefault(item.getId(), Collections.emptyList()));
+			if (version == null || StringUtils.isBlank(version.getValueSnapshot())) {
+				continue;
+			}
+			ContractPaymentRecordVersionSnapshot snapshot = JSON.parseObject(
+					version.getValueSnapshot(), ContractPaymentRecordVersionSnapshot.class);
+			if (snapshot != null && snapshot.getProducts() != null) {
+				result.put(item.getId(), new ArrayList<>(snapshot.getProducts()));
+			}
+		}
+		return result;
+	}
+
+	private ContractPaymentRecordVersion getDisplayVersion(ContractPaymentRecordResponse item,
+													List<ContractPaymentRecordVersion> versions) {
+		if (StringUtils.isNotBlank(item.getPendingVersionId())) {
+			return versions.stream()
+					.filter(version -> Strings.CS.equals(version.getId(), item.getPendingVersionId()))
+					.findFirst().orElse(null);
+		}
+		if (StringUtils.isNotBlank(item.getEffectiveVersionId())) {
+			return null;
+		}
+		return versions.stream().max(Comparator.comparing(ContractPaymentRecordVersion::getVersionNo,
+				Comparator.nullsFirst(Comparator.naturalOrder()))).orElse(null);
+	}
 
 	@Override
 	public List<List<Object>> getExportData(String taskId, ExportDTO exportDTO) throws InterruptedException {
@@ -62,9 +172,18 @@ public class ContractPaymentRecordExportService extends BaseExportService {
 		systemFieldMap.put("paymentPlanId", data.getPaymentPlanName());
 		systemFieldMap.put("owner", data.getOwnerName());
 		systemFieldMap.put("departmentId", data.getDepartmentName());
-		systemFieldMap.put("recordAmount", data.getRecordAmount());
-		systemFieldMap.put("recordEndTime", getInternalDateStr(data.getRecordEndTime(), FormKey.CONTRACT_PAYMENT_RECORD.getKey(),
-				data.getOrganizationId(), BusinessModuleField.CONTRACT_PAYMENT_RECORD_END_TIME.getKey()));
+			systemFieldMap.put("recordAmount", data.getRecordAmount());
+			systemFieldMap.put("totalLoanAmount", data.getTotalLoanAmount());
+			systemFieldMap.put("totalCostAmount", data.getTotalCostAmount());
+			systemFieldMap.put("totalMiscFeeAmount", data.getTotalMiscFeeAmount());
+			systemFieldMap.put("totalCommissionAmount", data.getTotalCommissionAmount());
+			systemFieldMap.put("totalRevenueAmount", data.getTotalRevenueAmount());
+			systemFieldMap.put("recordEndTime", getInternalDateStr(data.getRecordEndTime(), FormKey.CONTRACT_PAYMENT_RECORD.getKey(),
+					data.getOrganizationId(), BusinessModuleField.CONTRACT_PAYMENT_RECORD_END_TIME.getKey()));
+			if (StringUtils.isNotBlank(data.getApprovalStatus())) {
+				systemFieldMap.put("approvalStatus", Translator.get(
+						"contract.approval_status." + data.getApprovalStatus().toLowerCase(), Locale.SIMPLIFIED_CHINESE));
+			}
 
 		systemFieldMap.put("createUser", data.getCreateUserName());
 		systemFieldMap.put("createTime", TimeUtils.getDateTimeStr(data.getCreateTime()));

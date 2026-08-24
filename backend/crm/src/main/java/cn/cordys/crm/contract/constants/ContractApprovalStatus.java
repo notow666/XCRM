@@ -20,12 +20,14 @@ public enum ContractApprovalStatus {
      * 不通过
      */
     UNAPPROVED,
+
     /**
-     * 撤销
+     * 兼容发票、报价和旧数据，新合同流程禁止使用。
      */
     REVOKED,
+
     /**
-     * 当关闭审批时，审批状态为 NONE
+     * 兼容关闭审批的旧模块，新合同流程禁止使用。
      */
     NONE,
 }

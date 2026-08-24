@@ -110,6 +110,8 @@ public class PoolCustomerService {
     @Resource
     private CustomerPoolService customerPoolService;
     @Resource
+    private CustomerDeleteOrchestrator customerDeleteOrchestrator;
+    @Resource
     private ModuleFormCacheService moduleFormCacheService;
     @Resource
     private CustomerContactService customerContactService;
@@ -272,11 +274,9 @@ public class PoolCustomerService {
      * @param id 客户ID
      */
     @OperationLog(module = LogModule.CUSTOMER_POOL, type = LogType.DELETE, resourceId = "{#id}")
-    public void delete(String id) {
+    public void delete(String id, String userId, String orgId) {
         Customer customer = customerMapper.selectByPrimaryKey(id);
-        CustomerService customerService = CommonBeanFactory.getBean(CustomerService.class);
-        Objects.requireNonNull(customerService).checkResourceRef(List.of(id));
-        customerService.deleteCustomerResource(List.of(id));
+        customerDeleteOrchestrator.deleteOne(orgId, id, userId, LogModule.CUSTOMER_POOL, "删除公海客户");
 
         // 设置操作对象
         OperationLogContext.setResourceName(customer.getName());

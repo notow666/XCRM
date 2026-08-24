@@ -1,5 +1,7 @@
 <template>
-  <n-scrollbar x-scrollable :content-style="{ 'min-width': '1000px', 'width': '100%', 'height': '100%' }">
+  <ContractAnalysisReport />
+  <!-- 旧占位实现保留但不再渲染，便于确认本期只是替换入口展示。 -->
+  <n-scrollbar v-if="false" x-scrollable :content-style="{ 'min-width': '1000px', 'width': '100%', 'height': '100%' }">
     <CrmCard hide-footer auto-height class="form-card mb-[16px] min-w-[1000px]">
       <div class="flex flex-wrap items-end justify-between gap-[16px]">
         <n-form
@@ -63,6 +65,7 @@
   import { useI18n } from '@lib/shared/hooks/useI18n';
 
   import CrmCard from '@/components/pure/crm-card/index.vue';
+  import ContractAnalysisReport from './components/report.vue';
 
   const { t } = useI18n();
   const message = useMessage();

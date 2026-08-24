@@ -20,6 +20,9 @@
       :form-detail="props.formDetail"
       :fixed-column="props.fieldConfig.fixedColumn"
       :sumColumns="props.fieldConfig.sumColumns"
+      :min-rows="props.fieldConfig.minRows"
+      :max-rows="props.fieldConfig.maxRows"
+      :initial-rows="props.fieldConfig.initialRows"
       :disabled="props.fieldConfig.editable === false || !!props.fieldConfig.resourceFieldId"
       @change="emit('change', $event)"
     />

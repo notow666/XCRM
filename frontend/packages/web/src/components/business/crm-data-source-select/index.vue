@@ -43,7 +43,7 @@
   import { DataTableRowKey, NSelect, SelectOption } from 'naive-ui';
   import { cloneDeep } from 'lodash-es';
 
-  import { FieldDataSourceTypeEnum } from '@lib/shared/enums/formDesignEnum';
+  import { FieldDataSourceTypeEnum, type FormDesignKeyEnum } from '@lib/shared/enums/formDesignEnum';
   import { useI18n } from '@lib/shared/hooks/useI18n';
 
   import { FilterResult } from '@/components/pure/crm-advance-filter/type';
@@ -60,7 +60,7 @@
     disabled?: boolean;
     disabledSelection?: (row: RowData) => boolean;
     maxTagCount?: number | 'responsive';
-    filterParams?: FilterResult;
+    filterParams?: FilterResult & { sourceFormKey?: FormDesignKeyEnum };
     fieldConfig?: FormCreateField;
     hideChildTag?: boolean;
     status?: 'error' | 'success' | 'warning';

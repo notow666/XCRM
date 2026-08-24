@@ -1,6 +1,7 @@
 package cn.cordys.crm.contract.dto.response;
 
 import cn.cordys.common.dto.OptionDTO;
+import cn.cordys.crm.contract.domain.ContractVersion;
 import cn.cordys.crm.system.domain.Attachment;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -19,4 +20,13 @@ public class ContractGetResponse extends ContractListResponse {
 
     @Schema(description = "产品子列表")
     private List<Map<String, Object>> products;
+
+    @Schema(description = "当前审批版本")
+    private ContractVersion approvalVersion;
+
+    @Schema(description = "版本历史")
+    private List<ContractVersion> versionHistory;
+
+    @Schema(description = "版本历史操作人名称映射")
+    private Map<String, String> versionUserNameMap;
 }

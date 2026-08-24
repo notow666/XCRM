@@ -275,6 +275,7 @@ public abstract class BaseExportService {
 				setRowAccessWindowSize(writer);
                 AtomicInteger offset = new AtomicInteger(2);
                 SubListUtils.dealForSubList(exportParam.getSelectIds(), SubListUtils.DEFAULT_EXPORT_BATCH_SIZE, (ids) -> {
+                    exportParam.setSelectIds(ids);
                     MergeResult mergeResult = new MergeResult();
                     try {
                         mergeResult = getExportMergeData(task.getId(), exportParam);
@@ -867,7 +868,8 @@ public abstract class BaseExportService {
 				return false;
 			}
 			String headName = mergeHead.getFirst();
-			return headName != null && headName.startsWith(Translator.get("sum"));
+			return headName != null
+					&& (headName.startsWith(Translator.get("sum")) || headName.startsWith("合计"));
 		}).toList();
 	}
 

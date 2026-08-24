@@ -14,6 +14,7 @@ import cn.cordys.common.utils.ConditionFilterUtils;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.crm.contract.domain.ContractPaymentRecord;
 import cn.cordys.crm.contract.dto.request.ContractPaymentRecordAddRequest;
+import cn.cordys.crm.contract.dto.request.ContractPaymentRecordApprovalRequest;
 import cn.cordys.crm.contract.dto.request.ContractPaymentRecordExportRequest;
 import cn.cordys.crm.contract.dto.request.ContractPaymentRecordPageRequest;
 import cn.cordys.crm.contract.dto.request.ContractPaymentRecordUpdateRequest;
@@ -93,7 +94,14 @@ public class ContractPaymentRecordController {
 	@RequiresPermissions(PermissionConstants.CONTRACT_PAYMENT_RECORD_DELETE)
 	@Operation(summary = "删除回款记录")
 	public void delete(@PathVariable("id") String id) {
-		contractPaymentRecordService.delete(id);
+		contractPaymentRecordService.delete(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+	}
+
+	@PostMapping("/approval")
+	@RequiresPermissions(PermissionConstants.CONTRACT_PAYMENT_RECORD_APPROVAL)
+	@Operation(summary = "回款记录审批")
+	public void approval(@Validated @RequestBody ContractPaymentRecordApprovalRequest request) {
+		contractPaymentRecordService.approval(request, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
 	}
 
 	@GetMapping("/get/{id}")
@@ -133,7 +141,7 @@ public class ContractPaymentRecordController {
 
 	@PostMapping("/export-select")
 	@Operation(summary = "导出选中回款记录")
-	@RequiresPermissions(PermissionConstants.CONTRACT_PAYMENT_RECORD_IMPORT)
+	@RequiresPermissions(PermissionConstants.CONTRACT_PAYMENT_RECORD_EXPORT)
 	public String exportSelect(@Validated @RequestBody ExportSelectRequest request) {
 		DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(SessionUtils.getUserId(),
 				OrganizationContext.getOrganizationId(), PermissionConstants.CONTRACT_PAYMENT_RECORD_READ);
@@ -143,13 +151,14 @@ public class ContractPaymentRecordController {
 				.orgId(OrganizationContext.getOrganizationId()).userId(SessionUtils.getUserId())
 				.deptDataPermission(deptDataPermission).selectIds(request.getIds())
 				.selectRequest(request)
+				.formKey(FormKey.CONTRACT_PAYMENT_RECORD.getKey())
 				.build();
-		return contractPaymentRecordExportService.exportSelect(exportDTO);
+		return contractPaymentRecordExportService.exportSelectWithMergeStrategy(exportDTO);
 	}
 
 	@PostMapping("/export-all")
 	@Operation(summary = "导出全部回款记录")
-	@RequiresPermissions(PermissionConstants.CONTRACT_PAYMENT_RECORD_IMPORT)
+	@RequiresPermissions(PermissionConstants.CONTRACT_PAYMENT_RECORD_EXPORT)
 	public String exportAll(@Validated @RequestBody ContractPaymentRecordExportRequest request) {
 		ConditionFilterUtils.parseCondition(request);
 		DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(SessionUtils.getUserId(),
@@ -159,8 +168,9 @@ public class ContractPaymentRecordController {
 				.logModule(LogModule.CONTRACT_PAYMENT_RECORD).locale(LocaleContextHolder.getLocale())
 				.orgId(OrganizationContext.getOrganizationId()).userId(SessionUtils.getUserId())
 				.deptDataPermission(deptDataPermission).pageRequest(request)
+				.formKey(FormKey.CONTRACT_PAYMENT_RECORD.getKey())
 				.build();
-		return contractPaymentRecordExportService.export(exportDTO);
+		return contractPaymentRecordExportService.exportAllWithMergeStrategy(exportDTO);
 	}
 
 

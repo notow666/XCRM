@@ -190,6 +190,13 @@ public class CustomerController {
         customerService.delete(id, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
     }
 
+    @PostMapping("/batch/delete")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_DELETE)
+    @Operation(summary = "批量删除客户")
+    public int batchDelete(@RequestBody List<String> ids) {
+        return customerService.batchDelete(ids, SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+    }
+
     @PostMapping("/batch/delete-by-condition")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_DELETE)
     @Operation(summary = "按筛选条件批量删除客户")

@@ -26,4 +26,7 @@ public class CustomerPageRequest extends BasePageRequest {
 
 	@Schema(description = "关联客户数据权限")
 	private DeptDataPermissionDTO transitionDataPermission;
+
+    @Schema(description = "仅返回可签约客户（新建合同客户选择器）：非公海 + 签约阶段 +（负责人为当前用户 或 存在未完成签约阶段跟进计划且处理人为当前用户）")
+    private Boolean signableOnly;
 }

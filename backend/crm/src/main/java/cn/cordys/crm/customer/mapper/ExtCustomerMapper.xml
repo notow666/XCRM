@@ -515,6 +515,21 @@
             and c.name like concat('%', #{request.keyword},'%')
         </if>
 
+        <if test="request.signableOnly != null and request.signableOnly">
+            and c.stage = 'stage_sign'
+            and (
+                c.owner = #{userId}
+                or exists (
+                    select 1
+                    from follow_up_plan p
+                    where p.customer_id = c.id
+                      and p.processor = #{userId}
+                      and p.next_stage = 'stage_sign'
+                      and p.status not in ('COMPLETED', 'CANCELLED')
+                )
+            )
+        </if>
+
         <include refid="filters">
             <property name="filters" value="request.filters"/>
         </include>
@@ -1345,5 +1360,21 @@
             #{id}
         </foreach>
     </update>
+
+    <select id="selectForContractCreate" resultType="cn.cordys.crm.customer.domain.Customer">
+        SELECT *
+        FROM customer
+        WHERE id = #{id}
+          AND organization_id = #{orgId}
+        FOR UPDATE
+    </select>
+
+    <select id="selectForDelete" resultType="cn.cordys.crm.customer.domain.Customer">
+        SELECT *
+        FROM customer
+        WHERE id = #{id}
+          AND organization_id = #{orgId}
+        FOR UPDATE
+    </select>
 
 </mapper>

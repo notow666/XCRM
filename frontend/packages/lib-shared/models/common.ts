@@ -29,6 +29,8 @@ export interface TableQueryParams {
   // 视图ID
   viewId?: string;
   filterCondition?: FilterResult;
+  // 客户数据源：仅返回可签约客户（新建合同客户选择器，见 dataSourceTable.vue）
+  signableOnly?: boolean;
   [key: string]: any;
 }
 

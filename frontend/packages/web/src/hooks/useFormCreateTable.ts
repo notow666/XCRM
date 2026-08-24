@@ -880,6 +880,12 @@ export default async function useFormCreateTable(props: FormCreateTableProps) {
     [FormDesignKeyEnum.CONTRACT_CONTRACT_PAYMENT]: paymentInternalColumns,
     [FormDesignKeyEnum.CONTRACT_PAYMENT_RECORD]: [
       {
+        title: t('contract.approvalStatus'),
+        width: 120,
+        key: 'approvalStatus',
+        render: props.specialRender?.approvalStatus,
+      },
+      {
         title: t('org.department'),
         width: 120,
         key: 'departmentId',

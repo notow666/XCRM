@@ -18,7 +18,7 @@ public enum ContractStage {
     SIGNED,
 
     /**
-     * 合同变更
+     * 兼容旧数据，新合同流程禁止进入该阶段。
      */
     CHANGE,
 
@@ -38,7 +38,7 @@ public enum ContractStage {
     VOID,
 
     /**
-     * 归档
+     * 兼容旧数据，新合同流程禁止进入该阶段。
      */
     ARCHIVED,
 }

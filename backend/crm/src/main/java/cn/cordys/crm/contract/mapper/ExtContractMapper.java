@@ -20,6 +20,10 @@ public interface ExtContractMapper {
 
     ContractGetResponse getDetail(@Param("id") String id);
 
+    Contract selectForUpdate(@Param("id") String id, @Param("orgId") String orgId);
+
+    void clearPendingVersionId(@Param("id") String id);
+
     List<ContractListResponse> getListByIds(@Param("ids") List<String> ids, @Param("userId") String userId, @Param("orgId") String orgId, @Param("dataPermission") DeptDataPermissionDTO deptDataPermission);
 
     CustomerContractStatisticResponse calculateContractStatisticByCustomerId(@Param("customerId") String customerId, @Param("userId") String userId, @Param("orgId") String orgId, @Param("dataPermission") DeptDataPermissionDTO deptDataPermission);

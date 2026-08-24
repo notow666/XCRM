@@ -6,6 +6,7 @@ import cn.cordys.crm.contract.dto.request.ContractPaymentRecordPageRequest;
 import cn.cordys.crm.contract.dto.response.ContractPaymentRecordResponse;
 import cn.cordys.crm.contract.dto.response.ContractPaymentRecordStatisticResponse;
 import cn.cordys.crm.contract.dto.response.CustomerPaymentRecordStatisticResponse;
+import cn.cordys.crm.contract.domain.ContractPaymentRecord;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
@@ -51,4 +52,8 @@ public interface ExtContractPaymentRecordMapper {
     CustomerPaymentRecordStatisticResponse sumCustomerRecordAmount(@Param("customerId") String customerId, @Param("userId") String userId, @Param("orgId") String orgId, @Param("dataPermission") DeptDataPermissionDTO deptDataPermission);
 
     ContractPaymentRecordStatisticResponse searchStatistic(@Param("request") BaseCondition request, @Param("orgId") String orgId, @Param("userId") String userId, @Param("dataPermission") DeptDataPermissionDTO dataPermission);
+
+    ContractPaymentRecord selectForUpdate(@Param("id") String id, @Param("orgId") String orgId);
+
+    void clearPendingVersionId(@Param("id") String id);
 }

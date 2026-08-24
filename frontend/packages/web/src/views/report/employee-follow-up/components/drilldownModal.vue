@@ -9,7 +9,11 @@
         :scroll-x="scrollX"
         :max-height="560"
       />
-      <div class="flex justify-end">
+      <div class="flex items-center justify-between">
+        <n-button v-if="showExport" type="primary" secondary :loading="exportLoading" @click="emit('export')">
+          导出
+        </n-button>
+        <span v-else />
         <n-pagination
           :page="current"
           :page-size="pageSize"
@@ -25,9 +29,7 @@
 </template>
 
 <script setup lang="ts">
-  import { NDataTable, NModal, NPagination } from 'naive-ui';
-
-  import type { EmployeeFollowAnalysisDrilldownItem } from '@lib/shared/models/report/employeeFollowAnalysis';
+  import { NButton, NDataTable, NModal, NPagination } from 'naive-ui';
 
   import type { DataTableColumns } from 'naive-ui';
 
@@ -35,18 +37,21 @@
     show: boolean;
     title: string;
     loading: boolean;
-    data: EmployeeFollowAnalysisDrilldownItem[];
-    columns: DataTableColumns<EmployeeFollowAnalysisDrilldownItem>;
+    data: Record<string, any>[];
+    columns: DataTableColumns<any>;
     total: number;
     current: number;
     pageSize: number;
     scrollX?: number;
+    showExport?: boolean;
+    exportLoading?: boolean;
   }>();
 
   const emit = defineEmits<{
     (e: 'update:show', value: boolean): void;
     (e: 'pageChange', page: number): void;
     (e: 'pageSizeChange', pageSize: number): void;
+    (e: 'export'): void;
   }>();
 
   function handleVisibleChange(value: boolean) {

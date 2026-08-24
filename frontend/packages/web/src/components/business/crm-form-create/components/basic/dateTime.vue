@@ -63,7 +63,11 @@
     () => props.fieldConfig.defaultValue,
     (val) => {
       if (!props.needInitDetail) {
-        value.value = val !== undefined ? val : value.value;
+        if (val === '') {
+          value.value = null;
+        } else if (val !== undefined) {
+          value.value = val;
+        }
         emit('change', value.value);
       }
     },

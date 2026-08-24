@@ -148,6 +148,9 @@ export interface FormCreateField {
   subFields?: FormCreateField[];
   fixedColumn?: number; // 固定列数
   sumColumns?: string[]; // 需要汇总的字段id集合
+  minRows?: number; // 子表格最少行数
+  maxRows?: number; // 子表格最多行数
+  initialRows?: number; // 新建表单时的初始行数
   resourceFieldId?: string; // 关联来源字段id
   subTableFieldId?: string; // 关联来源的子表格字段id
   price_sub?: string; // 价格表子表格行号标识

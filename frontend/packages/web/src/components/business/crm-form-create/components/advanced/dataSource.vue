@@ -67,6 +67,7 @@
     feedback?: string;
     hideChildTag?: boolean;
     disabledSelection?: (row: Record<string, any>) => boolean;
+    sourceFormKey?: FormDesignKeyEnum;
   }>();
   const emit = defineEmits<{
     (e: 'change', value: (string | number)[], source: Record<string, any>[], fields?: FormCreateField[]): void;
@@ -77,7 +78,7 @@
     default: [],
   });
 
-  function getParams(): FilterResult {
+  function getParams(): FilterResult & { sourceFormKey?: FormDesignKeyEnum } {
     const conditions = props.fieldConfig.combineSearch?.conditions
       .map((item) => ({
         value: item.rightFieldCustom ? item.rightFieldCustomValue : props.formDetail?.[item.rightFieldId || ''],
@@ -92,6 +93,7 @@
     return {
       searchMode: props.fieldConfig.combineSearch?.searchMode,
       conditions,
+      sourceFormKey: props.sourceFormKey,
     };
   }
 
