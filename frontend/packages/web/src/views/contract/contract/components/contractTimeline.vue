@@ -134,7 +134,7 @@
   const { t } = useI18n();
   const { openNewPage } = useOpenNewPage();
 
-  const { data, loading, statisticInfo, getDescription, getFormConfig, loadList, getStatistic, handleReachBottom } =
+  const { data, loading, statisticInfo, getDescription, getFormConfig, loadList, handleReachBottom } =
     useContractTimeline(props.formKey, props.sourceId);
 
   function goDetail(id: string, type?: FormDesignKeyEnum.CONTRACT_PAYMENT_RECORD | FormDesignKeyEnum.CONTRACT) {
@@ -152,7 +152,8 @@
   onMounted(async () => {
     await getFormConfig();
     loadList();
-    getStatistic();
+    // 汇总金额暂不展示，恢复时需同时恢复 getStatistic 的解构和调用。
+    // getStatistic();
   });
 </script>
 
