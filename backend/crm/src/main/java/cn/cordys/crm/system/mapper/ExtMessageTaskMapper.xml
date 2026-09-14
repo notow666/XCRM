@@ -20,7 +20,7 @@
                 lark_enable = #{request.larkEnable},
             </if>
         </set>
-        where organization_id = #{organizationId}
+        where organization_id = #{organizationId} and display = b'1'
     </update>
 
     <select id="getEnableMessageTaskByReceiveTypeAndTaskType" resultType="cn.cordys.crm.system.domain.MessageTask">
@@ -36,4 +36,4 @@
     </select>
 
 
-</mapper> 
+</mapper>

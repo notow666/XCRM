@@ -43,7 +43,7 @@ public class ContractAnalysisController {
 
     @PostMapping("/export")
     @Operation(summary = "合同成交分析同步导出")
-    @RequiresPermissions(PermissionConstants.CONTRACT_EXPORT)
+    @RequiresPermissions(PermissionConstants.CONTRACT_READ)
     public ResponseEntity<ByteArrayResource> export(
             @RequestBody ContractAnalysisService.QueryRequest request) {
         return exportService.export(request, OrganizationContext.getOrganizationId(), SessionUtils.getUserId());
@@ -51,7 +51,7 @@ public class ContractAnalysisController {
 
     @PostMapping("/detail/export")
     @Operation(summary = "合同成交分析明细同步导出")
-    @RequiresPermissions(PermissionConstants.CONTRACT_EXPORT)
+    @RequiresPermissions(PermissionConstants.CONTRACT_READ)
     public ResponseEntity<ByteArrayResource> exportDetail(
             @RequestBody ContractAnalysisService.DetailRequest request) {
         return exportService.exportDetail(request, OrganizationContext.getOrganizationId(), SessionUtils.getUserId());

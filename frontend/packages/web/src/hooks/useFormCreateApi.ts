@@ -1247,6 +1247,12 @@ export default function useFormCreateApi(props: FormCreateApiProps) {
       loading.value = true;
       const api = getFormConfigApiMap[props.formKey.value];
       const res = await api(props.sourceId?.value ?? '');
+      if (props.formKey.value === FormDesignKeyEnum.CONTRACT_PAYMENT_RECORD) {
+        const nameField = res.fields.find((field) => field.internalKey === 'contractPaymentRecordName');
+        if (nameField) {
+          nameField.editable = true;
+        }
+      }
       moduleFormConfig.value = cloneDeep(res);
       initFormFieldConfig(res.fields);
       formConfig.value = res.formProp;

@@ -1196,10 +1196,14 @@ public class CustomerService {
         }
 
         int success = 0;
+        String failureMessage = null;
         List<LogDTO> logs = new ArrayList<>();
         List<String> customerIds = new ArrayList<>();
         for (Customer customer : customers) {
             if (!customerToPoolEligibilityService.isEligible(customer, orgId)) {
+                if (affectTotal == 1 && customerToPoolEligibilityService.hasActiveContract(customer, orgId)) {
+                    failureMessage = Translator.get("customer.to.pool.active.contract.failed");
+                }
                 continue;
             }
             CustomerPool customerPool = specifiedPool != null ? specifiedPool : ownersDefaultPoolMap.get(customer.getOwner());
@@ -1247,7 +1251,11 @@ public class CustomerService {
             followUpPlanService.deleteByCustomerIds(customerIds);
         }
 
-        return BatchAffectResponse.builder().success(success).fail(affectTotal - success).build();
+        return BatchAffectResponse.builder()
+                .success(success)
+                .fail(affectTotal - success)
+                .message(failureMessage)
+                .build();
     }
 
     /**

@@ -170,6 +170,10 @@ public interface ExtCustomerMapper {
                                                         @Param("orgId") String orgId,
                                                         @Param("limit") int limit);
 
+    List<Customer> listConvertibleCreateSourceCustomersByIds(@Param("ids") List<String> ids,
+                                                             @Param("ownerId") String ownerId,
+                                                             @Param("orgId") String orgId);
+
     int batchConvertCreateSourceToPrivate(@Param("ids") List<String> ids,
                                           @Param("ownerId") String ownerId,
                                           @Param("orgId") String orgId,

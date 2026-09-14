@@ -132,7 +132,9 @@
   const detailInfo = ref();
 
   const stageName = computed(() => {
-    return contractStatusOptions.find((item) => item.value === detailInfo.value?.stage)?.label;
+    return contractStatusOptions.find(
+      (item) => item.value === (detailInfo.value?.displayStage || detailInfo.value?.stage)
+    )?.label;
   });
 
   const activeTab = ref('contract');

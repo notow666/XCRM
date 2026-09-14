@@ -16,7 +16,10 @@
         </span>
       </div>
       <div v-if="props.failCount > 0" class="text-[var(--text-n4)]">
-        <div v-if="props.reasonKey === ReasonTypeEnum.CUSTOMER_POOL_RS" class="flex items-center justify-center">
+        <div v-if="props.failureMessage" class="flex items-center justify-center">
+          {{ props.failureMessage }}
+        </div>
+        <div v-else-if="props.reasonKey === ReasonTypeEnum.CUSTOMER_POOL_RS" class="flex items-center justify-center">
           {{ t('customer.moveToOpenSeaFailedContent1') }}
           <n-button type="primary" text @click="goConfig(props.reasonKey)">
             {{ t('customer.moveToOpenSeaFailedContent2') }}
@@ -52,6 +55,7 @@
     successCount: number;
     title?: string;
     reasonKey: ReasonKey;
+    failureMessage?: string;
   }>();
 
   const emit = defineEmits<{

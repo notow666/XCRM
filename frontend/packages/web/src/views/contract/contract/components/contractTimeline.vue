@@ -1,7 +1,8 @@
 <template>
   <CrmCard no-content-bottom-padding hide-footer>
+    <!-- 客户详情合同及回款汇总金额暂不展示，保留原代码供后续恢复。 -->
     <div
-      v-if="statisticInfo"
+      v-if="false && statisticInfo"
       class="mb-[16px] flex gap-[24px] rounded-[var(--border-radius-mini)] bg-[var(--text-n9)] p-[12px]"
     >
       <div v-for="item in statisticInfo" :key="item" class="flex items-center">
@@ -71,6 +72,11 @@
                 <template #recordAmount="{ item: decItem }">
                   <div class="flex items-center gap-[8px]">
                     {{ decItem.value }}
+                  </div>
+                </template>
+                <template #recordEndTime="{ item: decItem }">
+                  <div class="flex items-center gap-[8px]">
+                    {{ dayjs(decItem.value).format('YYYY-MM-DD') }}
                   </div>
                 </template>
                 <template #amount="{ item: decItem }">

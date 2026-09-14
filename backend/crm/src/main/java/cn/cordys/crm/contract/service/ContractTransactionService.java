@@ -3,7 +3,10 @@ package cn.cordys.crm.contract.service;
 import cn.cordys.aspectj.constants.LogModule;
 import cn.cordys.aspectj.constants.LogType;
 import cn.cordys.aspectj.dto.LogDTO;
+import cn.cordys.common.constants.BusinessModuleField;
+import cn.cordys.common.constants.FormKey;
 import cn.cordys.common.constants.InternalUser;
+import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.domain.BaseModuleFieldValue;
 import cn.cordys.common.dto.UserDeptDTO;
 import cn.cordys.common.exception.GenericException;
@@ -30,6 +33,7 @@ import cn.cordys.crm.follow.domain.FollowUpPlan;
 import cn.cordys.crm.report.customerconversion.service.CustomerConversionEventService;
 import cn.cordys.crm.system.dto.response.ModuleFormConfigDTO;
 import cn.cordys.crm.system.service.LogService;
+import cn.cordys.crm.system.service.ModuleFormService;
 import cn.cordys.mybatis.BaseMapper;
 import cn.cordys.mybatis.lambda.LambdaQueryWrapper;
 import jakarta.annotation.Resource;
@@ -86,6 +90,10 @@ public class ContractTransactionService {
     private CustomerConversionEventService customerConversionEventService;
     @Resource
     private LogService logService;
+    @Resource
+    private ContractDataPermissionService contractDataPermissionService;
+    @Resource
+    private ModuleFormService moduleFormService;
 
     @Transactional(rollbackFor = Exception.class)
     public Contract add(ContractAddRequest request, ModuleFormConfigDTO formConfig, String contractNumber,
@@ -135,6 +143,7 @@ public class ContractTransactionService {
     @Transactional(rollbackFor = Exception.class)
     public Contract update(ContractUpdateRequest request, ModuleFormConfigDTO formConfig, String userId, String orgId) {
         Contract contract = requireLockedContract(request.getId(), orgId);
+        contractDataPermissionService.checkDataPermission(userId, orgId, contract, PermissionConstants.CONTRACT_UPDATE);
         if (!Objects.equals(contract.getLockVersion(), request.getLockVersion())) {
             throw new GenericException("合同已被其他用户修改，请刷新后重试");
         }
@@ -143,6 +152,7 @@ public class ContractTransactionService {
             throw new GenericException("合同存在待审批版本，不能重复提交");
         }
         checkImmutableFields(request, contract);
+        restoreCustomerMobileSnapshotField(request.getModuleFields(), contract, orgId);
         checkDateRange(request.getStartTime(), request.getEndTime());
         List<ContractProductRequest> products = normalizeProducts(request.getProducts());
         UserDeptDTO signerDept = requireSignerDept(request.getSignerId(), orgId);
@@ -250,6 +260,7 @@ public class ContractTransactionService {
     @Transactional(rollbackFor = Exception.class)
     public Contract changeStage(ContractStageRequest request, String userId, String orgId) {
         Contract contract = requireLockedContract(request.getId(), orgId);
+        contractDataPermissionService.checkDataPermission(userId, orgId, contract, PermissionConstants.CONTRACT_STAGE);
         if (StringUtils.isBlank(contract.getEffectiveVersionId())) {
             throw new GenericException("合同尚未生效，不能变更阶段");
         }
@@ -271,7 +282,7 @@ public class ContractTransactionService {
 
     @Transactional(rollbackFor = Exception.class)
     public Contract delete(String id, String userId, String orgId) {
-        return deleteResources(id, userId, orgId, null, false);
+        return deleteResources(id, userId, orgId, null, false, true);
     }
 
     /**
@@ -279,11 +290,15 @@ public class ContractTransactionService {
      */
     @Transactional(rollbackFor = Exception.class)
     public Contract deleteForCustomerCascade(String id, String userId, String orgId, String reason) {
-        return deleteResources(id, userId, orgId, reason, true);
+        return deleteResources(id, userId, orgId, reason, true, false);
     }
 
-    private Contract deleteResources(String id, String userId, String orgId, String reason, boolean writeCascadeLogs) {
+    private Contract deleteResources(String id, String userId, String orgId, String reason, boolean writeCascadeLogs,
+                                     boolean checkContractPermission) {
         Contract contract = requireLockedContract(id, orgId);
+        if (checkContractPermission) {
+            contractDataPermissionService.checkDataPermission(userId, orgId, contract, PermissionConstants.CONTRACT_DELETE);
+        }
         List<ContractPaymentRecord> records = paymentRecordMapper.selectListByLambda(
                 new LambdaQueryWrapper<ContractPaymentRecord>().eq(ContractPaymentRecord::getContractId, id));
         List<String> paymentRecordIds = records.stream().map(ContractPaymentRecord::getId).toList();
@@ -376,6 +391,28 @@ public class ContractTransactionService {
         }
     }
 
+    /**
+     * 详情展示时手机号可能已按全局配置脱敏，更新版本前必须恢复为合同保存的原始快照，
+     * 避免将脱敏文本写入版本数据，同时阻止前端绕过基础字段保护修改客户手机号。
+     */
+    private void restoreCustomerMobileSnapshotField(List<BaseModuleFieldValue> moduleFields,
+                                                    Contract contract, String orgId) {
+        if (CollectionUtils.isEmpty(moduleFields)) {
+            return;
+        }
+        moduleFormService.getFlattenFormFields(FormKey.CONTRACT.getKey(), orgId).stream()
+                .filter(field -> StringUtils.isNotBlank(field.getResourceFieldId()))
+                .filter(field -> Strings.CS.equals(field.getInternalKey(),
+                        BusinessModuleField.CUSTOMER_MOBILE.getKey()))
+                .findFirst()
+                .ifPresent(field -> {
+                    moduleFields.removeIf(value -> Strings.CS.equals(value.getFieldId(), field.getId()));
+                    if (StringUtils.isNotBlank(contract.getCustomerMobileSnapshot())) {
+                        moduleFields.add(new BaseModuleFieldValue(field.getId(), contract.getCustomerMobileSnapshot()));
+                    }
+                });
+    }
+
     private void checkDateRange(Long startTime, Long endTime) {
         if (startTime == null || endTime == null || endTime < startTime) {
             throw new GenericException("合同结束时间不能早于开始时间");
@@ -383,16 +420,26 @@ public class ContractTransactionService {
     }
 
     private void checkContractUnique(String name, String number, String orgId, String excludeId) {
-        List<Contract> contracts = contractMapper.selectListByLambda(new LambdaQueryWrapper<Contract>()
-                .eq(Contract::getOrganizationId, orgId));
-        boolean nameExists = contracts.stream().anyMatch(contract ->
-                Strings.CS.equals(contract.getName(), name) && !Strings.CS.equals(contract.getId(), excludeId));
-        if (nameExists) {
+        LambdaQueryWrapper<Contract> nameQuery = new LambdaQueryWrapper<Contract>()
+                .eq(Contract::getOrganizationId, orgId)
+                .eq(Contract::getName, name);
+        if (StringUtils.isNotBlank(excludeId)) {
+            nameQuery.nq(Contract::getId, excludeId);
+        }
+        if (CollectionUtils.isNotEmpty(contractMapper.selectListByLambda(nameQuery))) {
             throw new GenericException("合同名称已存在");
         }
-        boolean numberExists = StringUtils.isNotBlank(number) && contracts.stream().anyMatch(contract ->
-                Strings.CS.equals(contract.getNumber(), number) && !Strings.CS.equals(contract.getId(), excludeId));
-        if (numberExists) {
+
+        if (StringUtils.isBlank(number)) {
+            return;
+        }
+        LambdaQueryWrapper<Contract> numberQuery = new LambdaQueryWrapper<Contract>()
+                .eq(Contract::getOrganizationId, orgId)
+                .eq(Contract::getNumber, number);
+        if (StringUtils.isNotBlank(excludeId)) {
+            numberQuery.nq(Contract::getId, excludeId);
+        }
+        if (CollectionUtils.isNotEmpty(contractMapper.selectListByLambda(numberQuery))) {
             throw new GenericException("合同编号已存在");
         }
     }

@@ -37,6 +37,8 @@
         v-model:keyword="keyword"
         :custom-fields-config-list="customFieldsFilterConfig"
         :filter-config-list="filterConfigList"
+        :auth-user-option-fields="['createUser', 'updateUser']"
+        :current-dept-member-fields="contractCurrentDeptMemberFields"
         @adv-search="handleAdvSearch"
         @keyword-search="searchData"
       />
@@ -52,7 +54,8 @@
         @refresh-table-data="searchData"
       />
     </template>
-    <template #totalRight>
+    <!-- 合同列表平均金额及总金额暂不展示，保留原代码供后续恢复。 -->
+    <template v-if="false" #totalRight>
       <div class="ml-[24px]">
         {{ t('opportunity.averageAmount') }}
         <span class="ml-[4px]">
@@ -432,6 +435,8 @@
 
   const { useTableRes, customFieldsFilterConfig, fieldList, dicApprovalEnable } = await useFormCreateTable({
     formKey: FormDesignKeyEnum.CONTRACT,
+    // 同一客户的不同合同可保存不同名称，保留每行快照，避免被公共选项覆盖。
+    excludeFieldIds: ['customerId'],
     operationColumn: {
       key: 'operation',
       width: currentLocale.value === 'en-US' ? 180 : 150,
@@ -542,6 +547,12 @@
     setAdvanceFilter,
   } = useTableRes;
 
+  const contractCurrentDeptMemberFields = computed(() =>
+    fieldList.value
+      .filter((field) => field.internalKey === 'contractSigner')
+      .map((field) => field.businessKey || field.id)
+  );
+
   const statisticInfo = ref({ amount: 0, averageAmount: 0 });
   async function getStatistic(_keyword?: string) {
     try {
@@ -621,7 +632,7 @@
         keyField: 'id',
         multiple: true,
         clearFilterAfterSelect: false,
-        type: 'department',
+        type: 'currentDepartment',
         checkable: true,
         showContainChildModule: true,
         containChildIds: [],
@@ -654,7 +665,11 @@
             operatorOption: COMMON_SELECTION_OPERATORS,
             type: FieldTypeEnum.SELECT_MULTIPLE,
             selectProps: {
-              options: quotationStatusOptions.filter((item) => ![QuotationStatusEnum.VOIDED].includes(item.value)),
+              options: quotationStatusOptions.filter((item) =>
+                [QuotationStatusEnum.APPROVED, QuotationStatusEnum.UNAPPROVED, QuotationStatusEnum.APPROVING].includes(
+                  item.value
+                )
+              ),
             },
           },
         ]

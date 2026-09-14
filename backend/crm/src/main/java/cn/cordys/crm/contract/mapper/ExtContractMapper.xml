@@ -2,6 +2,27 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="cn.cordys.crm.contract.mapper.ExtContractMapper">
+    <sql id="contractDeptDataPermission">
+        <if test="dataPermission != null and dataPermission.deptIds.size() > 0">
+            and (
+            exists (
+                select 1
+                from sys_organization_user contract_permission_user
+                where (contract_permission_user.user_id = ct.owner
+                    or contract_permission_user.user_id = ct.signer_id)
+                and contract_permission_user.department_id in
+                <foreach collection="dataPermission.deptIds" item="deptId" open="(" close=")" separator=",">
+                    #{deptId}
+                </foreach>
+            )
+            <if test="dataPermission.viewId == 'ALL'">
+                or ct.owner = #{userId}
+                or ct.signer_id = #{userId}
+            </if>
+            )
+        </if>
+    </sql>
+
     <select id="list" resultType="cn.cordys.crm.contract.dto.response.ContractListResponse">
         SELECT
         ct.id,
@@ -60,7 +81,6 @@
             ) END
         )
         LEFT JOIN contract_payment_record cpr on cpr.contract_id = ctt.id
-        AND cpr.approval_status = 'APPROVED'
         AND cpr.effective_version_id IS NOT NULL
         GROUP BY ctt.id
         ) ct
@@ -81,19 +101,8 @@
             <property name="sort" value="request.sort"/>
         </include>
 
-        <if test="dataPermission != null and dataPermission.deptIds.size() > 0">
-            join sys_organization_user on ct.owner = sys_organization_user.user_id
-            and (
-            sys_organization_user.department_id in
-            <foreach collection="dataPermission.deptIds" item="deptId" open="(" close=")" separator=",">
-                #{deptId}
-            </foreach>
-            <if test="dataPermission.viewId == 'ALL'">
-                or sys_organization_user.user_id = #{userId}
-            </if>
-            )
-        </if>
         where ct.organization_id = #{orgId}
+        <include refid="contractDeptDataPermission"/>
 
         <if test="request.customerId != null and request.customerId != ''">
             and ct.customer_id = #{request.customerId}
@@ -105,7 +114,7 @@
                 and ct.signer_id = #{userId}
             </when>
             <when test="dataPermission != null and dataPermission.self">
-                and ct.owner = #{userId}
+                and (ct.owner = #{userId} or ct.signer_id = #{userId})
             </when>
         </choose>
 
@@ -169,30 +178,20 @@
         SELECT ctt.*, IFNULL(SUM(cpr.record_amount), 0) AS alreadyPayAmount
         FROM contract ctt
         LEFT JOIN contract_payment_record cpr on cpr.contract_id = ctt.id
-        AND cpr.approval_status = 'APPROVED'
         AND cpr.effective_version_id IS NOT NULL
         GROUP BY ctt.id
         ) ct
         LEFT JOIN customer c ON ct.customer_id = c.id
 
-        <if test="dataPermission != null and dataPermission.deptIds.size() > 0">
-            join sys_organization_user on ct.owner = sys_organization_user.user_id
-            and (
-            sys_organization_user.department_id in
-            <foreach collection="dataPermission.deptIds" item="deptId" open="(" close=")" separator=",">
-                #{deptId}
-            </foreach>
-            )
-        </if>
-
         where ct.organization_id = #{orgId}
+        <include refid="contractDeptDataPermission"/>
         and ct.id in
         <foreach collection="ids" item="id" open="(" close=")" separator=",">
             #{id}
         </foreach>
 
         <if test="dataPermission != null and dataPermission.self">
-            and ct.owner = #{userId}
+            and (ct.owner = #{userId} or ct.signer_id = #{userId})
         </if>
     </select>
 
@@ -210,7 +209,7 @@
                             field_value VARCHAR(4000) PATH '$.fieldValue' NULL ON EMPTY
                         )
                     ) ${tablePrefix}_version_${i}
-                    on ${tablePrefix}_version_${i}.field_id = #{condition.name}
+                    on ${tablePrefix}_version_${i}.field_id COLLATE utf8mb4_unicode_ci = #{condition.name}
                     <if test="condition.multipleValue">
                         left join contract_field_blob ${tablePrefix}_${i}
                         on ct.id = ${tablePrefix}_${i}.resource_id and ${tablePrefix}_${i}.field_id = #{condition.name}
@@ -241,7 +240,7 @@
                     field_id VARCHAR(255) PATH '$.fieldId',
                     field_value VARCHAR(4000) PATH '$.fieldValue' NULL ON EMPTY
                 )
-            ) sort_version_table on sort_version_table.field_id = #{sortName}
+            ) sort_version_table on sort_version_table.field_id COLLATE utf8mb4_unicode_ci = #{sortName}
             left join sys_module_field module_table on module_table.id = #{sortName}
         </if>
         <if test="${sort} != null and ${sort}.valid() and ${sort}.name == 'department_id'">
@@ -497,18 +496,10 @@
         FROM
         contract ct
         LEFT JOIN customer c ON ct.customer_id = c.id
-        <if test="dataPermission != null and dataPermission.deptIds.size() > 0">
-            join sys_organization_user on ct.owner = sys_organization_user.user_id
-            and (
-            sys_organization_user.department_id in
-            <foreach collection="dataPermission.deptIds" item="deptId" open="(" close=")" separator=",">
-                #{deptId}
-            </foreach>
-            )
-        </if>
         where ct.organization_id = #{orgId} and ct.customer_id = #{customerId}
+        <include refid="contractDeptDataPermission"/>
         <if test="dataPermission != null and dataPermission.self">
-            and ct.owner = #{userId}
+            and (ct.owner = #{userId} or ct.signer_id = #{userId})
         </if>
     </select>
 
@@ -583,6 +574,7 @@
              LEFT JOIN (
                  SELECT contract_id, SUM(record_amount) AS alreadyPayAmount
                  FROM contract_payment_record
+                 WHERE effective_version_id IS NOT NULL
                  GROUP BY contract_id
              ) payment_amount ON payment_amount.contract_id = ctt.id
          ) ct
@@ -599,23 +591,11 @@
             <property name="conditions" value="request.viewCombineSearch.conditions"/>
             <property name="tablePrefix" value="viewCombine"/>
         </include>
-        <if test="dataPermission != null and dataPermission.deptIds.size() > 0">
-            join sys_organization_user on ct.owner = sys_organization_user.user_id
-            and (
-            sys_organization_user.department_id in
-            <foreach collection="dataPermission.deptIds" item="deptId" open="(" close=")" separator=",">
-                #{deptId}
-            </foreach>
-            <if test="dataPermission.viewId == 'ALL'">
-                or sys_organization_user.user_id = #{userId}
-            </if>
-            )
-        </if>
-
         where ct.organization_id = #{orgId}
+        <include refid="contractDeptDataPermission"/>
 
         <if test="dataPermission != null and dataPermission.self">
-            and ct.owner = #{userId}
+            and (ct.owner = #{userId} or ct.signer_id = #{userId})
         </if>
 
         <if test="request.keyword != null and request.keyword != ''">

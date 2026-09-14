@@ -26,11 +26,24 @@ public class CustomerToPoolEligibilityService {
                 || Strings.CS.equals(customer.getCreateSource(), CustomerCreateSource.PRIVATE_IMPORT)) {
             return false;
         }
-        List<Contract> contracts = contractMapper.selectListByLambda(new LambdaQueryWrapper<Contract>()
-                .eq(Contract::getCustomerId, customer.getId())
-                .eq(Contract::getOrganizationId, orgId));
-        return contracts.stream().allMatch(contract ->
+        return getCustomerContracts(customer, orgId).stream().allMatch(contract ->
                 Strings.CS.equals(contract.getStage(), ContractStage.COMPLETED_PERFORMANCE.name())
                         || Strings.CS.equals(contract.getStage(), ContractStage.VOID.name()));
+    }
+
+    public boolean hasActiveContract(Customer customer, String orgId) {
+        if (customer == null) {
+            return false;
+        }
+        return getCustomerContracts(customer, orgId).stream().anyMatch(contract ->
+                Strings.CS.equals(contract.getStage(), ContractStage.PENDING_SIGNING.name())
+                        || Strings.CS.equals(contract.getStage(), ContractStage.SIGNED.name())
+                        || Strings.CS.equals(contract.getStage(), ContractStage.IN_PROGRESS.name()));
+    }
+
+    private List<Contract> getCustomerContracts(Customer customer, String orgId) {
+        return contractMapper.selectListByLambda(new LambdaQueryWrapper<Contract>()
+                .eq(Contract::getCustomerId, customer.getId())
+                .eq(Contract::getOrganizationId, orgId));
     }
 }

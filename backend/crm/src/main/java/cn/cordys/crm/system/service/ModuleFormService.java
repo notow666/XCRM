@@ -218,21 +218,27 @@ public class ModuleFormService {
         formConfig.setFormProp(JSON.parseObject(formBlob.getProp(), FormProp.class));
         // set fields
         formConfig.setFields(getAllFields(form.getId()));
-        if (Strings.CS.equals(formKey, FormKey.CONTRACT.getKey())) {
-            lockContractFieldsForUi(formConfig.getFields());
-        }
+        lockProtectedFieldsForUi(formKey, formConfig.getFields());
         return formConfig;
     }
 
-    private void lockContractFieldsForUi(List<BaseField> fields) {
+    private void lockProtectedFieldsForUi(String formKey, List<BaseField> fields) {
+        if (Strings.CS.equals(formKey, FormKey.CONTRACT.getKey())) {
+            lockProtectedFieldsForUi(fields, CONTRACT_LOCKED_FIELD_KEYS);
+        } else if (Strings.CS.equals(formKey, FormKey.CONTRACT_PAYMENT_RECORD.getKey())) {
+            lockProtectedFieldsForUi(fields, PAYMENT_PROTECTED_FIELD_KEYS);
+        }
+    }
+
+    private void lockProtectedFieldsForUi(List<BaseField> fields, Set<String> protectedFieldKeys) {
         for (BaseField field : fields) {
-            if (CONTRACT_LOCKED_FIELD_KEYS.contains(field.getInternalKey())) {
+            if (protectedFieldKeys.contains(field.getInternalKey())) {
                 field.setDeletable(false);
                 field.setDisabledProps(CONTRACT_UI_DISABLED_PROPS);
             }
             if (field instanceof SubField subField && CollectionUtils.isNotEmpty(subField.getSubFields())) {
                 for (BaseField child : subField.getSubFields()) {
-                    if (CONTRACT_LOCKED_FIELD_KEYS.contains(child.getInternalKey())) {
+                    if (protectedFieldKeys.contains(child.getInternalKey())) {
                         child.setDeletable(false);
                         child.setDisabledProps(CONTRACT_UI_DISABLED_PROPS);
                     }
@@ -259,6 +265,8 @@ public class ModuleFormService {
                 .peek(this::setFieldBusinessParam)
                 .peek(this::reloadPropOfSubRefFields)
                 .collect(Collectors.toList());
+        // 业务字段参数会覆盖 disabledProps，表单设置接口需要在处理完成后重新施加内置字段保护。
+        lockProtectedFieldsForUi(formKey, processedFields);
         // 跟进相关表单加载动态选项
         if (FormKey.FOLLOW_RECORD.getKey().equals(formKey) || FormKey.FOLLOW_PLAN.getKey().equals(formKey)) {
             processedFields.forEach(field -> setFollowUpFieldOptions(field, organizationId));
@@ -1940,26 +1948,8 @@ public class ModuleFormService {
             throw new GenericException("回款记录核心字段不允许删除或重复");
         }
         for (String key : PAYMENT_PROTECTED_FIELD_KEYS) {
-            BaseField oldField = persisted.get(key).field();
-            BaseField newField = submitted.get(key).field();
-            if (!Strings.CS.equals(oldField.getType(), newField.getType())) {
-                throw new GenericException("回款记录核心字段不允许修改类型：" + oldField.getName());
-            }
-            if (oldField.needRequireCheck() && !newField.needRequireCheck()) {
-                throw new GenericException("回款记录核心字段不允许取消必填：" + oldField.getName());
-            }
-            if (Boolean.FALSE.equals(oldField.getEditable()) && !Boolean.FALSE.equals(newField.getEditable())) {
-                throw new GenericException("回款记录计算字段不允许改为可编辑：" + oldField.getName());
-            }
-            if (oldField instanceof DatasourceField oldSource && newField instanceof DatasourceField newSource
-                    && !Strings.CS.equals(oldSource.getDataSourceType(), newSource.getDataSourceType())) {
-                throw new GenericException("回款记录核心字段不允许修改数据源：" + oldField.getName());
-            }
-            if (oldField instanceof SubField oldSub && newField instanceof SubField newSub
-                    && (!Objects.equals(oldSub.getMinRows(), newSub.getMinRows())
-                    || !Objects.equals(oldSub.getMaxRows(), newSub.getMaxRows())
-                    || !Objects.equals(oldSub.getInitialRows(), newSub.getInitialRows()))) {
-                throw new GenericException("回款产品明细行数规则不允许修改");
+            if (!lockedFieldSignature(persisted.get(key)).equals(lockedFieldSignature(submitted.get(key)))) {
+                throw new GenericException("回款记录基础字段不允许修改：" + persisted.get(key).field().getName());
             }
         }
     }
@@ -2012,6 +2002,7 @@ public class ModuleFormService {
         normalized.remove("subTableFieldId");
         normalized.remove("initialOptions");
         normalized.remove("refFields");
+        normalized.remove("disabledProps");
         normalized.remove(SUB_FIELDS);
         return protectedField.topIndex() + ":" + protectedField.subIndex() + ":" + JSON.toJSONString(normalized);
     }

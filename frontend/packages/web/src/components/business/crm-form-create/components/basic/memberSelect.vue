@@ -74,7 +74,11 @@
   });
   const selectedUsers = ref<SelectedUsersItem[]>(props.fieldConfig.initialOptions || []);
   const memberApiTypeKey = computed(() => {
-    return props.fieldConfig.internalKey === 'planProcessor'
+    const useCurrentDeptTree =
+      props.fieldConfig.internalKey === 'planProcessor' ||
+      props.fieldConfig.internalKey === 'contractPaymentRecordDealPerson' ||
+      props.fieldConfig.internalKey === 'contractSigner';
+    return useCurrentDeptTree
       ? MemberApiTypeEnum.FORM_FIELD_CURRENT_DEPT
       : MemberApiTypeEnum.FORM_FIELD;
   });

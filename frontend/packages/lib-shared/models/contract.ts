@@ -48,6 +48,7 @@ export interface ContractDetail extends ContractItem {
 
 export interface ContractVersionHistoryItem {
   id: string;
+  baseEffectiveVersionId?: string;
   versionNo: number;
   submitType: 'CREATE' | 'UPDATE';
   approvalStatus: string;

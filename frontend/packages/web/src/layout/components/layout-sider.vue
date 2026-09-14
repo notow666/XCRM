@@ -160,7 +160,13 @@
   }
 
   const hasExportPermission = computed(() =>
-    hasAnyPermission(['CUSTOMER_MANAGEMENT:EXPORT', 'OPPORTUNITY_MANAGEMENT:EXPORT', 'CLUE_MANAGEMENT:EXPORT'])
+    hasAnyPermission([
+      'CUSTOMER_MANAGEMENT:EXPORT',
+      'OPPORTUNITY_MANAGEMENT:EXPORT',
+      'CLUE_MANAGEMENT:EXPORT',
+      'CONTRACT:EXPORT',
+      'CONTRACT_PAYMENT_RECORD:EXPORT',
+    ])
   );
 
   const personalMenuOptions = computed(() => {

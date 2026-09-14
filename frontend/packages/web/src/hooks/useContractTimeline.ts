@@ -75,13 +75,13 @@ export default function useContractTimeline(formKey: TimelineType, sourceId: str
   const descriptionListMap: Record<TimelineType, Description[]> = {
     [FormDesignKeyEnum.CONTRACT]: [
       {
-        key: 'ownerName',
-        label: t('contract.applicant'),
+        key: 'signerNameSnapshot',
+        label: t('contract.signer'),
         value: '',
       },
       {
         key: 'name',
-        label: t('contract.invoicedContract'),
+        label: t('contract.contractName'),
         value: '',
       },
       {

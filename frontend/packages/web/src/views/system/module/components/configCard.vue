@@ -334,11 +334,12 @@
 
   const contractMoreOptions = computed<ActionsItem[]>(() => [
     // 工商抬头和发票本期仅隐藏前端配置入口，原配置与数据继续保留。
-    {
-      label: t('module.approvalSwitch'),
-      key: 'approval',
-      render: renderContractApprovalConfig.value,
-    },
+    // 合同及回款流程强制依赖审批，隐藏合同审批开关，保留后端配置和审批能力。
+    // {
+    //   label: t('module.approvalSwitch'),
+    //   key: 'approval',
+    //   render: renderContractApprovalConfig.value,
+    // },
     // 发票审批本期仅隐藏前端配置入口。
   ]);
 
@@ -457,10 +458,11 @@
           label: t('module.customerContractDeletePolicy'),
           key: 'customerContractDeletePolicy',
         },
-        {
-          label: t('common.more'),
-          slotName: 'more',
-        },
+        // 合同审批开关隐藏后“更多”菜单暂无可展示配置，入口一并隐藏。
+        // {
+        //   label: t('common.more'),
+        //   slotName: 'more',
+        // },
       ],
     },
     // {

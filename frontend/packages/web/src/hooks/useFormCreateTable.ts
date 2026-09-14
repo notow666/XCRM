@@ -865,8 +865,10 @@ export default async function useFormCreateTable(props: FormCreateTableProps) {
               title: t('contract.approvalStatus'),
               width: 120,
               key: 'approvalStatus',
-              filterOptions: quotationStatusOptions.filter(
-                (item) => ![QuotationStatusEnum.VOIDED].includes(item.value)
+              filterOptions: quotationStatusOptions.filter((item) =>
+                [QuotationStatusEnum.APPROVED, QuotationStatusEnum.UNAPPROVED, QuotationStatusEnum.APPROVING].includes(
+                  item.value
+                )
               ),
               sortOrder: false,
               sorter: true,

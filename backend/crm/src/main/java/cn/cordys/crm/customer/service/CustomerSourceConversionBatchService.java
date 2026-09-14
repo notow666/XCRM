@@ -24,9 +24,12 @@ public class CustomerSourceConversionBatchService {
     private LogService logService;
 
     @Transactional(rollbackFor = Exception.class)
-    public int convertNextBatch(String ownerId, String orgId, String operator, int batchSize) {
+    public int convertMatchedBatch(List<String> candidateIds, String ownerId, String orgId, String operator) {
+        if (CollectionUtils.isEmpty(candidateIds)) {
+            return 0;
+        }
         List<Customer> customers =
-                extCustomerMapper.listConvertibleCreateSourceCustomers(ownerId, orgId, batchSize);
+                extCustomerMapper.listConvertibleCreateSourceCustomersByIds(candidateIds, ownerId, orgId);
         if (CollectionUtils.isEmpty(customers)) {
             return 0;
         }

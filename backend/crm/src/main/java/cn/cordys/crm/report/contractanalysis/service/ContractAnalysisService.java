@@ -1,13 +1,16 @@
 package cn.cordys.crm.report.contractanalysis.service;
 
+import cn.cordys.common.constants.ExecutorBeanNames;
 import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.dto.BaseTreeNode;
 import cn.cordys.common.dto.DeptDataPermissionDTO;
 import cn.cordys.common.dto.UserDeptDTO;
 import cn.cordys.common.service.BaseService;
 import cn.cordys.common.service.DataScopeService;
+import cn.cordys.common.util.PhoneMaskUtil;
 import cn.cordys.crm.report.mapper.ReportAggregateMapper;
 import cn.cordys.crm.system.service.DepartmentService;
+import cn.cordys.crm.system.service.GlobalPhoneMaskConfigService;
 import jakarta.annotation.Resource;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
@@ -25,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 /**
@@ -42,6 +46,10 @@ public class ContractAnalysisService {
     private DepartmentService departmentService;
     @Resource
     private DataScopeService dataScopeService;
+    @Resource
+    private GlobalPhoneMaskConfigService globalPhoneMaskConfigService;
+    @Resource(name = ExecutorBeanNames.PARALLEL)
+    private Executor parallelExecutor;
 
     public List<SummaryRow> summary(QueryRequest request, String orgId, String userId) {
         Range range = normalizeRange(request);
@@ -51,29 +59,35 @@ public class ContractAnalysisService {
         Set<String> signers = visibleSigners(
                 new HashSet<>(reportAggregateMapper.distinctContractSigners(orgId, range.startTime(), range.endTime())),
                 orgId, userId, visibilityScope);
+        if (signers.isEmpty()) {
+            return List.of();
+        }
 
         // 三个聚合查询相互独立，并行执行（MySQL 聚合为 CPU 密集，串行会累加耗时）
         CompletableFuture<List<ReportAggregateMapper.ContractAggregateRow>> contractFuture = CompletableFuture.supplyAsync(
-                () -> reportAggregateMapper.aggregateContracts(orgId, range.startTime(), range.endTime(), dimensionType, signers));
+                () -> reportAggregateMapper.aggregateContracts(orgId, range.startTime(), range.endTime(), dimensionType, signers),
+                parallelExecutor);
         CompletableFuture<List<ReportAggregateMapper.ContractAggregateRow>> loanFuture = CompletableFuture.supplyAsync(
-                () -> reportAggregateMapper.aggregateProducts(orgId, range.startTime(), range.endTime(), dimensionType, signers));
+                () -> reportAggregateMapper.aggregateProducts(orgId, range.startTime(), range.endTime(), dimensionType, signers),
+                parallelExecutor);
         CompletableFuture<List<ReportAggregateMapper.ContractAggregateRow>> repayFuture = CompletableFuture.supplyAsync(
-                () -> reportAggregateMapper.aggregateProductsRepayment(orgId, range.startTime(), range.endTime(), dimensionType, signers));
+                () -> reportAggregateMapper.aggregateProductsRepayment(orgId, range.startTime(), range.endTime(), dimensionType, signers),
+                parallelExecutor);
 
         Map<String, Accumulator> buckets = new LinkedHashMap<>();
         for (ReportAggregateMapper.ContractAggregateRow row : contractFuture.join()) {
             Accumulator acc = buckets.computeIfAbsent(row.getDimKey(), k -> new Accumulator(row.getDimKey(), row.getDimLabel()));
             acc.contractCount = (int) row.getContractCount();
-            acc.contractAmount = BigDecimal.valueOf(row.getContractAmount());
+            acc.contractAmount = zero(row.getContractAmount());
         }
         for (ReportAggregateMapper.ContractAggregateRow row : loanFuture.join()) {
             Accumulator acc = buckets.computeIfAbsent(row.getDimKey(), k -> new Accumulator(row.getDimKey(), row.getDimLabel()));
-            acc.loanAmount = acc.loanAmount.add(BigDecimal.valueOf(row.getLoanAmount()));
+            acc.loanAmount = acc.loanAmount.add(zero(row.getLoanAmount()));
         }
         for (ReportAggregateMapper.ContractAggregateRow row : repayFuture.join()) {
             Accumulator acc = buckets.computeIfAbsent(row.getDimKey(), k -> new Accumulator(row.getDimKey(), row.getDimLabel()));
-            acc.repaymentAmount = acc.repaymentAmount.add(BigDecimal.valueOf(row.getRepaymentAmount()));
-            acc.revenueAmount = acc.revenueAmount.add(BigDecimal.valueOf(row.getRevenueAmount()));
+            acc.repaymentAmount = acc.repaymentAmount.add(zero(row.getRepaymentAmount()));
+            acc.revenueAmount = acc.revenueAmount.add(zero(row.getRevenueAmount()));
         }
         return buckets.values().stream().map(Accumulator::toResponse).collect(Collectors.toList());
     }
@@ -88,6 +102,9 @@ public class ContractAnalysisService {
         Set<String> signers = visibleSigners(
                 new HashSet<>(reportAggregateMapper.distinctContractSigners(orgId, range.startTime(), range.endTime())),
                 orgId, userId, visibilityScope);
+        if (signers.isEmpty()) {
+            return new PageResult<>(0, List.of());
+        }
 
         List<ContractDetailRowAdapter> adapters = new ArrayList<>();
         long total;
@@ -118,6 +135,7 @@ public class ContractAnalysisService {
             }
         }
 
+        boolean phoneMaskEnabled = globalPhoneMaskConfigService.isEnabled(orgId);
         List<DetailRow> rows = new ArrayList<>(adapters.size());
         for (ContractDetailRowAdapter adapter : adapters) {
             ReportAggregateMapper.ContractDetailRow row = adapter.row();
@@ -129,14 +147,16 @@ public class ContractAnalysisService {
             d.setContractName(row.getContractName());
             d.setCustomerId(row.getCustomerId());
             d.setCustomerName(row.getCustomerName());
-            d.setCustomerMobile(row.getCustomerMobile());
+            d.setCustomerMobile(phoneMaskEnabled
+                    ? PhoneMaskUtil.maskGlobalPhone(row.getCustomerMobile())
+                    : row.getCustomerMobile());
             d.setCustomerSource(row.getCustomerSource());
             d.setSignerId(row.getSignerId());
             d.setSignerName(row.getSignerName());
             d.setDepartmentId(row.getDepartmentId());
             d.setDepartmentName(row.getDepartmentName());
             d.setBusinessTime(row.getBusinessTime());
-            d.setAmount(BigDecimal.valueOf(adapter.amount()));
+            d.setAmount(zero(adapter.amount()));
             rows.add(d);
         }
         return new PageResult<>(total, rows);
@@ -210,7 +230,7 @@ public class ContractAnalysisService {
     private record VisibilityScope(boolean all, boolean departmentFiltered, Set<String> deptIds) {
     }
 
-    private record ContractDetailRowAdapter(ReportAggregateMapper.ContractDetailRow row, long amount) {
+    private record ContractDetailRowAdapter(ReportAggregateMapper.ContractDetailRow row, BigDecimal amount) {
     }
 
     private static final class Accumulator {

@@ -48,6 +48,7 @@
           type="primary"
           ghost
           class="n-btn-outline-primary"
+          :disabled="(propsRes.crmPagination?.itemCount || 0) === 0"
           @click="handleConvertCreateSource"
         >
           {{ t('customer.convertCreateSource') }}
@@ -218,6 +219,7 @@
               <CrmCustomerListItem
                 v-memo="[
                   item.id,
+                  item.createSource,
                   checkedIdSet.has(item.id),
                   listMiddleColumns.length,
                   isListScrolling,
@@ -573,6 +575,12 @@
   const tableRemoveRefreshId = ref('');
 
   function handleConvertCreateSource() {
+    // eslint-disable-next-line no-use-before-define
+    const total = propsRes.value.crmPagination?.itemCount || 0;
+    if (!total) {
+      Message.warning(t('customer.convertCreateSourceEmptyTip'));
+      return;
+    }
     openModal({
       type: 'default',
       title: t('customer.convertCreateSourceConfirmTitle'),
@@ -580,12 +588,17 @@
       positiveText: t('common.confirm'),
       negativeText: t('common.cancel'),
       onPositiveClick: async () => {
-        const data = await convertCustomerCreateSourceToPrivate();
+        const data = await convertCustomerCreateSourceToPrivate({
+          // eslint-disable-next-line no-use-before-define
+          ...tableQueryParams.value,
+          viewId: activeTab.value as CustomerSearchTypeEnum,
+        });
         if (!data?.accepted) {
           Message.warning(data?.message || t('common.operationFailed'));
           return;
         }
         Message.success(data.message || t('customer.convertCreateSourceSubmitted'));
+        tableRefreshId.value += 1;
       },
     });
   }

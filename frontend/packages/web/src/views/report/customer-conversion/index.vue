@@ -33,6 +33,7 @@
       <n-data-table :columns="columns" :data="rows" :loading="loading" :bordered="false" :scroll-x="1000" />
     </CrmCard>
   </n-scrollbar>
+  <!-- 明细导出功能暂不开放，仅隐藏页面入口，保留后端接口及前端处理逻辑。 -->
   <DrilldownModal
     v-model:show="detail.visible"
     :title="detail.title"
@@ -43,7 +44,7 @@
     :current="detail.current"
     :page-size="detail.pageSize"
     :scroll-x="950"
-    show-export
+    :show-export="false"
     :export-loading="detail.exportLoading"
     @page-change="handlePageChange"
     @page-size-change="handlePageSizeChange"
@@ -62,6 +63,7 @@
     NFormItem,
     NScrollbar,
     NSelect,
+    NTooltip,
     NTreeSelect,
     useMessage,
   } from 'naive-ui';
@@ -173,6 +175,23 @@
     return h(NButton, { text: true, type: 'primary', onClick: () => openDetail(eventType, row) }, () => value);
   }
 
+  function rateColumnTitle(title: string, description: string) {
+    return () =>
+      h(NTooltip, null, {
+        trigger: () =>
+          h(
+            'span',
+            {
+              class: 'cursor-help border-b border-dashed border-[var(--text-n5)]',
+              tabindex: 0,
+              'aria-label': `${title}：${description}`,
+            },
+            title
+          ),
+        default: () => description,
+      });
+  }
+
   const columns: DataTableColumns<CustomerConversionSummaryItem> = [
     { title: '统计维度', key: 'dimensionLabel', width: 180 },
     {
@@ -190,8 +209,8 @@
       key: 'paymentCustomerCount',
       render: (row) => countButton('PAYMENT_APPROVED', row.paymentCustomerCount, row),
     },
-    { title: '到店签单率', key: 'signRate' },
-    { title: '到店转化率', key: 'paymentRate' },
+    { title: rateColumnTitle('到店签单率', '签约客户数/上门客户数'), key: 'signRate' },
+    { title: rateColumnTitle('到店转化率', '回款客户数/上门客户数'), key: 'paymentRate' },
   ];
 
   const detailColumns: DataTableColumns<CustomerConversionDetailItem> = [

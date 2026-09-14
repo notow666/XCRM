@@ -12,4 +12,6 @@ public class BatchAffectResponse {
     private Integer success;
     @Schema(description = "失败条数")
     private Integer fail;
+    @Schema(description = "失败原因")
+    private String message;
 }

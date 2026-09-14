@@ -3,6 +3,7 @@ package cn.cordys.crm.report.mapper;
 import cn.cordys.mybatis.BaseMapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
 
@@ -168,10 +169,10 @@ public interface ReportAggregateMapper {
         private String dimKey;
         private String dimLabel;
         private long contractCount;
-        private long contractAmount;
-        private long loanAmount;
-        private long repaymentAmount;
-        private long revenueAmount;
+        private BigDecimal contractAmount;
+        private BigDecimal loanAmount;
+        private BigDecimal repaymentAmount;
+        private BigDecimal revenueAmount;
 
         public String getDimKey() { return dimKey; }
         public void setDimKey(String dimKey) { this.dimKey = dimKey; }
@@ -179,14 +180,14 @@ public interface ReportAggregateMapper {
         public void setDimLabel(String dimLabel) { this.dimLabel = dimLabel; }
         public long getContractCount() { return contractCount; }
         public void setContractCount(long contractCount) { this.contractCount = contractCount; }
-        public long getContractAmount() { return contractAmount; }
-        public void setContractAmount(long contractAmount) { this.contractAmount = contractAmount; }
-        public long getLoanAmount() { return loanAmount; }
-        public void setLoanAmount(long loanAmount) { this.loanAmount = loanAmount; }
-        public long getRepaymentAmount() { return repaymentAmount; }
-        public void setRepaymentAmount(long repaymentAmount) { this.repaymentAmount = repaymentAmount; }
-        public long getRevenueAmount() { return revenueAmount; }
-        public void setRevenueAmount(long revenueAmount) { this.revenueAmount = revenueAmount; }
+        public BigDecimal getContractAmount() { return contractAmount; }
+        public void setContractAmount(BigDecimal contractAmount) { this.contractAmount = contractAmount; }
+        public BigDecimal getLoanAmount() { return loanAmount; }
+        public void setLoanAmount(BigDecimal loanAmount) { this.loanAmount = loanAmount; }
+        public BigDecimal getRepaymentAmount() { return repaymentAmount; }
+        public void setRepaymentAmount(BigDecimal repaymentAmount) { this.repaymentAmount = repaymentAmount; }
+        public BigDecimal getRevenueAmount() { return revenueAmount; }
+        public void setRevenueAmount(BigDecimal revenueAmount) { this.revenueAmount = revenueAmount; }
     }
 
     class ConversionDetailRow {
@@ -241,8 +242,8 @@ public interface ReportAggregateMapper {
         private String departmentId;
         private String departmentName;
         private long businessTime;
-        private long amount;
-        private long revenueAmount;
+        private BigDecimal amount;
+        private BigDecimal revenueAmount;
 
         public String getMetricType() { return metricType; }
         public void setMetricType(String metricType) { this.metricType = metricType; }
@@ -272,9 +273,9 @@ public interface ReportAggregateMapper {
         public void setDepartmentName(String departmentName) { this.departmentName = departmentName; }
         public long getBusinessTime() { return businessTime; }
         public void setBusinessTime(long businessTime) { this.businessTime = businessTime; }
-        public long getAmount() { return amount; }
-        public void setAmount(long amount) { this.amount = amount; }
-        public long getRevenueAmount() { return revenueAmount; }
-        public void setRevenueAmount(long revenueAmount) { this.revenueAmount = revenueAmount; }
+        public BigDecimal getAmount() { return amount; }
+        public void setAmount(BigDecimal amount) { this.amount = amount; }
+        public BigDecimal getRevenueAmount() { return revenueAmount; }
+        public void setRevenueAmount(BigDecimal revenueAmount) { this.revenueAmount = revenueAmount; }
     }
 }

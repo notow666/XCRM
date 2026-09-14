@@ -177,10 +177,15 @@ public class CustomerController {
 
     @PostMapping("/create-source/convert-to-private")
     @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_UPDATE)
-    @Operation(summary = "将本人名下公海组客户的创建来源批量转换为私海组")
-    public Map<String, Object> convertCreateSourceToPrivate() {
+    @Operation(summary = "按筛选条件将本人名下公海组客户的创建来源批量转换为私海组")
+    public Map<String, Object> convertCreateSourceToPrivate(@Validated @RequestBody CustomerPageRequest request) {
+        prepareCustomerListQueryRequest(request);
+        String userId = SessionUtils.getUserId();
+        String orgId = OrganizationContext.getOrganizationId();
+        DeptDataPermissionDTO deptDataPermission = dataScopeService.getDeptDataPermission(userId,
+                orgId, request.getViewId(), PermissionConstants.CUSTOMER_MANAGEMENT_READ);
         return customerBatchByConditionService.convertCreateSourceToPrivate(
-                SessionUtils.getUserId(), OrganizationContext.getOrganizationId());
+                request, userId, orgId, deptDataPermission);
     }
 
     @GetMapping("/delete/{id}")

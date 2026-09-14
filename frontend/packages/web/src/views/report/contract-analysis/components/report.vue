@@ -29,7 +29,14 @@
             <n-button class="ml-[12px]" @click="handleReset">重置</n-button>
           </n-form-item>
         </n-form>
-        <n-button type="primary" secondary :loading="exportLoading" @click="handleExport">导出</n-button>
+        <n-button
+          type="primary"
+          secondary
+          :loading="exportLoading"
+          @click="handleExport"
+        >
+          导出
+        </n-button>
       </div>
     </CrmCard>
     <CrmCard hide-footer class="min-w-[1000px]">
@@ -46,16 +53,14 @@
     :current="detail.current"
     :page-size="detail.pageSize"
     :scroll-x="1200"
-    show-export
-    :export-loading="detail.exportLoading"
     @page-change="handlePageChange"
     @page-size-change="handlePageSizeChange"
-    @export="handleDetailExport"
   />
+  <!-- 合同成交分析明细暂不开放导出；恢复时重新配置 show-export、export-loading 和 export 事件。 -->
 </template>
 
 <script lang="ts" setup>
-  import { h, onMounted, reactive, ref } from 'vue';
+  import { computed, h, onMounted, reactive, ref } from 'vue';
   import {
     type DataTableColumns,
     NButton,
@@ -84,7 +89,8 @@
 
   import {
     exportContractAnalysis,
-    exportContractAnalysisDetail,
+    // 合同成交分析明细暂不开放导出，保留接口代码便于后续恢复。
+    // exportContractAnalysisDetail,
     getContractAnalysisDetail,
     getContractAnalysisSummary,
     getHomeDepartmentTree,
@@ -161,10 +167,30 @@
     REPAYMENT: '回款',
     REVENUE: '创收',
   };
+  const customerSourceLabels: Record<string, string> = {
+    MANUAL_CREATE: '自主创建',
+    PRIVATE_IMPORT: '客户导入',
+    POOL_IMPORT: '公海导入',
+    CLUE_CREATE: '线索池生成',
+  };
+  const dimensionTitleLabels: Record<ReportRangeParams['dimensionType'], string> = {
+    EMPLOYEE_NAME: '签约人',
+    EMPLOYEE_DEPT: '部门',
+    CUSTOMER_SOURCE: '客户来源',
+    STAT_DAY: '统计日期',
+    STAT_MONTH: '统计月份',
+  };
+
+  function formatDimensionLabel(row: ContractAnalysisSummaryItem) {
+    if (form.dimensionType === 'CUSTOMER_SOURCE') {
+      return customerSourceLabels[row.dimensionKey] || customerSourceLabels[row.dimensionLabel] || row.dimensionLabel;
+    }
+    return row.dimensionLabel;
+  }
   const detail = reactive({
     visible: false,
     loading: false,
-    exportLoading: false,
+    // exportLoading: false,
     title: '',
     metricType: 'CONTRACT' as MetricType,
     dimensionKey: '',
@@ -195,7 +221,7 @@
     detail.metricType = metricType;
     detail.dimensionKey = row.dimensionKey;
     detail.current = 1;
-    detail.title = `${row.dimensionLabel} - ${metricLabel}明细`;
+    detail.title = `${formatDimensionLabel(row)} - ${metricLabel}明细`;
     detail.visible = true;
     fetchDetail();
   }
@@ -206,8 +232,13 @@
     );
   }
 
-  const columns: DataTableColumns<ContractAnalysisSummaryItem> = [
-    { title: '统计维度', key: 'dimensionLabel', width: 180 },
+  const columns = computed<DataTableColumns<ContractAnalysisSummaryItem>>(() => [
+    {
+      title: dimensionTitleLabels[form.dimensionType],
+      key: 'dimensionLabel',
+      width: 180,
+      render: (row) => formatDimensionLabel(row),
+    },
     {
       title: '合同签约数',
       key: 'contractCount',
@@ -221,7 +252,7 @@
     { title: '放款金额', key: 'loanAmount', render: (row) => metricButton('LOAN', row.loanAmount, row) },
     { title: '回款金额', key: 'repaymentAmount', render: (row) => metricButton('REPAYMENT', row.repaymentAmount, row) },
     { title: '创收金额', key: 'revenueAmount', render: (row) => metricButton('REVENUE', row.revenueAmount, row) },
-  ];
+  ]);
 
   const detailColumns: DataTableColumns<ContractAnalysisDetailItem> = [
     { title: '合同', key: 'contractName', width: 180 },
@@ -229,7 +260,13 @@
     { title: '手机号', key: 'customerMobile', width: 130 },
     { title: '签约人', key: 'signerName', width: 120 },
     { title: '部门', key: 'departmentName', width: 150 },
-    { title: '客户来源', key: 'customerSource', width: 120 },
+    {
+      title: '客户来源',
+      key: 'customerSource',
+      width: 120,
+      render: (row) =>
+        row.customerSource ? customerSourceLabels[row.customerSource] || row.customerSource : '-',
+    },
     {
       title: '业务日期',
       key: 'businessTime',
@@ -264,23 +301,24 @@
     }
   }
 
-  async function handleDetailExport() {
-    detail.exportLoading = true;
-    try {
-      const response = await exportContractAnalysisDetail({
-        ...buildQueryParams(),
-        dimensionKey: detail.dimensionKey,
-        metricType: detail.metricType,
-        current: detail.current,
-        pageSize: detail.pageSize,
-      });
-      downloadByteFile(response.data, `${detail.title}.xlsx`);
-    } catch {
-      message.error('明细导出失败');
-    } finally {
-      detail.exportLoading = false;
-    }
-  }
+  // 合同成交分析明细暂不开放导出，保留实现便于后续恢复。
+  // async function handleDetailExport() {
+  //   detail.exportLoading = true;
+  //   try {
+  //     const response = await exportContractAnalysisDetail({
+  //       ...buildQueryParams(),
+  //       dimensionKey: detail.dimensionKey,
+  //       metricType: detail.metricType,
+  //       current: detail.current,
+  //       pageSize: detail.pageSize,
+  //     });
+  //     downloadByteFile(response.data, `${detail.title}.xlsx`);
+  //   } catch {
+  //     message.error('明细导出失败');
+  //   } finally {
+  //     detail.exportLoading = false;
+  //   }
+  // }
 
   function handlePageChange(current: number) {
     detail.current = current;

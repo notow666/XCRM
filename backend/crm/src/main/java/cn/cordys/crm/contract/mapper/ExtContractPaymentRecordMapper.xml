@@ -224,7 +224,7 @@
                             field_value VARCHAR(4000) PATH '$.fieldValue' NULL ON EMPTY
                         )
                     ) ${tablePrefix}_version_${i}
-                    on ${tablePrefix}_version_${i}.field_id = #{condition.name}
+                    on ${tablePrefix}_version_${i}.field_id COLLATE utf8mb4_unicode_ci = #{condition.name}
                     <if test="condition.multipleValue">
                         left join contract_payment_record_field_blob ${tablePrefix}_${i}
                         on cpr.id = ${tablePrefix}_${i}.resource_id and ${tablePrefix}_${i}.field_id = #{condition.name}
@@ -259,7 +259,7 @@
                             field_id VARCHAR(255) PATH '$.fieldId',
                             field_value VARCHAR(4000) PATH '$.fieldValue' NULL ON EMPTY
                         )
-                    ) sort_version_table on sort_version_table.field_id = #{sortName}
+                    ) sort_version_table on sort_version_table.field_id COLLATE utf8mb4_unicode_ci = #{sortName}
                     left join sys_module_field module_table on module_table.id = #{sortName}
                 </when>
             </choose>

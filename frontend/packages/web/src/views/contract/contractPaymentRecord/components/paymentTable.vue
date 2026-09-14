@@ -50,6 +50,8 @@
         v-model:keyword="keyword"
         :custom-fields-config-list="customFieldsFilterConfig"
         :filter-config-list="filterConfigList"
+        :auth-user-option-fields="['createUser', 'updateUser']"
+        :current-dept-member-fields="paymentCurrentDeptMemberFields"
         @adv-search="handleAdvSearch"
         @keyword-search="searchData"
       />
@@ -66,7 +68,8 @@
         @refresh-table-data="searchData"
       />
     </template>
-    <template #totalRight>
+    <!-- 回款记录列表平均金额及总金额暂不展示，保留原代码供后续恢复。 -->
+    <template v-if="false" #totalRight>
       <div class="ml-[24px]">
         {{ t('opportunity.averageAmount') }}
         <span class="ml-[4px]">
@@ -110,6 +113,14 @@
     @create-success="handleExportCreateSuccess"
   />
 
+  <ApprovalModal
+    v-model:show="showApprovalModal"
+    :title="t('common.approval')"
+    :quotationIds="[activeSourceId]"
+    :approval-api="approvePaymentRecordFromList"
+    @refresh="handleApprovalSuccess"
+  />
+
   <DetailDrawer
     v-model:visible="showDetailDrawer"
     :sourceId="activeSourceId"
@@ -125,12 +136,15 @@
   import { DataTableRowKey, NButton, useMessage } from 'naive-ui';
 
   import { FieldTypeEnum, FormDesignKeyEnum } from '@lib/shared/enums/formDesignEnum';
+  import { QuotationStatusEnum } from '@lib/shared/enums/opportunityEnum';
   import { useI18n } from '@lib/shared/hooks/useI18n';
   import useLocale from '@lib/shared/locale/useLocale';
   import { abbreviateNumber, characterLimit } from '@lib/shared/method';
   import { ExportTableColumnItem } from '@lib/shared/models/common';
   import type { PaymentRecordItem } from '@lib/shared/models/contract';
+  import type { BatchUpdateQuotationStatusParams } from '@lib/shared/models/opportunity';
 
+  import { COMMON_SELECTION_OPERATORS } from '@/components/pure/crm-advance-filter/index';
   import CrmAdvanceFilter from '@/components/pure/crm-advance-filter/index.vue';
   import { FilterForm, FilterFormItem, FilterResult } from '@/components/pure/crm-advance-filter/type';
   import type { ActionsItem } from '@/components/pure/crm-more-action/type';
@@ -145,10 +159,12 @@
   import CrmTableExportModal from '@/components/business/crm-table-export-modal/index.vue';
   import CrmViewSelect from '@/components/business/crm-view-select/index.vue';
   import DetailDrawer from './detail.vue';
+  import ApprovalModal from '@/views/opportunity/components/quotation/approvalModal.vue';
   import QuotationStatus from '@/views/opportunity/components/quotation/quotationStatus.vue';
 
-  import { deletePaymentRecord, getPaymentRecordStatistic } from '@/api/modules';
+  import { approvalPaymentRecord, deletePaymentRecord, getPaymentRecordStatistic } from '@/api/modules';
   import { baseFilterConfigList } from '@/config/clue';
+  import { quotationStatusOptions } from '@/config/opportunity';
   import useFormCreateApi from '@/hooks/useFormCreateApi';
   import useFormCreateTable from '@/hooks/useFormCreateTable';
   import useModal from '@/hooks/useModal';
@@ -266,10 +282,23 @@
         keyField: 'id',
         multiple: true,
         clearFilterAfterSelect: false,
-        type: 'department',
+        type: 'currentDepartment',
         checkable: true,
         showContainChildModule: true,
         containChildIds: [],
+      },
+    },
+    {
+      title: t('contract.approvalStatus'),
+      dataIndex: 'approvalStatus',
+      operatorOption: COMMON_SELECTION_OPERATORS,
+      type: FieldTypeEnum.SELECT_MULTIPLE,
+      selectProps: {
+        options: quotationStatusOptions.filter((item) =>
+          [QuotationStatusEnum.APPROVED, QuotationStatusEnum.UNAPPROVED, QuotationStatusEnum.APPROVING].includes(
+            item.value
+          )
+        ),
       },
     },
     ...baseFilterConfigList,
@@ -285,6 +314,11 @@
               permission: ['CONTRACT_PAYMENT_RECORD:UPDATE'],
             },
             {
+              label: t('common.approval'),
+              key: 'approval',
+              permission: ['CONTRACT_PAYMENT_RECORD:APPROVAL'],
+            },
+            {
               label: t('common.delete'),
               key: 'delete',
               permission: ['CONTRACT_PAYMENT_RECORD:DELETE'],
@@ -297,6 +331,25 @@
   const tableRefreshId = ref(0);
   const tableRemoveRefreshId = ref('');
   const showDetailDrawer = ref(false);
+  const showApprovalModal = ref(false);
+
+  async function approvePaymentRecordFromList(params: BatchUpdateQuotationStatusParams) {
+    await approvalPaymentRecord({
+      id: String(params.ids[0]),
+      approvalStatus: params.approvalStatus,
+    });
+    return {
+      success: 1,
+      fail: 0,
+      errorMessages: '',
+    };
+  }
+
+  function handleApprovalSuccess() {
+    Message.success(t('common.operationSuccess'));
+    tableRefreshId.value += 1;
+    emit('refresh');
+  }
 
   function handleDelete(row: PaymentRecordItem) {
     openModal({
@@ -333,6 +386,10 @@
 
   async function handleActionSelect(row: PaymentRecordItem, actionKey: string) {
     switch (actionKey) {
+      case 'approval':
+        activeSourceId.value = row.id;
+        showApprovalModal.value = true;
+        break;
       case 'edit':
         handleEdit(row.id);
         break;
@@ -365,11 +422,13 @@
     excludeFieldIds: ['contractId', 'paymentPlanId'],
     operationColumn: {
       key: 'operation',
-      width: currentLocale.value === 'en-US' ? 150 : 120,
+      width: currentLocale.value === 'en-US' ? 180 : 150,
       fixed: 'right',
       render: (row: PaymentRecordItem) =>
         h(CrmOperationButton, {
-          groupList: operationGroupList.value,
+          groupList: operationGroupList.value.filter(
+            (item) => item.key !== 'approval' || row.approvalStatus === QuotationStatusEnum.APPROVING
+          ),
           onSelect: (key: string) => handleActionSelect(row, key),
         }),
     },
@@ -441,6 +500,12 @@
     setLoadListParams,
     setAdvanceFilter,
   } = useTableRes;
+
+  const paymentCurrentDeptMemberFields = computed(() =>
+    fieldList.value
+      .filter((field) => field.internalKey === 'contractPaymentRecordDealPerson')
+      .map((field) => field.businessKey || field.id)
+  );
 
   const exportColumns = computed<ExportTableColumnItem[]>(() =>
     getExportColumns(propsRes.value.columns, customFieldsFilterConfig.value as FilterFormItem[], fieldList.value)

@@ -35,7 +35,7 @@
       <n-data-table
         :single-line="false"
         :columns="columns"
-        :data="data"
+        :data="visibleData"
         :paging="false"
         :pagination="false"
         :loading="loading"
@@ -128,6 +128,8 @@
   const unsave = ref<boolean>(false);
   const backupDetail = ref<RoleDetail>();
   const data = ref<Record<string, any>[]>([]);
+  const hiddenOperatorIds = new Set(['CONTRACT_PAYMENT_PLAN']);
+  const visibleData = computed(() => data.value.filter((item) => !hiddenOperatorIds.has(item.id)));
 
   const departmentLoading = ref(false);
   async function initDept() {
@@ -182,12 +184,13 @@
 
       if (!children.length) return;
 
+      const visibleChildrenCount = children.filter((child) => !hiddenOperatorIds.has(child.id)).length;
       children.forEach((child) => {
         data.value.push({
           id: child.id,
           feature: item.name,
           operator: child.name,
-          rowSpan: children.length,
+          rowSpan: visibleChildrenCount,
           permissions: child.permissions,
           enable: isNew ? false : child.enable,
         });
@@ -236,7 +239,7 @@
   }
 
   const permissionAllChecked = computed({
-    get: () => data.value.every((item) => item.enable),
+    get: () => visibleData.value.every((item) => item.enable),
     set: (value) => value,
   });
   const columns: DataTableColumn[] = [
@@ -322,13 +325,14 @@
       title: () =>
         h(NCheckbox, {
           checked: permissionAllChecked.value,
-          indeterminate: data.value.some((item) => item.enable || item.indeterminate) && !permissionAllChecked.value,
+          indeterminate:
+            visibleData.value.some((item) => item.enable || item.indeterminate) && !permissionAllChecked.value,
           disabled: isDisabled.value,
           onUpdateChecked: (value: boolean) => {
             unsave.value = true;
             permissionAllChecked.value = value;
             // 全表格全选/取消全选
-            data.value.forEach((item) => {
+            visibleData.value.forEach((item) => {
               item.enable = value;
               ((item.permissions as []) || []).forEach((permission: any) => {
                 permission.enable = value;

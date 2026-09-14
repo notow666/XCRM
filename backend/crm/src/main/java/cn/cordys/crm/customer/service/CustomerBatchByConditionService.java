@@ -156,50 +156,58 @@ public class CustomerBatchByConditionService {
                         doBatchUpdateByConditionAsync(taskId, tenantId, asyncRequest, field, userId, orgId, deptDataPermission));
     }
 
-    public Map<String, Object> convertCreateSourceToPrivate(String userId, String orgId) {
+    public Map<String, Object> convertCreateSourceToPrivate(CustomerPageRequest request, String userId, String orgId,
+                                                            DeptDataPermissionDTO deptDataPermission) {
+        CustomerPageRequest asyncRequest = BeanUtils.copyBean(new CustomerPageRequest(), request);
         return submit(orgId, userId, Op.CONVERT_SOURCE, "创建来源转换任务已提交",
                 (taskId, tenantId) ->
-                        doConvertCreateSourceToPrivateAsync(taskId, tenantId, userId, orgId));
+                        doConvertCreateSourceToPrivateAsync(
+                                taskId, tenantId, asyncRequest, userId, orgId, deptDataPermission));
     }
 
     private void doConvertCreateSourceToPrivateAsync(String taskId, String tenantId,
-                                                     String userId, String orgId) {
+                                                      CustomerPageRequest request, String userId, String orgId,
+                                                      DeptDataPermissionDTO deptDataPermission) {
         tenantTransactionExecutor.runWithTenant(tenantId, () ->
-                executeConvertCreateSourceToPrivate(taskId, tenantId, userId, orgId));
+                executeConvertCreateSourceToPrivate(
+                        taskId, tenantId, request, userId, orgId, deptDataPermission));
     }
 
     private void executeConvertCreateSourceToPrivate(String taskId, String tenantId,
-                                                     String userId, String orgId) {
+                                                      CustomerPageRequest request, String userId, String orgId,
+                                                      DeptDataPermissionDTO deptDataPermission) {
         Op op = Op.CONVERT_SOURCE;
         int submittedCount = 0;
         int successCount = 0;
         try {
-            submittedCount = extCustomerMapper.countConvertibleCreateSourceCustomers(userId, orgId);
-            if (submittedCount == 0) {
-                sendOperatorNotice(taskId, tenantId, orgId, userId, op, "", 0, 0, 0,
-                        "未查询到可转换客户");
+            List<String> matchedIds = collectIdsUnlimited(request, userId, orgId, deptDataPermission);
+            if (CollectionUtils.isEmpty(matchedIds)) {
+                sendOperatorNotice(taskId, tenantId, orgId, userId, op, request.getViewId(), 0, 0, 0,
+                        "当前筛选结果中未查询到可转换客户");
                 return;
             }
 
-            while (successCount < submittedCount) {
-                int currentBatchSize = Math.min(
-                        SOURCE_CONVERSION_BATCH_SIZE, submittedCount - successCount);
+            for (List<String> chunkIds : batchSupport.partition(matchedIds, SOURCE_CONVERSION_BATCH_SIZE)) {
+                List<String> chunkCopy = new ArrayList<>(chunkIds);
                 int converted = tenantTransactionExecutor.executeInNewTransaction(tenantId,
-                        () -> sourceConversionBatchService.convertNextBatch(
-                                userId, orgId, userId, currentBatchSize));
-                if (converted == 0) {
-                    break;
-                }
+                        () -> sourceConversionBatchService.convertMatchedBatch(
+                                chunkCopy, userId, orgId, userId));
+                submittedCount += converted;
                 successCount += converted;
             }
+            if (submittedCount == 0) {
+                sendOperatorNotice(taskId, tenantId, orgId, userId, op, request.getViewId(), 0, 0, 0,
+                        "当前筛选结果中未查询到可转换客户");
+                return;
+            }
             int failCount = Math.max(0, submittedCount - successCount);
-            sendOperatorNotice(taskId, tenantId, orgId, userId, op, "",
+            sendOperatorNotice(taskId, tenantId, orgId, userId, op, request.getViewId(),
                     submittedCount, successCount, failCount, null);
         } catch (Exception ex) {
             int failCount = Math.max(0, submittedCount - successCount);
             log.error("[CUSTOMER_BATCH_CONVERT_SOURCE_FAILED] taskId={}, operator={}, submittedCount={}, successCount={}",
                     taskId, userId, submittedCount, successCount, ex);
-            sendOperatorNotice(taskId, tenantId, orgId, userId, op, "",
+            sendOperatorNotice(taskId, tenantId, orgId, userId, op, request.getViewId(),
                     submittedCount, successCount, failCount, ex.getMessage());
         }
     }

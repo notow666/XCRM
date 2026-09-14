@@ -25,6 +25,7 @@ import cn.cordys.common.uid.IDGenerator;
 import cn.cordys.common.uid.SerialNumGenerator;
 import cn.cordys.common.util.BeanUtils;
 import cn.cordys.common.util.JSON;
+import cn.cordys.common.util.PhoneMaskUtil;
 import cn.cordys.common.util.Translator;
 import cn.cordys.context.OrganizationContext;
 import cn.cordys.crm.contract.constants.ContractApprovalStatus;
@@ -55,6 +56,7 @@ import cn.cordys.crm.system.dto.response.BatchAffectSkipResponse;
 import cn.cordys.crm.system.dto.response.ModuleFormConfigDTO;
 import cn.cordys.crm.system.notice.CommonNoticeSendService;
 import cn.cordys.crm.system.service.DictService;
+import cn.cordys.crm.system.service.GlobalPhoneMaskConfigService;
 import cn.cordys.crm.system.service.LogService;
 import cn.cordys.crm.system.service.ModuleFormCacheService;
 import cn.cordys.crm.system.service.ModuleFormService;
@@ -111,11 +113,15 @@ public class ContractService {
     @Resource
     private DataScopeService dataScopeService;
     @Resource
+    private ContractDataPermissionService contractDataPermissionService;
+    @Resource
     private BaseMapper<ContractPaymentRecord> contractPaymentRecordMapper;
     @Resource
     private ExtContractInvoiceMapper extContractInvoiceMapper;
     @Resource
     private DictService dictService;
+    @Resource
+    private GlobalPhoneMaskConfigService globalPhoneMaskConfigService;
     @Resource
     private ContractTransactionService contractTransactionService;
     @Resource
@@ -174,27 +180,31 @@ public class ContractService {
     }
 
     public ContractGetResponse getWithDataPermissionCheck(String id, String userId, String orgId) {
-        ContractGetResponse getResponse = get(id);
-        if (getResponse == null) {
+        Contract contract = contractMapper.selectByPrimaryKey(id);
+        if (contract == null) {
             throw new GenericException(Translator.get("resource.not.exist"));
         }
-        dataScopeService.checkDataPermission(userId, orgId, getResponse.getOwner(), PermissionConstants.CONTRACT_READ);
-        return getResponse;
+        contractDataPermissionService.checkDataPermission(userId, orgId, contract, PermissionConstants.CONTRACT_READ);
+        return get(id);
     }
 
     public ContractGetResponse getSnapshotWithDataPermissionCheck(String id, String userId, String orgId) {
-        ContractGetResponse getResponse = getSnapshot(id);
-        if (getResponse == null) {
+        Contract contract = contractMapper.selectByPrimaryKey(id);
+        if (contract == null) {
             throw new GenericException(Translator.get("resource.not.exist"));
         }
-        dataScopeService.checkDataPermission(userId, orgId, getResponse.getOwner(), PermissionConstants.CONTRACT_READ);
-        return getResponse;
+        contractDataPermissionService.checkDataPermission(userId, orgId, contract, PermissionConstants.CONTRACT_READ);
+        return getSnapshot(id);
     }
 
     private ContractGetResponse get(Contract contract, List<BaseModuleFieldValue> contractFields, ModuleFormConfigDTO contractFormConfig) {
         ContractGetResponse contractGetResponse = BeanUtils.copyBean(new ContractGetResponse(), contract);
         contractGetResponse = baseService.setCreateUpdateOwnerUserName(contractGetResponse);
         contractGetResponse.setCustomerName(contract.getCustomerNameSnapshot());
+        String displayCustomerMobile = globalPhoneMaskConfigService.isEnabled(contract.getOrganizationId())
+                ? PhoneMaskUtil.maskGlobalPhone(contract.getCustomerMobileSnapshot())
+                : contract.getCustomerMobileSnapshot();
+        contractGetResponse.setCustomerMobileSnapshot(displayCustomerMobile);
         contractGetResponse.setOwnerName(contract.getOwnerNameSnapshot());
         contractGetResponse.setDisplayStage(StringUtils.isNotBlank(contract.getPendingVersionId())
                 ? ContractStage.PENDING_SIGNING.name() : contract.getStage());
@@ -209,7 +219,7 @@ public class ContractService {
         if (contractFields == null) {
             contractFields = new ArrayList<>();
         }
-        applyCustomerSnapshotModuleFields(contract, contractFields, flattenFormFields);
+        applyCustomerSnapshotModuleFields(displayCustomerMobile, contractFields, flattenFormFields);
 
         Map<String, List<OptionDTO>> optionMap = moduleFormService.getOptionMap(contractFormConfig, contractFields);
 
@@ -234,6 +244,7 @@ public class ContractService {
         contractGetResponse.setAlreadyPayAmount(sumContractRecordAmount(id));
         contractGetResponse.setProducts(getContractProductMaps(id));
         List<ContractVersion> versions = getVersionHistory(id);
+        maskContractVersionSnapshots(versions, contract.getOrganizationId());
         contractGetResponse.setVersionHistory(versions);
         contractGetResponse.setVersionUserNameMap(getVersionUserNameMap(versions));
 
@@ -342,6 +353,7 @@ public class ContractService {
                 : JSON.parseObject(version.getFormSnapshot(), ModuleFormConfigDTO.class);
         ContractGetResponse response = get(displayContract,
                 snapshot.getModuleFields() == null ? new ArrayList<>() : snapshot.getModuleFields(), formConfig);
+        maskContractVersionSnapshot(version, contract.getOrganizationId());
         response.setApprovalVersion(version);
         response.setProducts(toMapList(snapshot.getProducts()));
         Customer customer = customerBaseMapper.selectByPrimaryKey(contract.getCustomerId());
@@ -366,7 +378,7 @@ public class ContractService {
     public PagerWithOption<List<ContractListResponse>> list(ContractPageRequest request, String userId, String orgId, DeptDataPermissionDTO deptDataPermission, Boolean source) {
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
         List<ContractListResponse> list = extContractMapper.list(request, orgId, userId, deptDataPermission, source);
-        List<ContractListResponse> results = buildList(list, orgId);
+        List<ContractListResponse> results = buildList(list, orgId, true);
         ModuleFormConfigDTO customerFormConfig = getFormConfig(orgId);
         Map<String, List<OptionDTO>> optionMap = buildOptionMap(list, results, customerFormConfig);
 
@@ -397,6 +409,12 @@ public class ContractService {
     }
 
     public List<ContractListResponse> buildList(List<ContractListResponse> list, String orgId) {
+        // 合同导出复用此入口，沿用系统现有导出口径保留原始手机号。
+        return buildList(list, orgId, false);
+    }
+
+    private List<ContractListResponse> buildList(List<ContractListResponse> list, String orgId,
+                                                 boolean applyGlobalPhoneMask) {
         if (CollectionUtils.isEmpty(list)) {
             return list;
         }
@@ -410,10 +428,14 @@ public class ContractService {
         Map<String, List<BaseModuleFieldValue>> resolvefieldValueMap = contractFieldService.setBusinessRefFieldValue(
                 list, flattenFormFields, contractFiledMap);
 
-
+        boolean phoneMaskEnabled = applyGlobalPhoneMask && globalPhoneMaskConfigService.isEnabled(orgId);
         list.forEach(item -> {
             item.setOwnerName(item.getOwnerNameSnapshot());
             item.setCustomerName(item.getCustomerNameSnapshot());
+            String displayCustomerMobile = phoneMaskEnabled
+                    ? PhoneMaskUtil.maskGlobalPhone(item.getCustomerMobileSnapshot())
+                    : item.getCustomerMobileSnapshot();
+            item.setCustomerMobileSnapshot(displayCustomerMobile);
             item.setDisplayStage(StringUtils.isNotBlank(item.getPendingVersionId())
                     ? ContractStage.PENDING_SIGNING.name() : item.getStage());
             item.setDepartmentId(item.getSignerDeptIdSnapshot());
@@ -421,7 +443,7 @@ public class ContractService {
             // 获取自定义字段
             List<BaseModuleFieldValue> contractFields = resolvefieldValueMap.computeIfAbsent(
                     item.getId(), key -> new ArrayList<>());
-            applyCustomerSnapshotModuleFields(item, contractFields, flattenFormFields);
+            applyCustomerSnapshotModuleFields(displayCustomerMobile, contractFields, flattenFormFields);
             item.setModuleFields(contractFields);
         });
         return baseService.setCreateAndUpdateUserName(list);
@@ -432,7 +454,7 @@ public class ContractService {
      * 数据源引用字段默认会实时查询客户表；客户被删除或客户信息发生变化后，
      * 合同列表和详情仍应展示合同自身保存的手机号快照。
      */
-    private void applyCustomerSnapshotModuleFields(Contract contract,
+    private void applyCustomerSnapshotModuleFields(String customerMobile,
                                                     List<BaseModuleFieldValue> moduleFields,
                                                     List<BaseField> formFields) {
         formFields.stream()
@@ -442,9 +464,8 @@ public class ContractService {
                 .findFirst()
                 .ifPresent(field -> {
                     moduleFields.removeIf(value -> Strings.CS.equals(value.getFieldId(), field.getId()));
-                    if (StringUtils.isNotBlank(contract.getCustomerMobileSnapshot())) {
-                        moduleFields.add(new BaseModuleFieldValue(field.getId(),
-                                contract.getCustomerMobileSnapshot()));
+                    if (StringUtils.isNotBlank(customerMobile)) {
+                        moduleFields.add(new BaseModuleFieldValue(field.getId(), customerMobile));
                     }
                 });
     }
@@ -752,6 +773,28 @@ public class ContractService {
         return versions;
     }
 
+    private void maskContractVersionSnapshots(List<ContractVersion> versions, String orgId) {
+        if (CollectionUtils.isEmpty(versions) || !globalPhoneMaskConfigService.isEnabled(orgId)) {
+            return;
+        }
+        versions.forEach(version -> maskContractVersionSnapshot(version, orgId));
+    }
+
+    private void maskContractVersionSnapshot(ContractVersion version, String orgId) {
+        if (version == null || !globalPhoneMaskConfigService.isEnabled(orgId)
+                || StringUtils.isBlank(version.getValueSnapshot())) {
+            return;
+        }
+        ContractVersionSnapshot snapshot = JSON.parseObject(version.getValueSnapshot(), ContractVersionSnapshot.class);
+        if (snapshot == null || StringUtils.isBlank(snapshot.getCustomerMobileSnapshot())) {
+            return;
+        }
+        String mobile = snapshot.getCustomerMobileSnapshot();
+        String maskedMobile = PhoneMaskUtil.maskGlobalPhone(mobile);
+        version.setValueSnapshot(StringUtils.replace(version.getValueSnapshot(), mobile, maskedMobile));
+        version.setChangeSnapshot(StringUtils.replace(version.getChangeSnapshot(), mobile, maskedMobile));
+    }
+
     private Map<String, String> getVersionUserNameMap(List<ContractVersion> versions) {
         Set<String> userIds = new HashSet<>();
         for (ContractVersion version : versions) {
@@ -861,11 +904,11 @@ public class ContractService {
      */
     private BigDecimal sumContractRecordAmount(String contractId) {
         LambdaQueryWrapper<ContractPaymentRecord> paymentRecordWrapper = new LambdaQueryWrapper<>();
-        paymentRecordWrapper.eq(ContractPaymentRecord::getContractId, contractId)
-                .eq(ContractPaymentRecord::getApprovalStatus, ContractApprovalStatus.APPROVED.name());
+        paymentRecordWrapper.eq(ContractPaymentRecord::getContractId, contractId);
         List<ContractPaymentRecord> contractPaymentRecords = contractPaymentRecordMapper.selectListByLambda(paymentRecordWrapper);
         if (CollectionUtils.isNotEmpty(contractPaymentRecords)) {
             return contractPaymentRecords.stream()
+                    .filter(record -> StringUtils.isNotBlank(record.getEffectiveVersionId()))
                     .map(ContractPaymentRecord::getRecordAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
         } else {

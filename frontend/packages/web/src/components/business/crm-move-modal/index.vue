@@ -44,6 +44,7 @@
     :success-count="successCount"
     :title="resultTitle"
     :reason-key="props.reasonKey"
+    :failure-message="failureMessage"
     @cancel="handleResultCancel"
   />
 </template>
@@ -115,6 +116,7 @@
   });
   const successCount = ref<number>(0);
   const failCount = ref<number>(0);
+  const failureMessage = ref('');
 
   const reasonList = ref<Option[]>([]);
   const maxMoveCount = computed(() => Math.min(props.total ?? 0, MAX_MOVE_COUNT));
@@ -159,6 +161,7 @@
   async function handleSave() {
     try {
       loading.value = true;
+      failureMessage.value = '';
       const isBatch = Array.isArray(props.sourceId);
 
       if (props.byCondition) {
@@ -196,13 +199,14 @@
         failCount.value = fail;
         showToPoolResultModel.value = true;
       } else {
-        const { success, fail } = await moveApiMap[props.reasonKey]({
+        const { success, fail, message } = await moveApiMap[props.reasonKey]({
           id: props.sourceId as DataTableRowKey,
           poolId: props.poolId,
           reasonId: form.value.reason,
         });
         successCount.value = success;
         failCount.value = fail;
+        failureMessage.value = message || '';
         showToPoolResultModel.value = true;
       }
       if (failCount.value === 0) {

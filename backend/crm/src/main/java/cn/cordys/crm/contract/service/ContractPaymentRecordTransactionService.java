@@ -204,13 +204,11 @@ public class ContractPaymentRecordTransactionService {
                 .eq(ContractPaymentRecordVersion::getPaymentRecordId, id));
         paymentRecordMapper.deleteByPrimaryKey(id);
 
-        boolean hasApprovedRecords = paymentRecordMapper.selectListByLambda(
+        boolean hasEffectiveRecords = paymentRecordMapper.selectListByLambda(
                         new LambdaQueryWrapper<ContractPaymentRecord>()
-                                .eq(ContractPaymentRecord::getContractId, contract.getId())
-                                .eq(ContractPaymentRecord::getApprovalStatus,
-                                        ContractPaymentRecordApprovalStatus.APPROVED.name()))
+                                .eq(ContractPaymentRecord::getContractId, contract.getId()))
                 .stream().anyMatch(item -> StringUtils.isNotBlank(item.getEffectiveVersionId()));
-        if (!hasApprovedRecords && Strings.CS.equals(contract.getStage(), ContractStage.IN_PROGRESS.name())) {
+        if (!hasEffectiveRecords && Strings.CS.equals(contract.getStage(), ContractStage.IN_PROGRESS.name())) {
             contract.setStage(ContractStage.SIGNED.name());
             contract.setLockVersion(contract.getLockVersion() + 1);
             fillUpdateAudit(contract, userId, System.currentTimeMillis());
@@ -328,14 +326,26 @@ public class ContractPaymentRecordTransactionService {
     }
 
     private void checkUnique(String name, String no, String orgId, String excludeId) {
-        List<ContractPaymentRecord> records = paymentRecordMapper.selectListByLambda(
-                new LambdaQueryWrapper<ContractPaymentRecord>().eq(ContractPaymentRecord::getOrganizationId, orgId));
-        if (records.stream().anyMatch(record -> Strings.CS.equals(record.getName(), name)
-                && !Strings.CS.equals(record.getId(), excludeId))) {
+        LambdaQueryWrapper<ContractPaymentRecord> nameQuery = new LambdaQueryWrapper<ContractPaymentRecord>()
+                .eq(ContractPaymentRecord::getOrganizationId, orgId)
+                .eq(ContractPaymentRecord::getName, name);
+        if (StringUtils.isNotBlank(excludeId)) {
+            nameQuery.nq(ContractPaymentRecord::getId, excludeId);
+        }
+        if (CollectionUtils.isNotEmpty(paymentRecordMapper.selectListByLambda(nameQuery))) {
             throw new GenericException("回款记录名称已存在");
         }
-        if (StringUtils.isNotBlank(no) && records.stream().anyMatch(record -> Strings.CS.equals(record.getNo(), no)
-                && !Strings.CS.equals(record.getId(), excludeId))) {
+
+        if (StringUtils.isBlank(no)) {
+            return;
+        }
+        LambdaQueryWrapper<ContractPaymentRecord> noQuery = new LambdaQueryWrapper<ContractPaymentRecord>()
+                .eq(ContractPaymentRecord::getOrganizationId, orgId)
+                .eq(ContractPaymentRecord::getNo, no);
+        if (StringUtils.isNotBlank(excludeId)) {
+            noQuery.nq(ContractPaymentRecord::getId, excludeId);
+        }
+        if (CollectionUtils.isNotEmpty(paymentRecordMapper.selectListByLambda(noQuery))) {
             throw new GenericException("回款记录编码已存在");
         }
     }

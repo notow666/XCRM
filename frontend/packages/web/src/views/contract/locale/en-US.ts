@@ -20,6 +20,8 @@ export default {
   'contract.voidedConfirmTitle': 'Are you sure you want to void {name}?',
   'contract.applicant': 'Applicant',
   'contract.invoicedContract': 'Invoiced Contract',
+  'contract.signer': 'Signer',
+  'contract.contractName': 'Contract Name',
   'contract.contractAmount': 'Contract Amount',
   'contract.applicationTime': 'Application Time',
   'contract.customerContractAmount': 'Customer contract amount',

@@ -474,8 +474,8 @@ export default function useProductApi(CDR: CordysAxios) {
     return CDR.post<BatchCustomerByConditionSubmitResult>({ url: BatchDeleteCustomerByConditionUrl, data });
   }
 
-  function convertCustomerCreateSourceToPrivate() {
-    return CDR.post<BatchCustomerByConditionSubmitResult>({ url: ConvertCustomerCreateSourceToPrivateUrl });
+  function convertCustomerCreateSourceToPrivate(data: CustomerTableParams) {
+    return CDR.post<BatchCustomerByConditionSubmitResult>({ url: ConvertCustomerCreateSourceToPrivateUrl, data });
   }
 
   // 批量转移客户

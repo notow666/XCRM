@@ -1,14 +1,17 @@
 package cn.cordys.crm.report.customerconversion.service;
 
+import cn.cordys.common.constants.ExecutorBeanNames;
 import cn.cordys.common.constants.PermissionConstants;
 import cn.cordys.common.dto.BaseTreeNode;
 import cn.cordys.common.dto.DeptDataPermissionDTO;
 import cn.cordys.common.dto.UserDeptDTO;
 import cn.cordys.common.service.BaseService;
 import cn.cordys.common.service.DataScopeService;
+import cn.cordys.common.util.PhoneMaskUtil;
 import cn.cordys.crm.report.customerconversion.constants.CustomerConversionEventType;
 import cn.cordys.crm.report.mapper.ReportAggregateMapper;
 import cn.cordys.crm.system.service.DepartmentService;
+import cn.cordys.crm.system.service.GlobalPhoneMaskConfigService;
 import jakarta.annotation.Resource;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
@@ -27,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 /**
@@ -45,6 +49,10 @@ public class CustomerConversionReportService {
     private DepartmentService departmentService;
     @Resource
     private DataScopeService dataScopeService;
+    @Resource
+    private GlobalPhoneMaskConfigService globalPhoneMaskConfigService;
+    @Resource(name = ExecutorBeanNames.PARALLEL)
+    private Executor parallelExecutor;
 
     public List<SummaryRow> summary(QueryRequest request, String orgId, String userId) {
         Range range = normalizeRange(request);
@@ -54,24 +62,32 @@ public class CustomerConversionReportService {
         // 涉及员工去重，按实时部门做可见性过滤后下推到 SQL（三组 distinct 并行）
         CompletableFuture<Set<String>> visitEmployeesFuture = CompletableFuture.supplyAsync(() -> visibleEmployees(
                 new HashSet<>(reportAggregateMapper.distinctVisitEmployees(orgId, range.startTime(), range.endTime())),
-                orgId, userId, visibilityScope));
+                orgId, userId, visibilityScope), parallelExecutor);
         CompletableFuture<Set<String>> signedEmployeesFuture = CompletableFuture.supplyAsync(() -> visibleEmployees(
                 new HashSet<>(reportAggregateMapper.distinctConversionEmployees(orgId, CustomerConversionEventType.CONTRACT_SIGNED.name(), range.startTime(), range.endTime())),
-                orgId, userId, visibilityScope));
+                orgId, userId, visibilityScope), parallelExecutor);
         CompletableFuture<Set<String>> paidEmployeesFuture = CompletableFuture.supplyAsync(() -> visibleEmployees(
                 new HashSet<>(reportAggregateMapper.distinctConversionEmployees(orgId, CustomerConversionEventType.PAYMENT_APPROVED.name(), range.startTime(), range.endTime())),
-                orgId, userId, visibilityScope));
+                orgId, userId, visibilityScope), parallelExecutor);
         Set<String> visitEmployees = visitEmployeesFuture.join();
         Set<String> signedEmployees = signedEmployeesFuture.join();
         Set<String> paidEmployees = paidEmployeesFuture.join();
 
         // SQL 聚合：上门 / 签约 / 回款客户数（COUNT(DISTINCT customer_id)，按维度分组，并行执行）
-        CompletableFuture<List<ReportAggregateMapper.ConversionAggregateRow>> visitFuture = CompletableFuture.supplyAsync(
-                () -> reportAggregateMapper.countVisitCustomers(orgId, range.startTime(), range.endTime(), dimensionType, visitEmployees));
-        CompletableFuture<List<ReportAggregateMapper.ConversionAggregateRow>> signedFuture = CompletableFuture.supplyAsync(
-                () -> reportAggregateMapper.countConversionCustomers(orgId, CustomerConversionEventType.CONTRACT_SIGNED.name(), range.startTime(), range.endTime(), dimensionType, signedEmployees));
-        CompletableFuture<List<ReportAggregateMapper.ConversionAggregateRow>> paidFuture = CompletableFuture.supplyAsync(
-                () -> reportAggregateMapper.countConversionCustomers(orgId, CustomerConversionEventType.PAYMENT_APPROVED.name(), range.startTime(), range.endTime(), dimensionType, paidEmployees));
+        CompletableFuture<List<ReportAggregateMapper.ConversionAggregateRow>> visitFuture = visitEmployees.isEmpty()
+                ? CompletableFuture.completedFuture(List.of())
+                : CompletableFuture.supplyAsync(() -> reportAggregateMapper.countVisitCustomers(
+                        orgId, range.startTime(), range.endTime(), dimensionType, visitEmployees), parallelExecutor);
+        CompletableFuture<List<ReportAggregateMapper.ConversionAggregateRow>> signedFuture = signedEmployees.isEmpty()
+                ? CompletableFuture.completedFuture(List.of())
+                : CompletableFuture.supplyAsync(() -> reportAggregateMapper.countConversionCustomers(
+                        orgId, CustomerConversionEventType.CONTRACT_SIGNED.name(), range.startTime(), range.endTime(),
+                        dimensionType, signedEmployees), parallelExecutor);
+        CompletableFuture<List<ReportAggregateMapper.ConversionAggregateRow>> paidFuture = paidEmployees.isEmpty()
+                ? CompletableFuture.completedFuture(List.of())
+                : CompletableFuture.supplyAsync(() -> reportAggregateMapper.countConversionCustomers(
+                        orgId, CustomerConversionEventType.PAYMENT_APPROVED.name(), range.startTime(), range.endTime(),
+                        dimensionType, paidEmployees), parallelExecutor);
 
         Map<String, SummaryAccumulator> buckets = new LinkedHashMap<>();
         for (ReportAggregateMapper.ConversionAggregateRow row : visitFuture.join()) {
@@ -95,6 +111,7 @@ public class CustomerConversionReportService {
         VisibilityScope visibilityScope = resolveVisibilityScope(orgId, userId, request.getDepartmentId());
         String eventType = StringUtils.defaultIfBlank(request.getEventType(), CustomerConversionEventType.CONTRACT_SIGNED.name());
         int offset = (request.getCurrent() - 1) * request.getPageSize();
+        boolean phoneMaskEnabled = globalPhoneMaskConfigService.isEnabled(orgId);
 
         List<DetailRow> rows;
         long total;
@@ -102,16 +119,24 @@ public class CustomerConversionReportService {
             Set<String> visitEmployees = visibleEmployees(
                     new HashSet<>(reportAggregateMapper.distinctVisitEmployees(orgId, range.startTime(), range.endTime())),
                     orgId, userId, visibilityScope);
+            if (visitEmployees.isEmpty()) {
+                return new PageResult<>(0, List.of());
+            }
             rows = toDetailRows(reportAggregateMapper.listVisitDetails(orgId, range.startTime(), range.endTime(),
-                    visitEmployees, dimensionType, request.getDimensionKey(), offset, request.getPageSize()));
+                    visitEmployees, dimensionType, request.getDimensionKey(), offset, request.getPageSize()),
+                    phoneMaskEnabled);
             total = reportAggregateMapper.countVisitDetails(orgId, range.startTime(), range.endTime(),
                     visitEmployees, dimensionType, request.getDimensionKey());
         } else {
             Set<String> employees = visibleEmployees(
                     new HashSet<>(reportAggregateMapper.distinctConversionEmployees(orgId, eventType, range.startTime(), range.endTime())),
                     orgId, userId, visibilityScope);
+            if (employees.isEmpty()) {
+                return new PageResult<>(0, List.of());
+            }
             rows = toDetailRows(reportAggregateMapper.listConversionDetails(orgId, eventType, range.startTime(), range.endTime(),
-                    employees, dimensionType, request.getDimensionKey(), offset, request.getPageSize()));
+                    employees, dimensionType, request.getDimensionKey(), offset, request.getPageSize()),
+                    phoneMaskEnabled);
             total = reportAggregateMapper.countConversionDetails(orgId, eventType, range.startTime(), range.endTime(),
                     employees, dimensionType, request.getDimensionKey());
         }
@@ -132,7 +157,8 @@ public class CustomerConversionReportService {
                 .collect(Collectors.toSet());
     }
 
-    private List<DetailRow> toDetailRows(List<ReportAggregateMapper.ConversionDetailRow> rows) {
+    private List<DetailRow> toDetailRows(List<ReportAggregateMapper.ConversionDetailRow> rows,
+                                         boolean phoneMaskEnabled) {
         List<DetailRow> result = new ArrayList<>(rows.size());
         for (ReportAggregateMapper.ConversionDetailRow row : rows) {
             DetailRow d = new DetailRow();
@@ -140,7 +166,9 @@ public class CustomerConversionReportService {
             d.setBusinessId(row.getBusinessId());
             d.setCustomerId(row.getCustomerId());
             d.setCustomerName(row.getCustomerName());
-            d.setCustomerMobile(row.getCustomerMobile());
+            d.setCustomerMobile(phoneMaskEnabled
+                    ? PhoneMaskUtil.maskGlobalPhone(row.getCustomerMobile())
+                    : row.getCustomerMobile());
             d.setEmployeeId(row.getEmployeeId());
             d.setEmployeeName(row.getEmployeeName());
             d.setDepartmentId(row.getDepartmentId());

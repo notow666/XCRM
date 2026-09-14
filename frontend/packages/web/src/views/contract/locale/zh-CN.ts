@@ -20,6 +20,8 @@ export default {
   'contract.voidedConfirmTitle': '确认作废 {name} 吗？',
   'contract.applicant': '申请人',
   'contract.invoicedContract': '开票合同',
+  'contract.signer': '签约人',
+  'contract.contractName': '合同名称',
   'contract.contractAmount': '合同金额',
   'contract.applicationTime': '申请时间',
   'contract.customerContractAmount': '客户合同金额',

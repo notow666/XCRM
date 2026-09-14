@@ -248,10 +248,32 @@
     return result;
   }
 
+  function getChanges(version: ContractVersionHistoryItem): Record<string, ChangeValue> {
+    const savedChanges = parseJson<Record<string, ChangeValue>>(version.changeSnapshot);
+    if (savedChanges || version.submitType === 'CREATE' || version.baseEffectiveVersionId) return savedChanges ?? {};
+
+    // 首次驳回重提尚无生效版本，用前一次提交快照补全历史展示，不改写审批基线。
+    const previousVersion = (props.versions ?? [])
+      .filter((item) => item.versionNo < version.versionNo)
+      .sort((a, b) => b.versionNo - a.versionNo)[0];
+    const before = parseJson<Record<string, unknown>>(previousVersion?.valueSnapshot);
+    const after = parseJson<Record<string, unknown>>(version.valueSnapshot);
+    if (!before || !after) return {};
+
+    const changes: Record<string, ChangeValue> = {};
+    const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+    keys.forEach((key) => {
+      if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) {
+        changes[key] = { before: before[key], after: after[key] };
+      }
+    });
+    return changes;
+  }
+
   function buildChanges(version: ContractVersionHistoryItem): ChangeItem[] {
     const formConfig = parseJson<{ fields?: Array<Record<string, any>> }>(version.formSnapshot);
     const fields = formConfig?.fields ?? [];
-    const changes = parseJson<Record<string, ChangeValue>>(version.changeSnapshot) ?? {};
+    const changes = getChanges(version);
     const result: ChangeItem[] = [];
 
     Object.entries(changes).forEach(([key, change]) => {

@@ -274,10 +274,27 @@
     </select>
 
     <select id="distinctContractSigners" resultType="java.lang.String">
-        SELECT DISTINCT signer_id FROM contract
-        WHERE organization_id = #{orgId} AND effective_version_id IS NOT NULL
-          AND start_time BETWEEN #{startTime} AND #{endTime}
-          AND signer_id IS NOT NULL
+        SELECT DISTINCT signer_id
+        FROM (
+            SELECT signer_id
+            FROM contract
+            WHERE organization_id = #{orgId}
+              AND effective_version_id IS NOT NULL
+              AND start_time BETWEEN #{startTime} AND #{endTime}
+              AND signer_id IS NOT NULL
+            UNION ALL
+            SELECT signer_id
+            FROM contract_payment_record_product
+            WHERE organization_id = CAST(#{orgId} AS UNSIGNED)
+              AND loan_time BETWEEN #{startTime} AND #{endTime}
+              AND signer_id IS NOT NULL
+            UNION ALL
+            SELECT signer_id
+            FROM contract_payment_record_product
+            WHERE organization_id = CAST(#{orgId} AS UNSIGNED)
+              AND repayment_time BETWEEN #{startTime} AND #{endTime}
+              AND signer_id IS NOT NULL
+        ) report_signer
     </select>
 
     <!-- ================= 客户转化明细（SQL 分页） ================= -->

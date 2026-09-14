@@ -156,6 +156,16 @@ export function normalizeFormulaNumber(n: number): number {
  * 保留小数位，不进行四舍五入
  */
 export function keepDecimal(value: number, digits = 2) {
-  const factor = 10 ** digits;
-  return Math.trunc(value * factor) / factor;
+  if (!Number.isFinite(value) || value === 0) return value;
+
+  // 按十进制位截取，避免 10.2 * 100 的浮点误差导致少一分钱。
+  const [coefficient, exponent = '0'] = Math.abs(value).toString().split('e');
+  const [integer, fraction = ''] = coefficient.split('.');
+  const decimalDigits = integer + fraction;
+  const keepLength = integer.length + Number(exponent) + digits;
+
+  if (keepLength >= decimalDigits.length) return value;
+  if (keepLength <= 0) return 0;
+
+  return Number(`${value < 0 ? '-' : ''}${decimalDigits.slice(0, keepLength)}e${-digits}`);
 }

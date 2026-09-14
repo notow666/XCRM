@@ -2,7 +2,7 @@
   <CrmModal
     v-model:show="showModal"
     size="small"
-    :title="t('common.batchApproval')"
+    :title="props.title ?? t('common.batchApproval')"
     :ok-loading="loading"
     @confirm="handleConfirm"
     @cancel="handleCancel"
@@ -53,6 +53,7 @@
   const props = defineProps<{
     quotationIds: (string | number)[];
     approvalApi?: (params: BatchUpdateQuotationStatusParams) => Promise<any>;
+    title?: string;
   }>();
 
   const emit = defineEmits<{

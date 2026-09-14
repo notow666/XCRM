@@ -508,7 +508,20 @@
         where c.organization_id = #{orgId} and c.in_shared_pool is false
 
         <if test="dataPermission != null and dataPermission.self">
-            and (c.owner = #{userId} or cc.id is not null)
+            and (
+                c.owner = #{userId}
+                or cc.id is not null
+                <if test="request.signableOnly != null and request.signableOnly">
+                    or exists (
+                        select 1
+                        from follow_up_plan p
+                        where p.customer_id = c.id
+                          and p.processor = #{userId}
+                          and p.next_stage = 'stage_sign'
+                          and p.status not in ('COMPLETED', 'CANCELLED')
+                    )
+                </if>
+            )
         </if>
 
         <if test="request.keyword != null and request.keyword != ''">
@@ -1339,6 +1352,22 @@
           AND c.create_source IN ('POOL_IMPORT', 'CLUE_CREATE')
         ORDER BY c.id
         LIMIT #{limit}
+        FOR UPDATE
+    </select>
+
+    <select id="listConvertibleCreateSourceCustomersByIds"
+            resultType="cn.cordys.crm.customer.domain.Customer">
+        SELECT c.*
+        FROM customer c
+        WHERE c.owner = #{ownerId}
+          AND c.organization_id = #{orgId}
+          AND c.in_shared_pool = false
+          AND c.create_source IN ('POOL_IMPORT', 'CLUE_CREATE')
+          AND c.id IN
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+        ORDER BY c.id
         FOR UPDATE
     </select>
 
