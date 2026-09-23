@@ -191,6 +191,7 @@ public class PoolCustomerController {
     }
 
     @GetMapping("/import/error-file/{fileId}")
+    @RequiresPermissions(PermissionConstants.CUSTOMER_MANAGEMENT_POOL_IMPORT)
     @Operation(summary = "下载公海导入错误文件")
     public void downloadErrorFile(@PathVariable("fileId") String fileId, HttpServletResponse response) {
         poolCustomerImportService.downloadErrorFile(fileId, OrganizationContext.getOrganizationId(), response);

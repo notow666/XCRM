@@ -1,6 +1,7 @@
 package cn.cordys.crm.customer.service;
 
 import cn.cordys.common.constants.FormKey;
+import cn.cordys.excel.domain.ExcelErrData;
 import cn.cordys.common.domain.BaseResourceSubField;
 import cn.cordys.common.exception.GenericException;
 import cn.cordys.common.uid.IDGenerator;
@@ -39,6 +40,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class PoolCustomerImportExecutor {
+    @Resource
+    private cn.cordys.crm.blacklist.service.BlacklistCheckService blacklistCheckService;
 
     @Resource
     private ExtCustomerMapper customerMapper;
@@ -66,17 +69,23 @@ public class PoolCustomerImportExecutor {
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public String executeImport(MultipartFile file, String poolId, String userId, String orgId, Set<Integer> skipRows) {
+        return executeImport(file, poolId, userId, orgId, skipRows, new java.util.HashSet<>()).message();
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public ImportExecution executeImport(MultipartFile file, String poolId, String userId, String orgId, Set<Integer> skipRows,
+                                Set<String> rejectedMobiles) {
         try (InputStream inputStream = file.getInputStream()) {
             List<BaseField> fields = moduleFormService.getAllCustomImportFields(FormKey.CUSTOMER.getKey(), orgId);
             List<BaseField> filteredFields = filterOwnerField(fields);
             removeUniqueRules(filteredFields);
 
-            CustomImportAfterDoConsumer<Customer, BaseResourceSubField> afterDo = buildAfterDoConsumer(poolId, userId, orgId);
+            CustomImportAfterDoConsumer<Customer, BaseResourceSubField> afterDo = buildAfterDoConsumer(poolId, userId, orgId, rejectedMobiles);
 
             CustomFieldImportEventListener<Customer> eventListener = new PoolCustomerImportEventListener(
                     filteredFields, orgId, userId, afterDo, skipRows);
             FastExcelFactory.read(inputStream, eventListener).headRowNumber(1).ignoreEmptyRow(true).sheet().doRead();
-            return eventListener.successMsg();
+            return new ImportExecution(eventListener.successMsg(), eventListener.getSuccessCount(), List.copyOf(eventListener.getErrList()));
         } catch (Exception e) {
             Throwable cause = e.getCause();
             log.error("pool customer import error", cause != null ? cause : e);
@@ -84,8 +93,19 @@ public class PoolCustomerImportExecutor {
         }
     }
 
-    private CustomImportAfterDoConsumer<Customer, BaseResourceSubField> buildAfterDoConsumer(String poolId, String userId, String orgId) {
-        return (customers, customerFields, customerFieldBlobs) -> {
+    public record ImportExecution(String message, int successCount, List<ExcelErrData> errors) { }
+
+    private CustomImportAfterDoConsumer<Customer, BaseResourceSubField> buildAfterDoConsumer(String poolId, String userId, String orgId,
+                                                                                          Set<String> rejectedMobiles) {
+        return (customers, customerFields, customerFieldBlobs) -> blacklistCheckService.write(() -> {
+            Set<String> blocked = blacklistCheckService.find(customers.stream().map(Customer::getMobile).toList());
+            rejectedMobiles.addAll(blocked);
+            Set<String> ids = customers.stream().filter(c -> blocked.contains(StringUtils.trim(c.getMobile())))
+                    .map(Customer::getId).collect(Collectors.toSet());
+            customers.removeIf(c -> ids.contains(c.getId()));
+            customerFields.removeIf(f -> ids.contains(f.getResourceId()));
+            customerFieldBlobs.removeIf(f -> ids.contains(f.getResourceId()));
+            if (customers.isEmpty()) return null;
             customers.forEach(customer -> {
                 initCustomerContactStatus(customer);
                 customer.setInSharedPool(true);
@@ -203,7 +223,8 @@ public class PoolCustomerImportExecutor {
                             .map(field -> BeanUtils.copyBean(new CustomerFieldBlob(), field)).collect(Collectors.toList()));
                 }
             }
-        };
+            return null;
+        });
     }
 
     private void batchMoveToPoolIncludeStage(List<Customer> customers) {

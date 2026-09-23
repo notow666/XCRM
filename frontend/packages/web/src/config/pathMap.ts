@@ -59,6 +59,11 @@ export const pathMap: PathMapItem[] = [
     locale: 'module.customerManagement',
     children: [
       {
+        key: 'CUSTOMER_BLACKLIST',
+        route: AppRouteEnum.TOOLS_BLACKLIST,
+        locale: 'menu.blacklist',
+      },
+      {
         key: 'CUSTOMER_INDEX',
         route: AppRouteEnum.CUSTOMER_INDEX,
         locale: 'menu.customer',

@@ -10,7 +10,14 @@ const tools: AppRouteRecordRaw = {
   component: DEFAULT_LAYOUT,
   meta: {
     locale: 'menu.tools',
-    permissions: ['NUMBER_CUBE:READ'],
+    permissions: [
+      'NUMBER_CUBE:READ',
+      'BLACKLIST:READ',
+      'BLACKLIST:ADD',
+      'BLACKLIST:IMPORT',
+      'BLACKLIST:EXPORT',
+      'BLACKLIST:DELETE',
+    ],
     icon: 'iconicon_set_up',
     collapsedLocale: 'menu.toolsCollapsed',
   },
@@ -22,6 +29,15 @@ const tools: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.tools.numberCube',
         permissions: ['NUMBER_CUBE:READ'],
+      },
+    },
+    {
+      path: 'blacklist',
+      name: ToolsRouteEnum.TOOLS_BLACKLIST,
+      component: () => import('@/views/blacklist/index.vue'),
+      meta: {
+        locale: 'menu.blacklist',
+        permissions: ['BLACKLIST:READ', 'BLACKLIST:ADD', 'BLACKLIST:IMPORT', 'BLACKLIST:EXPORT', 'BLACKLIST:DELETE'],
       },
     },
   ],

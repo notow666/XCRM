@@ -46,6 +46,7 @@
         {{ t('crmImportButton.successImportActionTip') }}
       </div>
       <div v-else-if="validateResultInfo.successCount > 0" class="mt-[8px] text-[var(--text-n4)]">
+        <div>错误文件中的黑名单号码标记为紫色。</div>
         {{ t('crmImportButton.customerPartialCanImport') }}
       </div>
       <div v-else class="mt-[8px] text-[var(--text-n4)]">

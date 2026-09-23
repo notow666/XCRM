@@ -8,6 +8,8 @@ import lombok.Data;
 @Builder
 @Schema(description = "公海导入错误分类统计")
 public class PoolImportErrorSummary {
+    @Schema(description = "黑名单号码数（紫色）")
+    private int blacklistCount;
 
     @Schema(description = "字段校验失败数（红色）")
     private int fieldValidationCount;

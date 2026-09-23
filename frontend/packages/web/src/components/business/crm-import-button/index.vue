@@ -37,14 +37,19 @@
     @save="importHandler"
     @close="importModal = false"
   />
+  <n-modal v-model:show="finalResultVisible" preset="dialog" title="客户导入完成">
+    <p>成功 {{ finalResult.successCount }} 条，失败 {{ finalResult.failCount }} 行。</p>
+    <n-button v-if="finalResult.errorFileId" text type="primary" @click="downloadFinalErrors">下载错误文件</n-button>
+  </n-modal>
 </template>
 
 <script setup lang="ts">
   import { ref } from 'vue';
-  import { NButton, useMessage } from 'naive-ui';
+  import { NButton, NModal, useMessage } from 'naive-ui';
 
   import { FormDesignKeyEnum } from '@lib/shared/enums/formDesignEnum';
   import { useI18n } from '@lib/shared/hooks/useI18n';
+  import { downloadByteFile } from '@lib/shared/method';
   import type { ValidateInfo } from '@lib/shared/models/system/org';
 
   import type { CrmFileItem } from '@/components/pure/crm-upload/types';
@@ -106,12 +111,26 @@
   // 导入
   const fileList = ref<CrmFileItem[]>([]);
   const importLoading = ref<boolean>(false);
+  const finalResultVisible = ref(false);
+  const finalResult = ref<ValidateInfo>({ ...initValidateInfo });
+  async function downloadFinalErrors() {
+    const download = importApiMap[props.apiType].downloadError;
+    if (download && finalResult.value.errorFileId) {
+      const response = await download(finalResult.value.errorFileId);
+      downloadByteFile(response.data, finalResult.value.errorFileName || '客户导入错误.xlsx');
+    }
+  }
 
   async function importHandler() {
     try {
       importLoading.value = true;
-      await importApiMap[props.apiType].save(fileList.value[0].file as File);
-      Message.success(t('common.importSuccess'));
+      const result = await importApiMap[props.apiType].save(fileList.value[0].file as File);
+      if (props.apiType === FormDesignKeyEnum.CUSTOMER && result?.data) {
+        finalResult.value = result.data;
+        finalResultVisible.value = true;
+      } else {
+        Message.success(t('common.importSuccess'));
+      }
 
       emit('importSuccess');
       validateResultModal.value = false;

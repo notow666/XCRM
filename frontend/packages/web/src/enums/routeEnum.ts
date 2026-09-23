@@ -125,6 +125,7 @@ export enum ManagementCenterRouteEnum {
 export enum ToolsRouteEnum {
   TOOLS = 'tools',
   TOOLS_NUMBER_CUBE = 'toolsNumberCube',
+  TOOLS_BLACKLIST = 'toolsBlacklist',
 }
 
 export enum FullPageEnum {

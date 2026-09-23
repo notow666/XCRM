@@ -32,6 +32,7 @@ export default {
     'menu.collapsedProduct': 'Product',
     'menu.clue': 'Lead',
     'menu.customer': 'Account',
+    'menu.blacklist': 'Blacklist',
     'menu.contact': 'Contact',
     'menu.dashboard': 'Dashboard',
     'menu.agent': 'Agent',

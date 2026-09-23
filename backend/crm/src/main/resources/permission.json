@@ -751,6 +751,17 @@
     "license": false,
     "children": [
       {
+        "id": "CUSTOMER_BLACKLIST",
+        "name": "permission.customer_blacklist.name",
+        "permissions": [
+          { "id": "BLACKLIST:READ" },
+          { "id": "BLACKLIST:ADD" },
+          { "id": "BLACKLIST:IMPORT" },
+          { "id": "BLACKLIST:EXPORT" },
+          { "id": "BLACKLIST:DELETE" }
+        ]
+      },
+      {
         "id": "NUMBER_CUBE",
         "name": "permission.number_cube.name",
         "permissions": [

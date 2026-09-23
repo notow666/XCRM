@@ -71,7 +71,9 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class PoolCustomerImportService {
-
+    @Resource
+    private cn.cordys.crm.blacklist.service.BlacklistCheckService blacklistCheckService;
+    private static final String ERROR_TYPE_BLACKLIST = "BLACKLIST";
     @Resource
     private ExtCustomerMapper customerMapper;
     @Resource
@@ -178,9 +180,8 @@ public class PoolCustomerImportService {
         if (!checkContext.result.isPassed()) {
             // 步骤5-写入错误Excel
             String errorFileId = IDGenerator.nextStr();
-            String errorFileName = Translator.get("pool.import.error.file.name");
             try {
-                writeErrorExcelStreaming(file, checkContext.result, errorFileId, orgId);
+                String errorFileName = writeErrorExcelStreaming(file, checkContext.result, errorFileId, orgId);
                 response.setErrorFileId(errorFileId);
                 response.setErrorFileName(errorFileName);
 
@@ -242,6 +243,19 @@ public class PoolCustomerImportService {
 
         checkFieldValidation(rowMobileMap, fieldErrors, result, mobileFieldName);
         view.put("Layer1-字段校验", result.getRowErrorCount());
+
+        Set<String> blacklisted = blacklistCheckService.find(rowMobileMap.values());
+        rowMobileMap.forEach((row, mobile) -> {
+            if (blacklisted.contains(StringUtils.trim(mobile))) {
+                String previous = result.getRowErrorMsgMap().getOrDefault(row, "");
+                if (ERROR_TYPE_FIELD_VALIDATION.equals(result.getRowErrorTypeMap().get(row))) {
+                    result.fieldValidationCount--;
+                }
+                result.addRowError(row, ERROR_TYPE_BLACKLIST,
+                        cn.cordys.crm.blacklist.service.BlacklistCheckService.IMPORT_MESSAGE + previous);
+                result.blacklistCount++;
+            }
+        });
 
         checkImportableExcelDuplicate(rowMobileMap, result);
         view.put("Layer2-Excel重复检查", result.getRowErrorCount());
@@ -516,6 +530,7 @@ public class PoolCustomerImportService {
                 .excelDuplicateCount(result.getExcelDuplicateCount())
                 .otherPoolConflictCount(result.getOtherPoolConflictCount())
                 .poolSourceConflictCount(result.getPoolSourceConflictCount())
+                .blacklistCount(result.getBlacklistCount())
                 .build();
     }
 
@@ -523,7 +538,7 @@ public class PoolCustomerImportService {
      * 使用EasyExcel流式写入错误Excel
      * 优化：重新生成Excel而非修改原文件，避免内存溢出
      */
-    private void writeErrorExcelStreaming(MultipartFile file, ErrorCheckResult result,
+    private String writeErrorExcelStreaming(MultipartFile file, ErrorCheckResult result,
                                           String fileId, String orgId) throws IOException {
         String exportDirPath = DefaultRepositoryDir.getDefaultDir() + File.separator
                 + DefaultRepositoryDir.getTempFileDir(TenantContext.requireTenantId(), FileSourceModule.CUSTOMER)
@@ -532,14 +547,16 @@ public class PoolCustomerImportService {
         if (!dir.exists() && !dir.mkdirs()) {
             throw new RuntimeException("cannot create export dir: " + dir.getAbsolutePath());
         }
-        String fileName = Translator.get("pool.import.error.file.name") + ".xlsx";
-        File outputFile = new File(dir, fileName);
-
         try (InputStream inputStream = file.getInputStream();
-             Workbook workbook = WorkbookFactory.create(inputStream);
-             OutputStream os = new FileOutputStream(outputFile)) {
-            markErrorRows(workbook.getSheetAt(0), result, workbook);
-            workbook.write(os);
+             Workbook workbook = WorkbookFactory.create(inputStream)) {
+            String extension = workbook instanceof org.apache.poi.hssf.usermodel.HSSFWorkbook ? ".xls" : ".xlsx";
+            String fileName = Translator.get("pool.import.error.file.name") + extension;
+            File outputFile = new File(dir, fileName);
+            try (OutputStream os = new FileOutputStream(outputFile)) {
+                markErrorRows(workbook.getSheetAt(0), result, workbook);
+                workbook.write(os);
+            }
+            return fileName;
         }
     }
 
@@ -563,6 +580,8 @@ public class PoolCustomerImportService {
      * 错误检查结果内部类
      */
     private static class ErrorCheckResult {
+        @Getter
+        private int blacklistCount = 0;
         @Getter
         private final Map<Integer, String> rowErrorTypeMap = new LinkedHashMap<>();
         @Getter
@@ -666,7 +685,9 @@ public class PoolCustomerImportService {
         }
 
         private short getColorIndex(String errorType) {
-            if (ERROR_TYPE_FIELD_VALIDATION.equals(errorType)) {
+            if (ERROR_TYPE_BLACKLIST.equals(errorType)) {
+                return IndexedColors.LAVENDER.getIndex();
+            } else if (ERROR_TYPE_FIELD_VALIDATION.equals(errorType)) {
                 return IndexedColors.RED.getIndex();
             } else if (ERROR_TYPE_EXCEL_DUPLICATE.equals(errorType)) {
                 return IndexedColors.LIGHT_YELLOW.getIndex();
@@ -727,6 +748,13 @@ public class PoolCustomerImportService {
      */
     public String realImport(MultipartFile file, String poolId, String userId, String orgId) {
         CustomerPool pool = validatePool(poolId);
+        // 异步工作及最终错误文件不能依赖 HTTP 请求结束后被清理的上传临时文件。
+        final MultipartFile importFile;
+        try {
+            importFile = new ImportFileSnapshot(file.getOriginalFilename(), file.getBytes());
+        } catch (IOException e) {
+            throw new GenericException("无法读取导入文件，请重新上传");
+        }
 
         AsyncUtils.runAsync(() -> {
             Locale prevLocale = LocaleContextHolder.getLocale();
@@ -735,11 +763,26 @@ public class PoolCustomerImportService {
                 Locale locale = resolveUserLocale(operator);
                 LocaleContextHolder.setLocale(locale);
 
-                ImportCheckContext checkContext = checkImportRows(file, orgId, poolId);
+                ImportCheckContext checkContext = checkImportRows(importFile, orgId, poolId);
                 Set<Integer> skipRows = new HashSet<>(checkContext.result.getRowErrorTypeMap().keySet());
-                String success = poolCustomerImportExecutor.executeImport(file, poolId, userId, orgId, skipRows);
+                Set<String> rejectedMobiles = new HashSet<>();
+                PoolCustomerImportExecutor.ImportExecution executed = poolCustomerImportExecutor.executeImport(importFile, poolId, userId, orgId, skipRows, rejectedMobiles);
+                checkContext.checkListener.getRowMobileMap().forEach((row, mobile) -> {
+                    if (!skipRows.contains(row) && rejectedMobiles.contains(StringUtils.trim(mobile))) {
+                        checkContext.result.addRowError(row, ERROR_TYPE_BLACKLIST,
+                                cn.cordys.crm.blacklist.service.BlacklistCheckService.IMPORT_MESSAGE);
+                        checkContext.result.blacklistCount++;
+                    }
+                });
+                executed.errors().forEach(error -> {
+                    if (!checkContext.result.hasRowError(error.getRowNum())) {
+                        checkContext.result.addRowError(error.getRowNum(), ERROR_TYPE_FIELD_VALIDATION, error.getErrMsg());
+                        checkContext.result.incrementFieldValidationCount();
+                    }
+                });
                 int failCount = checkContext.result.getRowErrorCount();
-                int successCount = checkContext.totalRows - failCount;
+                int successCount = executed.successCount();
+                String success = "成功 " + successCount + " 条，失败 " + failCount + " 行";
                 recordImportLog(userId, orgId, pool, successCount, failCount);
                 sendImportNotice(userId, orgId, pool,true, success);
             } catch (Exception e) {
@@ -755,6 +798,17 @@ public class PoolCustomerImportService {
         }, executor);
 
         return Translator.get("pool.import.accepted");
+    }
+
+    private record ImportFileSnapshot(String filename, byte[] content) implements MultipartFile {
+        @Override public String getName() { return "file"; }
+        @Override public String getOriginalFilename() { return filename; }
+        @Override public String getContentType() { return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"; }
+        @Override public boolean isEmpty() { return content.length == 0; }
+        @Override public long getSize() { return content.length; }
+        @Override public byte[] getBytes() { return content; }
+        @Override public InputStream getInputStream() { return new ByteArrayInputStream(content); }
+        @Override public void transferTo(File destination) throws IOException { java.nio.file.Files.write(destination.toPath(), content); }
     }
 
     private void recordImportLog(String userId, String orgId, CustomerPool pool, int successCount, int failCount) {

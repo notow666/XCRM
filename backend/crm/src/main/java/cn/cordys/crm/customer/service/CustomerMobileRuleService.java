@@ -20,6 +20,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class CustomerMobileRuleService {
+    @Resource
+    private cn.cordys.crm.blacklist.service.BlacklistCheckService blacklistCheckService;
 
     @Resource
     private BaseMapper<Customer> customerMapper;
@@ -39,6 +41,7 @@ public class CustomerMobileRuleService {
      * @param orgId 组织ID
      */
     public void validateForSave(String customerId, String name, String mobile, String createSource, String ownerId, String orgId) {
+        blacklistCheckService.validateSave(mobile, StringUtils.isBlank(customerId));
         MobileRuleDecision decision = customerMobileRuleEngine.evaluate(MobileRuleContext.builder()
                 .customerId(customerId)
                 .mobile(mobile)

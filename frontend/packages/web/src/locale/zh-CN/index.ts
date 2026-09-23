@@ -31,6 +31,7 @@ export default {
     'menu.collapsedProduct': '产品',
     'menu.clue': '线索',
     'menu.customer': '客户',
+    'menu.blacklist': '黑名单',
     'menu.contact': '联系人',
     'menu.dashboard': '仪表板',
     'menu.agent': '智能体',

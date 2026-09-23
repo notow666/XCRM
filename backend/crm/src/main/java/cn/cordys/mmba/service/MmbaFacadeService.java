@@ -56,6 +56,8 @@ import java.util.function.Function;
 @Slf4j
 @Service
 public class MmbaFacadeService {
+    @Resource
+    private cn.cordys.crm.blacklist.service.BlacklistCheckService blacklistCheckService;
 
     private static final int WX_FRIEND_LIST_MAX_LIMIT = 100;
     /** 设备列表查询方式一：单次请求 ums 数量上限（MMBA 文档最多 50） */
@@ -298,6 +300,19 @@ public class MmbaFacadeService {
     private JsonNode executeJson(String bizType, String mmbaUrl, JsonNode request, String userId, String organizationId,
                                  Function<JsonNode, JsonNode> action) {
         ObjectNode payload = normalizeRequest(request);
+        // 四类客户触达统一检查客户表里的手机号。
+        if (MmbaBizTypes.CALL_DIAL.equals(bizType) || MmbaBizTypes.SMS_SEND.equals(bizType)
+                || MmbaBizTypes.WX_FRIEND_ADD.equals(bizType) || MmbaBizTypes.WX_MSG_SEND.equals(bizType)) {
+            String customerId = readCustomerId(payload);
+            if (StringUtils.isBlank(customerId)) {
+                throw new GenericException("缺少客户ID，无法操作。");
+            }
+            Customer customer = customerMapper.selectByPrimaryKey(customerId);
+            if (customer == null) {
+                throw new GenericException("客户不存在，无法操作。");
+            }
+            blacklistCheckService.validateCommunication(customer.getMobile());
+        }
         String reqId = ensureReqId(payload);
         String tenantId = TenantContext.getTenantId();
         MmbaRequestRecord record = initRequestRecord(bizType, mmbaUrl, reqId, organizationId, userId, payload);

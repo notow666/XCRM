@@ -129,6 +129,8 @@ import java.util.stream.Stream;
 @Transactional(rollbackFor = Exception.class)
 @Slf4j
 public class CustomerService {
+    @Resource
+    private cn.cordys.crm.blacklist.service.BlacklistCheckService blacklistCheckService;
 
     private static final int BATCH_DELETE_BY_CONDITION_SIZE = 500;
     private static final int BATCH_TRANSFER_BY_CONDITION_MAX_SIZE = 2000;
@@ -1381,13 +1383,29 @@ public class CustomerService {
     public ImportResponse realImport(MultipartFile file, String currentOrg, String currentUser) {
         try {
             CustomerImportCheckContext checkContext = checkCustomerImportRows(file, currentOrg, currentUser);
+            List<ExcelErrData> blacklistErrors = new ArrayList<>();
             Set<Integer> skipRows = new HashSet<>(checkContext.eventListener.getErrRows());
             List<BaseField> fields = moduleFormService.getAllFields(FormKey.CUSTOMER.getKey(), currentOrg);
             List<BaseField> filteredFields = filterOwnerField(fields);
             removeCustomerMobileUniqueRule(filteredFields);
             // 获取默认阶段ID
             String defaultStageId = customerStageService.getDefaultStageId(currentOrg);
-            CustomImportAfterDoConsumer<Customer, BaseResourceSubField> afterDo = (customers, customerFields, customerFieldBlobs) -> {
+            CustomImportAfterDoConsumer<Customer, BaseResourceSubField> afterDo = (customers, customerFields, customerFieldBlobs) -> blacklistCheckService.write(() -> {
+                Set<String> blocked = blacklistCheckService.find(customers.stream().map(Customer::getMobile).toList());
+                Set<String> blockedIds = customers.stream().filter(c -> blocked.contains(StringUtils.trim(c.getMobile())))
+                        .map(Customer::getId).collect(Collectors.toSet());
+                if (!blockedIds.isEmpty()) {
+                    checkContext.eventListener.getRowMobileMap().forEach((row, mobile) -> {
+                        if (!skipRows.contains(row) && blocked.contains(StringUtils.trim(mobile))) {
+                            skipRows.add(row);
+                            blacklistErrors.add(new ExcelErrData(row, cn.cordys.crm.blacklist.service.BlacklistCheckService.IMPORT_MESSAGE));
+                        }
+                    });
+                    customers.removeIf(c -> blockedIds.contains(c.getId()));
+                    customerFields.removeIf(f -> blockedIds.contains(f.getResourceId()));
+                    customerFieldBlobs.removeIf(f -> blockedIds.contains(f.getResourceId()));
+                }
+                if (customers.isEmpty()) return null;
                 validatePrivateImportBatch(customers, currentUser, currentOrg);
                 List<LogDTO> logs = new ArrayList<>();
                 List<CustomerContact> contacts = new ArrayList<>();
@@ -1433,13 +1451,17 @@ public class CustomerService {
                 logService.batchAdd(logs);
                 //员工事件服务
                 employeeStatEventRecordService.recordCustomerCreateEvents(customers, currentUser, currentOrg);
-            };
+                return null;
+            });
             CustomFieldImportEventListener<Customer> eventListener = new CustomerImportEventListener(filteredFields, currentOrg, currentUser, afterDo, skipRows);
             FastExcelFactory.read(file.getInputStream(), eventListener).headRowNumber(1).ignoreEmptyRow(true).sheet().doRead();
             List<ExcelErrData> errList = new ArrayList<>(checkContext.eventListener.getErrList());
             errList.addAll(eventListener.getErrList());
-            return ImportResponse.builder().errorMessages(errList)
+            errList.addAll(blacklistErrors);
+            ImportResponse response = ImportResponse.builder().errorMessages(errList)
                     .successCount(eventListener.getSuccessCount()).failCount(errList.size()).build();
+            attachCustomerImportErrorFile(file, errList, response);
+            return response;
         } catch (Exception e) {
             log.error("customer import error: {}", e.getMessage());
             throw new GenericException(e.getMessage());
@@ -1481,6 +1503,21 @@ public class CustomerService {
     private int appendPrivateImportMobileErrors(CustomerImportCheckEventListener eventListener, String currentOrg, String currentUser) {
         Set<Integer> existingErrRows = new HashSet<>(eventListener.getErrRows());
         int extraFailCount = 0;
+        Set<String> blocked = blacklistCheckService.find(eventListener.getRowMobileMap().values());
+        for (Map.Entry<Integer, String> entry : eventListener.getRowMobileMap().entrySet()) {
+            if (blocked.contains(StringUtils.trim(entry.getValue()))) {
+                int row = entry.getKey();
+                if (existingErrRows.add(row)) {
+                    eventListener.getErrRows().add(row);
+                    extraFailCount++;
+                }
+                String previous = eventListener.getErrList().stream().filter(e -> e.getRowNum() == row)
+                        .map(ExcelErrData::getErrMsg).collect(Collectors.joining("；"));
+                eventListener.getErrList().removeIf(e -> e.getRowNum() == row);
+                eventListener.getErrList().add(new ExcelErrData(row,
+                        cn.cordys.crm.blacklist.service.BlacklistCheckService.IMPORT_MESSAGE + previous));
+            }
+        }
         Map<String, List<Integer>> mobileRowMap = new LinkedHashMap<>();
         String mobileFieldName = StringUtils.defaultIfBlank(eventListener.getMobileFieldName(), "手机号");
         for (Map.Entry<Integer, String> entry : eventListener.getRowMobileMap().entrySet()) {
@@ -1685,9 +1722,12 @@ public class CustomerService {
     }
 
     private static class CustomerImportErrorRowStyleHandler {
-        private final Map<Short, CellStyle> styleCache = new HashMap<>();
+        private final Map<String, CellStyle> styleCache = new HashMap<>();
+        private short color;
 
         public void markRow(Row row, int columnCount, String errorMsg, Workbook workbook) {
+            color = errorMsg != null && errorMsg.contains(cn.cordys.crm.blacklist.service.BlacklistCheckService.IMPORT_MESSAGE)
+                    ? IndexedColors.LAVENDER.getIndex() : IndexedColors.RED.getIndex();
             for (int i = 0; i < columnCount; i++) {
                 Cell cell = row.getCell(i);
                 if (cell == null) {
@@ -1702,7 +1742,7 @@ public class CustomerService {
 
         private CellStyle getOrCreateErrorStyle(Workbook workbook, CellStyle baseStyle) {
             short baseStyleIndex = baseStyle == null ? -1 : baseStyle.getIndex();
-            return styleCache.computeIfAbsent(baseStyleIndex, key -> createErrorStyle(workbook, baseStyle));
+            return styleCache.computeIfAbsent(baseStyleIndex + "_" + color, key -> createErrorStyle(workbook, baseStyle));
         }
 
         private CellStyle createErrorStyle(Workbook workbook, CellStyle baseStyle) {
@@ -1710,7 +1750,7 @@ public class CustomerService {
             if (baseStyle != null) {
                 style.cloneStyleFrom(baseStyle);
             }
-            style.setFillForegroundColor(IndexedColors.RED.getIndex());
+            style.setFillForegroundColor(color);
             style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
             return style;
         }

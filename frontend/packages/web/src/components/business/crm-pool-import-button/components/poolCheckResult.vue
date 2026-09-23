@@ -27,6 +27,10 @@
           {{ t('poolImportButton.errorSummary') }}
         </div>
         <div class="flex flex-col gap-[4px]">
+          <div v-if="checkResponse.errorSummary.blacklistCount" class="flex items-center gap-[8px]">
+            <span class="inline-block h-[10px] w-[10px] rounded-full bg-purple-400"></span>
+            <span class="text-[var(--text-n2)]">黑名单号码（紫色）: {{ checkResponse.errorSummary.blacklistCount }}</span>
+          </div>
           <div v-if="checkResponse.errorSummary.fieldValidationCount > 0" class="flex items-center gap-[8px]">
             <span class="inline-block h-[10px] w-[10px] rounded-full bg-[#F5222D]"></span>
             <span class="text-[var(--text-n2)]">

@@ -8,7 +8,6 @@
   >
     {{ t('common.import') }}
   </n-button>
-
   <PoolImportModal
     v-model:show="importModal"
     :validating="validateLoading"
@@ -58,7 +57,6 @@
   const importLoading = ref(false);
   const currentFile = ref<File | null>(null);
   const currentPoolId = ref('');
-
   const initCheckResponse: PoolCustomerImportCheckResponse = {
     passed: false,
     totalCount: 0,

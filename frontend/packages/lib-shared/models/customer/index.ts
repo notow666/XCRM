@@ -563,6 +563,7 @@ export interface UpdateCustomerStageParams {
 }
 
 export interface PoolImportErrorSummary {
+  blacklistCount?: number;
   fieldValidationCount: number;
   excelDuplicateCount: number;
   otherPoolConflictCount: number;
